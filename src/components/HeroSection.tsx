@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AnimatedStars } from "./AnimatedStars";
 import { ServiceButton } from "./ServiceButton";
 import { ServiceModal } from "./ServiceModal";
 import { GoldParticles } from "./GoldParticles";
+import { Settings } from "lucide-react";
 import goldCar from "@/assets/gold-car.png";
 
 interface Service {
@@ -55,6 +57,15 @@ export function HeroSection() {
       
       {/* Gold particles */}
       <GoldParticles />
+
+      {/* Admin link - top right */}
+      <Link
+        to="/auth"
+        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-card/50 border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+        title="Admin Login"
+      >
+        <Settings className="w-5 h-5" />
+      </Link>
 
       {/* Header */}
       <header className="relative z-10 text-center mb-8 md:mb-12">
