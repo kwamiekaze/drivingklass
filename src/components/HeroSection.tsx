@@ -5,6 +5,7 @@ import { AnimatedStars } from "./AnimatedStars";
 import { ServiceButton } from "./ServiceButton";
 import { ServiceModal } from "./ServiceModal";
 import { GoldParticles } from "./GoldParticles";
+import goldCar from "@/assets/gold-car.png";
 
 interface Service {
   id: string;
@@ -65,17 +66,22 @@ export function HeroSection() {
         </div>
       </header>
 
-      {/* Car Image Placeholder - will be replaced with uploaded image */}
-      <div className="relative z-10 w-full max-w-md md:max-w-xl lg:max-w-2xl aspect-video flex items-center justify-center mb-8">
-        <div className="relative w-full h-full flex items-center justify-center">
+      {/* Gold Car Image */}
+      <div className="relative z-10 w-full max-w-sm md:max-w-lg lg:max-w-2xl flex items-center justify-center mb-8">
+        <div className="relative">
           {/* Headlight glow effects */}
-          <div className="absolute left-[15%] top-[40%] w-8 h-8 md:w-12 md:h-12 rounded-full bg-gold-shimmer/50 blur-xl animate-headlight" />
-          <div className="absolute right-[15%] top-[40%] w-8 h-8 md:w-12 md:h-12 rounded-full bg-gold-shimmer/50 blur-xl animate-headlight" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute left-[10%] top-[45%] w-10 h-10 md:w-16 md:h-16 rounded-full bg-gold/40 blur-2xl animate-headlight" />
+          <div className="absolute left-[5%] top-[50%] w-6 h-6 md:w-10 md:h-10 rounded-full bg-gold-shimmer/60 blur-xl animate-headlight" style={{ animationDelay: '0.5s' }} />
           
-          {/* Car placeholder */}
-          <div className="w-full h-full bg-gradient-to-b from-gold/10 to-transparent rounded-3xl border border-gold/20 flex items-center justify-center">
-            <p className="text-muted-foreground text-sm">Car image will appear here</p>
-          </div>
+          {/* Car shadow */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-8 bg-black/30 blur-2xl rounded-full" />
+          
+          {/* Car image */}
+          <img 
+            src={goldCar} 
+            alt="DRIVINGKLASS Gold Car" 
+            className="relative w-full h-auto drop-shadow-2xl"
+          />
         </div>
       </div>
 
