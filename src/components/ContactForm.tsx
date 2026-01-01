@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "./ThemeProvider";
 import {
   Form,
   FormControl,
@@ -51,6 +52,8 @@ export function ContactForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -222,9 +225,13 @@ export function ContactForm() {
     <div 
       className="p-6 md:p-8 lg:p-10 rounded-2xl"
       style={{
-        background: 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 5% / 0.9) 100%)',
-        border: '1px solid hsl(43 60% 40% / 0.25)',
-        boxShadow: '0 0 50px hsl(0 0% 0% / 0.5), 0 0 30px hsl(43 80% 52% / 0.08)',
+        background: isLight 
+          ? 'linear-gradient(135deg, hsl(45 30% 95% / 0.95) 0%, hsl(42 25% 92% / 0.95) 100%)'
+          : 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 5% / 0.9) 100%)',
+        border: `1px solid ${isLight ? 'hsl(43 50% 60% / 0.4)' : 'hsl(43 60% 40% / 0.25)'}`,
+        boxShadow: isLight 
+          ? '0 4px 30px hsl(43 50% 50% / 0.15), 0 0 20px hsl(43 60% 50% / 0.1)'
+          : '0 0 50px hsl(0 0% 0% / 0.5), 0 0 30px hsl(43 80% 52% / 0.08)',
         backdropFilter: 'blur(10px)',
       }}
     >
@@ -237,7 +244,10 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ color: 'hsl(43 60% 55%)' }}
+                  style={{ 
+                    color: isLight ? '#2a2a2a' : 'hsl(43 60% 55%)',
+                    textShadow: isLight ? '0 0 4px rgba(212, 175, 55, 0.5)' : undefined,
+                  }}
                 >
                   Full Name *
                 </FormLabel>
@@ -246,9 +256,9 @@ export function ContactForm() {
                     placeholder="Your full name"
                     className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
                     style={{
-                      background: 'hsl(25 5% 6%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)',
-                      color: 'hsl(42 30% 90%)',
+                      background: isLight ? 'hsl(45 30% 98%)' : 'hsl(25 5% 6%)',
+                      border: `1px solid ${isLight ? 'hsl(43 50% 50% / 0.4)' : 'hsl(43 50% 35% / 0.3)'}`,
+                      color: isLight ? '#1a1a1a' : 'hsl(42 30% 90%)',
                     }}
                     {...field}
                   />

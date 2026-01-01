@@ -3,6 +3,7 @@ import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
 import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PackageWheelProps {
   carImageSrc: string;
@@ -82,6 +83,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [containerSize, setContainerSize] = useState(320);
+  
+  const isMobile = useIsMobile();
 
   const packages = useMemo(() => getPackagesSortedByPosition(), []);
   const totalButtons = packages.length;
@@ -101,63 +104,41 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Auto-orbit animation - runs only on MOBILE and before user selection
+  // Auto-orbit animation - runs ONLY on mobile (<768px) and before user selection
   useEffect(() => {
-    const isMobileQuery = '(max-width: 767px)';
-    const mql = window.matchMedia(isMobileQuery);
-
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const stop = () => {
-      if (intervalId) clearInterval(intervalId);
-      intervalId = null;
-    };
-
-    const start = () => {
-      stop();
-      // Only run if mobile AND user hasn't selected a package
-      if (!mql.matches) return;
-      if (hasUserSelected) return;
-
-      setHighlightedIndex(0);
-      intervalId = setInterval(() => {
-        setHighlightedIndex((prev) => ((prev ?? 0) + 1) % totalButtons);
-      }, 900);
-    };
-
-    const onChange = () => {
-      if (!mql.matches) {
-        stop();
-        setHighlightedIndex(null); // Desktop shows normal buttons
-      } else if (!hasUserSelected) {
-        start();
-      }
-    };
-
-    // Initial check
-    if (mql.matches && !hasUserSelected) {
-      start();
-    } else {
+    // Only run on mobile
+    if (!isMobile) {
       setHighlightedIndex(null);
+      return;
+    }
+    
+    // Don't run if user has already selected
+    if (hasUserSelected) {
+      setHighlightedIndex(null);
+      return;
     }
 
-    mql.addEventListener?.('change', onChange);
-    window.addEventListener('resize', onChange);
+    setHighlightedIndex(0);
+    const intervalId = setInterval(() => {
+      setHighlightedIndex((prev) => ((prev ?? 0) + 1) % totalButtons);
+    }, 900);
 
-    return () => {
-      stop();
-      mql.removeEventListener?.('change', onChange);
-      window.removeEventListener('resize', onChange);
-    };
-  }, [hasUserSelected, totalButtons]);
+    return () => clearInterval(intervalId);
+  }, [isMobile, hasUserSelected, totalButtons]);
 
+  // Handle package click - also opens modal on double-tap of same package
   const handlePackageClick = useCallback((packageId: string) => {
-    setSelectedPackageId(packageId);
-    setHasUserSelected(true);
-    onPackageSelect?.(packageId);
-  }, [onPackageSelect]);
+    if (selectedPackageId === packageId) {
+      // Second tap on the same package opens the modal
+      setIsModalOpen(true);
+    } else {
+      setSelectedPackageId(packageId);
+      setHasUserSelected(true);
+      onPackageSelect?.(packageId);
+    }
+  }, [selectedPackageId, onPackageSelect]);
 
-  const handleContinue = () => {
+  const handleInfoClick = () => {
     if (selectedPackageId) {
       setIsModalOpen(true);
     }
@@ -251,7 +232,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         {/* Package buttons positioned in circle - topmost layer */}
         {packages.map((pkg, index) => {
           const pos = buttonPositions[index];
-          const isHighlighted = highlightedIndex !== null && !hasUserSelected && highlightedIndex === index;
+          // Only show highlight animation on mobile before user selection
+          const isHighlighted = isMobile && !hasUserSelected && highlightedIndex === index;
           const isSelected = selectedPackageId === pkg.id;
           
           return (
@@ -271,7 +253,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         })}
       </div>
 
-      {/* Selected package indicator & Continue CTA - moved down with more spacing */}
+      {/* Selected package indicator & INFO CTA - moved down with more spacing */}
       <div className="mt-12 sm:mt-16 md:mt-20 text-center pb-6">
         <div className={cn(
           "transition-all duration-300",
@@ -309,7 +291,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         </div>
         
         <button
-          onClick={handleContinue}
+          onClick={handleInfoClick}
           disabled={!selectedPackageId}
           className={cn(
             "px-10 py-4 rounded-full font-bold tracking-wider uppercase text-sm",
@@ -328,7 +310,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               : '0 2px 10px hsl(0 0% 0% / 0.3)',
           }}
         >
-          Continue
+          Info
         </button>
       </div>
 

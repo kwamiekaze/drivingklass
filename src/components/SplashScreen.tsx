@@ -11,11 +11,11 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [shouldShow, setShouldShow] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Check if desktop on mount - skip splash for desktop
+  // Check if desktop/tablet on mount - skip splash for >= 768px
   useEffect(() => {
-    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-    if (isDesktop) {
-      // Skip splash entirely on desktop
+    const isDesktopOrTablet = window.matchMedia("(min-width: 768px)").matches;
+    if (isDesktopOrTablet) {
+      // Skip splash entirely on desktop/tablet
       setShouldShow(false);
       onComplete();
     }
@@ -44,7 +44,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     setTimeout(onComplete, 600);
   };
 
-  // Don't render anything if we shouldn't show (desktop)
+  // Don't render anything if we shouldn't show (desktop/tablet)
   if (!shouldShow) {
     return null;
   }

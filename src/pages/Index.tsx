@@ -14,10 +14,10 @@ const Index = () => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   
-  // Check if desktop on initial render - skip splash for desktop
+  // Check if desktop/tablet on initial render - skip splash for >= 768px
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window !== 'undefined') {
-      return !window.matchMedia("(min-width: 1024px)").matches;
+      return !window.matchMedia("(min-width: 768px)").matches;
     }
     return true;
   });
