@@ -100,8 +100,17 @@ export default function Auth() {
           <CardTitle className="text-3xl font-display text-gold-shimmer">
             DRIVINGKLASS
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Admin Portal
+          <CardDescription 
+            className="text-lg font-semibold"
+            style={{
+              background: 'linear-gradient(180deg, hsl(48 85% 72%) 0%, hsl(43 80% 55%) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 8px hsl(43 80% 50% / 0.6))',
+            }}
+          >
+            Klassroom Portal
           </CardDescription>
         </CardHeader>
         <CardContent>
