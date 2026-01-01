@@ -2,155 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DRIVINGKLASS Luxury Gold Theme - Definition of the design system */
+/* DRIVINGKLASS Luxury Theme System
+   ================================
+   SINGLE SOURCE OF TRUTH: html[data-theme="dark"|"light"]
+   - html.dark class exists for Tailwind dark: variants
+   - All components use CSS variables, not hardcoded colors
+*/
 
 @layer base {
-  :root {
-    /* ========================================= */
-    /* THEME SINGLE SOURCE OF TRUTH
-       html[data-theme] controls CSS variables
-       html.dark exists only for Tailwind dark: variants
-       Default = DARK on first load.
-    */
-    /* ========================================= */
-
+  /* ===== DARK THEME (default) ===== */
+  :root,
+  :root[data-theme="dark"] {
     color-scheme: dark;
 
-    /* Explicit theme vars (requested) */
+    /* Core theme tokens */
     --bg: 30 10% 3%;
     --bg2: 30 8% 8%;
+    --card: 30 8% 10%;
+    --card2: 30 6% 12%;
     --text: 42 30% 92%;
-    --mutedText: 42 20% 60%;
+    --text-muted: 42 20% 60%;
+    --border: 30 8% 20%;
     --gold: 43 80% 52%;
-    --outline: 30 8% 20%;
-    --shadow: 0 0% 0%;
-
-    /* Shadcn design tokens (mapped to explicit vars) */
-    --background: var(--bg);
-    --foreground: var(--text);
-
-    --card: var(--bg2);
-    --card-foreground: var(--text);
-
-    --popover: var(--bg2);
-    --popover-foreground: var(--text);
-
-    --primary: var(--gold);
-    --primary-foreground: 30 10% 5%;
-
-    --secondary: 30 5% 12%;
-    --secondary-foreground: 42 30% 90%;
-
-    --muted: 30 5% 18%;
-    --muted-foreground: var(--mutedText);
-
-    --accent: 40 75% 55%;
-    --accent-foreground: 30 10% 5%;
-
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: var(--outline);
-    --input: 30 5% 15%;
-    --ring: var(--gold);
-
-    --radius: 0.75rem;
-
-    /* Gold palette tokens */
     --gold-light: 45 75% 68%;
     --gold-dark: 38 85% 38%;
     --gold-shimmer: 48 90% 78%;
-    --champagne: 42 40% 85%;
+    --accent: 40 75% 55%;
+    --accent2: 28 100% 55%;
+    --shadow: 0 0% 0%;
+    --glow: 43 80% 52%;
 
-    /* Driving school accent colors */
+    /* Shadcn mapped tokens */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --muted: 30 5% 18%;
+    --muted-foreground: var(--text-muted);
+    --popover: var(--bg2);
+    --popover-foreground: var(--text);
+    --card-foreground: var(--text);
+    --primary: var(--gold);
+    --primary-foreground: 30 10% 5%;
+    --secondary: 30 5% 12%;
+    --secondary-foreground: 42 30% 90%;
+    --accent-foreground: 30 10% 5%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --input: 30 5% 15%;
+    --ring: var(--gold);
+    --radius: 0.75rem;
+
+    /* Extra tokens */
+    --champagne: 42 40% 85%;
     --cone-orange: 28 100% 55%;
     --asphalt: 0 0% 17%;
     --sky-blue: 200 50% 90%;
 
+    /* Sidebar */
     --sidebar-background: 30 8% 6%;
     --sidebar-foreground: 42 30% 90%;
     --sidebar-primary: var(--gold);
     --sidebar-primary-foreground: 30 10% 5%;
     --sidebar-accent: 30 5% 12%;
     --sidebar-accent-foreground: 42 30% 90%;
-    --sidebar-border: var(--outline);
+    --sidebar-border: var(--border);
     --sidebar-ring: var(--gold);
   }
 
-  :root[data-theme="light"] {
+  /* ===== LIGHT THEME (spring/summer driving school) ===== */
+  :root[data-theme="light"],
+  :root.light {
     color-scheme: light;
 
-    /* Explicit theme vars (requested) */
-    --bg: 42 45% 96%;
-    --bg2: 40 40% 94%;
-    --text: 0 0% 11%;
-    --mutedText: 0 0% 35%;
-    --gold: 43 74% 49%;
-    --outline: 40 30% 82%;
+    /* Core theme tokens - warm cream/sky palette */
+    --bg: 42 50% 96%;
+    --bg2: 40 45% 93%;
+    --card: 42 40% 98%;
+    --card2: 40 35% 95%;
+    --text: 0 0% 12%;
+    --text-muted: 0 0% 40%;
+    --border: 40 40% 80%;
+    --gold: 43 75% 48%;
+    --gold-light: 45 70% 58%;
+    --gold-dark: 38 80% 35%;
+    --gold-shimmer: 48 85% 68%;
+    --accent: 28 95% 52%;
+    --accent2: 35 90% 50%;
     --shadow: 0 0% 0%;
+    --glow: 43 75% 55%;
 
+    /* Shadcn mapped tokens */
     --background: var(--bg);
     --foreground: var(--text);
-
-    --card: var(--bg2);
-    --card-foreground: var(--text);
-
-    --popover: 42 45% 97%;
+    --muted: 42 35% 90%;
+    --muted-foreground: var(--text-muted);
+    --popover: 42 50% 98%;
     --popover-foreground: var(--text);
-
+    --card-foreground: var(--text);
     --primary: var(--gold);
-    --primary-foreground: 0 0% 5%;
-
-    --secondary: 40 35% 90%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 40 40% 92%;
     --secondary-foreground: 0 0% 15%;
-
-    --muted: 42 30% 88%;
-    --muted-foreground: var(--mutedText);
-
-    --accent: var(--gold);
-    --accent-foreground: 0 0% 5%;
-
+    --accent-foreground: 0 0% 8%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: var(--outline);
-    --input: 40 35% 92%;
+    --input: 40 40% 96%;
     --ring: var(--gold);
 
-    /* Gold palette tokens - light mode */
-    --gold-light: 45 70% 62%;
-    --gold-dark: 38 80% 38%;
-    --gold-shimmer: 48 85% 72%;
-
-    /* Driving school accent colors */
+    /* Extra tokens */
+    --champagne: 42 35% 82%;
     --cone-orange: 28 100% 55%;
-    --asphalt: 0 0% 17%;
-    --sky-blue: 200 50% 90%;
+    --asphalt: 0 0% 20%;
+    --sky-blue: 200 55% 92%;
 
-    --sidebar-background: 42 35% 95%;
-    --sidebar-foreground: 0 0% 13%;
+    /* Sidebar */
+    --sidebar-background: 42 40% 96%;
+    --sidebar-foreground: 0 0% 15%;
     --sidebar-primary: var(--gold);
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 42 30% 90%;
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 42 35% 92%;
     --sidebar-accent-foreground: 0 0% 12%;
-    --sidebar-border: 40 30% 85%;
+    --sidebar-border: 40 35% 85%;
     --sidebar-ring: var(--gold);
   }
-}
 
-
-@layer base {
   * {
     @apply border-border;
   }
 
   html {
-    transition: background-color 380ms ease, color 380ms ease;
+    transition: background-color 400ms ease, color 400ms ease;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    transition: background-color 380ms ease, color 380ms ease;
+    transition: background-color 400ms ease, color 400ms ease;
   }
 
   /* Custom scrollbar */
@@ -254,7 +239,7 @@
     pointer-events: none;
   }
 
-  /* Luxury card styling */
+  /* Luxury card styling - theme aware */
   .luxury-card {
     @apply rounded-2xl border;
     background: linear-gradient(
@@ -264,85 +249,82 @@
     );
     border-color: hsl(var(--gold) / 0.2);
     box-shadow: 
-      0 4px 20px hsl(0 0% 0% / 0.1),
+      0 4px 20px hsl(var(--shadow) / 0.1),
       0 0 40px hsl(var(--gold) / 0.05);
     backdrop-filter: blur(10px);
   }
 
-  .dark .luxury-card {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--card)) 0%,
-      hsl(0 0% 8%) 100%
-    );
-    box-shadow: 
-      0 4px 20px hsl(0 0% 0% / 0.4),
-      0 0 40px hsl(var(--gold) / 0.1);
-  }
+  /* =========================================== */
+  /* LIGHT THEME SPECIFIC COMPONENT STYLES      */
+  /* =========================================== */
 
   /* Light mode CTA buttons - Gold to orange gradient */
-  .light-cta-button {
-    background: linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(28 100% 55%) 100%);
-    color: hsl(0 0% 8%);
+  :root[data-theme="light"] .cta-button,
+  .light .cta-button {
+    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--accent)) 100%) !important;
+    color: hsl(0 0% 10%) !important;
     box-shadow: 
-      0 4px 15px hsl(43 74% 49% / 0.35),
-      0 2px 4px hsl(0 0% 0% / 0.1),
-      inset 0 1px 0 hsl(48 85% 75% / 0.4);
-    transition: all 0.25s ease;
+      0 4px 18px hsl(var(--gold) / 0.4),
+      0 2px 6px hsl(var(--shadow) / 0.15),
+      inset 0 1px 0 hsl(var(--gold-shimmer) / 0.5) !important;
   }
 
-  .light-cta-button:hover {
+  :root[data-theme="light"] .cta-button:hover,
+  .light .cta-button:hover {
     box-shadow: 
-      0 6px 20px hsl(43 74% 49% / 0.45),
-      0 3px 6px hsl(0 0% 0% / 0.12),
-      inset 0 1px 0 hsl(48 85% 75% / 0.5);
+      0 6px 24px hsl(var(--gold) / 0.5),
+      0 3px 8px hsl(var(--shadow) / 0.2),
+      inset 0 1px 0 hsl(var(--gold-shimmer) / 0.6) !important;
     transform: translateY(-1px);
   }
 
-  /* Light mode price popup styling */
-  .light-price-popup {
-    background: linear-gradient(135deg, hsl(42 45% 97%) 0%, hsl(40 40% 94%) 100%);
-    border: 2px solid hsl(43 74% 49% / 0.6);
-    color: hsl(0 0% 11%);
+  /* Light mode form card */
+  :root[data-theme="light"] .form-card,
+  .light .form-card {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card2)) 100%);
+    border: 1px solid hsl(var(--gold) / 0.35);
     box-shadow: 
-      0 4px 20px hsl(0 0% 0% / 0.12),
-      0 0 20px hsl(43 74% 49% / 0.15);
+      0 4px 30px hsl(var(--shadow) / 0.08),
+      0 0 25px hsl(var(--gold) / 0.1);
   }
 
-  /* Light mode package button styling */
-  .light-package-button {
-    background: linear-gradient(145deg, hsl(0 0% 15%) 0%, hsl(0 0% 10%) 100%);
-    border: 3px solid hsl(43 74% 49%);
-    box-shadow: 
-      0 4px 16px hsl(0 0% 0% / 0.2),
-      0 0 20px hsl(43 74% 49% / 0.2);
+  /* Light mode inputs */
+  :root[data-theme="light"] .theme-input,
+  .light .theme-input {
+    background: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--gold) / 0.4) !important;
+    color: hsl(var(--foreground)) !important;
   }
 
-  .light-package-button:hover {
-    box-shadow: 
-      0 6px 20px hsl(0 0% 0% / 0.25),
-      0 0 30px hsl(43 74% 49% / 0.35),
-      0 0 15px hsl(28 100% 55% / 0.2);
+  :root[data-theme="light"] .theme-input:focus,
+  .light .theme-input:focus {
+    border-color: hsl(var(--gold)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--gold) / 0.2) !important;
   }
 
-  .light-package-button.selected {
-    border-width: 4px;
-    box-shadow: 
-      0 0 25px hsl(43 74% 49% / 0.5),
-      0 0 45px hsl(43 74% 49% / 0.25),
-      0 0 12px hsl(28 100% 55% / 0.3);
+  /* Light mode headings with gold glow */
+  :root[data-theme="light"] .theme-heading,
+  .light .theme-heading {
+    color: hsl(var(--foreground));
+    text-shadow:
+      0 0 1px hsl(var(--gold) / 0.8),
+      0 0 8px hsl(var(--gold) / 0.4),
+      1px 1px 0 hsl(var(--gold) / 0.25),
+      -1px -1px 0 hsl(var(--gold) / 0.25);
+  }
+
+  /* Dark mode headings - neon gold */
+  :root[data-theme="dark"] .theme-heading,
+  .dark .theme-heading {
+    color: hsl(var(--gold-shimmer));
   }
 }
 
 @layer utilities {
   /* Animations */
   @keyframes shimmer {
-    0% {
-      background-position: -200% center;
-    }
-    100% {
-      background-position: 200% center;
-    }
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
   }
 
   @keyframes float {
@@ -350,12 +332,8 @@
       transform: translateY(0) rotate(0deg);
       opacity: 0;
     }
-    10% {
-      opacity: 1;
-    }
-    90% {
-      opacity: 1;
-    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
     100% {
       transform: translateY(-100vh) rotate(720deg);
       opacity: 0;
@@ -363,12 +341,8 @@
   }
 
   @keyframes orbit {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
   @keyframes pulse-glow {
@@ -410,69 +384,10 @@
     font-weight: 800;
   }
 
-  /* ========================================= */
-  /* LIGHT MODE TEXT & TYPOGRAPHY UTILITIES   */
-  /* ========================================= */
-
-  /* Light mode heading - charcoal with gold glow */
-  :root[data-theme="light"] .light-heading {
-    color: hsl(var(--foreground));
-    text-shadow:
-      0 0 1px hsl(var(--gold) / 0.9),
-      0 0 6px hsl(var(--gold) / 0.35);
-  }
-
-  /* Light mode body text - near black, no gold */
-  :root[data-theme="light"] .light-body-text {
-    color: hsl(var(--foreground));
-  }
-
-  /* Light mode button/label text - readable on gold */
-  :root[data-theme="light"] .light-button-text {
-    color: hsl(var(--foreground));
-    text-shadow: none;
-  }
-
-  /* Light mode gold text for accents */
-  :root[data-theme="light"] .light-gold-accent {
-    color: hsl(var(--gold-dark));
-    text-shadow: 0 0 2px hsl(var(--gold) / 0.5);
-  }
-
-  /* Legacy light mode readability - black with gold outline */
-  :root[data-theme="light"] .text-light-readable {
-    color: hsl(var(--foreground));
-    text-shadow:
-      0 0 1px hsl(var(--gold) / 0.9),
-      0 0 6px hsl(var(--gold) / 0.35);
-  }
-
-  /* Legacy light mode headings with gold stroke effect */
-  :root[data-theme="light"] .heading-gold-stroke {
-    color: hsl(var(--foreground));
-    text-shadow:
-      0 0 2px hsl(var(--gold) / 0.8),
-      0 0 8px hsl(var(--gold) / 0.4),
-      1px 1px 0 hsl(var(--gold) / 0.3),
-      -1px -1px 0 hsl(var(--gold) / 0.3);
-  }
-
-  /* Legacy light mode form labels with readability */
-  :root[data-theme="light"] .label-readable {
-    color: hsl(var(--foreground));
-    text-shadow: 0 0 4px hsl(var(--gold) / 0.5);
-  }
-
   @keyframes headlight-flicker {
-    0%, 90%, 100% {
-      opacity: 0.8;
-    }
-    92%, 98% {
-      opacity: 1;
-    }
-    94%, 96% {
-      opacity: 0.6;
-    }
+    0%, 90%, 100% { opacity: 0.8; }
+    92%, 98% { opacity: 1; }
+    94%, 96% { opacity: 0.6; }
   }
 
   @keyframes star-twinkle {
@@ -486,7 +401,6 @@
     }
   }
 
-  /* Galaxy star animations */
   @keyframes galaxy-twinkle {
     0%, 100% {
       opacity: var(--tw-opacity, 0.5);
@@ -503,9 +417,7 @@
       opacity: 0;
       transform: translateX(0) translateY(0) rotate(-45deg);
     }
-    92% {
-      opacity: 0.8;
-    }
+    92% { opacity: 0.8; }
     95% {
       opacity: 0.8;
       transform: translateX(100px) translateY(100px) rotate(-45deg);
@@ -528,12 +440,8 @@
   }
 
   @keyframes fade-in {
-    0% {
-      opacity: 0;
-    }
-    100% {
-      opacity: 1;
-    }
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }
 
   @keyframes scale-in {
@@ -547,45 +455,16 @@
     }
   }
 
-  .animate-shimmer {
-    animation: shimmer 3s linear infinite;
-  }
-
-  .animate-float {
-    animation: float 15s linear infinite;
-  }
-
-  .animate-orbit {
-    animation: orbit 60s linear infinite;
-  }
-
-  .animate-orbit-reverse {
-    animation: orbit 45s linear infinite reverse;
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  .animate-headlight {
-    animation: headlight-flicker 4s ease-in-out infinite;
-  }
-
-  .animate-star-twinkle {
-    animation: star-twinkle 2s ease-in-out infinite;
-  }
-
-  .animate-slide-up {
-    animation: slide-up 0.4s ease-out forwards;
-  }
-
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
-  }
-
-  .animate-scale-in {
-    animation: scale-in 0.3s ease-out forwards;
-  }
+  .animate-shimmer { animation: shimmer 3s linear infinite; }
+  .animate-float { animation: float 15s linear infinite; }
+  .animate-orbit { animation: orbit 60s linear infinite; }
+  .animate-orbit-reverse { animation: orbit 45s linear infinite reverse; }
+  .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  .animate-headlight { animation: headlight-flicker 4s ease-in-out infinite; }
+  .animate-star-twinkle { animation: star-twinkle 2s ease-in-out infinite; }
+  .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
+  .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+  .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
 
   /* Staggered animation delays */
   .delay-100 { animation-delay: 100ms; }

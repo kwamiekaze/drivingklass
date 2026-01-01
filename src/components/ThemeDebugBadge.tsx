@@ -7,8 +7,8 @@ export function ThemeDebugBadge() {
   if (!import.meta.env.DEV) return null;
 
   return (
-    <div className="fixed bottom-3 right-3 z-[9999] select-none rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-      Theme Debug: <span className="font-semibold">{resolvedTheme}</span>
+    <div className="fixed top-3 left-16 z-[9999] select-none rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm">
+      Theme: <span className="uppercase tracking-wide">{resolvedTheme}</span>
     </div>
   );
 }

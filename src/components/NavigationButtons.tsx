@@ -22,27 +22,24 @@ function NavButton({ label, onClick }: NavButtonProps) {
         // Theme-aware glow
         isDark 
           ? "shadow-[0_0_12px_hsl(43_80%_50%/0.25),0_0_24px_hsl(43_80%_50%/0.1)]"
-          : "shadow-[0_4px_16px_hsl(0_0%_0%/0.12),0_0_20px_hsl(43_74%_49%/0.2)]",
+          : "shadow-[0_4px_18px_hsl(0_0%_0%/0.1),0_0_22px_hsl(43_75%_50%/0.25)]",
         // Hover state
         isDark
           ? "hover:brightness-110 hover:shadow-[0_0_20px_hsl(43_80%_50%/0.4),0_0_35px_hsl(43_80%_50%/0.2)]"
-          : "hover:shadow-[0_6px_20px_hsl(0_0%_0%/0.15),0_0_25px_hsl(43_74%_49%/0.3)]",
+          : "hover:shadow-[0_6px_24px_hsl(0_0%_0%/0.12),0_0_28px_hsl(43_75%_50%/0.35)]",
         // Active/tap state
         "active:scale-[0.98]"
       )}
       style={{
-        // Metallic gold ring gradient
+        // Metallic gold ring gradient - same for both themes
         background: 'linear-gradient(145deg, hsl(43 75% 55%) 0%, hsl(40 70% 45%) 50%, hsl(35 65% 30%) 100%)',
       }}
     >
-      {/* Inner fill - charcoal for both themes for consistent contrast */}
-      <div className={cn(
-        "absolute inset-[2px] rounded-full",
-        "bg-gradient-to-b from-[hsl(30_10%_14%)] via-[hsl(30_8%_10%)] to-[hsl(30_8%_7%)]"
-      )} />
+      {/* Inner fill - charcoal for contrast in both themes */}
+      <div className="absolute inset-[2px] rounded-full bg-gradient-to-b from-[hsl(30_10%_14%)] via-[hsl(30_8%_10%)] to-[hsl(30_8%_7%)]" />
       
       {/* Inner gold ring accent */}
-      <div className="absolute inset-[3px] rounded-full border border-gold/25" />
+      <div className="absolute inset-[3px] rounded-full border border-[hsl(43_75%_55%/0.3)]" />
       
       {/* Specular highlight on top */}
       <div className="absolute inset-[3px] rounded-full overflow-hidden pointer-events-none">

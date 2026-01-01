@@ -5,16 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="hsl(30 10% 3%)" />
 
-    <!-- Prevent theme flash: set html[data-theme] + .dark before React mounts -->
+    <!-- CRITICAL: Apply theme before any paint to prevent flash -->
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem("theme");
+          var STORAGE_KEY = "theme";
+          var stored = localStorage.getItem(STORAGE_KEY);
+          // Only accept valid values; default to dark
           var theme = stored === "light" || stored === "dark" ? stored : "dark";
+          
           var root = document.documentElement;
+          // Single source of truth
           root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-
+          // Tailwind compatibility
+          root.classList.add(theme);
+          
+          // Update meta theme-color
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) {
             meta.setAttribute(
@@ -22,7 +28,9 @@
               theme === "dark" ? "hsl(30 10% 3%)" : "hsl(42 45% 96%)"
             );
           }
-        } catch (e) {}
+        } catch (e) {
+          // Fail silently
+        }
       })();
     </script>
 
