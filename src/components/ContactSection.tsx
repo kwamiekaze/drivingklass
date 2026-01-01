@@ -1,6 +1,11 @@
 import { ContactForm } from "./ContactForm";
+import { useTheme } from "./ThemeProvider";
+import { cn } from "@/lib/utils";
 
 export function ContactSection() {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
+
   return (
     <section 
       id="contact" 
@@ -11,15 +16,26 @@ export function ContactSection() {
         {/* Header */}
         <div className="text-center mb-10 md:mb-14">
           <h2 
-            className="text-3xl md:text-4xl lg:text-5xl font-poppins font-extrabold tracking-[0.15em] uppercase mb-4 text-neon-gold animate-breathing-glow"
+            className={cn(
+              "text-3xl md:text-4xl lg:text-5xl font-poppins font-extrabold tracking-[0.15em] uppercase mb-4",
+              !isLight && "text-neon-gold animate-breathing-glow"
+            )}
+            style={{
+              color: isLight ? '#1a1a1a' : '#FFD700',
+              textShadow: isLight 
+                ? '0 0 2px rgba(212, 175, 55, 0.9), 0 0 8px rgba(212, 175, 55, 0.5), 1px 1px 0 rgba(212, 175, 55, 0.4), -1px -1px 0 rgba(212, 175, 55, 0.4)'
+                : undefined,
+            }}
           >
             CONTACT DRIVING KLASS
           </h2>
           <p 
             className="text-base md:text-lg tracking-wide"
             style={{
-              color: 'hsl(42 30% 70%)',
-              textShadow: '0 0 15px hsl(43 60% 50% / 0.2)',
+              color: isLight ? '#3d3d3d' : 'hsl(42 30% 70%)',
+              textShadow: isLight 
+                ? '0 0 4px rgba(212, 175, 55, 0.4)'
+                : '0 0 15px hsl(43 60% 50% / 0.2)',
             }}
           >
             Tell us what you need, get in touch.

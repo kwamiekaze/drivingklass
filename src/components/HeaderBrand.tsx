@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "./ThemeProvider";
 
 interface HeaderBrandProps {
   className?: string;
@@ -13,6 +14,9 @@ const neonGoldDropShadow = `
 `;
 
 export function HeaderBrand({ className }: HeaderBrandProps) {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
+
   return (
     <header className={cn("text-center", className)}>
       {/* Brand title - Poppins ExtraBold with breathing glow */}
@@ -21,9 +25,14 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
           "font-poppins font-extrabold tracking-widest uppercase",
           "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
           "tracking-[0.15em]",
-          "relative",
-          "text-neon-gold"
+          "relative"
         )}
+        style={{
+          color: isLight ? '#1a1a1a' : '#FFD700',
+          textShadow: isLight 
+            ? '0 0 2px rgba(212, 175, 55, 0.8), 0 0 8px rgba(212, 175, 55, 0.4), 1px 1px 0 rgba(212, 175, 55, 0.3), -1px -1px 0 rgba(212, 175, 55, 0.3)'
+            : undefined,
+        }}
       >
         DRIVINGKLASS
       </h1>
@@ -35,10 +44,14 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
           "text-sm sm:text-base md:text-lg lg:text-xl",
           "mt-3 sm:mt-4 md:mt-5",
           "tracking-[0.08em]",
-          "text-neon-gold animate-breathing-glow"
+          !isLight && "text-neon-gold animate-breathing-glow"
         )}
         style={{
           animationDelay: '0.5s',
+          color: isLight ? '#1a1a1a' : '#FFD700',
+          textShadow: isLight 
+            ? '0 0 2px rgba(212, 175, 55, 0.9), 0 0 8px rgba(212, 175, 55, 0.5), 1px 1px 0 rgba(212, 175, 55, 0.4), -1px -1px 0 rgba(212, 175, 55, 0.4)'
+            : undefined,
         }}
       >
         Where 5-Star Drivers Are Made
@@ -53,10 +66,12 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
               "w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7"
             )}
             style={{
-              fill: '#FFD700',
-              stroke: '#FFD700',
+              fill: isLight ? '#b8860b' : '#FFD700',
+              stroke: isLight ? '#b8860b' : '#FFD700',
               strokeWidth: 0.5,
-              filter: neonGoldDropShadow,
+              filter: isLight 
+                ? 'drop-shadow(0px 0px 3px rgba(184, 134, 11, 0.6)) drop-shadow(0px 0px 8px rgba(184, 134, 11, 0.4))'
+                : neonGoldDropShadow,
             }}
           />
         ))}

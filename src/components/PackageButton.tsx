@@ -26,15 +26,18 @@ export function PackageButton({
         background: isActive 
           ? 'linear-gradient(145deg, hsl(48 85% 65%) 0%, hsl(43 80% 50%) 50%, hsl(38 75% 35%) 100%)'
           : 'linear-gradient(145deg, hsl(43 75% 55%) 0%, hsl(40 70% 45%) 50%, hsl(35 65% 30%) 100%)',
+        // Ensure button content is never clipped
+        position: 'absolute',
+        overflow: 'visible',
       }}
       className={cn(
-        "absolute flex items-center justify-center",
+        "flex items-center justify-center",
         "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24",
         "rounded-full cursor-pointer select-none",
         "transition-all duration-200 ease-out",
-        // Thicker padding for selected state
+        // Thicker padding for selected state - ring glow only, no overlay
         isSelected ? "p-[3px] sm:p-[4px]" : "p-[2px] sm:p-[3px]",
-        // Glow - stronger for selected, subtle pulse for highlighted
+        // Glow - ring shadow only, NOT filled overlay
         isSelected 
           ? "shadow-[0_0_25px_hsl(43_80%_50%/0.6),0_0_45px_hsl(43_80%_50%/0.3)]"
           : isHighlighted
@@ -48,45 +51,55 @@ export function PackageButton({
         "z-30"
       )}
     >
-      {/* Inner dark fill */}
-      <div className={cn(
-        "absolute rounded-full",
-        isSelected ? "inset-[3px] sm:inset-[4px]" : "inset-[2px] sm:inset-[3px]",
-        "bg-gradient-to-b from-[hsl(30_10%_12%)] via-[hsl(30_8%_8%)] to-[hsl(30_8%_6%)]",
-        "dark:from-[hsl(30_10%_10%)] dark:via-[hsl(30_8%_6%)] dark:to-[hsl(30_8%_4%)]"
-      )} />
+      {/* Inner dark fill - no covering of text */}
+      <div 
+        className={cn(
+          "absolute rounded-full pointer-events-none",
+          isSelected ? "inset-[3px] sm:inset-[4px]" : "inset-[2px] sm:inset-[3px]",
+          "bg-gradient-to-b from-[hsl(30_10%_12%)] via-[hsl(30_8%_8%)] to-[hsl(30_8%_6%)]",
+          "dark:from-[hsl(30_10%_10%)] dark:via-[hsl(30_8%_6%)] dark:to-[hsl(30_8%_4%)]"
+        )}
+        style={{ zIndex: 0 }}
+      />
       
-      {/* Inner gold ring accent */}
-      <div className={cn(
-        "absolute rounded-full border",
-        isSelected ? "inset-[4px] sm:inset-[5px] border-gold/50" : "inset-[3px] sm:inset-[4px] border-gold/20",
-        isHighlighted && !isSelected && "border-gold/35"
-      )} />
+      {/* Inner gold ring accent - pointer-events-none so it doesn't block */}
+      <div 
+        className={cn(
+          "absolute rounded-full border pointer-events-none",
+          isSelected ? "inset-[4px] sm:inset-[5px] border-gold/50" : "inset-[3px] sm:inset-[4px] border-gold/20",
+          isHighlighted && !isSelected && "border-gold/35"
+        )}
+        style={{ zIndex: 1 }}
+      />
       
-      {/* Specular highlight on top */}
-      <div className={cn(
-        "absolute rounded-full overflow-hidden pointer-events-none",
-        isSelected ? "inset-[4px] sm:inset-[5px]" : "inset-[3px] sm:inset-[4px]"
-      )}>
+      {/* Specular highlight on top - low opacity, never covers text */}
+      <div 
+        className={cn(
+          "absolute rounded-full overflow-hidden pointer-events-none",
+          isSelected ? "inset-[4px] sm:inset-[5px]" : "inset-[3px] sm:inset-[4px]"
+        )}
+        style={{ zIndex: 1, opacity: isActive ? 0.1 : 0.05 }}
+      >
         <div 
-          className="absolute inset-x-0 top-0 h-1/3"
+          className="absolute inset-x-0 top-0 h-1/3 pointer-events-none"
           style={{
-            opacity: isActive ? 0.15 : 0.1,
-            background: 'linear-gradient(180deg, hsl(0 0% 100% / 0.3) 0%, transparent 100%)',
+            background: 'linear-gradient(180deg, hsl(0 0% 100% / 0.25) 0%, transparent 100%)',
           }}
         />
       </div>
       
-      {/* Button content - label always visible above all effects */}
+      {/* Button content - label ALWAYS visible above all effects */}
       <span 
         className={cn(
-          "relative z-20 text-center leading-tight font-bold pointer-events-none",
+          "relative text-center leading-tight font-bold pointer-events-none",
           "text-[10px] sm:text-xs md:text-sm lg:text-base",
           "px-1 whitespace-pre-line"
         )}
         style={{
+          zIndex: 10,
+          position: 'relative',
           color: isActive ? 'hsl(48 90% 75%)' : 'hsl(45 80% 65%)',
-          textShadow: '0 1px 2px hsl(0 0% 0% / 0.5), 0 0 8px hsl(43 80% 50% / 0.3)',
+          textShadow: '0 1px 2px hsl(0 0% 0% / 0.7), 0 0 8px hsl(43 80% 50% / 0.4)',
         }}
       >
         {label}

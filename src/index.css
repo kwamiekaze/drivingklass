@@ -321,6 +321,30 @@
     font-weight: 800;
   }
 
+  /* Light mode text readability - black with gold outline */
+  .light .text-light-readable {
+    color: #0b0b0b;
+    text-shadow: 
+      0 0 1px rgba(212, 175, 55, 0.9),
+      0 0 6px rgba(212, 175, 55, 0.35);
+  }
+
+  /* Light mode headings with gold stroke effect */
+  .light .heading-gold-stroke {
+    color: #1a1a1a;
+    text-shadow: 
+      0 0 2px rgba(212, 175, 55, 0.8),
+      0 0 8px rgba(212, 175, 55, 0.4),
+      1px 1px 0 rgba(212, 175, 55, 0.3),
+      -1px -1px 0 rgba(212, 175, 55, 0.3);
+  }
+
+  /* Light mode form labels with readability */
+  .light .label-readable {
+    color: #2a2a2a;
+    text-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
+  }
+
   @keyframes headlight-flicker {
     0%, 90%, 100% {
       opacity: 0.8;
