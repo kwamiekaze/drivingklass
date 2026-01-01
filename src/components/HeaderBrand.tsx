@@ -22,7 +22,7 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
           "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
           "tracking-[0.15em]",
           "relative",
-          "text-neon-gold animate-breathing-glow"
+          "text-neon-gold"
         )}
       >
         DRIVINGKLASS
