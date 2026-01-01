@@ -16,74 +16,74 @@ export function GalaxyStars() {
   const stars = useMemo(() => {
     const newStars: Star[] = [];
     
-    // Dust layer - thousands of tiny barely visible stars (creates density)
-    for (let i = 0; i < 400; i++) {
+    // Dust layer - massive amount of tiny barely visible stars (creates infinite depth)
+    for (let i = 0; i < 800; i++) {
       newStars.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 0.3 + Math.random() * 0.5,
-        baseOpacity: 0.08 + Math.random() * 0.12,
-        twinkleSpeed: 6 + Math.random() * 8,
-        twinkleDelay: Math.random() * 10,
+        size: 0.2 + Math.random() * 0.4,
+        baseOpacity: 0.06 + Math.random() * 0.1,
+        twinkleSpeed: 8 + Math.random() * 12,
+        twinkleDelay: Math.random() * 15,
         layer: 'dust',
-        hue: 35 + Math.random() * 20,
+        hue: 35 + Math.random() * 18,
       });
     }
     
     // Far layer - tiny dim stars
-    for (let i = 400; i < 700; i++) {
+    for (let i = 800; i < 1300; i++) {
       newStars.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 0.5 + Math.random() * 0.8,
-        baseOpacity: 0.15 + Math.random() * 0.2,
-        twinkleSpeed: 5 + Math.random() * 7,
-        twinkleDelay: Math.random() * 8,
+        size: 0.4 + Math.random() * 0.7,
+        baseOpacity: 0.12 + Math.random() * 0.18,
+        twinkleSpeed: 6 + Math.random() * 9,
+        twinkleDelay: Math.random() * 12,
         layer: 'far',
-        hue: 38 + Math.random() * 15,
+        hue: 38 + Math.random() * 14,
       });
     }
     
     // Mid layer - medium stars  
-    for (let i = 700; i < 900; i++) {
+    for (let i = 1300; i < 1650; i++) {
       newStars.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 0.8 + Math.random() * 1.2,
-        baseOpacity: 0.25 + Math.random() * 0.3,
-        twinkleSpeed: 4 + Math.random() * 5,
-        twinkleDelay: Math.random() * 6,
+        size: 0.7 + Math.random() * 1.1,
+        baseOpacity: 0.2 + Math.random() * 0.28,
+        twinkleSpeed: 4 + Math.random() * 6,
+        twinkleDelay: Math.random() * 8,
         layer: 'mid',
         hue: 40 + Math.random() * 12,
       });
     }
     
     // Near layer - visible stars
-    for (let i = 900; i < 1000; i++) {
+    for (let i = 1650; i < 1850; i++) {
       newStars.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 1.2 + Math.random() * 1.8,
-        baseOpacity: 0.4 + Math.random() * 0.35,
+        size: 1.0 + Math.random() * 1.6,
+        baseOpacity: 0.35 + Math.random() * 0.35,
         twinkleSpeed: 3 + Math.random() * 4,
-        twinkleDelay: Math.random() * 5,
+        twinkleDelay: Math.random() * 6,
         layer: 'near',
         hue: 42 + Math.random() * 10,
       });
     }
     
-    // Bright layer - prominent stars (fewer)
-    for (let i = 1000; i < 1040; i++) {
+    // Bright layer - prominent golden stars (fewer, more impactful)
+    for (let i = 1850; i < 1920; i++) {
       newStars.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 2 + Math.random() * 2.5,
-        baseOpacity: 0.6 + Math.random() * 0.4,
+        size: 1.8 + Math.random() * 2.8,
+        baseOpacity: 0.55 + Math.random() * 0.45,
         twinkleSpeed: 2 + Math.random() * 3,
         twinkleDelay: Math.random() * 4,
         layer: 'bright',
