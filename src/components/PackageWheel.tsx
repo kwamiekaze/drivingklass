@@ -63,20 +63,10 @@ export function PackageWheel({ carImageSrc, onPackageSelect, carGlow = false }: 
 
   return (
     <div className="relative w-full flex flex-col items-center">
-      {/* Package wheel container */}
+      {/* Package wheel container - NO rectangular/square borders */}
       <div 
         className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
       >
-        {/* Subtle connecting ring with metallic gradient */}
-        <div 
-          className="absolute inset-8 sm:inset-10 md:inset-12 lg:inset-14 rounded-full"
-          style={{
-            background: 'transparent',
-            border: '1px solid transparent',
-            borderImage: 'linear-gradient(180deg, hsl(43 60% 45% / 0.3) 0%, hsl(43 60% 35% / 0.15) 50%, hsl(43 60% 45% / 0.3) 100%) 1',
-            boxShadow: 'inset 0 0 40px hsl(43 80% 50% / 0.05)',
-          }}
-        />
         
         {/* Center car container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">

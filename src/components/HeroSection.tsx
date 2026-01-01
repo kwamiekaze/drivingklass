@@ -49,8 +49,8 @@ export function HeroSection() {
         <Settings className="w-5 h-5" />
       </Link>
 
-      {/* Header with brand and stars - positioned at top with proper spacing */}
-      <HeaderBrand className="relative z-10 mt-8 sm:mt-12 mb-6 sm:mb-10 md:mb-12" />
+      {/* Header with brand and stars - raised higher with clear separation from ring */}
+      <HeaderBrand className="relative z-10 mt-6 sm:mt-8 mb-8 sm:mb-12 md:mb-16" />
 
       {/* Package Wheel with car */}
       <PackageWheel 

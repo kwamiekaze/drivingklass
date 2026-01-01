@@ -28,8 +28,8 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
         DRIVINGKLASS
       </h1>
       
-      {/* Five stars - realistic metallic gold */}
-      <div className="flex justify-center gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+      {/* Five stars - realistic metallic gold - raised with more spacing */}
+      <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-5 md:mt-6">
         {[...Array(5)].map((_, i) => (
           <Star 
             key={i}
