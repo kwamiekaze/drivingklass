@@ -1,12 +1,21 @@
+import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
+import { NavigationButtons } from "@/components/NavigationButtons";
+import { ReviewsModal } from "@/components/ReviewsModal";
+import { AboutModal } from "@/components/AboutModal";
+import { MediaModal } from "@/components/MediaModal";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { useTheme } from "@/components/ThemeProvider";
 
 const Index = () => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  
+  const [isReviewsOpen, setIsReviewsOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isMediaOpen, setIsMediaOpen] = useState(false);
 
   return (
     <div className="min-h-screen relative">
@@ -49,9 +58,21 @@ const Index = () => {
         {/* Hero Section with car and package wheel */}
         <HeroSection />
 
+        {/* Navigation Buttons */}
+        <NavigationButtons 
+          onReviewsClick={() => setIsReviewsOpen(true)}
+          onAboutClick={() => setIsAboutOpen(true)}
+          onMediaClick={() => setIsMediaOpen(true)}
+        />
+
         {/* Contact Section */}
         <ContactSection />
       </div>
+
+      {/* Modals */}
+      <ReviewsModal isOpen={isReviewsOpen} onClose={() => setIsReviewsOpen(false)} />
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+      <MediaModal isOpen={isMediaOpen} onClose={() => setIsMediaOpen(false)} />
     </div>
   );
 };
