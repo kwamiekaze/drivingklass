@@ -14,7 +14,7 @@ export function LightModeBackground() {
   const roadElements = useMemo(() => {
     const elements: RoadElement[] = [];
     
-    // Dashed road lines - horizontal
+    // Dashed road lines - horizontal (make them visible enough to feel "instructional")
     for (let i = 0; i < 12; i++) {
       elements.push({
         id: i,
@@ -22,11 +22,11 @@ export function LightModeBackground() {
         x: 5 + (i * 8),
         y: 15 + Math.random() * 10,
         rotation: 0,
-        opacity: 0.03 + Math.random() * 0.02,
+        opacity: 0.05 + Math.random() * 0.02,
         scale: 0.8 + Math.random() * 0.4,
       });
     }
-    
+
     // More dashed lines at bottom
     for (let i = 12; i < 24; i++) {
       elements.push({
@@ -35,11 +35,11 @@ export function LightModeBackground() {
         x: 3 + ((i - 12) * 8.5),
         y: 75 + Math.random() * 15,
         rotation: 0,
-        opacity: 0.025 + Math.random() * 0.02,
+        opacity: 0.045 + Math.random() * 0.02,
         scale: 0.7 + Math.random() * 0.5,
       });
     }
-    
+
     // Parking guide lines - vertical
     for (let i = 24; i < 32; i++) {
       elements.push({
@@ -48,11 +48,11 @@ export function LightModeBackground() {
         x: 8 + ((i - 24) * 12),
         y: 40 + Math.random() * 20,
         rotation: 90,
-        opacity: 0.025 + Math.random() * 0.015,
+        opacity: 0.04 + Math.random() * 0.02,
         scale: 0.6 + Math.random() * 0.4,
       });
     }
-    
+
     // Arrows pointing various directions
     for (let i = 32; i < 40; i++) {
       elements.push({
@@ -61,11 +61,11 @@ export function LightModeBackground() {
         x: 10 + Math.random() * 80,
         y: 20 + Math.random() * 60,
         rotation: Math.floor(Math.random() * 4) * 90,
-        opacity: 0.02 + Math.random() * 0.015,
+        opacity: 0.035 + Math.random() * 0.02,
         scale: 0.5 + Math.random() * 0.3,
       });
     }
-    
+
     // Safety cones scattered
     for (let i = 40; i < 48; i++) {
       elements.push({
@@ -74,11 +74,11 @@ export function LightModeBackground() {
         x: 5 + Math.random() * 90,
         y: 10 + Math.random() * 80,
         rotation: -5 + Math.random() * 10,
-        opacity: 0.04 + Math.random() * 0.02,
+        opacity: 0.06 + Math.random() * 0.03,
         scale: 0.4 + Math.random() * 0.3,
       });
     }
-    
+
     return elements;
   }, []);
 
@@ -97,24 +97,42 @@ export function LightModeBackground() {
           )`,
         }}
       />
-      
+
+      {/* Soft sky-blue atmosphere up top (spring morning) */}
+      <div
+        className="absolute inset-x-0 top-0 h-[38%]"
+        style={{
+          background:
+            "linear-gradient(180deg, hsl(200 50% 90% / 0.55) 0%, hsl(200 50% 90% / 0.18) 45%, transparent 100%)",
+        }}
+      />
+
       {/* Warm sunlight gradient overlay */}
       <div 
         className="absolute inset-0"
         style={{
           background: `
-            radial-gradient(ellipse 100% 60% at 50% 0%, hsl(45 60% 95% / 0.8) 0%, transparent 50%),
-            radial-gradient(ellipse 80% 50% at 30% 20%, hsl(43 70% 92% / 0.4) 0%, transparent 40%),
-            radial-gradient(ellipse 60% 40% at 70% 80%, hsl(40 55% 90% / 0.3) 0%, transparent 35%)
+            radial-gradient(ellipse 100% 60% at 50% 0%, hsl(45 60% 95% / 0.85) 0%, transparent 55%),
+            radial-gradient(ellipse 80% 50% at 30% 20%, hsl(43 70% 92% / 0.45) 0%, transparent 45%),
+            radial-gradient(ellipse 70% 45% at 70% 85%, hsl(40 55% 90% / 0.38) 0%, transparent 40%)
           `,
         }}
       />
-      
+
       {/* Subtle golden atmospheric glow */}
       <div 
         className="absolute inset-0"
         style={{
-          background: `radial-gradient(ellipse 70% 50% at 50% 40%, hsl(43 74% 49% / 0.06) 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse 70% 55% at 50% 42%, hsl(43 74% 49% / 0.075) 0%, transparent 62%)`,
+        }}
+      />
+
+      {/* Soft asphalt wash near the bottom (parking lot) */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[42%]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent 0%, hsl(0 0% 17% / 0.05) 55%, hsl(0 0% 17% / 0.11) 100%)",
         }}
       />
       
@@ -226,10 +244,10 @@ export function LightModeBackground() {
         className="absolute inset-0"
         style={{
           backgroundImage: `
-            linear-gradient(hsl(43 50% 50% / 0.015) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(43 50% 50% / 0.015) 1px, transparent 1px)
+            linear-gradient(hsl(43 50% 50% / 0.028) 1px, transparent 1px),
+            linear-gradient(90deg, hsl(43 50% 50% / 0.028) 1px, transparent 1px)
           `,
-          backgroundSize: '60px 60px',
+          backgroundSize: '72px 72px',
         }}
       />
     </div>

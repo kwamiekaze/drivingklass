@@ -46,11 +46,13 @@ export function ThemeProvider({
         : "light";
 
       root.classList.add(systemTheme);
+      root.dataset.theme = systemTheme;
       setResolvedTheme(systemTheme);
       return;
     }
 
     root.classList.add(theme);
+    root.dataset.theme = theme;
     setResolvedTheme(theme);
   }, [theme]);
 
