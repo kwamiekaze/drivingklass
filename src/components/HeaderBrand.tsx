@@ -6,72 +6,65 @@ interface HeaderBrandProps {
   className?: string;
 }
 
-// Neon gold glow for SVG filter (drop-shadow)
-const neonGoldDropShadow = `
-  drop-shadow(0px 0px 5px rgba(255, 215, 0, 0.8))
-  drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.5))
-  drop-shadow(0px 0px 30px rgba(255, 165, 0, 0.4))
-`;
-
 export function HeaderBrand({ className }: HeaderBrandProps) {
   const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === "light";
+  const isDark = resolvedTheme === "dark";
 
   return (
     <header className={cn("text-center", className)}>
-      {/* Brand title - Poppins ExtraBold with breathing glow */}
+      {/* Brand title - Poppins ExtraBold with theme-aware styling */}
       <h1 
         className={cn(
           "font-poppins font-extrabold tracking-widest uppercase",
           "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
           "tracking-[0.15em]",
-          "relative"
+          "relative transition-colors duration-300",
+          isDark && "text-neon-gold animate-breathing-glow"
         )}
         style={{
-          color: isLight ? '#1a1a1a' : '#FFD700',
-          textShadow: isLight 
-            ? '0 0 2px rgba(212, 175, 55, 0.8), 0 0 8px rgba(212, 175, 55, 0.4), 1px 1px 0 rgba(212, 175, 55, 0.3), -1px -1px 0 rgba(212, 175, 55, 0.3)'
-            : undefined,
+          color: isDark ? 'hsl(48 90% 78%)' : 'hsl(0 0% 12%)',
+          textShadow: isDark 
+            ? undefined
+            : '0 0 2px hsl(43 75% 50% / 0.7), 0 0 10px hsl(43 75% 50% / 0.35), 1px 1px 0 hsl(43 75% 50% / 0.25), -1px -1px 0 hsl(43 75% 50% / 0.25)',
         }}
       >
         DRIVINGKLASS
       </h1>
       
-      {/* Slogan - Poppins ExtraBold with breathing glow */}
+      {/* Slogan - Poppins ExtraBold with theme-aware styling */}
       <p
         className={cn(
           "font-poppins font-extrabold tracking-wide",
           "text-sm sm:text-base md:text-lg lg:text-xl",
           "mt-3 sm:mt-4 md:mt-5",
           "tracking-[0.08em]",
-          !isLight && "text-neon-gold animate-breathing-glow"
+          "transition-colors duration-300",
+          isDark && "text-neon-gold animate-breathing-glow"
         )}
         style={{
           animationDelay: '0.5s',
-          color: isLight ? '#1a1a1a' : '#FFD700',
-          textShadow: isLight 
-            ? '0 0 2px rgba(212, 175, 55, 0.9), 0 0 8px rgba(212, 175, 55, 0.5), 1px 1px 0 rgba(212, 175, 55, 0.4), -1px -1px 0 rgba(212, 175, 55, 0.4)'
-            : undefined,
+          color: isDark ? 'hsl(48 90% 78%)' : 'hsl(0 0% 12%)',
+          textShadow: isDark 
+            ? undefined
+            : '0 0 2px hsl(43 75% 50% / 0.8), 0 0 10px hsl(43 75% 50% / 0.4), 1px 1px 0 hsl(43 75% 50% / 0.3), -1px -1px 0 hsl(43 75% 50% / 0.3)',
         }}
       >
         Where 5-Star Drivers Are Made
       </p>
       
-      {/* Five stars - glowing neon gold like lit-up lights */}
+      {/* Five stars - theme-aware glowing */}
       <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-5 md:mt-6">
         {[...Array(5)].map((_, i) => (
           <Star 
             key={i}
-            className={cn(
-              "w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7"
-            )}
+            className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 transition-colors duration-300"
             style={{
-              fill: isLight ? '#b8860b' : '#FFD700',
-              stroke: isLight ? '#b8860b' : '#FFD700',
+              fill: isDark ? 'hsl(48 90% 78%)' : 'hsl(38 80% 42%)',
+              stroke: isDark ? 'hsl(48 90% 78%)' : 'hsl(38 80% 42%)',
               strokeWidth: 0.5,
-              filter: isLight 
-                ? 'drop-shadow(0px 0px 3px rgba(184, 134, 11, 0.6)) drop-shadow(0px 0px 8px rgba(184, 134, 11, 0.4))'
-                : neonGoldDropShadow,
+              filter: isDark 
+                ? 'drop-shadow(0px 0px 5px rgba(255, 215, 0, 0.8)) drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.5)) drop-shadow(0px 0px 30px rgba(255, 165, 0, 0.4))'
+                : 'drop-shadow(0px 0px 4px hsl(43 75% 50% / 0.6)) drop-shadow(0px 0px 10px hsl(43 75% 50% / 0.35))',
             }}
           />
         ))}

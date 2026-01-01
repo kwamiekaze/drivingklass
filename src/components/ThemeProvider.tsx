@@ -27,44 +27,65 @@ function isTheme(value: unknown): value is Theme {
   return value === "dark" || value === "light";
 }
 
+/**
+ * Applies theme to document:
+ * - Sets data-theme attribute (CSS variable source of truth)
+ * - Toggles .dark class (Tailwind dark: variants)
+ * - Updates meta[name="theme-color"]
+ * - Persists to localStorage
+ */
+function applyTheme(theme: Theme, storageKey: string) {
+  const root = document.documentElement;
+
+  // Single source of truth: data-theme attribute
+  root.dataset.theme = theme;
+  
+  // For Tailwind dark: variants compatibility
+  root.classList.remove("dark", "light");
+  root.classList.add(theme);
+
+  // Persist choice - user preference always wins
+  localStorage.setItem(storageKey, theme);
+
+  // Update meta theme-color for browser chrome
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute("content", getThemeColor(theme));
+  }
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
   storageKey = "theme",
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Prefer the pre-init script value to prevent flashes.
-    const fromDom = document.documentElement.dataset.theme;
-    if (isTheme(fromDom)) return fromDom;
+    // Priority: 1) DOM (from inline script), 2) localStorage, 3) default
+    if (typeof document !== "undefined") {
+      const fromDom = document.documentElement.dataset.theme;
+      if (isTheme(fromDom)) return fromDom;
+    }
 
-    const fromStorage = localStorage.getItem(storageKey);
-    if (isTheme(fromStorage)) return fromStorage;
+    if (typeof localStorage !== "undefined") {
+      const fromStorage = localStorage.getItem(storageKey);
+      if (isTheme(fromStorage)) return fromStorage;
+    }
 
     return defaultTheme;
   });
 
-  const applyTheme = (next: Theme) => {
-    const root = document.documentElement;
-
-    root.dataset.theme = next;
-    root.classList.toggle("dark", next === "dark");
-
-    localStorage.setItem(storageKey, next);
-
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", getThemeColor(next));
-  };
-
+  // Apply theme on mount and whenever it changes
   useEffect(() => {
-    applyTheme(theme);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme]);
+    applyTheme(theme, storageKey);
+  }, [theme, storageKey]);
 
   const value = useMemo<ThemeProviderState>(
     () => ({
       theme,
       resolvedTheme: theme,
-      setTheme: (next) => setThemeState(next),
+      setTheme: (next) => {
+        setThemeState(next);
+      },
     }),
     [theme]
   );
