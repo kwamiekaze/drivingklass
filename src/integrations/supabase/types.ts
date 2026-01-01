@@ -25,6 +25,7 @@ export type Database = {
           id: string
           message: string | null
           phone: string
+          status: string | null
         }
         Insert: {
           attachment_name?: string | null
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone: string
+          status?: string | null
         }
         Update: {
           attachment_name?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone?: string
+          status?: string | null
         }
         Relationships: []
       }

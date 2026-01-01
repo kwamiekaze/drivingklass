@@ -12,8 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { LogOut, Plus, Pencil, Trash2, Download, ExternalLink, Eye, Search, ImageIcon, X } from "lucide-react";
+import { LogOut, Plus, Pencil, Trash2, Download, ExternalLink, Eye, Search, ImageIcon, X, CheckCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Service {
@@ -34,6 +35,7 @@ interface ContactSubmission {
   message: string | null;
   attachment_url: string | null;
   attachment_name: string | null;
+  status: string | null;
   created_at: string;
 }
 
@@ -50,7 +52,10 @@ export default function Admin() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasIdFilter, setHasIdFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
 
   // Form state for service editing
   const [formData, setFormData] = useState({
@@ -95,8 +100,13 @@ export default function Admin() {
       result = result.filter(s => !s.attachment_url);
     }
 
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter(s => s.status === statusFilter);
+    }
+
     setFilteredSubmissions(result);
-  }, [submissions, searchQuery, hasIdFilter]);
+  }, [submissions, searchQuery, hasIdFilter, statusFilter]);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -126,6 +136,53 @@ export default function Admin() {
     }
 
     setIsLoadingData(false);
+  };
+
+  // Generate signed URL for a file path (from private bucket)
+  const getSignedUrl = async (filePath: string): Promise<string | null> => {
+    // Check if already cached
+    if (signedUrls[filePath]) {
+      return signedUrls[filePath];
+    }
+
+    setLoadingImages(prev => ({ ...prev, [filePath]: true }));
+
+    try {
+      // Try the new id-uploads bucket first
+      let bucket = "id-uploads";
+      let path = filePath;
+
+      // If path doesn't include contact-ids, it might be from old contact-attachments bucket
+      if (!filePath.startsWith("contact-ids/")) {
+        bucket = "contact-attachments";
+      }
+
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, 3600); // 1 hour expiry
+
+      if (error) {
+        console.error("Error creating signed URL:", error);
+        // Fallback: try as public URL from contact-attachments
+        const { data: publicData } = supabase.storage
+          .from("contact-attachments")
+          .getPublicUrl(filePath);
+        
+        if (publicData?.publicUrl) {
+          setSignedUrls(prev => ({ ...prev, [filePath]: publicData.publicUrl }));
+          return publicData.publicUrl;
+        }
+        return null;
+      }
+
+      setSignedUrls(prev => ({ ...prev, [filePath]: data.signedUrl }));
+      return data.signedUrl;
+    } catch (err) {
+      console.error("Error getting signed URL:", err);
+      return null;
+    } finally {
+      setLoadingImages(prev => ({ ...prev, [filePath]: false }));
+    }
   };
 
   const handleSignOut = async () => {
@@ -233,19 +290,56 @@ export default function Admin() {
     }
   };
 
-  const openSubmissionDetail = (submission: ContactSubmission) => {
-    setSelectedSubmission(submission);
-    setIsDetailOpen(true);
+  const handleMarkAsReviewed = async (id: string) => {
+    const { error } = await supabase
+      .from("contact_submissions")
+      .update({ status: "reviewed" })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to update status");
+    } else {
+      toast.success("Marked as reviewed");
+      fetchData();
+      if (selectedSubmission?.id === id) {
+        setSelectedSubmission(prev => prev ? { ...prev, status: "reviewed" } : null);
+      }
+    }
   };
 
-  const getAttachmentUrls = (submission: ContactSubmission): string[] => {
+  const openSubmissionDetail = async (submission: ContactSubmission) => {
+    setSelectedSubmission(submission);
+    setIsDetailOpen(true);
+
+    // Pre-fetch signed URLs for attachments
+    if (submission.attachment_url) {
+      const paths = submission.attachment_url.split(",").filter(p => p.trim());
+      for (const path of paths) {
+        if (!signedUrls[path]) {
+          getSignedUrl(path);
+        }
+      }
+    }
+  };
+
+  const getAttachmentPaths = (submission: ContactSubmission): string[] => {
     if (!submission.attachment_url) return [];
-    return submission.attachment_url.split(",").filter(url => url.trim());
+    return submission.attachment_url.split(",").filter(path => path.trim());
   };
 
   const getAttachmentNames = (submission: ContactSubmission): string[] => {
     if (!submission.attachment_name) return [];
     return submission.attachment_name.split(",").filter(name => name.trim());
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case "reviewed":
+        return <Badge variant="default" className="bg-green-600">Reviewed</Badge>;
+      case "new":
+      default:
+        return <Badge variant="secondary">New</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -472,6 +566,16 @@ export default function Admin() {
                       <SelectItem value="no">No ID Upload</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="reviewed">Reviewed</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
@@ -491,6 +595,7 @@ export default function Admin() {
                           <TableHead>Email</TableHead>
                           <TableHead>Phone</TableHead>
                           <TableHead>City</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Has ID?</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -513,6 +618,7 @@ export default function Admin() {
                               </a>
                             </TableCell>
                             <TableCell>{submission.city || "-"}</TableCell>
+                            <TableCell>{getStatusBadge(submission.status)}</TableCell>
                             <TableCell>
                               {submission.attachment_url ? (
                                 <span className="inline-flex items-center gap-1 text-green-600">
@@ -559,7 +665,10 @@ export default function Admin() {
           {selectedSubmission && (
             <>
               <SheetHeader>
-                <SheetTitle>Submission Details</SheetTitle>
+                <SheetTitle className="flex items-center gap-3">
+                  Submission Details
+                  {getStatusBadge(selectedSubmission.status)}
+                </SheetTitle>
               </SheetHeader>
               <div className="mt-6 space-y-6">
                 <div>
@@ -600,50 +709,80 @@ export default function Admin() {
                 </div>
 
                 {/* ID Images */}
-                {getAttachmentUrls(selectedSubmission).length > 0 && (
+                {getAttachmentPaths(selectedSubmission).length > 0 && (
                   <div>
                     <Label className="text-muted-foreground text-sm">ID Images</Label>
                     <div className="mt-2 grid grid-cols-2 gap-3">
-                      {getAttachmentUrls(selectedSubmission).map((url, index) => (
-                        <div key={index} className="space-y-2">
-                          <div 
-                            className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setImagePreview(url)}
-                          >
-                            <img
-                              src={url}
-                              alt={`ID ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-muted-foreground truncate flex-1">
-                              {getAttachmentNames(selectedSubmission)[index] || `ID ${index + 1}`}
-                            </p>
-                            <a
-                              href={url}
-                              download
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
+                      {getAttachmentPaths(selectedSubmission).map((path, index) => {
+                        const url = signedUrls[path];
+                        const isLoading = loadingImages[path];
+                        
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div 
+                              className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity bg-muted"
+                              onClick={() => url && setImagePreview(url)}
                             >
-                              <Download className="w-4 h-4" />
-                            </a>
+                              {isLoading ? (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                </div>
+                              ) : url ? (
+                                <img
+                                  src={url}
+                                  alt={`ID ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                  <ImageIcon className="w-8 h-8" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground truncate flex-1">
+                                {getAttachmentNames(selectedSubmission)[index] || `ID ${index + 1}`}
+                              </p>
+                              {url && (
+                                <a
+                                  href={url}
+                                  download
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </a>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => handleDeleteSubmission(selectedSubmission.id)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Submission
-                </Button>
+                {/* Action buttons */}
+                <div className="space-y-3 pt-4 border-t">
+                  {selectedSubmission.status !== "reviewed" && (
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleMarkAsReviewed(selectedSubmission.id)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark as Reviewed
+                    </Button>
+                  )}
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => handleDeleteSubmission(selectedSubmission.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Submission
+                  </Button>
+                </div>
               </div>
             </>
           )}
