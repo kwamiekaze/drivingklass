@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import splashVideo from '@/assets/splash-video.mov';
-import goldCarSplash from '@/assets/gold-car-splash.png';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -58,46 +57,28 @@ export function SplashScreen({ onComplete, duration = 6000 }: SplashScreenProps)
         transition: 'opacity 600ms ease-out',
       }}
     >
-      {/* Full-screen video or fallback poster */}
-      {!videoError ? (
-        <video
-          ref={videoRef}
-          src={splashVideo}
-          poster={goldCarSplash}
-          autoPlay
-          muted
-          loop
-          playsInline
-          onLoadedData={handleVideoLoaded}
-          onError={handleVideoError}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-            opacity: videoLoaded ? 1 : 0,
-            transition: 'opacity 500ms ease-out',
-          }}
-        />
-      ) : (
-        /* Fallback poster image if video fails */
-        <img
-          src={goldCarSplash}
-          alt="DrivingKlass"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-          }}
-        />
-      )}
+      {/* Full-screen video */}
+      <video
+        ref={videoRef}
+        src={splashVideo}
+        autoPlay
+        muted
+        loop
+        playsInline
+        onLoadedData={handleVideoLoaded}
+        onError={handleVideoError}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          opacity: videoLoaded ? 1 : 0,
+          transition: 'opacity 500ms ease-out',
+        }}
+      />
 
       {/* Skip hint - positioned safely from edges */}
       <div
