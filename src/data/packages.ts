@@ -45,7 +45,7 @@ export const PACKAGES: Package[] = [
   {
     id: "8hr",
     label: "8 HR",
-    price: "$499.00",
+    price: "$450.00",
     description: "Four Sessions Driving Package. This package includes four (4), two-hour behind-the-wheel driving klasses, with convenient pick-up and drop-off from your home, workplace, or school.",
     squareUrl: "https://square.link/u/M2d0Bcmb?src=sheet",
     positionIndex: 4,
