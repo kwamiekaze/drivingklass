@@ -10,8 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Plus, Pencil, Trash2, Download, ExternalLink } from "lucide-react";
+import { LogOut, Plus, Pencil, Trash2, Download, ExternalLink, Eye, Search, ImageIcon, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Service {
@@ -40,9 +42,15 @@ export default function Admin() {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<ContactSubmission[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hasIdFilter, setHasIdFilter] = useState<string>("all");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Form state for service editing
   const [formData, setFormData] = useState({
@@ -64,6 +72,31 @@ export default function Admin() {
       fetchData();
     }
   }, [user, isAdmin]);
+
+  // Filter submissions
+  useEffect(() => {
+    let result = [...submissions];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        s =>
+          s.full_name.toLowerCase().includes(query) ||
+          s.email.toLowerCase().includes(query) ||
+          s.phone.toLowerCase().includes(query)
+      );
+    }
+
+    // Has ID filter
+    if (hasIdFilter === "yes") {
+      result = result.filter(s => s.attachment_url);
+    } else if (hasIdFilter === "no") {
+      result = result.filter(s => !s.attachment_url);
+    }
+
+    setFilteredSubmissions(result);
+  }, [submissions, searchQuery, hasIdFilter]);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -131,7 +164,6 @@ export default function Admin() {
     }
 
     if (editingService) {
-      // Update existing service
       const { error } = await supabase
         .from("services")
         .update({
@@ -151,7 +183,6 @@ export default function Admin() {
         setIsDialogOpen(false);
       }
     } else {
-      // Create new service
       const { error } = await supabase
         .from("services")
         .insert({
@@ -195,7 +226,26 @@ export default function Admin() {
     } else {
       toast.success("Submission deleted");
       fetchData();
+      if (selectedSubmission?.id === id) {
+        setIsDetailOpen(false);
+        setSelectedSubmission(null);
+      }
     }
+  };
+
+  const openSubmissionDetail = (submission: ContactSubmission) => {
+    setSelectedSubmission(submission);
+    setIsDetailOpen(true);
+  };
+
+  const getAttachmentUrls = (submission: ContactSubmission): string[] => {
+    if (!submission.attachment_url) return [];
+    return submission.attachment_url.split(",").filter(url => url.trim());
+  };
+
+  const getAttachmentNames = (submission: ContactSubmission): string[] => {
+    if (!submission.attachment_name) return [];
+    return submission.attachment_name.split(",").filter(name => name.trim());
   };
 
   if (isLoading) {
@@ -400,13 +450,36 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle>Contact Submissions</CardTitle>
                 <CardDescription>View and manage contact form submissions</CardDescription>
+                
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, email, or phone..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={hasIdFilter} onValueChange={setHasIdFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Has ID Upload" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Submissions</SelectItem>
+                      <SelectItem value="yes">Has ID Upload</SelectItem>
+                      <SelectItem value="no">No ID Upload</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoadingData ? (
                   <div className="text-center py-8 text-muted-foreground">Loading...</div>
-                ) : submissions.length === 0 ? (
+                ) : filteredSubmissions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No submissions yet.
+                    {submissions.length === 0 ? "No submissions yet." : "No submissions match your filters."}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -418,13 +491,12 @@ export default function Admin() {
                           <TableHead>Email</TableHead>
                           <TableHead>Phone</TableHead>
                           <TableHead>City</TableHead>
-                          <TableHead>Message</TableHead>
-                          <TableHead>Attachment</TableHead>
+                          <TableHead>Has ID?</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {submissions.map((submission) => (
+                        {filteredSubmissions.map((submission) => (
                           <TableRow key={submission.id}>
                             <TableCell className="whitespace-nowrap">
                               {new Date(submission.created_at).toLocaleDateString()}
@@ -441,33 +513,33 @@ export default function Admin() {
                               </a>
                             </TableCell>
                             <TableCell>{submission.city || "-"}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {submission.message || "-"}
-                            </TableCell>
                             <TableCell>
                               {submission.attachment_url ? (
-                                <a
-                                  href={submission.attachment_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline flex items-center gap-1"
-                                >
-                                  <Download className="w-3 h-3" />
-                                  {submission.attachment_name || "File"}
-                                </a>
+                                <span className="inline-flex items-center gap-1 text-green-600">
+                                  <ImageIcon className="w-4 h-4" /> Yes
+                                </span>
                               ) : (
-                                "-"
+                                <span className="text-muted-foreground">No</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteSubmission(submission.id)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openSubmissionDetail(submission)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteSubmission(submission.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -480,6 +552,124 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Submission Detail Sheet */}
+      <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedSubmission && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Submission Details</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-6">
+                <div>
+                  <Label className="text-muted-foreground text-sm">Date</Label>
+                  <p className="font-medium">
+                    {new Date(selectedSubmission.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">Full Name</Label>
+                  <p className="font-medium">{selectedSubmission.full_name}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">Email</Label>
+                  <p>
+                    <a href={`mailto:${selectedSubmission.email}`} className="text-primary hover:underline">
+                      {selectedSubmission.email}
+                    </a>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">Phone</Label>
+                  <p>
+                    <a href={`tel:${selectedSubmission.phone}`} className="text-primary hover:underline">
+                      {selectedSubmission.phone}
+                    </a>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">City</Label>
+                  <p className="font-medium">{selectedSubmission.city || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">Message</Label>
+                  <p className="whitespace-pre-wrap bg-muted p-3 rounded-lg text-sm">
+                    {selectedSubmission.message || "-"}
+                  </p>
+                </div>
+
+                {/* ID Images */}
+                {getAttachmentUrls(selectedSubmission).length > 0 && (
+                  <div>
+                    <Label className="text-muted-foreground text-sm">ID Images</Label>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      {getAttachmentUrls(selectedSubmission).map((url, index) => (
+                        <div key={index} className="space-y-2">
+                          <div 
+                            className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setImagePreview(url)}
+                          >
+                            <img
+                              src={url}
+                              alt={`ID ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-muted-foreground truncate flex-1">
+                              {getAttachmentNames(selectedSubmission)[index] || `ID ${index + 1}`}
+                            </p>
+                            <a
+                              href={url}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleDeleteSubmission(selectedSubmission.id)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Submission
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Image Preview Modal */}
+      {imagePreview && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setImagePreview(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+            onClick={() => setImagePreview(null)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img
+            src={imagePreview}
+            alt="ID Preview"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

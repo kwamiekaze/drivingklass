@@ -2,14 +2,9 @@ import { Link } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
-import { GalaxyStars } from "./GalaxyStars";
-import { useTheme } from "./ThemeProvider";
 import goldCar from "@/assets/gold-car-transparent.png";
 
 export function HeroSection() {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-
   const handlePackageSelect = (packageId: string) => {
     console.log("Selected package:", packageId);
     // TODO: Link to Square payment when ready
@@ -17,29 +12,6 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-start overflow-hidden px-4 py-6 sm:py-8">
-      {/* Background - Deep cinematic gradient */}
-      <div 
-        className="absolute inset-0 transition-colors duration-500"
-        style={{
-          background: isDark 
-            ? 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)'
-            : 'radial-gradient(ellipse at center, hsl(45 40% 95%) 0%, hsl(45 35% 92%) 50%, hsl(45 30% 88%) 100%)',
-        }}
-      />
-      
-      {/* Subtle gold atmospheric glow in center - deeper for dark mode */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: isDark
-            ? 'radial-gradient(ellipse 80% 60% at 50% 55%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)'
-            : 'radial-gradient(ellipse at center, hsl(43 74% 49% / 0.08) 0%, transparent 50%)',
-        }}
-      />
-      
-      {/* Galaxy stars - realistic astronomical background */}
-      {isDark && <GalaxyStars />}
-
       {/* Admin link - top right */}
       <Link
         to="/auth"
