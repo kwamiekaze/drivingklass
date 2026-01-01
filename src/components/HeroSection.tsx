@@ -4,7 +4,7 @@ import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
 import { GoldParticles } from "./GoldParticles";
 import { useTheme } from "./ThemeProvider";
-import goldCar from "@/assets/gold-car.png";
+import goldCar from "@/assets/gold-car-transparent.png";
 
 export function HeroSection() {
   const { resolvedTheme } = useTheme();
