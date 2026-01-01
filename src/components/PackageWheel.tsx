@@ -2,11 +2,78 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
-import { getPackagesSortedByPosition, getPackageById, type Package } from "@/data/packages";
+import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
 
 interface PackageWheelProps {
   carImageSrc: string;
   onPackageSelect?: (packageId: string) => void;
+}
+
+// Price label component - positioned inside the circle
+function PriceLabel({ 
+  price, 
+  angle, 
+  containerSize 
+}: { 
+  price: string; 
+  angle: number; 
+  containerSize: number;
+}) {
+  // Calculate position inside the ring (toward the car)
+  // Use smaller radius than buttons
+  const isMobile = containerSize < 400;
+  const labelRadiusOffset = isMobile ? 65 : 85;
+  
+  // Button radius is 50% of container, label is closer to center
+  const buttonRadiusPx = containerSize * 0.5;
+  const labelRadiusPx = buttonRadiusPx - labelRadiusOffset;
+  const labelRadiusPercent = (labelRadiusPx / containerSize) * 100;
+  
+  const angleRad = angle * (Math.PI / 180);
+  const x = Math.cos(angleRad) * labelRadiusPercent;
+  const y = Math.sin(angleRad) * labelRadiusPercent;
+
+  return (
+    <div 
+      className="absolute z-20 pointer-events-none animate-scale-in"
+      style={{
+        left: `calc(50% + ${x}%)`,
+        top: `calc(50% + ${y}%)`,
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      {/* Small caret/line pointing toward the button */}
+      <div 
+        className="absolute w-3 h-[2px] opacity-60"
+        style={{
+          background: 'linear-gradient(90deg, transparent, hsl(43 70% 50%))',
+          left: '50%',
+          top: '50%',
+          transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+          transformOrigin: 'center',
+        }}
+      />
+      
+      {/* Price pill/badge */}
+      <span 
+        className={cn(
+          "relative block px-2 py-1 rounded-md font-bold whitespace-nowrap",
+          "text-[10px] sm:text-xs md:text-sm"
+        )}
+        style={{
+          background: 'linear-gradient(135deg, hsl(30 12% 10% / 0.92) 0%, hsl(25 10% 6% / 0.95) 100%)',
+          border: '1px solid hsl(43 65% 45% / 0.6)',
+          color: 'hsl(43 90% 62%)',
+          boxShadow: '0 2px 12px hsl(0 0% 0% / 0.5), 0 0 18px hsl(43 80% 52% / 0.18), inset 0 1px 0 hsl(43 50% 50% / 0.15)',
+          textShadow: '0 0 8px hsl(43 80% 52% / 0.4)',
+          maxWidth: isMobile ? '55px' : '80px',
+          textAlign: 'center',
+        }}
+      >
+        {price}
+      </span>
+    </div>
+  );
 }
 
 export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps) {
@@ -14,9 +81,25 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [containerSize, setContainerSize] = useState(320);
 
   const packages = useMemo(() => getPackagesSortedByPosition(), []);
   const totalButtons = packages.length;
+
+  // Detect container size for responsive positioning
+  useEffect(() => {
+    const updateSize = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) setContainerSize(600);
+      else if (width >= 768) setContainerSize(500);
+      else if (width >= 640) setContainerSize(400);
+      else setContainerSize(320);
+    };
+    
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // Auto-orbit animation - runs only before user selection
   useEffect(() => {
@@ -44,44 +127,36 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   // Calculate button positions in a circle
   // Starting from top (12 o'clock position) and going clockwise
   const buttonPositions = useMemo(() => {
-    const positions: { x: number; y: number; angle: number; pricePosition: 'top' | 'bottom' | 'left' | 'right' }[] = [];
+    const positions: { x: number; y: number; angle: number }[] = [];
     
     for (let i = 0; i < totalButtons; i++) {
       // Start at -90 degrees (12 o'clock) so first package is at top
       const angleDegrees = (i / totalButtons) * 360 - 90;
       const angle = angleDegrees * (Math.PI / 180);
       
-      // Determine price label position based on angle
-      let pricePosition: 'top' | 'bottom' | 'left' | 'right';
-      const normalizedAngle = ((angleDegrees + 90) % 360 + 360) % 360;
-      
-      if (normalizedAngle >= 315 || normalizedAngle < 45) {
-        pricePosition = 'top';
-      } else if (normalizedAngle >= 45 && normalizedAngle < 135) {
-        pricePosition = 'right';
-      } else if (normalizedAngle >= 135 && normalizedAngle < 225) {
-        pricePosition = 'bottom';
-      } else {
-        pricePosition = 'left';
-      }
-      
       positions.push({
         x: Math.cos(angle) * 50, // 50% from center
         y: Math.sin(angle) * 50,
         angle: angleDegrees,
-        pricePosition,
       });
     }
     return positions;
   }, [totalButtons]);
 
   const selectedPackage = selectedPackageId ? getPackageById(selectedPackageId) : null;
+  const selectedIndex = selectedPackageId 
+    ? packages.findIndex(p => p.id === selectedPackageId) 
+    : -1;
 
   return (
     <div className="relative w-full flex flex-col items-center">
-      {/* Package wheel container */}
+      {/* Package wheel container - overflow visible for internal elements */}
       <div 
-        className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
+        className="relative overflow-visible"
+        style={{
+          width: containerSize,
+          height: containerSize,
+        }}
       >
         
         {/* HERO CENTER LAYER - Completely isolated, static, no interaction effects */}
@@ -125,7 +200,16 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
           </div>
         </div>
 
-        {/* Package buttons positioned in circle */}
+        {/* Price label layer - above glow, below buttons */}
+        {selectedPackageId && selectedIndex >= 0 && (
+          <PriceLabel
+            price={packages[selectedIndex].price}
+            angle={buttonPositions[selectedIndex].angle}
+            containerSize={containerSize}
+          />
+        )}
+
+        {/* Package buttons positioned in circle - topmost layer */}
         {packages.map((pkg, index) => {
           const pos = buttonPositions[index];
           const isHighlighted = !hasUserSelected && highlightedIndex === index;
@@ -135,11 +219,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
             <PackageButton
               key={pkg.id}
               label={pkg.label}
-              price={pkg.price}
               isSelected={isSelected}
               isHighlighted={isHighlighted}
-              showPrice={isSelected}
-              pricePosition={pos.pricePosition}
               onClick={() => handlePackageClick(pkg.id)}
               style={{
                 left: `calc(50% + ${pos.x}%)`,
