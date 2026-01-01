@@ -3,11 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="hsl(30 10% 3%)" />
+
+    <!-- Prevent theme flash: set html[data-theme] + .dark before React mounts -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme");
+          var theme = stored === "light" || stored === "dark" ? stored : "dark";
+          var root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.toggle("dark", theme === "dark");
+
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute(
+              "content",
+              theme === "dark" ? "hsl(30 10% 3%)" : "hsl(42 45% 96%)"
+            );
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <title>Driving Klass | Where 5-Star Drivers Are Made</title>
     <meta name="description" content="Where 5-Star Drivers Are Made - Premier luxury driving school offering professional driving lessons, road test preparation, and expert instruction." />
     <meta name="author" content="Driving Klass" />
     <meta name="keywords" content="driving school, driving lessons, road test, driver education, learn to drive, professional driving instruction" />
-    
+
     <link rel="canonical" href="https://drivingklass.lovable.app" />
 
     <!-- Open Graph / Facebook -->
@@ -27,9 +50,9 @@
     <meta name="twitter:image" content="https://drivingklass.lovable.app/og-image.jpg" />
 
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
 
   <body>

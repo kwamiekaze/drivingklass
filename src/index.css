@@ -6,48 +6,121 @@
 
 @layer base {
   :root {
-    /* LIGHT MODE - Warm Sunlit Driving School Theme */
-    /* Soft warm cream / sunlit ivory background */
-    --background: 42 45% 96%;
-    --foreground: 0 0% 11%;
+    /* ========================================= */
+    /* THEME SINGLE SOURCE OF TRUTH
+       html[data-theme] controls CSS variables
+       html.dark exists only for Tailwind dark: variants
+       Default = DARK on first load.
+    */
+    /* ========================================= */
 
-    /* Light sand / warm beige for cards */
-    --card: 40 40% 94%;
-    --card-foreground: 0 0% 11%;
+    color-scheme: dark;
+
+    /* Explicit theme vars (requested) */
+    --bg: 30 10% 3%;
+    --bg2: 30 8% 8%;
+    --text: 42 30% 92%;
+    --mutedText: 42 20% 60%;
+    --gold: 43 80% 52%;
+    --outline: 30 8% 20%;
+    --shadow: 0 0% 0%;
+
+    /* Shadcn design tokens (mapped to explicit vars) */
+    --background: var(--bg);
+    --foreground: var(--text);
+
+    --card: var(--bg2);
+    --card-foreground: var(--text);
+
+    --popover: var(--bg2);
+    --popover-foreground: var(--text);
+
+    --primary: var(--gold);
+    --primary-foreground: 30 10% 5%;
+
+    --secondary: 30 5% 12%;
+    --secondary-foreground: 42 30% 90%;
+
+    --muted: 30 5% 18%;
+    --muted-foreground: var(--mutedText);
+
+    --accent: 40 75% 55%;
+    --accent-foreground: 30 10% 5%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: var(--outline);
+    --input: 30 5% 15%;
+    --ring: var(--gold);
+
+    --radius: 0.75rem;
+
+    /* Gold palette tokens */
+    --gold-light: 45 75% 68%;
+    --gold-dark: 38 85% 38%;
+    --gold-shimmer: 48 90% 78%;
+    --champagne: 42 40% 85%;
+
+    /* Driving school accent colors */
+    --cone-orange: 28 100% 55%;
+    --asphalt: 0 0% 17%;
+    --sky-blue: 200 50% 90%;
+
+    --sidebar-background: 30 8% 6%;
+    --sidebar-foreground: 42 30% 90%;
+    --sidebar-primary: var(--gold);
+    --sidebar-primary-foreground: 30 10% 5%;
+    --sidebar-accent: 30 5% 12%;
+    --sidebar-accent-foreground: 42 30% 90%;
+    --sidebar-border: var(--outline);
+    --sidebar-ring: var(--gold);
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    /* Explicit theme vars (requested) */
+    --bg: 42 45% 96%;
+    --bg2: 40 40% 94%;
+    --text: 0 0% 11%;
+    --mutedText: 0 0% 35%;
+    --gold: 43 74% 49%;
+    --outline: 40 30% 82%;
+    --shadow: 0 0% 0%;
+
+    --background: var(--bg);
+    --foreground: var(--text);
+
+    --card: var(--bg2);
+    --card-foreground: var(--text);
 
     --popover: 42 45% 97%;
-    --popover-foreground: 0 0% 11%;
+    --popover-foreground: var(--text);
 
-    /* Gold Primary - Rich metallic gold */
-    --primary: 43 74% 49%;
+    --primary: var(--gold);
     --primary-foreground: 0 0% 5%;
 
-    /* Champagne Secondary */
     --secondary: 40 35% 90%;
     --secondary-foreground: 0 0% 15%;
 
     --muted: 42 30% 88%;
-    --muted-foreground: 0 0% 35%;
+    --muted-foreground: var(--mutedText);
 
-    /* Gold Accent */
-    --accent: 43 74% 49%;
+    --accent: var(--gold);
     --accent-foreground: 0 0% 5%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 30% 82%;
+    --border: var(--outline);
     --input: 40 35% 92%;
-    --ring: 43 74% 49%;
-
-    --radius: 0.75rem;
+    --ring: var(--gold);
 
     /* Gold palette tokens - light mode */
-    --gold: 43 74% 49%;
     --gold-light: 45 70% 62%;
     --gold-dark: 38 80% 38%;
     --gold-shimmer: 48 85% 72%;
-    --champagne: 42 40% 85%;
 
     /* Driving school accent colors */
     --cone-orange: 28 100% 55%;
@@ -56,69 +129,15 @@
 
     --sidebar-background: 42 35% 95%;
     --sidebar-foreground: 0 0% 13%;
-    --sidebar-primary: 43 74% 49%;
+    --sidebar-primary: var(--gold);
     --sidebar-primary-foreground: 0 0% 5%;
     --sidebar-accent: 42 30% 90%;
     --sidebar-accent-foreground: 0 0% 12%;
     --sidebar-border: 40 30% 85%;
-    --sidebar-ring: 43 74% 49%;
-  }
-
-  .dark {
-    /* Dark Mode - Rich Black with Gold like reference images */
-    --background: 30 10% 3%;
-    --foreground: 42 30% 92%;
-
-    --card: 30 8% 8%;
-    --card-foreground: 42 30% 92%;
-
-    --popover: 30 8% 8%;
-    --popover-foreground: 42 30% 92%;
-
-    /* Gold Primary - brighter for dark mode */
-    --primary: 43 80% 52%;
-    --primary-foreground: 30 10% 5%;
-
-    /* Dark Secondary */
-    --secondary: 30 5% 12%;
-    --secondary-foreground: 42 30% 90%;
-
-    --muted: 30 5% 18%;
-    --muted-foreground: 42 20% 60%;
-
-    /* Gold Accent */
-    --accent: 40 75% 55%;
-    --accent-foreground: 30 10% 5%;
-
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 30 8% 20%;
-    --input: 30 5% 15%;
-    --ring: 43 80% 52%;
-
-    /* Gold palette tokens - brighter for dark mode */
-    --gold: 43 80% 52%;
-    --gold-light: 45 75% 68%;
-    --gold-dark: 38 85% 38%;
-    --gold-shimmer: 48 90% 78%;
-    --champagne: 42 40% 85%;
-
-    /* Driving school accent colors - dark mode */
-    --cone-orange: 28 100% 55%;
-    --asphalt: 0 0% 17%;
-    --sky-blue: 200 50% 90%;
-
-    --sidebar-background: 30 8% 6%;
-    --sidebar-foreground: 42 30% 90%;
-    --sidebar-primary: 43 80% 52%;
-    --sidebar-primary-foreground: 30 10% 5%;
-    --sidebar-accent: 30 5% 12%;
-    --sidebar-accent-foreground: 42 30% 90%;
-    --sidebar-border: 30 8% 20%;
-    --sidebar-ring: 43 80% 52%;
+    --sidebar-ring: var(--gold);
   }
 }
+
 
 @layer base {
   * {
@@ -386,7 +405,7 @@
 
   /* Neon gold text styling */
   .text-neon-gold {
-    color: #FFD700;
+    color: hsl(var(--gold-shimmer));
     font-family: 'Poppins', system-ui, sans-serif;
     font-weight: 800;
   }
@@ -396,53 +415,52 @@
   /* ========================================= */
 
   /* Light mode heading - charcoal with gold glow */
-  .light .light-heading {
-    color: #1C1C1C;
-    text-shadow: 
-      0 0 1px rgba(212, 175, 55, 0.9),
-      0 0 6px rgba(212, 175, 55, 0.35);
+  :root[data-theme="light"] .light-heading {
+    color: hsl(var(--foreground));
+    text-shadow:
+      0 0 1px hsl(var(--gold) / 0.9),
+      0 0 6px hsl(var(--gold) / 0.35);
   }
 
   /* Light mode body text - near black, no gold */
-  .light .light-body-text {
-    color: #2A2A2A;
+  :root[data-theme="light"] .light-body-text {
+    color: hsl(var(--foreground));
   }
 
   /* Light mode button/label text - readable on gold */
-  .light .light-button-text {
-    color: #1C1C1C;
+  :root[data-theme="light"] .light-button-text {
+    color: hsl(var(--foreground));
     text-shadow: none;
   }
 
   /* Light mode gold text for accents */
-  .light .light-gold-accent {
-    color: hsl(38 80% 38%);
-    text-shadow: 
-      0 0 2px rgba(212, 175, 55, 0.5);
+  :root[data-theme="light"] .light-gold-accent {
+    color: hsl(var(--gold-dark));
+    text-shadow: 0 0 2px hsl(var(--gold) / 0.5);
   }
 
   /* Legacy light mode readability - black with gold outline */
-  .light .text-light-readable {
-    color: #0b0b0b;
-    text-shadow: 
-      0 0 1px rgba(212, 175, 55, 0.9),
-      0 0 6px rgba(212, 175, 55, 0.35);
+  :root[data-theme="light"] .text-light-readable {
+    color: hsl(var(--foreground));
+    text-shadow:
+      0 0 1px hsl(var(--gold) / 0.9),
+      0 0 6px hsl(var(--gold) / 0.35);
   }
 
   /* Legacy light mode headings with gold stroke effect */
-  .light .heading-gold-stroke {
-    color: #1a1a1a;
-    text-shadow: 
-      0 0 2px rgba(212, 175, 55, 0.8),
-      0 0 8px rgba(212, 175, 55, 0.4),
-      1px 1px 0 rgba(212, 175, 55, 0.3),
-      -1px -1px 0 rgba(212, 175, 55, 0.3);
+  :root[data-theme="light"] .heading-gold-stroke {
+    color: hsl(var(--foreground));
+    text-shadow:
+      0 0 2px hsl(var(--gold) / 0.8),
+      0 0 8px hsl(var(--gold) / 0.4),
+      1px 1px 0 hsl(var(--gold) / 0.3),
+      -1px -1px 0 hsl(var(--gold) / 0.3);
   }
 
   /* Legacy light mode form labels with readability */
-  .light .label-readable {
-    color: #2a2a2a;
-    text-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
+  :root[data-theme="light"] .label-readable {
+    color: hsl(var(--foreground));
+    text-shadow: 0 0 4px hsl(var(--gold) / 0.5);
   }
 
   @keyframes headlight-flicker {
