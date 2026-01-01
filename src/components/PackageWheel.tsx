@@ -68,29 +68,42 @@ export function PackageWheel({ carImageSrc, onPackageSelect, carGlow = false }: 
         className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
       >
         
-        {/* Center car container */}
+        {/* Center car container - scaled up 15% for more presence */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className={cn(
-            "relative w-[50%] flex items-center justify-center transition-all duration-300",
+            "relative w-[58%] flex items-center justify-center transition-all duration-300",
             (isCarGlowing || carGlow) && "brightness-105"
           )}>
-            {/* Cinematic shadow/reflection under car */}
+            {/* Radial glow behind car for enhanced presence */}
             <div 
-              className="absolute bottom-[-8%] left-1/2 -translate-x-1/2 w-[85%] h-8"
+              className="absolute inset-0 flex items-center justify-center"
               style={{
-                background: 'radial-gradient(ellipse at center, hsl(0 0% 0% / 0.6) 0%, hsl(0 0% 0% / 0.3) 40%, transparent 70%)',
-                filter: 'blur(12px)',
+                background: 'radial-gradient(ellipse 80% 60% at center, hsl(43 60% 40% / 0.15) 0%, hsl(40 50% 35% / 0.08) 35%, transparent 70%)',
+                filter: 'blur(20px)',
+                transform: 'scale(1.3)',
               }}
             />
             
-            {/* Car image */}
+            {/* Cinematic shadow/reflection under car */}
+            <div 
+              className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-10"
+              style={{
+                background: 'radial-gradient(ellipse at center, hsl(0 0% 0% / 0.65) 0%, hsl(0 0% 0% / 0.35) 45%, transparent 75%)',
+                filter: 'blur(14px)',
+              }}
+            />
+            
+            {/* Car image with enhanced contrast */}
             <img 
               src={carImageSrc} 
               alt="DRIVINGKLASS Gold Car" 
               className={cn(
-                "w-full h-auto object-contain transition-all duration-300",
+                "w-full h-auto object-contain transition-all duration-300 relative z-10",
                 (isCarGlowing || carGlow) && "brightness-110"
               )}
+              style={{
+                filter: 'contrast(1.08) saturate(1.05)',
+              }}
             />
           </div>
         </div>
