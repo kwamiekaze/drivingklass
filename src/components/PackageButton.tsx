@@ -6,6 +6,8 @@ interface PackageButtonProps {
   isSelected: boolean;
   isHighlighted?: boolean;
   onClick: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   style?: React.CSSProperties;
 }
 
@@ -14,6 +16,8 @@ export function PackageButton({
   isSelected, 
   isHighlighted = false,
   onClick, 
+  onMouseEnter,
+  onMouseLeave,
   style,
 }: PackageButtonProps) {
   const { resolvedTheme } = useTheme();
@@ -23,6 +27,8 @@ export function PackageButton({
   return (
     <button
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       style={{
         ...style,
         // Metallic gold ring gradient - consistent across themes
