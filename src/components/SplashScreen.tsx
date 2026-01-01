@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import '@fontsource/pinyon-script';
 import goldCarSplash from '@/assets/gold-car-splash.png';
 
@@ -65,105 +65,166 @@ export function SplashScreen({ onComplete, duration = 5500 }: SplashScreenProps)
   // Glow pulse intensity
   const glowIntensity = Math.sin(glowPulse * 0.03) * 0.15 + 0.85;
 
+  // Generate distant galaxy stars
+  const galaxyStars = Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    top: Math.random() * 100,
+    size: Math.random() * 1.5 + 0.5,
+    opacity: Math.random() * 0.25 + 0.05,
+    delay: Math.random() * 20,
+    duration: 15 + Math.random() * 10,
+  }));
+
   return (
     <div
-      className={`fixed inset-0 flex flex-col items-center justify-center overflow-hidden transition-opacity duration-600 ${
-        isFading ? 'opacity-0' : 'opacity-100'
-      }`}
-      style={{ 
-        background: 'radial-gradient(ellipse at center, #0a0806 0%, #030201 50%, #000000 100%)',
-        zIndex: 9999 
+      onClick={() => {
+        setPhase('fade');
+        setTimeout(onComplete, 600);
+      }}
+      className="cursor-pointer"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        overflow: 'hidden',
+        margin: 0,
+        padding: 0,
+        opacity: isFading ? 0 : 1,
+        transition: 'opacity 600ms ease-out',
       }}
     >
-      {/* Deep cinematic vignette */}
+      {/* Full-viewport cinematic background - edge to edge */}
       <div
-        className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.9) 100%)',
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse at center, #0a0806 0%, #030201 50%, #000000 100%)',
         }}
       />
 
-      {/* Subtle ambient gold particles (very distant, no clouds) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(40)].map((_, i) => (
+      {/* Deep cinematic vignette */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.9) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Subtle ambient gold particles - distant galaxy stars */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {galaxyStars.map((star) => (
           <div
-            key={i}
-            className="absolute rounded-full"
+            key={star.id}
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 1.5 + 0.5}px`,
-              height: `${Math.random() * 1.5 + 0.5}px`,
+              position: 'absolute',
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              width: `${star.size}px`,
+              height: `${star.size}px`,
+              borderRadius: '50%',
               background: GOLD.champagne,
-              opacity: showGlow ? (Math.random() * 0.25 + 0.05) : 0,
+              opacity: showGlow ? star.opacity : 0,
               transition: 'opacity 2s ease-out',
-              animation: `float-particle ${15 + Math.random() * 10}s linear infinite`,
-              animationDelay: `${-Math.random() * 20}s`,
+              animation: `float-particle ${star.duration}s linear infinite`,
+              animationDelay: `${-star.delay}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Main content container - 9:16 safe */}
+      {/* Glossy floor surface at bottom */}
       <div
-        className="relative flex flex-col items-center justify-center"
         style={{
-          maxWidth: '100vw',
-          padding: '0 5%',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '35%',
+          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 20%, rgba(3,2,1,0.8) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Main content - car centered in viewport */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         {/* Car container with floor reflection */}
         <div
-          className={`relative transition-all ease-out ${
-            showCar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-          style={{ 
-            width: 'clamp(280px, 70vw, 500px)',
-            transitionDuration: '1200ms',
+          style={{
+            position: 'relative',
+            width: 'min(85vw, 85vh * 1.5, 700px)',
+            opacity: showCar ? 1 : 0,
+            transform: showCar ? 'translateY(0)' : 'translateY(32px)',
+            transition: 'all 1200ms ease-out',
           }}
         >
-          {/* Soft gold glow beneath car (diffused, realistic) */}
+          {/* Soft gold glow beneath car - refined, diffused, polished */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
             style={{
-              bottom: '-5%',
-              width: '85%',
-              height: '35%',
-              background: `radial-gradient(ellipse at center, ${GOLD.glow} 0%, rgba(212, 165, 116, 0.15) 40%, transparent 70%)`,
+              position: 'absolute',
+              bottom: '-8%',
+              left: '10%',
+              right: '10%',
+              height: '40%',
+              background: `radial-gradient(ellipse at center, ${GOLD.glow} 0%, rgba(212, 165, 116, 0.18) 40%, transparent 70%)`,
               opacity: showGlow ? glowIntensity : 0,
               transition: 'opacity 1.2s ease-out',
-              filter: 'blur(20px)',
+              filter: 'blur(25px)',
+              pointerEvents: 'none',
             }}
           />
 
-          {/* The gold sedan */}
+          {/* The gold sedan - fills container, object-fit cover behavior */}
           <img
             src={goldCarSplash}
             alt="DrivingKlass Gold Sedan"
-            className="w-full h-auto relative z-10"
             style={{
-              filter: `drop-shadow(0 25px 40px rgba(0, 0, 0, 0.7)) brightness(${0.95 + headlightBlink * 0.08})`,
+              width: '100%',
+              height: 'auto',
+              objectFit: 'contain',
+              position: 'relative',
+              zIndex: 10,
+              filter: `drop-shadow(0 25px 50px rgba(0, 0, 0, 0.7)) brightness(${0.95 + headlightBlink * 0.08})`,
             }}
           />
 
-          {/* Glossy floor reflection */}
+          {/* Glossy floor reflection beneath car */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 w-[100%] overflow-hidden pointer-events-none"
-            style={{ 
-              bottom: '-20%',
-              height: '45%',
+            style={{
+              position: 'absolute',
+              bottom: '-25%',
+              left: '5%',
+              right: '5%',
+              height: '50%',
+              overflow: 'hidden',
+              pointerEvents: 'none',
             }}
           >
             <img
               src={goldCarSplash}
               alt=""
-              className="w-full h-auto"
               style={{
-                transform: 'scaleY(-0.4) translateY(-60%)',
-                opacity: showGlow ? 0.18 : 0,
-                filter: 'blur(2px) brightness(0.8)',
-                maskImage: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 80%)',
-                WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 80%)',
+                width: '100%',
+                height: 'auto',
+                transform: 'scaleY(-0.4) translateY(-55%)',
+                opacity: showGlow ? 0.15 : 0,
+                filter: 'blur(3px) brightness(0.7)',
+                maskImage: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 75%)',
+                WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 75%)',
                 transition: 'opacity 1s ease-out',
               }}
             />
@@ -172,54 +233,98 @@ export function SplashScreen({ onComplete, duration = 5500 }: SplashScreenProps)
 
         {/* Slogan with luxury cursive script */}
         <div
-          className={`relative mt-8 transition-all ease-out ${
-            showSlogan ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-          }`}
           style={{
-            transitionDuration: '1200ms',
+            position: 'relative',
+            marginTop: '2rem',
+            opacity: showSlogan ? 1 : 0,
+            transform: showSlogan ? 'translateY(0)' : 'translateY(16px)',
+            transition: 'all 1200ms ease-out',
             transitionDelay: showSlogan ? '200ms' : '0ms',
+            padding: '0 1.5rem',
+            textAlign: 'center',
           }}
         >
           <h2
-            className="text-center"
             style={{
               fontFamily: '"Pinyon Script", "Dancing Script", cursive',
               fontSize: 'clamp(1.4rem, 5vw, 2.8rem)',
               fontWeight: 400,
               letterSpacing: '0.03em',
               lineHeight: 1.3,
+              margin: 0,
               background: `linear-gradient(180deg, ${GOLD.shimmer} 0%, ${GOLD.warm} 35%, ${GOLD.metallic} 70%, ${GOLD.deep} 100%)`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              textShadow: 'none',
               filter: 'drop-shadow(0 2px 8px rgba(212, 165, 116, 0.3))',
             }}
           >
             Where 5-Star Drivers Are Made
           </h2>
 
+          {/* Five gold stars */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginTop: '0.75rem',
+              opacity: showSlogan ? 1 : 0,
+              transform: showSlogan ? 'translateY(0)' : 'translateY(8px)',
+              transition: 'all 800ms ease-out 400ms',
+            }}
+          >
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 'clamp(1rem, 3vw, 1.5rem)',
+                  background: `linear-gradient(135deg, ${GOLD.deep} 0%, ${GOLD.metallic} 40%, ${GOLD.shimmer} 60%, ${GOLD.metallic} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  filter: 'drop-shadow(0 1px 4px rgba(212, 165, 116, 0.4))',
+                  animation: `star-glint 2.5s ease-in-out ${i * 0.15}s infinite`,
+                }}
+              >
+                ★
+              </span>
+            ))}
+          </div>
+
           {/* Subtle shimmer pass effect */}
           <div
-            className="absolute inset-0 pointer-events-none overflow-hidden"
             style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              overflow: 'hidden',
               background: `linear-gradient(90deg, transparent 0%, rgba(245, 230, 200, 0.15) 50%, transparent 100%)`,
-              animation: showSlogan ? 'shimmer-pass 2.5s ease-out forwards' : 'none',
-              animationDelay: '0.5s',
+              animation: showSlogan ? 'shimmer-pass 2.5s ease-out 0.5s forwards' : 'none',
               opacity: 0,
             }}
           />
         </div>
       </div>
 
-      {/* Skip button - mobile safe positioning */}
-      <button
-        onClick={onComplete}
-        className="absolute bottom-[8%] left-1/2 -translate-x-1/2 text-xs tracking-[0.2em] uppercase opacity-20 hover:opacity-40 transition-opacity"
-        style={{ color: GOLD.shimmer }}
+      {/* Skip hint - positioned safely from edges */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '0.75rem',
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          color: GOLD.shimmer,
+          opacity: 0.25,
+          pointerEvents: 'none',
+        }}
       >
-        Skip
-      </button>
+        Tap to enter
+      </div>
 
       {/* Keyframes for animations */}
       <style>{`
@@ -234,6 +339,16 @@ export function SplashScreen({ onComplete, duration = 5500 }: SplashScreenProps)
           0% { opacity: 0; transform: translateX(-100%); }
           50% { opacity: 1; }
           100% { opacity: 0; transform: translateX(100%); }
+        }
+        @keyframes star-glint {
+          0%, 100% { 
+            filter: drop-shadow(0 1px 4px rgba(212, 165, 116, 0.4));
+            transform: scale(1);
+          }
+          50% { 
+            filter: drop-shadow(0 2px 8px rgba(232, 184, 109, 0.6));
+            transform: scale(1.1);
+          }
         }
       `}</style>
     </div>
