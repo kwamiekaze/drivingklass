@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      media_uploads: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
