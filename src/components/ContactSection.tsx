@@ -11,18 +11,9 @@ export function ContactSection() {
         {/* Header */}
         <div className="text-center mb-10 md:mb-14">
           <h2 
-            className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-[0.15em] uppercase mb-4"
-            style={{
-              fontFamily: 'inherit',
-              background: 'linear-gradient(135deg, hsl(38 75% 45%) 0%, hsl(43 85% 55%) 30%, hsl(48 90% 72%) 50%, hsl(43 85% 55%) 70%, hsl(38 75% 45%) 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 40px hsl(43 80% 52% / 0.35)',
-              filter: 'drop-shadow(0 0 20px hsl(43 80% 52% / 0.25))',
-            }}
+            className="text-3xl md:text-4xl lg:text-5xl font-poppins font-extrabold tracking-[0.15em] uppercase mb-4 text-neon-gold animate-breathing-glow"
           >
-            Contact Driving Klass
+            CONTACT DRIVING KLASS
           </h2>
           <p 
             className="text-base md:text-lg tracking-wide"

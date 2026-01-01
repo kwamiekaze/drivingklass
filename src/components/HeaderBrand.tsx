@@ -5,13 +5,6 @@ interface HeaderBrandProps {
   className?: string;
 }
 
-// Neon gold glow layering for text-shadow
-const neonGoldTextShadow = `
-  0px 0px 5px rgba(255, 215, 0, 0.8),
-  0px 0px 15px rgba(255, 215, 0, 0.5),
-  0px 0px 30px rgba(255, 165, 0, 0.4)
-`;
-
 // Neon gold glow for SVG filter (drop-shadow)
 const neonGoldDropShadow = `
   drop-shadow(0px 0px 5px rgba(255, 215, 0, 0.8))
@@ -22,33 +15,30 @@ const neonGoldDropShadow = `
 export function HeaderBrand({ className }: HeaderBrandProps) {
   return (
     <header className={cn("text-center", className)}>
-      {/* Brand title - Neon Gold Marquee effect */}
+      {/* Brand title - Poppins ExtraBold with breathing glow */}
       <h1 
         className={cn(
-          "font-extrabold tracking-widest uppercase",
+          "font-poppins font-extrabold tracking-widest uppercase",
           "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
           "tracking-[0.15em]",
-          "relative"
+          "relative",
+          "text-neon-gold animate-breathing-glow"
         )}
-        style={{
-          color: '#FFD700',
-          textShadow: neonGoldTextShadow,
-        }}
       >
         DRIVINGKLASS
       </h1>
       
-      {/* Slogan - Neon Gold glow matching the heading */}
+      {/* Slogan - Poppins ExtraBold with breathing glow */}
       <p
         className={cn(
-          "font-bold tracking-wide",
+          "font-poppins font-extrabold tracking-wide",
           "text-sm sm:text-base md:text-lg lg:text-xl",
           "mt-3 sm:mt-4 md:mt-5",
-          "tracking-[0.08em]"
+          "tracking-[0.08em]",
+          "text-neon-gold animate-breathing-glow"
         )}
         style={{
-          color: '#FFD700',
-          textShadow: neonGoldTextShadow,
+          animationDelay: '0.5s',
         }}
       >
         Where 5-Star Drivers Are Made
