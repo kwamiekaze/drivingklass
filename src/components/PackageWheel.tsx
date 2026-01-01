@@ -5,30 +5,32 @@ import { cn } from "@/lib/utils";
 import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "./ThemeProvider";
+import { formatChipPrice } from "@/lib/priceFormatters";
 
 interface PackageWheelProps {
   carImageSrc: string;
   onPackageSelect?: (packageId: string) => void;
 }
 
-// Price label component - positioned inside the circle
-function PriceLabel({ 
+// Price chip component - positioned inside the circle between button and car
+function PriceChip({ 
   price, 
   angle, 
   containerSize,
-  isLight
+  isLight,
+  isAnimating = false,
 }: { 
   price: string; 
   angle: number; 
   containerSize: number;
   isLight: boolean;
+  isAnimating?: boolean;
 }) {
   // Calculate position inside the ring (toward the car)
-  // Use smaller radius than buttons
   const isMobile = containerSize < 400;
   const labelRadiusOffset = isMobile ? 65 : 85;
   
-  // Button radius is 50% of container, label is closer to center
+  // Button radius is 50% of container, chip is closer to center
   const buttonRadiusPx = containerSize * 0.5;
   const labelRadiusPx = buttonRadiusPx - labelRadiusOffset;
   const labelRadiusPercent = (labelRadiusPx / containerSize) * 100;
@@ -37,9 +39,15 @@ function PriceLabel({
   const x = Math.cos(angleRad) * labelRadiusPercent;
   const y = Math.sin(angleRad) * labelRadiusPercent;
 
+  // Format price for chip display (removes .00)
+  const chipPrice = formatChipPrice(price);
+
   return (
     <div 
-      className="absolute z-20 pointer-events-none animate-scale-in"
+      className={cn(
+        "absolute z-20 pointer-events-none",
+        isAnimating ? "animate-fade-in" : "animate-scale-in"
+      )}
       style={{
         left: `calc(50% + ${x}%)`,
         top: `calc(50% + ${y}%)`,
@@ -62,7 +70,8 @@ function PriceLabel({
       <span 
         className={cn(
           "relative block px-2 py-1 rounded-md font-bold whitespace-nowrap",
-          "text-[10px] sm:text-xs md:text-sm"
+          "text-[10px] sm:text-xs md:text-sm",
+          "backdrop-blur-sm"
         )}
         style={isLight ? {
           background: 'linear-gradient(135deg, hsl(42 45% 97%) 0%, hsl(40 40% 94%) 100%)',
@@ -81,7 +90,7 @@ function PriceLabel({
           textAlign: 'center',
         }}
       >
-        {price}
+        {chipPrice}
       </span>
     </div>
   );
@@ -90,6 +99,7 @@ function PriceLabel({
 export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps) {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -100,6 +110,27 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
 
   const packages = useMemo(() => getPackagesSortedByPosition(), []);
   const totalButtons = packages.length;
+
+  // Determine which price chip to show
+  // Priority: 1) Desktop hover, 2) Selected, 3) Mobile glow animation
+  const chipIndexToShow = useMemo(() => {
+    // On desktop, hover takes priority
+    if (!isMobile && hoveredIndex !== null) {
+      return { index: hoveredIndex, isAnimating: false, type: 'hover' };
+    }
+    // After user selection, show selected package chip
+    if (hasUserSelected && selectedPackageId) {
+      const idx = packages.findIndex(p => p.id === selectedPackageId);
+      if (idx >= 0) {
+        return { index: idx, isAnimating: false, type: 'selected' };
+      }
+    }
+    // Mobile glow animation (before selection)
+    if (isMobile && !hasUserSelected && highlightedIndex !== null) {
+      return { index: highlightedIndex, isAnimating: true, type: 'glow' };
+    }
+    return null;
+  }, [isMobile, hoveredIndex, hasUserSelected, selectedPackageId, highlightedIndex, packages]);
 
   // Detect container size for responsive positioning
   useEffect(() => {
@@ -232,13 +263,15 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
           </div>
         </div>
 
-        {/* Price label layer - above glow, below buttons */}
-        {selectedPackageId && selectedIndex >= 0 && (
-          <PriceLabel
-            price={packages[selectedIndex].price}
-            angle={buttonPositions[selectedIndex].angle}
+        {/* Price chip layer - shows during glow animation, hover (desktop), or selection */}
+        {chipIndexToShow && (
+          <PriceChip
+            key={`chip-${chipIndexToShow.type}-${chipIndexToShow.index}`}
+            price={packages[chipIndexToShow.index].price}
+            angle={buttonPositions[chipIndexToShow.index].angle}
             containerSize={containerSize}
             isLight={isLight}
+            isAnimating={chipIndexToShow.isAnimating}
           />
         )}
 
@@ -256,6 +289,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               isSelected={isSelected}
               isHighlighted={isHighlighted}
               onClick={() => handlePackageClick(pkg.id)}
+              onMouseEnter={() => !isMobile && setHoveredIndex(index)}
+              onMouseLeave={() => !isMobile && setHoveredIndex(null)}
               style={{
                 left: `calc(50% + ${pos.x}%)`,
                 top: `calc(50% + ${pos.y}%)`,
