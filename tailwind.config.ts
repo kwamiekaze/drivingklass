@@ -65,6 +65,10 @@ export default {
           shimmer: "hsl(var(--gold-shimmer))",
         },
         champagne: "hsl(var(--champagne))",
+        // Driving school accents
+        "cone-orange": "hsl(var(--cone-orange))",
+        asphalt: "hsl(var(--asphalt))",
+        "sky-blue": "hsl(var(--sky-blue))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -94,6 +98,7 @@ export default {
         gold: "0 4px 20px hsl(43 74% 49% / 0.3)",
         "gold-lg": "0 8px 40px hsl(43 74% 49% / 0.4)",
         "gold-glow": "0 0 30px hsl(43 74% 49% / 0.3), 0 0 60px hsl(43 74% 49% / 0.1)",
+        "cone-glow": "0 0 20px hsl(28 100% 55% / 0.3), 0 0 40px hsl(28 100% 55% / 0.15)",
       },
     },
   },

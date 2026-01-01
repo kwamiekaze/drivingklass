@@ -176,25 +176,71 @@ export function ContactForm() {
     }
   };
 
+  // Theme-aware styles
+  const labelStyle = { 
+    color: isLight ? '#2a2a2a' : 'hsl(43 60% 55%)',
+    textShadow: isLight ? '0 0 4px rgba(212, 175, 55, 0.5)' : undefined,
+  };
+  
+  const inputStyle = {
+    background: isLight ? 'hsl(45 35% 98%)' : 'hsl(25 5% 6%)',
+    border: `1px solid ${isLight ? 'hsl(43 50% 50% / 0.4)' : 'hsl(43 50% 35% / 0.3)'}`,
+    color: isLight ? '#1a1a1a' : 'hsl(42 30% 90%)',
+  };
+
+  const buttonStyle = isLight 
+    ? {
+        background: 'linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(28 100% 55%) 100%)',
+        color: '#1a1a1a',
+        boxShadow: '0 4px 20px hsl(43 74% 49% / 0.35), inset 0 1px 0 hsl(48 85% 75% / 0.4)',
+        border: 'none',
+      }
+    : {
+        background: 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)',
+        color: 'hsl(30 10% 8%)',
+        boxShadow: '0 4px 20px hsl(43 80% 52% / 0.3), 0 0 30px hsl(43 80% 52% / 0.15)',
+        border: 'none',
+      };
+
+  const uploadButtonStyle = isLight
+    ? {
+        background: 'linear-gradient(145deg, hsl(43 60% 55% / 0.3) 0%, hsl(40 50% 60% / 0.2) 100%)',
+        border: '1px solid hsl(43 60% 50% / 0.5)',
+        color: '#2a2a2a',
+        boxShadow: '0 2px 10px hsl(43 60% 50% / 0.2)',
+      }
+    : {
+        background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
+        border: '1px solid hsl(43 60% 40% / 0.4)',
+        color: 'hsl(43 60% 70%)',
+        boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
+      };
+
   if (isSubmitted) {
     return (
       <div 
         className="text-center p-8 md:p-10 rounded-2xl animate-scale-in"
         style={{
-          background: 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 6% / 0.9) 100%)',
-          border: '1px solid hsl(43 60% 40% / 0.3)',
-          boxShadow: '0 0 40px hsl(43 80% 52% / 0.1), inset 0 1px 0 hsl(43 80% 60% / 0.1)',
+          background: isLight 
+            ? 'linear-gradient(135deg, hsl(45 35% 96% / 0.98) 0%, hsl(42 30% 93% / 0.98) 100%)'
+            : 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 6% / 0.9) 100%)',
+          border: `1px solid ${isLight ? 'hsl(43 60% 55% / 0.4)' : 'hsl(43 60% 40% / 0.3)'}`,
+          boxShadow: isLight 
+            ? '0 4px 30px hsl(43 50% 50% / 0.2)'
+            : '0 0 40px hsl(43 80% 52% / 0.1), inset 0 1px 0 hsl(43 80% 60% / 0.1)',
           backdropFilter: 'blur(10px)',
         }}
       >
         <CheckCircle 
           className="w-16 h-16 mx-auto mb-4"
-          style={{ color: 'hsl(43 80% 52%)' }}
+          style={{ color: isLight ? 'hsl(38 80% 45%)' : 'hsl(43 80% 52%)' }}
         />
         <h3 
           className="text-xl md:text-2xl font-bold tracking-wide uppercase mb-3"
           style={{
-            background: 'linear-gradient(135deg, hsl(38 75% 50%) 0%, hsl(48 90% 70%) 100%)',
+            background: isLight 
+              ? 'linear-gradient(135deg, hsl(38 80% 38%) 0%, hsl(43 75% 48%) 100%)'
+              : 'linear-gradient(135deg, hsl(38 75% 50%) 0%, hsl(48 90% 70%) 100%)',
             WebkitBackgroundClip: 'text',
             backgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -202,18 +248,13 @@ export function ContactForm() {
         >
           Message Sent!
         </h3>
-        <p style={{ color: 'hsl(42 20% 60%)' }} className="mb-6">
+        <p style={{ color: isLight ? '#3a3a3a' : 'hsl(42 20% 60%)' }} className="mb-6">
           Thanks! We'll reach out shortly.
         </p>
         <Button
           onClick={() => setIsSubmitted(false)}
           className="px-6 py-2 font-semibold tracking-wide uppercase text-sm transition-all duration-200 hover:scale-[0.98] active:scale-[0.96]"
-          style={{
-            background: 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)',
-            color: 'hsl(30 10% 8%)',
-            boxShadow: '0 4px 20px hsl(43 80% 52% / 0.3), 0 0 30px hsl(43 80% 52% / 0.15)',
-            border: 'none',
-          }}
+          style={buttonStyle}
         >
           Send Another Message
         </Button>
@@ -226,9 +267,9 @@ export function ContactForm() {
       className="p-6 md:p-8 lg:p-10 rounded-2xl"
       style={{
         background: isLight 
-          ? 'linear-gradient(135deg, hsl(45 30% 95% / 0.95) 0%, hsl(42 25% 92% / 0.95) 100%)'
+          ? 'linear-gradient(135deg, hsl(45 35% 96% / 0.95) 0%, hsl(42 30% 93% / 0.95) 100%)'
           : 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 5% / 0.9) 100%)',
-        border: `1px solid ${isLight ? 'hsl(43 50% 60% / 0.4)' : 'hsl(43 60% 40% / 0.25)'}`,
+        border: `1px solid ${isLight ? 'hsl(43 55% 60% / 0.4)' : 'hsl(43 60% 40% / 0.25)'}`,
         boxShadow: isLight 
           ? '0 4px 30px hsl(43 50% 50% / 0.15), 0 0 20px hsl(43 60% 50% / 0.1)'
           : '0 0 50px hsl(0 0% 0% / 0.5), 0 0 30px hsl(43 80% 52% / 0.08)',
@@ -244,10 +285,7 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ 
-                    color: isLight ? '#2a2a2a' : 'hsl(43 60% 55%)',
-                    textShadow: isLight ? '0 0 4px rgba(212, 175, 55, 0.5)' : undefined,
-                  }}
+                  style={labelStyle}
                 >
                   Full Name *
                 </FormLabel>
@@ -255,11 +293,7 @@ export function ContactForm() {
                   <Input
                     placeholder="Your full name"
                     className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      background: isLight ? 'hsl(45 30% 98%)' : 'hsl(25 5% 6%)',
-                      border: `1px solid ${isLight ? 'hsl(43 50% 50% / 0.4)' : 'hsl(43 50% 35% / 0.3)'}`,
-                      color: isLight ? '#1a1a1a' : 'hsl(42 30% 90%)',
-                    }}
+                    style={inputStyle}
                     {...field}
                   />
                 </FormControl>
@@ -275,7 +309,7 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ color: 'hsl(43 60% 55%)' }}
+                  style={labelStyle}
                 >
                   Phone Number *
                 </FormLabel>
@@ -284,11 +318,7 @@ export function ContactForm() {
                     type="tel"
                     placeholder="(404) 872-1000"
                     className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      background: 'hsl(25 5% 6%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)',
-                      color: 'hsl(42 30% 90%)',
-                    }}
+                    style={inputStyle}
                     {...field}
                   />
                 </FormControl>
@@ -304,7 +334,7 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ color: 'hsl(43 60% 55%)' }}
+                  style={labelStyle}
                 >
                   City
                 </FormLabel>
@@ -312,11 +342,7 @@ export function ContactForm() {
                   <Input
                     placeholder="Your city"
                     className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      background: 'hsl(25 5% 6%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)',
-                      color: 'hsl(42 30% 90%)',
-                    }}
+                    style={inputStyle}
                     {...field}
                   />
                 </FormControl>
@@ -332,7 +358,7 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ color: 'hsl(43 60% 55%)' }}
+                  style={labelStyle}
                 >
                   Email *
                 </FormLabel>
@@ -341,11 +367,7 @@ export function ContactForm() {
                     type="email"
                     placeholder="you@email.com"
                     className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      background: 'hsl(25 5% 6%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)',
-                      color: 'hsl(42 30% 90%)',
-                    }}
+                    style={inputStyle}
                     {...field}
                   />
                 </FormControl>
@@ -361,7 +383,7 @@ export function ContactForm() {
               <FormItem>
                 <FormLabel 
                   className="text-sm font-medium tracking-wide"
-                  style={{ color: 'hsl(43 60% 55%)' }}
+                  style={labelStyle}
                 >
                   Message *
                 </FormLabel>
@@ -369,11 +391,7 @@ export function ContactForm() {
                   <Textarea
                     placeholder="Tell us about your driving goals..."
                     className="min-h-[120px] rounded-xl resize-none transition-all duration-200 focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      background: 'hsl(25 5% 6%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)',
-                      color: 'hsl(42 30% 90%)',
-                    }}
+                    style={inputStyle}
                     {...field}
                   />
                 </FormControl>
@@ -386,11 +404,11 @@ export function ContactForm() {
           <div className="space-y-3">
             <label 
               className="block text-sm font-medium tracking-wide"
-              style={{ color: 'hsl(43 60% 55%)' }}
+              style={labelStyle}
             >
               Upload ID (optional)
             </label>
-            <p className="text-xs" style={{ color: 'hsl(42 20% 50%)' }}>
+            <p className="text-xs" style={{ color: isLight ? '#555' : 'hsl(42 20% 50%)' }}>
               You can upload or take a photo of your ID for verification. (JPG, PNG, PDF up to 20MB)
             </p>
             
@@ -402,17 +420,17 @@ export function ContactForm() {
                     src={selectedFile.preview}
                     alt="ID preview"
                     className="w-24 h-24 object-cover rounded-lg"
-                    style={{ border: '1px solid hsl(43 50% 35% / 0.3)' }}
+                    style={{ border: `1px solid ${isLight ? 'hsl(43 50% 50% / 0.4)' : 'hsl(43 50% 35% / 0.3)'}` }}
                   />
                 ) : (
                   <div 
                     className="w-24 h-24 rounded-lg flex items-center justify-center"
                     style={{ 
-                      background: 'hsl(25 5% 10%)',
-                      border: '1px solid hsl(43 50% 35% / 0.3)' 
+                      background: isLight ? 'hsl(45 30% 95%)' : 'hsl(25 5% 10%)',
+                      border: `1px solid ${isLight ? 'hsl(43 50% 50% / 0.4)' : 'hsl(43 50% 35% / 0.3)'}` 
                     }}
                   >
-                    <span className="text-xs text-center px-2" style={{ color: 'hsl(42 20% 60%)' }}>
+                    <span className="text-xs text-center px-2" style={{ color: isLight ? '#555' : 'hsl(42 20% 60%)' }}>
                       PDF
                     </span>
                   </div>
@@ -428,7 +446,7 @@ export function ContactForm() {
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <p className="text-xs mt-1 truncate max-w-[96px]" style={{ color: 'hsl(42 20% 60%)' }}>
+                <p className="text-xs mt-1 truncate max-w-[96px]" style={{ color: isLight ? '#555' : 'hsl(42 20% 60%)' }}>
                   {selectedFile.file.name}
                 </p>
               </div>
@@ -449,12 +467,7 @@ export function ContactForm() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98]"
-                  style={{
-                    background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
-                    border: '1px solid hsl(43 60% 40% / 0.4)',
-                    color: 'hsl(43 60% 70%)',
-                    boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
-                  }}
+                  style={uploadButtonStyle}
                 >
                   <Upload className="w-4 h-4" />
                   <span className="text-sm font-medium">Choose File</span>
@@ -474,12 +487,7 @@ export function ContactForm() {
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98]"
-                  style={{
-                    background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
-                    border: '1px solid hsl(43 60% 40% / 0.4)',
-                    color: 'hsl(43 60% 70%)',
-                    boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
-                  }}
+                  style={uploadButtonStyle}
                 >
                   <Camera className="w-4 h-4" />
                   <span className="text-sm font-medium">Camera</span>
@@ -495,13 +503,8 @@ export function ContactForm() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full h-14 text-base font-bold tracking-widest uppercase transition-all duration-300 hover:scale-[0.98] active:scale-[0.96] disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)',
-              color: 'hsl(30 10% 8%)',
-              boxShadow: '0 6px 30px hsl(43 80% 52% / 0.4), 0 0 40px hsl(43 80% 52% / 0.2), inset 0 1px 0 hsl(48 80% 70% / 0.3)',
-              border: 'none',
-            }}
+            className="w-full h-14 rounded-xl font-bold tracking-wider uppercase text-base transition-all duration-200 hover:scale-[0.99] active:scale-[0.98]"
+            style={buttonStyle}
           >
             {isSubmitting ? (
               <>

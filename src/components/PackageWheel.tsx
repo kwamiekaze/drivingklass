@@ -4,6 +4,7 @@ import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
 import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "./ThemeProvider";
 
 interface PackageWheelProps {
   carImageSrc: string;
@@ -14,11 +15,13 @@ interface PackageWheelProps {
 function PriceLabel({ 
   price, 
   angle, 
-  containerSize 
+  containerSize,
+  isLight
 }: { 
   price: string; 
   angle: number; 
   containerSize: number;
+  isLight: boolean;
 }) {
   // Calculate position inside the ring (toward the car)
   // Use smaller radius than buttons
@@ -55,13 +58,20 @@ function PriceLabel({
         }}
       />
       
-      {/* Price pill/badge */}
+      {/* Price pill/badge - theme aware */}
       <span 
         className={cn(
           "relative block px-2 py-1 rounded-md font-bold whitespace-nowrap",
           "text-[10px] sm:text-xs md:text-sm"
         )}
-        style={{
+        style={isLight ? {
+          background: 'linear-gradient(135deg, hsl(42 45% 97%) 0%, hsl(40 40% 94%) 100%)',
+          border: '2px solid hsl(43 74% 49% / 0.6)',
+          color: '#1a1a1a',
+          boxShadow: '0 2px 12px hsl(0 0% 0% / 0.12), 0 0 15px hsl(43 74% 49% / 0.15)',
+          maxWidth: isMobile ? '55px' : '80px',
+          textAlign: 'center',
+        } : {
           background: 'linear-gradient(135deg, hsl(30 12% 10% / 0.92) 0%, hsl(25 10% 6% / 0.95) 100%)',
           border: '1px solid hsl(43 65% 45% / 0.6)',
           color: 'hsl(43 90% 62%)',
@@ -82,6 +92,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
   const [containerSize, setContainerSize] = useState(320);
   
   const isMobile = useIsMobile();
@@ -226,6 +238,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
             price={packages[selectedIndex].price}
             angle={buttonPositions[selectedIndex].angle}
             containerSize={containerSize}
+            isLight={isLight}
           />
         )}
 

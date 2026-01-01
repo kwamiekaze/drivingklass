@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface PackageButtonProps {
   label: string;
@@ -15,6 +16,8 @@ export function PackageButton({
   onClick, 
   style,
 }: PackageButtonProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const isActive = isSelected || isHighlighted;
 
   return (
@@ -22,7 +25,7 @@ export function PackageButton({
       onClick={onClick}
       style={{
         ...style,
-        // Metallic gold ring gradient
+        // Metallic gold ring gradient - consistent across themes
         background: isActive 
           ? 'linear-gradient(145deg, hsl(48 85% 65%) 0%, hsl(43 80% 50%) 50%, hsl(38 75% 35%) 100%)'
           : 'linear-gradient(145deg, hsl(43 75% 55%) 0%, hsl(40 70% 45%) 50%, hsl(35 65% 30%) 100%)',
@@ -37,12 +40,20 @@ export function PackageButton({
         "transition-all duration-200 ease-out",
         // Thicker padding for selected state - ring glow only, no overlay
         isSelected ? "p-[3px] sm:p-[4px]" : "p-[2px] sm:p-[3px]",
-        // Glow - ring shadow only, NOT filled overlay
-        isSelected 
-          ? "shadow-[0_0_25px_hsl(43_80%_50%/0.6),0_0_45px_hsl(43_80%_50%/0.3)]"
-          : isHighlighted
-          ? "shadow-[0_0_18px_hsl(43_80%_50%/0.4),0_0_30px_hsl(43_80%_50%/0.15)]"
-          : "shadow-[0_0_12px_hsl(43_80%_50%/0.25),0_0_24px_hsl(43_80%_50%/0.1)]",
+        // Glow - theme aware with orange accent in light mode
+        isDark ? (
+          isSelected 
+            ? "shadow-[0_0_25px_hsl(43_80%_50%/0.6),0_0_45px_hsl(43_80%_50%/0.3)]"
+            : isHighlighted
+            ? "shadow-[0_0_18px_hsl(43_80%_50%/0.4),0_0_30px_hsl(43_80%_50%/0.15)]"
+            : "shadow-[0_0_12px_hsl(43_80%_50%/0.25),0_0_24px_hsl(43_80%_50%/0.1)]"
+        ) : (
+          isSelected 
+            ? "shadow-[0_0_25px_hsl(43_74%_49%/0.5),0_0_45px_hsl(43_74%_49%/0.25),0_0_15px_hsl(28_100%_55%/0.2)]"
+            : isHighlighted
+            ? "shadow-[0_0_18px_hsl(43_74%_49%/0.35),0_0_30px_hsl(43_74%_49%/0.15)]"
+            : "shadow-[0_4px_16px_hsl(0_0%_0%/0.15),0_0_20px_hsl(43_74%_49%/0.2)]"
+        ),
         // Hover state - gentle brightness
         "hover:brightness-110",
         // Active/tap state - subtle scale
@@ -51,13 +62,13 @@ export function PackageButton({
         "z-30"
       )}
     >
-      {/* Inner dark fill - no covering of text */}
+      {/* Inner dark fill - matte charcoal for both themes */}
       <div 
         className={cn(
           "absolute rounded-full pointer-events-none",
           isSelected ? "inset-[3px] sm:inset-[4px]" : "inset-[2px] sm:inset-[3px]",
-          "bg-gradient-to-b from-[hsl(30_10%_12%)] via-[hsl(30_8%_8%)] to-[hsl(30_8%_6%)]",
-          "dark:from-[hsl(30_10%_10%)] dark:via-[hsl(30_8%_6%)] dark:to-[hsl(30_8%_4%)]"
+          // Charcoal interior - same for both themes for contrast
+          "bg-gradient-to-b from-[hsl(30_10%_14%)] via-[hsl(30_8%_10%)] to-[hsl(30_8%_7%)]"
         )}
         style={{ zIndex: 0 }}
       />
@@ -66,7 +77,9 @@ export function PackageButton({
       <div 
         className={cn(
           "absolute rounded-full border pointer-events-none",
-          isSelected ? "inset-[4px] sm:inset-[5px] border-gold/50" : "inset-[3px] sm:inset-[4px] border-gold/20",
+          isSelected 
+            ? "inset-[4px] sm:inset-[5px] border-gold/50" 
+            : "inset-[3px] sm:inset-[4px] border-gold/20",
           isHighlighted && !isSelected && "border-gold/35"
         )}
         style={{ zIndex: 1 }}

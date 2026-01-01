@@ -6,55 +6,62 @@
 
 @layer base {
   :root {
-    /* Light Mode - Warm Cream/Beige like reference images */
-    --background: 40 30% 94%;
-    --foreground: 35 20% 20%;
+    /* LIGHT MODE - Warm Sunlit Driving School Theme */
+    /* Soft warm cream / sunlit ivory background */
+    --background: 42 45% 96%;
+    --foreground: 0 0% 11%;
 
-    --card: 42 35% 96%;
-    --card-foreground: 35 20% 20%;
+    /* Light sand / warm beige for cards */
+    --card: 40 40% 94%;
+    --card-foreground: 0 0% 11%;
 
-    --popover: 42 35% 96%;
-    --popover-foreground: 35 20% 20%;
+    --popover: 42 45% 97%;
+    --popover-foreground: 0 0% 11%;
 
-    /* Gold Primary */
-    --primary: 40 70% 45%;
-    --primary-foreground: 40 10% 10%;
+    /* Gold Primary - Rich metallic gold */
+    --primary: 43 74% 49%;
+    --primary-foreground: 0 0% 5%;
 
     /* Champagne Secondary */
-    --secondary: 42 30% 90%;
-    --secondary-foreground: 35 15% 25%;
+    --secondary: 40 35% 90%;
+    --secondary-foreground: 0 0% 15%;
 
-    --muted: 40 25% 85%;
-    --muted-foreground: 35 15% 45%;
+    --muted: 42 30% 88%;
+    --muted-foreground: 0 0% 35%;
 
     /* Gold Accent */
-    --accent: 38 65% 50%;
-    --accent-foreground: 35 10% 10%;
+    --accent: 43 74% 49%;
+    --accent-foreground: 0 0% 5%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 35% 80%;
-    --input: 40 30% 88%;
-    --ring: 40 70% 45%;
+    --border: 40 30% 82%;
+    --input: 40 35% 92%;
+    --ring: 43 74% 49%;
 
     --radius: 0.75rem;
 
-    /* Gold palette tokens - warmer for light mode */
-    --gold: 40 70% 45%;
-    --gold-light: 42 65% 60%;
-    --gold-dark: 36 75% 35%;
-    --gold-shimmer: 45 80% 70%;
+    /* Gold palette tokens - light mode */
+    --gold: 43 74% 49%;
+    --gold-light: 45 70% 62%;
+    --gold-dark: 38 80% 38%;
+    --gold-shimmer: 48 85% 72%;
     --champagne: 42 40% 85%;
 
-    --sidebar-background: 42 30% 95%;
-    --sidebar-foreground: 35 15% 20%;
-    --sidebar-primary: 40 70% 45%;
-    --sidebar-primary-foreground: 35 10% 10%;
-    --sidebar-accent: 42 30% 88%;
-    --sidebar-accent-foreground: 35 15% 15%;
-    --sidebar-border: 40 30% 80%;
-    --sidebar-ring: 40 70% 45%;
+    /* Driving school accent colors */
+    --cone-orange: 28 100% 55%;
+    --asphalt: 0 0% 17%;
+    --sky-blue: 200 50% 90%;
+
+    --sidebar-background: 42 35% 95%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 43 74% 49%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 42 30% 90%;
+    --sidebar-accent-foreground: 0 0% 12%;
+    --sidebar-border: 40 30% 85%;
+    --sidebar-ring: 43 74% 49%;
   }
 
   .dark {
@@ -96,6 +103,11 @@
     --gold-dark: 38 85% 38%;
     --gold-shimmer: 48 90% 78%;
     --champagne: 42 40% 85%;
+
+    /* Driving school accent colors - dark mode */
+    --cone-orange: 28 100% 55%;
+    --asphalt: 0 0% 17%;
+    --sky-blue: 200 50% 90%;
 
     --sidebar-background: 30 8% 6%;
     --sidebar-foreground: 42 30% 90%;
@@ -243,6 +255,59 @@
       0 4px 20px hsl(0 0% 0% / 0.4),
       0 0 40px hsl(var(--gold) / 0.1);
   }
+
+  /* Light mode CTA buttons - Gold to orange gradient */
+  .light-cta-button {
+    background: linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(28 100% 55%) 100%);
+    color: hsl(0 0% 8%);
+    box-shadow: 
+      0 4px 15px hsl(43 74% 49% / 0.35),
+      0 2px 4px hsl(0 0% 0% / 0.1),
+      inset 0 1px 0 hsl(48 85% 75% / 0.4);
+    transition: all 0.25s ease;
+  }
+
+  .light-cta-button:hover {
+    box-shadow: 
+      0 6px 20px hsl(43 74% 49% / 0.45),
+      0 3px 6px hsl(0 0% 0% / 0.12),
+      inset 0 1px 0 hsl(48 85% 75% / 0.5);
+    transform: translateY(-1px);
+  }
+
+  /* Light mode price popup styling */
+  .light-price-popup {
+    background: linear-gradient(135deg, hsl(42 45% 97%) 0%, hsl(40 40% 94%) 100%);
+    border: 2px solid hsl(43 74% 49% / 0.6);
+    color: hsl(0 0% 11%);
+    box-shadow: 
+      0 4px 20px hsl(0 0% 0% / 0.12),
+      0 0 20px hsl(43 74% 49% / 0.15);
+  }
+
+  /* Light mode package button styling */
+  .light-package-button {
+    background: linear-gradient(145deg, hsl(0 0% 15%) 0%, hsl(0 0% 10%) 100%);
+    border: 3px solid hsl(43 74% 49%);
+    box-shadow: 
+      0 4px 16px hsl(0 0% 0% / 0.2),
+      0 0 20px hsl(43 74% 49% / 0.2);
+  }
+
+  .light-package-button:hover {
+    box-shadow: 
+      0 6px 20px hsl(0 0% 0% / 0.25),
+      0 0 30px hsl(43 74% 49% / 0.35),
+      0 0 15px hsl(28 100% 55% / 0.2);
+  }
+
+  .light-package-button.selected {
+    border-width: 4px;
+    box-shadow: 
+      0 0 25px hsl(43 74% 49% / 0.5),
+      0 0 45px hsl(43 74% 49% / 0.25),
+      0 0 12px hsl(28 100% 55% / 0.3);
+  }
 }
 
 @layer utilities {
@@ -321,7 +386,37 @@
     font-weight: 800;
   }
 
-  /* Light mode text readability - black with gold outline */
+  /* ========================================= */
+  /* LIGHT MODE TEXT & TYPOGRAPHY UTILITIES   */
+  /* ========================================= */
+
+  /* Light mode heading - charcoal with gold glow */
+  .light .light-heading {
+    color: #1C1C1C;
+    text-shadow: 
+      0 0 1px rgba(212, 175, 55, 0.9),
+      0 0 6px rgba(212, 175, 55, 0.35);
+  }
+
+  /* Light mode body text - near black, no gold */
+  .light .light-body-text {
+    color: #2A2A2A;
+  }
+
+  /* Light mode button/label text - readable on gold */
+  .light .light-button-text {
+    color: #1C1C1C;
+    text-shadow: none;
+  }
+
+  /* Light mode gold text for accents */
+  .light .light-gold-accent {
+    color: hsl(38 80% 38%);
+    text-shadow: 
+      0 0 2px rgba(212, 175, 55, 0.5);
+  }
+
+  /* Legacy light mode readability - black with gold outline */
   .light .text-light-readable {
     color: #0b0b0b;
     text-shadow: 
@@ -329,7 +424,7 @@
       0 0 6px rgba(212, 175, 55, 0.35);
   }
 
-  /* Light mode headings with gold stroke effect */
+  /* Legacy light mode headings with gold stroke effect */
   .light .heading-gold-stroke {
     color: #1a1a1a;
     text-shadow: 
@@ -339,7 +434,7 @@
       -1px -1px 0 rgba(212, 175, 55, 0.3);
   }
 
-  /* Light mode form labels with readability */
+  /* Legacy light mode form labels with readability */
   .light .label-readable {
     color: #2a2a2a;
     text-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
