@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Upload, X, Send, CheckCircle } from "lucide-react";
+import { Loader2, Send, CheckCircle, Upload, X, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,22 +18,28 @@ import {
 } from "@/components/ui/form";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/heic", "image/heif"];
 
 const formSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   phone: z.string().min(10, "Please enter a valid phone number").max(20),
   city: z.string().max(100).optional(),
   email: z.string().email("Please enter a valid email address").max(255),
-  message: z.string().max(1000).optional(),
+  message: z.string().min(1, "Please enter a message").max(1000),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
+interface FilePreview {
+  file: File;
+  preview: string;
+}
+
 export function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -49,93 +55,129 @@ export function ContactForm() {
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+    const files = Array.from(e.target.files || []);
+    setFileError(null);
 
-    if (selectedFile.size > MAX_FILE_SIZE) {
-      toast({
-        variant: "destructive",
-        title: "File too large",
-        description: "Please select a file smaller than 10MB.",
+    // Validate files
+    const validFiles: FilePreview[] = [];
+    for (const file of files) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        setFileError("Only JPG, PNG, and HEIC images are allowed");
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError("Each file must be less than 10MB");
+        continue;
+      }
+      if (selectedFiles.length + validFiles.length >= 2) {
+        setFileError("Maximum 2 files allowed");
+        break;
+      }
+      validFiles.push({
+        file,
+        preview: URL.createObjectURL(file),
       });
-      return;
     }
 
-    if (!ACCEPTED_FILE_TYPES.includes(selectedFile.type)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid file type",
-        description: "Please upload an image (JPEG, PNG, WebP) or PDF.",
-      });
-      return;
-    }
-
-    setFile(selectedFile);
-  };
-
-  const removeFile = () => {
-    setFile(null);
+    setSelectedFiles(prev => [...prev, ...validFiles].slice(0, 2));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev];
+      URL.revokeObjectURL(newFiles[index].preview);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+    setFileError(null);
+  };
+
+  const uploadFiles = async (submissionId: string): Promise<string[]> => {
+    const urls: string[] = [];
+    
+    for (const { file } of selectedFiles) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${submissionId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from("contact-attachments")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("File upload error:", error);
+        continue;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("contact-attachments")
+        .getPublicUrl(data.path);
+      
+      urls.push(publicUrlData.publicUrl);
+    }
+    
+    return urls;
   };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
 
     try {
-      let attachmentUrl = null;
-      let attachmentName = null;
-
-      // Upload file if present
-      if (file) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-        const { error: uploadError, data: uploadData } = await supabase.storage
-          .from("contact-attachments")
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from("contact-attachments")
-          .getPublicUrl(fileName);
-
-        attachmentUrl = urlData.publicUrl;
-        attachmentName = file.name;
-      }
-
-      // Submit form data
-      const { error } = await supabase.from("contact_submissions").insert({
-        full_name: data.full_name,
-        phone: data.phone,
-        city: data.city || null,
-        email: data.email,
-        message: data.message || null,
-        attachment_url: attachmentUrl,
-        attachment_name: attachmentName,
-      });
+      // First create the submission to get the ID
+      const { data: submission, error } = await supabase
+        .from("contact_submissions")
+        .insert({
+          full_name: data.full_name,
+          phone: data.phone,
+          city: data.city || null,
+          email: data.email,
+          message: data.message,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      // Send email notification via edge function
+      // Upload files if any
+      if (selectedFiles.length > 0 && submission) {
+        const urls = await uploadFiles(submission.id);
+        if (urls.length > 0) {
+          // Update the submission with attachment info
+          await supabase
+            .from("contact_submissions")
+            .update({
+              attachment_url: urls.join(","),
+              attachment_name: selectedFiles.map(f => f.file.name).join(","),
+            })
+            .eq("id", submission.id);
+        }
+      }
+
+      // Try to send email notification (non-blocking)
       try {
         await supabase.functions.invoke("send-contact-notification", {
-          body: {
-            ...data,
-            attachment_url: attachmentUrl,
-            attachment_name: attachmentName,
-          },
+          body: data,
         });
       } catch {
-        // Email notification failed but form was submitted successfully
         console.log("Email notification could not be sent");
       }
 
+      // Cleanup previews
+      selectedFiles.forEach(f => URL.revokeObjectURL(f.preview));
+      setSelectedFiles([]);
+      
       setIsSubmitted(true);
       form.reset();
-      setFile(null);
+      toast({
+        title: "Thanks! We received your message.",
+        description: "We'll get back to you shortly.",
+      });
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
@@ -150,190 +192,321 @@ export function ContactForm() {
 
   if (isSubmitted) {
     return (
-      <section id="contact" className="py-20 px-4">
-        <div className="max-w-lg mx-auto luxury-card p-8 text-center animate-scale-in">
-          <CheckCircle className="w-16 h-16 text-gold mx-auto mb-4" />
-          <h2 className="text-2xl font-display font-bold text-gold mb-4">
-            Message Sent!
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            Thank you for contacting DRIVINGKLASS. We'll get back to you shortly.
-          </p>
-          <Button
-            onClick={() => setIsSubmitted(false)}
-            className="bg-gold-gradient hover:opacity-90 text-primary-foreground"
-          >
-            Send Another Message
-          </Button>
-        </div>
-      </section>
+      <div 
+        className="text-center p-8 md:p-10 rounded-2xl animate-scale-in"
+        style={{
+          background: 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 6% / 0.9) 100%)',
+          border: '1px solid hsl(43 60% 40% / 0.3)',
+          boxShadow: '0 0 40px hsl(43 80% 52% / 0.1), inset 0 1px 0 hsl(43 80% 60% / 0.1)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <CheckCircle 
+          className="w-16 h-16 mx-auto mb-4"
+          style={{ color: 'hsl(43 80% 52%)' }}
+        />
+        <h3 
+          className="text-xl md:text-2xl font-bold tracking-wide uppercase mb-3"
+          style={{
+            background: 'linear-gradient(135deg, hsl(38 75% 50%) 0%, hsl(48 90% 70%) 100%)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Message Sent!
+        </h3>
+        <p style={{ color: 'hsl(42 20% 60%)' }} className="mb-6">
+          Thanks! We'll reach out shortly.
+        </p>
+        <Button
+          onClick={() => setIsSubmitted(false)}
+          className="px-6 py-2 font-semibold tracking-wide uppercase text-sm transition-all duration-200 hover:scale-[0.98] active:scale-[0.96]"
+          style={{
+            background: 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)',
+            color: 'hsl(30 10% 8%)',
+            boxShadow: '0 4px 20px hsl(43 80% 52% / 0.3), 0 0 30px hsl(43 80% 52% / 0.15)',
+            border: 'none',
+          }}
+        >
+          Send Another Message
+        </Button>
+      </div>
     );
   }
 
   return (
-    <section id="contact" className="py-20 px-4">
-      <div className="max-w-lg mx-auto">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-gold-shimmer mb-4">
-            Contact Us
-          </h2>
-          <p className="text-muted-foreground">
-            Have questions? We're here to help you start your driving journey.
-          </p>
-        </div>
+    <div 
+      className="p-6 md:p-8 lg:p-10 rounded-2xl"
+      style={{
+        background: 'linear-gradient(135deg, hsl(30 8% 8% / 0.9) 0%, hsl(25 5% 5% / 0.9) 100%)',
+        border: '1px solid hsl(43 60% 40% / 0.25)',
+        boxShadow: '0 0 50px hsl(0 0% 0% / 0.5), 0 0 30px hsl(43 80% 52% / 0.08)',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 md:space-y-6">
+          <FormField
+            control={form.control}
+            name="full_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel 
+                  className="text-sm font-medium tracking-wide"
+                  style={{ color: 'hsl(43 60% 55%)' }}
+                >
+                  Full Name *
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Your full name"
+                    className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                    style={{
+                      background: 'hsl(25 5% 6%)',
+                      border: '1px solid hsl(43 50% 35% / 0.3)',
+                      color: 'hsl(42 30% 90%)',
+                    }}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage className="text-amber-500" />
+              </FormItem>
+            )}
+          />
 
-        <div className="luxury-card p-6 md:p-8">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">Full Name *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="John Doe"
-                        className="bg-background/50 border-gold/20 focus:border-gold"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel 
+                  className="text-sm font-medium tracking-wide"
+                  style={{ color: 'hsl(43 60% 55%)' }}
+                >
+                  Phone Number *
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                    style={{
+                      background: 'hsl(25 5% 6%)',
+                      border: '1px solid hsl(43 50% 35% / 0.3)',
+                      color: 'hsl(42 30% 90%)',
+                    }}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage className="text-amber-500" />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">Phone Number *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="(555) 123-4567"
-                        className="bg-background/50 border-gold/20 focus:border-gold"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel 
+                  className="text-sm font-medium tracking-wide"
+                  style={{ color: 'hsl(43 60% 55%)' }}
+                >
+                  City
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Your city"
+                    className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                    style={{
+                      background: 'hsl(25 5% 6%)',
+                      border: '1px solid hsl(43 50% 35% / 0.3)',
+                      color: 'hsl(42 30% 90%)',
+                    }}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage className="text-amber-500" />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">City</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Los Angeles"
-                        className="bg-background/50 border-gold/20 focus:border-gold"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel 
+                  className="text-sm font-medium tracking-wide"
+                  style={{ color: 'hsl(43 60% 55%)' }}
+                >
+                  Email *
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="you@email.com"
+                    className="h-12 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                    style={{
+                      background: 'hsl(25 5% 6%)',
+                      border: '1px solid hsl(43 50% 35% / 0.3)',
+                      color: 'hsl(42 30% 90%)',
+                    }}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage className="text-amber-500" />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">Email *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="john@example.com"
-                        className="bg-background/50 border-gold/20 focus:border-gold"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={form.control}
+            name="message"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel 
+                  className="text-sm font-medium tracking-wide"
+                  style={{ color: 'hsl(43 60% 55%)' }}
+                >
+                  Message *
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Tell us about your driving goals..."
+                    className="min-h-[120px] rounded-xl resize-none transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                    style={{
+                      background: 'hsl(25 5% 6%)',
+                      border: '1px solid hsl(43 50% 35% / 0.3)',
+                      color: 'hsl(42 30% 90%)',
+                    }}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage className="text-amber-500" />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="message"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">Message</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us about your driving goals..."
-                        className="bg-background/50 border-gold/20 focus:border-gold min-h-[120px] resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* File Upload */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Attachment (Optional)
-                </label>
-                {file ? (
-                  <div className="flex items-center gap-3 p-3 bg-background/50 rounded-lg border border-gold/20">
-                    <div className="flex-1 truncate text-sm">{file.name}</div>
+          {/* ID Upload Field */}
+          <div className="space-y-3">
+            <label 
+              className="block text-sm font-medium tracking-wide"
+              style={{ color: 'hsl(43 60% 55%)' }}
+            >
+              Upload ID (optional)
+            </label>
+            <p className="text-xs" style={{ color: 'hsl(42 20% 50%)' }}>
+              You can upload or take a photo of your ID for verification.
+            </p>
+            
+            {/* File previews */}
+            {selectedFiles.length > 0 && (
+              <div className="flex gap-3 flex-wrap">
+                {selectedFiles.map((file, index) => (
+                  <div 
+                    key={index}
+                    className="relative group"
+                  >
+                    <img
+                      src={file.preview}
+                      alt={`ID preview ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg"
+                      style={{ border: '1px solid hsl(43 50% 35% / 0.3)' }}
+                    />
                     <button
                       type="button"
-                      onClick={removeFile}
-                      className="p-1 hover:bg-gold/10 rounded-full transition-colors"
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center transition-colors"
+                      style={{
+                        background: 'hsl(0 70% 50%)',
+                        color: 'white',
+                      }}
                     >
-                      <X className="w-4 h-4 text-muted-foreground" />
+                      <X className="w-3 h-3" />
                     </button>
+                    <p className="text-xs mt-1 truncate max-w-[80px]" style={{ color: 'hsl(42 20% 60%)' }}>
+                      {file.file.name}
+                    </p>
                   </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gold/20 rounded-lg cursor-pointer hover:border-gold/40 hover:bg-gold/5 transition-all"
-                  >
-                    <Upload className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Click to upload (Images or PDF, max 10MB)
-                    </span>
-                  </div>
-                )}
+                ))}
+              </div>
+            )}
+            
+            {selectedFiles.length < 2 && (
+              <div className="flex gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".jpg,.jpeg,.png,.webp,.pdf"
+                  accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
                   onChange={handleFileChange}
                   className="hidden"
+                  id="id-upload"
+                  multiple
+                  capture="environment"
                 />
+                <label
+                  htmlFor="id-upload"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98]"
+                  style={{
+                    background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
+                    border: '1px solid hsl(43 60% 40% / 0.4)',
+                    color: 'hsl(43 60% 70%)',
+                    boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
+                  }}
+                >
+                  <Upload className="w-4 h-4" />
+                  <span className="text-sm font-medium">Choose File</span>
+                </label>
+                <label
+                  htmlFor="id-upload"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98] md:hidden"
+                  style={{
+                    background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
+                    border: '1px solid hsl(43 60% 40% / 0.4)',
+                    color: 'hsl(43 60% 70%)',
+                    boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
+                  }}
+                >
+                  <Camera className="w-4 h-4" />
+                  <span className="text-sm font-medium">Camera</span>
+                </label>
               </div>
+            )}
+            
+            {fileError && (
+              <p className="text-sm" style={{ color: 'hsl(25 80% 55%)' }}>
+                {fileError}
+              </p>
+            )}
+          </div>
 
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-12 bg-gold-gradient hover:opacity-90 text-primary-foreground font-semibold transition-all duration-300 hover:shadow-gold"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5 mr-2" />
-                    Send Message
-                  </>
-                )}
-              </Button>
-            </form>
-          </Form>
-        </div>
-      </div>
-    </section>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-14 rounded-xl font-semibold tracking-wider uppercase text-sm transition-all duration-200 hover:scale-[0.98] active:scale-[0.96] disabled:opacity-60"
+            style={{
+              background: 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)',
+              color: 'hsl(30 10% 8%)',
+              boxShadow: '0 4px 25px hsl(43 80% 52% / 0.35), 0 0 40px hsl(43 80% 52% / 0.15), inset 0 1px 0 hsl(48 80% 70% / 0.4)',
+              border: 'none',
+            }}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5 mr-2" />
+                Send Message
+              </>
+            )}
+          </Button>
+        </form>
+      </Form>
+    </div>
   );
 }
