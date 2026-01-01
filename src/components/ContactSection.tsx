@@ -31,7 +31,7 @@ export function ContactSection() {
               textShadow: '0 0 15px hsl(43 60% 50% / 0.2)',
             }}
           >
-            Tell us what you need and we'll get you scheduled.
+            Tell us what you need, get in touch.
           </p>
         </div>
 
