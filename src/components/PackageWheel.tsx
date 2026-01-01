@@ -1,24 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { PackageButton } from "./PackageButton";
-import { Button } from "./ui/button";
+import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
-
-// Fixed package labels - ORDER matches reference exactly (2 HR at 12 o'clock, going clockwise)
-// Reference shows: 2HR (top) → 4HR → 6HR → 8HR → 10HR → 20HR → 30HR → 40HR → RdTest → 1Hr+RdTest → 2Hr+RdTest → 1HR
-const PACKAGES = [
-  { id: "2hr", label: "2 HR" },     // 12 o'clock (top)
-  { id: "4hr", label: "4 HR" },     // 1 o'clock
-  { id: "6hr", label: "6 HR" },     // 2 o'clock
-  { id: "8hr", label: "8 HR" },     // 3 o'clock
-  { id: "10hr", label: "10 HR" },   // 4 o'clock
-  { id: "20hr", label: "20 HR" },   // 5 o'clock
-  { id: "30hr", label: "30 HR" },   // 6 o'clock (bottom)
-  { id: "40hr", label: "40 HR" },   // 7 o'clock
-  { id: "rdtest", label: "Rd Test" }, // 8 o'clock
-  { id: "1hr-rdtest", label: "1Hr +\nRd Test" }, // 9 o'clock
-  { id: "2hr-rdtest", label: "2Hr +\nRd Test" }, // 10 o'clock
-  { id: "1hr", label: "1 HR" },     // 11 o'clock
-];
+import { getPackagesSortedByPosition, getPackageById, type Package } from "@/data/packages";
 
 interface PackageWheelProps {
   carImageSrc: string;
@@ -26,38 +10,76 @@ interface PackageWheelProps {
 }
 
 export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps) {
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [hasUserSelected, setHasUserSelected] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handlePackageClick = (packageId: string) => {
-    setSelectedPackage(packageId);
+  const packages = useMemo(() => getPackagesSortedByPosition(), []);
+  const totalButtons = packages.length;
+
+  // Auto-orbit animation - runs only before user selection
+  useEffect(() => {
+    if (hasUserSelected) return;
+
+    const interval = setInterval(() => {
+      setHighlightedIndex((prev) => (prev + 1) % totalButtons);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [hasUserSelected, totalButtons]);
+
+  const handlePackageClick = useCallback((packageId: string) => {
+    setSelectedPackageId(packageId);
+    setHasUserSelected(true);
     onPackageSelect?.(packageId);
+  }, [onPackageSelect]);
+
+  const handleContinue = () => {
+    if (selectedPackageId) {
+      setIsModalOpen(true);
+    }
   };
 
   // Calculate button positions in a circle
   // Starting from top (12 o'clock position) and going clockwise
   const buttonPositions = useMemo(() => {
-    const positions: { x: number; y: number; angle: number }[] = [];
-    const totalButtons = PACKAGES.length;
+    const positions: { x: number; y: number; angle: number; pricePosition: 'top' | 'bottom' | 'left' | 'right' }[] = [];
     
-    // Start at -90 degrees (12 o'clock) so "2 HR" is at top
-    // Buttons are positioned clockwise
     for (let i = 0; i < totalButtons; i++) {
-      // Adjust so 2 HR is at top center, going clockwise
-      const angle = ((i / totalButtons) * 360 - 90) * (Math.PI / 180);
+      // Start at -90 degrees (12 o'clock) so first package is at top
+      const angleDegrees = (i / totalButtons) * 360 - 90;
+      const angle = angleDegrees * (Math.PI / 180);
+      
+      // Determine price label position based on angle
+      let pricePosition: 'top' | 'bottom' | 'left' | 'right';
+      const normalizedAngle = ((angleDegrees + 90) % 360 + 360) % 360;
+      
+      if (normalizedAngle >= 315 || normalizedAngle < 45) {
+        pricePosition = 'top';
+      } else if (normalizedAngle >= 45 && normalizedAngle < 135) {
+        pricePosition = 'right';
+      } else if (normalizedAngle >= 135 && normalizedAngle < 225) {
+        pricePosition = 'bottom';
+      } else {
+        pricePosition = 'left';
+      }
+      
       positions.push({
         x: Math.cos(angle) * 50, // 50% from center
         y: Math.sin(angle) * 50,
-        angle: (i / totalButtons) * 360 - 90,
+        angle: angleDegrees,
+        pricePosition,
       });
     }
     return positions;
-  }, []);
+  }, [totalButtons]);
 
-  const selectedPackageLabel = PACKAGES.find(p => p.id === selectedPackage)?.label.replace('\n', ' ');
+  const selectedPackage = selectedPackageId ? getPackageById(selectedPackageId) : null;
 
   return (
     <div className="relative w-full flex flex-col items-center">
-      {/* Package wheel container - NO rectangular/square borders */}
+      {/* Package wheel container */}
       <div 
         className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
       >
@@ -104,13 +126,20 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         </div>
 
         {/* Package buttons positioned in circle */}
-        {PACKAGES.map((pkg, index) => {
+        {packages.map((pkg, index) => {
           const pos = buttonPositions[index];
+          const isHighlighted = !hasUserSelected && highlightedIndex === index;
+          const isSelected = selectedPackageId === pkg.id;
+          
           return (
             <PackageButton
               key={pkg.id}
               label={pkg.label}
-              isSelected={selectedPackage === pkg.id}
+              price={pkg.price}
+              isSelected={isSelected}
+              isHighlighted={isHighlighted}
+              showPrice={isSelected}
+              pricePosition={pos.pricePosition}
               onClick={() => handlePackageClick(pkg.id)}
               style={{
                 left: `calc(50% + ${pos.x}%)`,
@@ -122,25 +151,73 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         })}
       </div>
 
-      {/* Selected package indicator & CTA */}
-      <div className={cn(
-        "mt-6 text-center transition-all duration-300",
-        selectedPackage ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-      )}>
-        <p className="text-sm text-muted-foreground mb-3">
-          Selected: <span className="font-semibold text-gold">{selectedPackageLabel}</span>
-        </p>
-        <Button 
-          size="lg"
+      {/* Selected package indicator & Continue CTA - moved down with more spacing */}
+      <div className="mt-12 sm:mt-16 md:mt-20 text-center pb-6">
+        <div className={cn(
+          "transition-all duration-300",
+          selectedPackageId ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+        )}>
+          <p 
+            className="text-sm mb-2"
+            style={{ color: 'hsl(42 30% 65%)' }}
+          >
+            Selected Package
+          </p>
+          <p 
+            className="text-lg sm:text-xl font-bold mb-1"
+            style={{
+              background: 'linear-gradient(135deg, hsl(43 85% 55%) 0%, hsl(48 90% 72%) 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {selectedPackage?.label.replace('\n', ' ')}
+          </p>
+          <p 
+            className="text-2xl sm:text-3xl font-bold mb-5"
+            style={{
+              background: 'linear-gradient(135deg, hsl(38 75% 45%) 0%, hsl(43 85% 55%) 50%, hsl(48 90% 72%) 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 10px hsl(43 80% 52% / 0.3))',
+            }}
+          >
+            {selectedPackage?.price}
+          </p>
+        </div>
+        
+        <button
+          onClick={handleContinue}
+          disabled={!selectedPackageId}
           className={cn(
-            "bg-gold hover:bg-gold-dark text-primary-foreground font-bold",
-            "px-8 py-6 text-lg rounded-full",
-            "shadow-gold hover:shadow-gold-lg transition-all duration-300"
+            "px-10 py-4 rounded-full font-bold tracking-wider uppercase text-sm",
+            "transition-all duration-200",
+            selectedPackageId 
+              ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer" 
+              : "opacity-50 cursor-not-allowed"
           )}
+          style={{
+            background: selectedPackageId
+              ? 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)'
+              : 'linear-gradient(145deg, hsl(36 30% 25%) 0%, hsl(43 35% 35%) 50%, hsl(48 30% 40%) 100%)',
+            color: selectedPackageId ? 'hsl(30 10% 8%)' : 'hsl(30 10% 25%)',
+            boxShadow: selectedPackageId 
+              ? '0 4px 25px hsl(43 80% 52% / 0.35), 0 0 40px hsl(43 80% 52% / 0.15), inset 0 1px 0 hsl(48 80% 70% / 0.4)'
+              : '0 2px 10px hsl(0 0% 0% / 0.3)',
+          }}
         >
           Continue
-        </Button>
+        </button>
       </div>
+
+      {/* Package Details Modal */}
+      <PackageModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        pkg={selectedPackage} 
+      />
     </div>
   );
 }
