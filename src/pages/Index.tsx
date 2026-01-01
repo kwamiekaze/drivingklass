@@ -1,5 +1,6 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
+import { ContactSection } from "@/components/ContactSection";
 
 const Index = () => {
   return (
@@ -11,6 +12,9 @@ const Index = () => {
 
       {/* Hero Section with car and package wheel */}
       <HeroSection />
+
+      {/* Contact Section */}
+      <ContactSection />
     </div>
   );
 };
