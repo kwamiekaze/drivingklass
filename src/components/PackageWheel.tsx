@@ -78,7 +78,7 @@ function PriceLabel({
 
 export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps) {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [containerSize, setContainerSize] = useState(320);
@@ -101,15 +101,54 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Auto-orbit animation - runs only before user selection
+  // Auto-orbit animation - runs only on MOBILE and before user selection
   useEffect(() => {
-    if (hasUserSelected) return;
+    const isMobileQuery = '(max-width: 767px)';
+    const mql = window.matchMedia(isMobileQuery);
 
-    const interval = setInterval(() => {
-      setHighlightedIndex((prev) => (prev + 1) % totalButtons);
-    }, 1000);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    const stop = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = null;
+    };
+
+    const start = () => {
+      stop();
+      // Only run if mobile AND user hasn't selected a package
+      if (!mql.matches) return;
+      if (hasUserSelected) return;
+
+      setHighlightedIndex(0);
+      intervalId = setInterval(() => {
+        setHighlightedIndex((prev) => ((prev ?? 0) + 1) % totalButtons);
+      }, 900);
+    };
+
+    const onChange = () => {
+      if (!mql.matches) {
+        stop();
+        setHighlightedIndex(null); // Desktop shows normal buttons
+      } else if (!hasUserSelected) {
+        start();
+      }
+    };
+
+    // Initial check
+    if (mql.matches && !hasUserSelected) {
+      start();
+    } else {
+      setHighlightedIndex(null);
+    }
+
+    mql.addEventListener?.('change', onChange);
+    window.addEventListener('resize', onChange);
+
+    return () => {
+      stop();
+      mql.removeEventListener?.('change', onChange);
+      window.removeEventListener('resize', onChange);
+    };
   }, [hasUserSelected, totalButtons]);
 
   const handlePackageClick = useCallback((packageId: string) => {
