@@ -125,8 +125,13 @@
     @apply border-border;
   }
 
+  html {
+    transition: background-color 380ms ease, color 380ms ease;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
+    transition: background-color 380ms ease, color 380ms ease;
   }
 
   /* Custom scrollbar */
