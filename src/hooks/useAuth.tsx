@@ -29,7 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Defer admin check with setTimeout to avoid deadlock
         if (session?.user) {
-          setTimeout(() => {
+          setTimeout(async () => {
+            // Try to setup admin role if applicable
+            try {
+              await supabase.functions.invoke('setup-admin');
+            } catch (e) {
+              console.log('Admin setup check failed (may be expected):', e);
+            }
             checkAdminRole(session.user.id);
           }, 0);
         } else {
