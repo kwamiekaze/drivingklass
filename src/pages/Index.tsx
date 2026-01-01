@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
@@ -14,7 +14,13 @@ const Index = () => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   
-  const [showSplash, setShowSplash] = useState(true);
+  // Check if desktop on initial render - skip splash for desktop
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !window.matchMedia("(min-width: 1024px)").matches;
+    }
+    return true;
+  });
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isMediaOpen, setIsMediaOpen] = useState(false);

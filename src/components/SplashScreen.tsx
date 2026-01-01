@@ -8,7 +8,18 @@ interface SplashScreenProps {
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [shouldShow, setShouldShow] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Check if desktop on mount - skip splash for desktop
+  useEffect(() => {
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (isDesktop) {
+      // Skip splash entirely on desktop
+      setShouldShow(false);
+      onComplete();
+    }
+  }, [onComplete]);
 
   // Handle video loaded
   const handleVideoLoaded = () => {
@@ -32,6 +43,11 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     setIsFading(true);
     setTimeout(onComplete, 600);
   };
+
+  // Don't render anything if we shouldn't show (desktop)
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <div

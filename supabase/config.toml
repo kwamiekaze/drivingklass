@@ -1,4 +1,7 @@
 project_id = "wfuadudqtcmpdbgtgazh"
 
+[functions.submit-contact]
+verify_jwt = false
+
 [functions.setup-admin]
 verify_jwt = false
