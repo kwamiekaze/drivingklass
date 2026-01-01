@@ -7,25 +7,19 @@ interface SplashScreenProps {
   duration?: number;
 }
 
-// Premium gold colors matching the car reference
-const GOLD_COLORS = {
-  primary: '#C9A227',      // Champagne gold (car body)
-  bright: '#D4AF37',       // Metallic gold
-  shimmer: '#E8D5A3',      // Light gold shimmer
-  amber: '#B8860B',        // Dark gold
-  champagne: '#F5E6C8',    // Cream gold
-  highlight: '#FFE4B5',    // Soft highlight
-  headlight: '#FFF8E7',    // Warm white headlight
+// Premium champagne gold colors matching the car
+const GOLD = {
+  metallic: '#C9A227',
+  champagne: '#D4AF37',
+  shimmer: '#E8D5A3',
+  dark: '#8B7355',
+  cream: '#F5E6C8',
+  headlight: '#FFF8E7',
 };
 
 export function SplashScreen({ onComplete, duration = 7000 }: SplashScreenProps) {
-  const [phase, setPhase] = useState<'intro' | 'car' | 'title' | 'slogan' | 'stars' | 'hold' | 'fadeout'>('intro');
-  const [showCar, setShowCar] = useState(false);
-  const [showTitle, setShowTitle] = useState(false);
-  const [showSlogan, setShowSlogan] = useState(false);
-  const [showStars, setShowStars] = useState(false);
-  const [fadeOut, setFadeOut] = useState(false);
-  const [headlightPulse, setHeadlightPulse] = useState(0);
+  const [phase, setPhase] = useState<'init' | 'car' | 'title' | 'slogan' | 'stars' | 'hold' | 'fade'>('init');
+  const [headlightPhase, setHeadlightPhase] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const starsRef = useRef<Array<{
@@ -34,373 +28,306 @@ export function SplashScreen({ onComplete, duration = 7000 }: SplashScreenProps)
     size: number;
     brightness: number;
     speed: number;
-    twinkleOffset: number;
-    depth: number;
+    twinklePhase: number;
   }>>([]);
 
-  // Initialize gold galaxy stars with depth layers
+  const showCar = phase !== 'init';
+  const showTitle = ['title', 'slogan', 'stars', 'hold', 'fade'].includes(phase);
+  const showSlogan = ['slogan', 'stars', 'hold', 'fade'].includes(phase);
+  const showStars = ['stars', 'hold', 'fade'].includes(phase);
+  const isFading = phase === 'fade';
+
+  // Initialize distant gold stars (subtle, not glowy)
   useEffect(() => {
     const stars: typeof starsRef.current = [];
-    for (let i = 0; i < 250; i++) {
-      const depth = Math.random();
+    for (let i = 0; i < 120; i++) {
       stars.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        size: depth * 2 + 0.3,
-        brightness: depth * 0.6 + 0.2,
-        speed: (1 - depth) * 0.03 + 0.005,
-        twinkleOffset: Math.random() * Math.PI * 2,
-        depth,
+        size: Math.random() * 1.2 + 0.3,
+        brightness: Math.random() * 0.4 + 0.1,
+        speed: Math.random() * 0.008 + 0.002,
+        twinklePhase: Math.random() * Math.PI * 2,
       });
     }
     starsRef.current = stars;
   }, []);
 
-  // Headlight pulse animation
+  // Headlight slow pulse (luxury cadence)
   useEffect(() => {
-    const pulseInterval = setInterval(() => {
-      setHeadlightPulse(prev => (prev + 1) % 100);
-    }, 50);
-    return () => clearInterval(pulseInterval);
+    const interval = setInterval(() => {
+      setHeadlightPhase(p => (p + 1) % 200);
+    }, 40);
+    return () => clearInterval(interval);
   }, []);
 
-  // Animate star field canvas
+  // Canvas animation for subtle gold stars
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resizeCanvas = () => {
+    const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    resize();
+    window.addEventListener('resize', resize);
 
     let time = 0;
-    let starFieldOpacity = 0;
+    let opacity = 0;
 
-    const animate = () => {
+    const draw = () => {
       time += 0.016;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Gradually increase star field opacity
-      if (phase !== 'intro') {
-        starFieldOpacity = Math.min(1, starFieldOpacity + 0.015);
+      if (phase !== 'init') {
+        opacity = Math.min(1, opacity + 0.01);
       }
 
-      // Draw gold galaxy stars with parallax
-      starsRef.current.forEach((star) => {
-        const twinkle = Math.sin(time * 1.5 + star.twinkleOffset) * 0.4 + 0.6;
-        const alpha = star.brightness * twinkle * starFieldOpacity;
+      // Draw subtle distant stars (no glow clouds)
+      starsRef.current.forEach(star => {
+        const twinkle = Math.sin(time * 0.8 + star.twinklePhase) * 0.3 + 0.7;
+        const alpha = star.brightness * twinkle * opacity;
 
-        // Outer glow (gold nebula effect)
-        const outerGlow = ctx.createRadialGradient(
-          star.x, star.y, 0,
-          star.x, star.y, star.size * 6
-        );
-        outerGlow.addColorStop(0, `rgba(201, 162, 39, ${alpha * 0.8})`);
-        outerGlow.addColorStop(0.4, `rgba(212, 175, 55, ${alpha * 0.3})`);
-        outerGlow.addColorStop(1, 'transparent');
-
+        // Simple dot star (no bloom)
         ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size * 6, 0, Math.PI * 2);
-        ctx.fillStyle = outerGlow;
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(201, 162, 39, ${alpha})`;
         ctx.fill();
 
-        // Star core
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(245, 230, 200, ${alpha})`;
-        ctx.fill();
+        // Very subtle tiny glow (realistic star point)
+        if (star.size > 0.8) {
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(201, 162, 39, ${alpha * 0.15})`;
+          ctx.fill();
+        }
 
-        // Parallax movement
-        star.y += star.speed * (1 - star.depth * 0.5);
-        star.x += star.speed * 0.1 * (star.x > canvas.width / 2 ? 1 : -1);
-        
-        if (star.y > canvas.height + 10) {
-          star.y = -10;
+        // Parallax drift
+        star.y += star.speed;
+        if (star.y > canvas.height + 5) {
+          star.y = -5;
           star.x = Math.random() * canvas.width;
         }
       });
 
-      // Floating gold particles
-      for (let i = 0; i < 30; i++) {
-        const px = (Math.sin(time * 0.3 + i * 0.5) * 0.5 + 0.5) * canvas.width;
-        const py = (Math.cos(time * 0.2 + i * 0.7) * 0.5 + 0.5) * canvas.height;
-        const pAlpha = (Math.sin(time + i) * 0.3 + 0.4) * starFieldOpacity;
-        
-        ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(201, 162, 39, ${pAlpha})`;
-        ctx.fill();
-      }
-
-      animationRef.current = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame(draw);
     };
-
-    animate();
+    draw();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      window.removeEventListener('resize', resize);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [phase]);
 
   // Phase timing
   useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
-
-    timers.push(setTimeout(() => { setPhase('car'); setShowCar(true); }, 500));
-    timers.push(setTimeout(() => { setPhase('title'); setShowTitle(true); }, 1500));
-    timers.push(setTimeout(() => { setPhase('slogan'); setShowSlogan(true); }, 2800));
-    timers.push(setTimeout(() => { setPhase('stars'); setShowStars(true); }, 3800));
-    timers.push(setTimeout(() => setPhase('hold'), 5000));
-    timers.push(setTimeout(() => { setPhase('fadeout'); setFadeOut(true); }, duration - 800));
-    timers.push(setTimeout(onComplete, duration));
-
+    const timers = [
+      setTimeout(() => setPhase('car'), 400),
+      setTimeout(() => setPhase('title'), 1400),
+      setTimeout(() => setPhase('slogan'), 2600),
+      setTimeout(() => setPhase('stars'), 3600),
+      setTimeout(() => setPhase('hold'), 4800),
+      setTimeout(() => setPhase('fade'), duration - 700),
+      setTimeout(onComplete, duration),
+    ];
     return () => timers.forEach(clearTimeout);
   }, [onComplete, duration]);
 
-  // Calculate headlight glow intensity (smooth sine wave pulse)
-  const headlightIntensity = Math.sin(headlightPulse * 0.06) * 0.3 + 0.7;
+  // Headlight intensity (slow sine wave for luxury pulse)
+  const headlightIntensity = Math.sin(headlightPhase * 0.03) * 0.25 + 0.75;
 
   return (
     <div
       className={`fixed inset-0 flex flex-col items-center justify-center overflow-hidden transition-opacity duration-700 ${
-        fadeOut ? 'opacity-0' : 'opacity-100'
+        isFading ? 'opacity-0' : 'opacity-100'
       }`}
-      style={{
-        background: 'linear-gradient(180deg, #080808 0%, #040404 50%, #000000 100%)',
-        zIndex: 9999,
-      }}
+      style={{ background: '#000000', zIndex: 9999 }}
     >
-      {/* Gold galaxy star field canvas */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
-      />
+      {/* Subtle gold star field */}
+      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
 
-      {/* Cinematic vignette */}
+      {/* Subtle vignette (cinematic) */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.9) 100%)',
+          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%)',
         }}
       />
 
-      {/* Soft gold ambient glow behind car */}
+      {/* Main content with slow cinematic push-in */}
       <div
-        className="absolute inset-0 pointer-events-none transition-opacity duration-1500"
+        className="relative flex flex-col items-center transition-transform ease-out"
         style={{
-          background: `radial-gradient(ellipse 50% 35% at 50% 55%, rgba(201, 162, 39, ${showCar ? 0.15 : 0}) 0%, transparent 70%)`,
-        }}
-      />
-
-      {/* Main content container with cinematic push-in */}
-      <div
-        className="relative flex flex-col items-center transition-transform duration-[4000ms] ease-out"
-        style={{
-          transform: phase === 'hold' || phase === 'fadeout' ? 'scale(1.04)' : 'scale(1)',
+          transitionDuration: '5000ms',
+          transform: showStars ? 'scale(1.03)' : 'scale(1)',
         }}
       >
         {/* DRIVING KLASS Title */}
         <h1
-          className={`relative font-light tracking-[0.25em] uppercase text-center transition-all duration-1000 ${
-            showTitle ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-6'
+          className={`relative tracking-[0.25em] uppercase text-center transition-all duration-1000 ease-out ${
+            showTitle ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
           }`}
           style={{
-            fontSize: 'clamp(1.5rem, 6vw, 3.5rem)',
-            fontFamily: '"Playfair Display", "Times New Roman", serif',
-            letterSpacing: '0.3em',
-            marginBottom: 'clamp(1rem, 3vw, 2rem)',
+            fontSize: 'clamp(1.4rem, 5vw, 3rem)',
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontWeight: 400,
+            letterSpacing: '0.35em',
+            marginBottom: 'clamp(1.5rem, 4vw, 3rem)',
           }}
         >
           <span
             style={{
-              background: `linear-gradient(180deg, ${GOLD_COLORS.shimmer} 0%, ${GOLD_COLORS.primary} 40%, ${GOLD_COLORS.amber} 100%)`,
+              background: `linear-gradient(180deg, ${GOLD.shimmer} 0%, ${GOLD.metallic} 50%, ${GOLD.dark} 100%)`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              filter: showTitle ? `drop-shadow(0 0 20px rgba(201, 162, 39, 0.6)) drop-shadow(0 0 40px rgba(201, 162, 39, 0.3))` : 'none',
             }}
           >
             DRIVING KLASS
           </span>
         </h1>
 
-        {/* Gold Car with Headlight Animation */}
+        {/* Car container */}
         <div
           className={`relative transition-all duration-1200 ease-out ${
-            showCar ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
+            showCar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
-          style={{
-            width: 'clamp(280px, 60vw, 500px)',
-            marginBottom: 'clamp(1rem, 2vw, 1.5rem)',
-          }}
+          style={{ width: 'clamp(260px, 55vw, 480px)' }}
         >
-          {/* Car rim light glow */}
+          {/* Headlight glow - left (subtle, warm) */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute pointer-events-none z-20"
             style={{
-              background: `radial-gradient(ellipse 80% 60% at 50% 50%, rgba(201, 162, 39, 0.2) 0%, transparent 60%)`,
-              filter: 'blur(20px)',
-              transform: 'scale(1.2)',
-            }}
-          />
-          
-          {/* Headlight glow overlay (left) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: '12%',
-              top: '35%',
-              width: '60px',
-              height: '25px',
-              background: `radial-gradient(ellipse at center, rgba(255, 248, 231, ${headlightIntensity * 0.9}) 0%, rgba(201, 162, 39, ${headlightIntensity * 0.4}) 40%, transparent 70%)`,
-              filter: `blur(8px)`,
+              left: '10%',
+              top: '32%',
+              width: '40px',
+              height: '15px',
+              background: `radial-gradient(ellipse at center, rgba(255, 248, 231, ${headlightIntensity * 0.6}) 0%, transparent 70%)`,
+              filter: 'blur(4px)',
               opacity: showCar ? 1 : 0,
-              transition: 'opacity 1s ease',
-            }}
-          />
-          
-          {/* Headlight glow overlay (right) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: '35%',
-              top: '40%',
-              width: '50px',
-              height: '20px',
-              background: `radial-gradient(ellipse at center, rgba(255, 248, 231, ${headlightIntensity * 0.7}) 0%, rgba(201, 162, 39, ${headlightIntensity * 0.3}) 40%, transparent 70%)`,
-              filter: `blur(6px)`,
-              opacity: showCar ? 1 : 0,
-              transition: 'opacity 1s ease',
+              transition: 'opacity 0.8s',
             }}
           />
 
-          {/* The actual car image */}
+          {/* Headlight glow - right (subtle) */}
+          <div
+            className="absolute pointer-events-none z-20"
+            style={{
+              left: '32%',
+              top: '38%',
+              width: '30px',
+              height: '12px',
+              background: `radial-gradient(ellipse at center, rgba(255, 248, 231, ${headlightIntensity * 0.45}) 0%, transparent 70%)`,
+              filter: 'blur(3px)',
+              opacity: showCar ? 1 : 0,
+              transition: 'opacity 0.8s',
+            }}
+          />
+
+          {/* The car - no glow aura, just shadow for grounding */}
           <img
             src={goldCarSplash}
             alt="DrivingKlass Gold Sedan"
             className="w-full h-auto relative z-10"
             style={{
-              filter: `drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 60px rgba(201, 162, 39, 0.2))`,
+              filter: 'drop-shadow(0 20px 25px rgba(0, 0, 0, 0.6))',
             }}
           />
-          
-          {/* Subtle ground reflection */}
+
+          {/* Floor reflection (realistic, low opacity, blurred) */}
           <div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4/5 h-4 pointer-events-none"
+            className="absolute left-1/2 bottom-0 -translate-x-1/2 w-[90%] overflow-hidden pointer-events-none"
+            style={{ height: '60px' }}
+          >
+            <img
+              src={goldCarSplash}
+              alt=""
+              className="w-full h-auto"
+              style={{
+                transform: 'scaleY(-0.35) translateY(-140%)',
+                opacity: 0.12,
+                filter: 'blur(3px)',
+                maskImage: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 100%)',
+              }}
+            />
+          </div>
+
+          {/* Subtle rim light effect on edges (CSS only, no glow blobs) */}
+          <div
+            className="absolute inset-0 pointer-events-none z-5"
             style={{
-              background: `linear-gradient(180deg, rgba(201, 162, 39, 0.15) 0%, transparent 100%)`,
-              filter: 'blur(10px)',
-              transform: 'translateX(-50%) scaleY(-0.3)',
+              background: 'linear-gradient(135deg, rgba(201, 162, 39, 0.08) 0%, transparent 30%, transparent 70%, rgba(201, 162, 39, 0.05) 100%)',
+              mixBlendMode: 'overlay',
             }}
           />
         </div>
 
         {/* Slogan */}
         <p
-          className={`text-center font-light tracking-widest transition-all duration-1000 ${
-            showSlogan ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          className={`text-center tracking-[0.15em] transition-all duration-1000 ease-out ${
+            showSlogan ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
           }`}
           style={{
-            fontSize: 'clamp(0.75rem, 2vw, 1.1rem)',
-            letterSpacing: '0.2em',
-            marginBottom: 'clamp(0.75rem, 2vw, 1.5rem)',
-            color: GOLD_COLORS.champagne,
-            textShadow: `0 0 15px rgba(201, 162, 39, 0.5), 0 0 30px rgba(201, 162, 39, 0.3)`,
+            fontSize: 'clamp(0.7rem, 1.8vw, 1rem)',
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontWeight: 300,
+            color: GOLD.cream,
+            marginTop: 'clamp(1rem, 3vw, 2rem)',
+            marginBottom: 'clamp(0.75rem, 2vw, 1.25rem)',
           }}
         >
           Where 5-Star Drivers Are Made
         </p>
 
-        {/* Five Gold Stars with individual twinkle */}
+        {/* Five metallic gold stars (no outward glow, natural shine) */}
         <div
-          className={`flex justify-center gap-2 sm:gap-3 transition-all duration-1000 ${
-            showStars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          className={`flex justify-center gap-2 transition-all duration-800 ${
+            showStars ? 'opacity-100' : 'opacity-0'
           }`}
         >
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="relative">
-              {/* Star sparkle/glint effect */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  animation: showStars ? `starSparkle ${2 + i * 0.3}s ease-in-out infinite` : 'none',
-                  animationDelay: `${i * 0.5}s`,
-                }}
-              >
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-3 rounded-full"
-                  style={{
-                    background: `linear-gradient(180deg, ${GOLD_COLORS.shimmer} 0%, transparent 100%)`,
-                    opacity: 0.8,
-                  }}
-                />
-              </div>
-              
-              <Star
-                className="transition-all duration-500"
-                style={{
-                  width: 'clamp(18px, 4vw, 28px)',
-                  height: 'clamp(18px, 4vw, 28px)',
-                  fill: `url(#starGradient)`,
-                  stroke: GOLD_COLORS.shimmer,
-                  strokeWidth: 0.3,
-                  filter: `
-                    drop-shadow(0 0 4px rgba(201, 162, 39, 0.9))
-                    drop-shadow(0 0 12px rgba(201, 162, 39, 0.6))
-                    drop-shadow(0 0 20px rgba(184, 134, 11, 0.4))
-                  `,
-                  transitionDelay: `${i * 120}ms`,
-                  opacity: showStars ? 1 : 0,
-                  transform: showStars ? 'scale(1)' : 'scale(0.3)',
-                }}
-              />
-            </div>
+            <Star
+              key={i}
+              style={{
+                width: 'clamp(16px, 3.5vw, 24px)',
+                height: 'clamp(16px, 3.5vw, 24px)',
+                fill: `url(#starGold)`,
+                stroke: GOLD.shimmer,
+                strokeWidth: 0.4,
+                transitionDelay: `${i * 100}ms`,
+                opacity: showStars ? 1 : 0,
+                transform: showStars ? 'scale(1)' : 'scale(0.5)',
+                transition: 'all 0.5s ease-out',
+              }}
+            />
           ))}
         </div>
 
         {/* SVG gradient for stars */}
         <svg width="0" height="0" className="absolute">
           <defs>
-            <linearGradient id="starGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={GOLD_COLORS.shimmer} />
-              <stop offset="40%" stopColor={GOLD_COLORS.primary} />
-              <stop offset="100%" stopColor={GOLD_COLORS.amber} />
+            <linearGradient id="starGold" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={GOLD.shimmer} />
+              <stop offset="50%" stopColor={GOLD.metallic} />
+              <stop offset="100%" stopColor={GOLD.dark} />
             </linearGradient>
           </defs>
         </svg>
       </div>
 
-      {/* Click to skip */}
+      {/* Skip button */}
       <button
         onClick={onComplete}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs tracking-[0.2em] uppercase opacity-30 hover:opacity-60 transition-opacity"
-        style={{ color: GOLD_COLORS.champagne }}
+        className="absolute bottom-5 left-1/2 -translate-x-1/2 text-xs tracking-[0.15em] uppercase opacity-25 hover:opacity-50 transition-opacity"
+        style={{ color: GOLD.cream }}
       >
-        Click to skip
+        Skip
       </button>
-
-      {/* Keyframe animations */}
-      <style>{`
-        @keyframes starSparkle {
-          0%, 100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.1);
-          }
-        }
-      `}</style>
     </div>
   );
 }
