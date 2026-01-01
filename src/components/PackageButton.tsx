@@ -77,21 +77,16 @@ export function PackageButton({
         />
       </div>
       
-      {/* Button content */}
+      {/* Button content - label always visible above all effects */}
       <span 
         className={cn(
-          "relative z-10 text-center leading-tight font-bold",
+          "relative z-20 text-center leading-tight font-bold pointer-events-none",
           "text-[10px] sm:text-xs md:text-sm lg:text-base",
           "px-1 whitespace-pre-line"
         )}
         style={{
-          background: isActive
-            ? 'linear-gradient(180deg, hsl(48 90% 78%) 0%, hsl(43 85% 60%) 100%)'
-            : 'linear-gradient(180deg, hsl(45 80% 70%) 0%, hsl(40 75% 50%) 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          filter: 'drop-shadow(0 1px 1px hsl(0 0% 0% / 0.3))',
+          color: isActive ? 'hsl(48 90% 75%)' : 'hsl(45 80% 65%)',
+          textShadow: '0 1px 2px hsl(0 0% 0% / 0.5), 0 0 8px hsl(43 80% 50% / 0.3)',
         }}
       >
         {label}

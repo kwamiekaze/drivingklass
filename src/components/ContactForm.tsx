@@ -463,7 +463,7 @@ export function ContactForm() {
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98] md:hidden"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[0.98]"
                   style={{
                     background: 'linear-gradient(145deg, hsl(36 75% 30% / 0.5) 0%, hsl(43 80% 45% / 0.3) 100%)',
                     border: '1px solid hsl(43 60% 40% / 0.4)',
