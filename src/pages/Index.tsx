@@ -27,7 +27,7 @@ const Index = () => {
     <>
       {/* Cinematic Splash Screen */}
       {showSplash && (
-        <SplashScreen onComplete={handleSplashComplete} duration={6000} />
+        <SplashScreen onComplete={handleSplashComplete} />
       )}
 
       <div 

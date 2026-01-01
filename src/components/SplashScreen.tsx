@@ -3,33 +3,30 @@ import splashVideo from '@/assets/splash-video.mov';
 
 interface SplashScreenProps {
   onComplete: () => void;
-  duration?: number;
 }
 
-export function SplashScreen({ onComplete, duration = 6000 }: SplashScreenProps) {
+export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
-  const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Handle video end or timeout
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsFading(true);
-      setTimeout(onComplete, 600);
-    }, duration);
-    return () => clearTimeout(timer);
-  }, [onComplete, duration]);
 
   // Handle video loaded
   const handleVideoLoaded = () => {
     setVideoLoaded(true);
   };
 
-  // Handle video error - fallback to poster
+  // Handle video ended - hold last frame briefly, then fade out
+  const handleVideoEnded = () => {
+    setTimeout(() => {
+      setIsFading(true);
+      setTimeout(onComplete, 600);
+    }, 400); // Hold last frame for 400ms
+  };
+
+  // Handle video error - proceed to homepage
   const handleVideoError = () => {
-    setVideoError(true);
-    setVideoLoaded(true);
+    setIsFading(true);
+    setTimeout(onComplete, 600);
   };
 
   // Skip splash on click/tap
@@ -63,9 +60,9 @@ export function SplashScreen({ onComplete, duration = 6000 }: SplashScreenProps)
         src={splashVideo}
         autoPlay
         muted
-        loop
         playsInline
         onLoadedData={handleVideoLoaded}
+        onEnded={handleVideoEnded}
         onError={handleVideoError}
         style={{
           position: 'absolute',
