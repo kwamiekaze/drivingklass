@@ -67,17 +67,31 @@ export function PackageWheel({ carImageSrc, onPackageSelect, carGlow = false }: 
       <div 
         className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
       >
-        {/* Subtle connecting ring (like reference) */}
-        <div className="absolute inset-8 sm:inset-10 md:inset-12 lg:inset-14 rounded-full border border-gold/20 dark:border-gold/30" />
+        {/* Subtle connecting ring with metallic gradient */}
+        <div 
+          className="absolute inset-8 sm:inset-10 md:inset-12 lg:inset-14 rounded-full"
+          style={{
+            background: 'transparent',
+            border: '1px solid transparent',
+            borderImage: 'linear-gradient(180deg, hsl(43 60% 45% / 0.3) 0%, hsl(43 60% 35% / 0.15) 50%, hsl(43 60% 45% / 0.3) 100%) 1',
+            boxShadow: 'inset 0 0 40px hsl(43 80% 50% / 0.05)',
+          }}
+        />
         
         {/* Center car container */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className={cn(
             "relative w-[50%] flex items-center justify-center transition-all duration-300",
-            (isCarGlowing || carGlow) && "drop-shadow-[0_0_30px_hsl(var(--gold)/0.6)]"
+            (isCarGlowing || carGlow) && "brightness-105"
           )}>
-            {/* Car shadow/reflection */}
-            <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-6 bg-black/20 dark:bg-black/40 blur-xl rounded-full" />
+            {/* Cinematic shadow/reflection under car */}
+            <div 
+              className="absolute bottom-[-8%] left-1/2 -translate-x-1/2 w-[85%] h-8"
+              style={{
+                background: 'radial-gradient(ellipse at center, hsl(0 0% 0% / 0.6) 0%, hsl(0 0% 0% / 0.3) 40%, transparent 70%)',
+                filter: 'blur(12px)',
+              }}
+            />
             
             {/* Car image */}
             <img 
