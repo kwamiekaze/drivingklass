@@ -251,7 +251,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         {/* Package buttons positioned in circle - topmost layer */}
         {packages.map((pkg, index) => {
           const pos = buttonPositions[index];
-          const isHighlighted = !hasUserSelected && highlightedIndex === index;
+          const isHighlighted = highlightedIndex !== null && !hasUserSelected && highlightedIndex === index;
           const isSelected = selectedPackageId === pkg.id;
           
           return (
