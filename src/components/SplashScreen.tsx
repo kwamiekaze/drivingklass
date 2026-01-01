@@ -15,12 +15,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     setVideoLoaded(true);
   };
 
-  // Handle video ended - hold last frame briefly, then fade out
+  // Handle video ended - fade out immediately
   const handleVideoEnded = () => {
-    setTimeout(() => {
-      setIsFading(true);
-      setTimeout(onComplete, 600);
-    }, 400); // Hold last frame for 400ms
+    setIsFading(true);
+    setTimeout(onComplete, 600);
   };
 
   // Handle video error - proceed to homepage
