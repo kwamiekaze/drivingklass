@@ -83,7 +83,7 @@ export function LightModeBackground() {
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none transition-all duration-500">
       {/* Base cream gradient */}
       <div 
         className="absolute inset-0"
