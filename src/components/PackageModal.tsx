@@ -1,6 +1,7 @@
 import { X, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Package } from "@/data/packages";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 interface PackageModalProps {
   isOpen: boolean;
@@ -9,9 +10,14 @@ interface PackageModalProps {
 }
 
 export function PackageModal({ isOpen, onClose, pkg }: PackageModalProps) {
+  const { trackClick } = useAnalytics();
+  
   if (!isOpen || !pkg) return null;
 
   const handleBook = () => {
+    // Track book click
+    trackClick("book_click", { package_id: pkg.id, square_url: pkg.squareUrl });
+    
     // Try to open in new tab, fallback to same tab if blocked
     const newWindow = window.open(pkg.squareUrl, '_blank', 'noopener,noreferrer');
     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
