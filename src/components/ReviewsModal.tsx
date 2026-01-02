@@ -124,10 +124,10 @@ export function ReviewsModal({ isOpen, onClose }: ReviewsModalProps) {
                 ))}
               </div>
               <p className="text-sm italic mb-3" style={{ color: 'hsl(42 20% 75%)' }}>
-                "Quamie is exceptional! His patience, clear guidance, and encouragement transformed me into a confident driver. I couldn't have asked for a better instructor!"
+                "Quamie was absolutely amazing. My daughter suffers from severe anxiety and he helped her every step of the way. Great experience and he was always punctual. Highly recommend"
               </p>
               <p className="text-xs" style={{ color: 'hsl(42 20% 50%)' }}>
-                — Manaleek Mouzon • 11 months ago
+                — Amanda Yula • 1 week ago
               </p>
             </div>
           </div>
