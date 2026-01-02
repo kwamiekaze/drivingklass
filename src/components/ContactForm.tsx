@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "./ThemeProvider";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import {
   Form,
   FormControl,
@@ -54,6 +55,7 @@ export function ContactForm() {
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
+  const { trackClick } = useAnalytics();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -71,6 +73,9 @@ export function ContactForm() {
     setFileError(null);
 
     if (!file) return;
+
+    // Track ID upload attempt
+    trackClick("id_upload_attempt", { file_type: file.type });
 
     // Validate file type
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -115,6 +120,9 @@ export function ContactForm() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    
+    // Track contact form submission
+    trackClick("contact_submit");
 
     try {
       // Prepare file data if exists
