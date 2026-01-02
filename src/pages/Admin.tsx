@@ -395,6 +395,7 @@ export default function Admin() {
           <TabsList className="mb-6">
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="submissions">Contact Submissions</TabsTrigger>
+            <TabsTrigger value="analytics" onClick={() => navigate('/admin/analytics')}>Analytics</TabsTrigger>
           </TabsList>
 
           {/* Services Tab */}
