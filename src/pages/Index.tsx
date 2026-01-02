@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
 import { NavigationButtons } from "@/components/NavigationButtons";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
-import { MediaModal } from "@/components/MediaModal";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
@@ -24,7 +23,6 @@ const Index = () => {
   });
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isMediaOpen, setIsMediaOpen] = useState(false);
 
   const handleSplashComplete = () => {
     setShowSplash(false);
@@ -85,7 +83,6 @@ const Index = () => {
           <NavigationButtons 
             onReviewsClick={() => setIsReviewsOpen(true)}
             onAboutClick={() => setIsAboutOpen(true)}
-            onMediaClick={() => setIsMediaOpen(true)}
           />
 
           {/* Contact Section */}
@@ -95,7 +92,6 @@ const Index = () => {
         {/* Modals */}
         <ReviewsModal isOpen={isReviewsOpen} onClose={() => setIsReviewsOpen(false)} />
         <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-        <MediaModal isOpen={isMediaOpen} onClose={() => setIsMediaOpen(false)} />
       </div>
     </>
   );
