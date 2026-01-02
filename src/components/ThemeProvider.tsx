@@ -20,7 +20,7 @@ const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
 
 function getThemeColor(theme: Theme) {
   // Keep these in sync with the design tokens (index.css)
-  return theme === "dark" ? "hsl(30 10% 3%)" : "hsl(42 45% 96%)";
+  return theme === "dark" ? "hsl(30 10% 3%)" : "hsl(200 70% 88%)";
 }
 
 function isTheme(value: unknown): value is Theme {

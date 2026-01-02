@@ -68,60 +68,64 @@
     --sidebar-ring: var(--gold);
   }
 
-  /* ===== LIGHT THEME (spring/summer driving school) ===== */
+  /* ===== LIGHT THEME (bright spring/summer daytime) ===== */
   :root[data-theme="light"],
   :root.light {
     color-scheme: light;
 
-    /* Core theme tokens - warm cream/sky palette */
-    --bg: 42 50% 96%;
-    --bg2: 40 45% 93%;
-    --card: 42 40% 98%;
-    --card2: 40 35% 95%;
-    --text: 0 0% 12%;
-    --text-muted: 0 0% 40%;
-    --border: 40 40% 80%;
-    --gold: 43 75% 48%;
-    --gold-light: 45 70% 58%;
-    --gold-dark: 38 80% 35%;
-    --gold-shimmer: 48 85% 68%;
-    --accent: 28 95% 52%;
-    --accent2: 35 90% 50%;
-    --shadow: 0 0% 0%;
-    --glow: 43 75% 55%;
+    /* Core theme tokens - bright sky & cream palette */
+    --bg: 200 45% 96%;
+    --bg2: 45 35% 94%;
+    --card: 0 0% 100%;
+    --card2: 45 40% 97%;
+    --text: 220 15% 15%;
+    --text-muted: 220 10% 45%;
+    --border: 45 30% 82%;
+    --gold: 43 85% 45%;
+    --gold-light: 45 80% 55%;
+    --gold-dark: 38 90% 32%;
+    --gold-shimmer: 48 90% 62%;
+    --accent: 28 100% 50%;
+    --accent2: 120 35% 45%;
+    --shadow: 220 20% 20%;
+    --glow: 43 80% 50%;
 
     /* Shadcn mapped tokens */
     --background: var(--bg);
     --foreground: var(--text);
-    --muted: 42 35% 90%;
+    --muted: 200 20% 92%;
     --muted-foreground: var(--text-muted);
-    --popover: 42 50% 98%;
+    --popover: 0 0% 100%;
     --popover-foreground: var(--text);
     --card-foreground: var(--text);
     --primary: var(--gold);
-    --primary-foreground: 0 0% 8%;
-    --secondary: 40 40% 92%;
-    --secondary-foreground: 0 0% 15%;
-    --accent-foreground: 0 0% 8%;
-    --destructive: 0 84% 60%;
+    --primary-foreground: 220 15% 10%;
+    --secondary: 45 25% 94%;
+    --secondary-foreground: 220 15% 18%;
+    --accent-foreground: 220 15% 10%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --input: 40 40% 96%;
+    --input: 0 0% 100%;
     --ring: var(--gold);
 
-    /* Extra tokens */
-    --champagne: 42 35% 82%;
-    --cone-orange: 28 100% 55%;
-    --asphalt: 0 0% 20%;
-    --sky-blue: 200 55% 92%;
+    /* Extra tokens - spring/summer palette */
+    --champagne: 45 30% 85%;
+    --cone-orange: 28 100% 52%;
+    --asphalt: 220 5% 35%;
+    --sky-blue: 200 70% 85%;
+    --sky-light: 200 60% 92%;
+    --cream: 45 45% 95%;
+    --sand: 38 35% 88%;
+    --greenery: 120 30% 75%;
 
     /* Sidebar */
-    --sidebar-background: 42 40% 96%;
-    --sidebar-foreground: 0 0% 15%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 18%;
     --sidebar-primary: var(--gold);
-    --sidebar-primary-foreground: 0 0% 8%;
-    --sidebar-accent: 42 35% 92%;
-    --sidebar-accent-foreground: 0 0% 12%;
-    --sidebar-border: 40 35% 85%;
+    --sidebar-primary-foreground: 220 15% 10%;
+    --sidebar-accent: 45 30% 94%;
+    --sidebar-accent-foreground: 220 15% 15%;
+    --sidebar-border: 45 25% 88%;
     --sidebar-ring: var(--gold);
   }
 
@@ -258,59 +262,100 @@
   /* LIGHT THEME SPECIFIC COMPONENT STYLES      */
   /* =========================================== */
 
-  /* Light mode CTA buttons - Gold to orange gradient */
+  /* Light mode CTA buttons - clean gold gradient */
   :root[data-theme="light"] .cta-button,
   .light .cta-button {
-    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--accent)) 100%) !important;
-    color: hsl(0 0% 10%) !important;
+    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-light)) 100%) !important;
+    color: hsl(220 15% 12%) !important;
+    font-weight: 600 !important;
     box-shadow: 
-      0 4px 18px hsl(var(--gold) / 0.4),
-      0 2px 6px hsl(var(--shadow) / 0.15),
-      inset 0 1px 0 hsl(var(--gold-shimmer) / 0.5) !important;
+      0 4px 16px hsl(var(--gold) / 0.35),
+      0 2px 4px hsl(var(--shadow) / 0.1),
+      inset 0 1px 0 hsl(0 0% 100% / 0.3) !important;
   }
 
   :root[data-theme="light"] .cta-button:hover,
   .light .cta-button:hover {
     box-shadow: 
-      0 6px 24px hsl(var(--gold) / 0.5),
-      0 3px 8px hsl(var(--shadow) / 0.2),
-      inset 0 1px 0 hsl(var(--gold-shimmer) / 0.6) !important;
-    transform: translateY(-1px);
+      0 6px 20px hsl(var(--gold) / 0.45),
+      0 3px 6px hsl(var(--shadow) / 0.12),
+      inset 0 1px 0 hsl(0 0% 100% / 0.4) !important;
+    transform: translateY(-2px);
   }
 
-  /* Light mode form card */
+  /* Light mode form card - clean white with subtle gold */
   :root[data-theme="light"] .form-card,
   .light .form-card {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card2)) 100%);
-    border: 1px solid hsl(var(--gold) / 0.35);
+    background: hsl(0 0% 100% / 0.95);
+    border: 1px solid hsl(var(--gold) / 0.3);
     box-shadow: 
-      0 4px 30px hsl(var(--shadow) / 0.08),
-      0 0 25px hsl(var(--gold) / 0.1);
+      0 8px 32px hsl(var(--shadow) / 0.08),
+      0 2px 8px hsl(var(--shadow) / 0.04),
+      0 0 0 1px hsl(var(--gold) / 0.05);
   }
 
-  /* Light mode inputs */
+  /* Light mode inputs - clean white */
   :root[data-theme="light"] .theme-input,
   .light .theme-input {
-    background: hsl(var(--card)) !important;
-    border: 1px solid hsl(var(--gold) / 0.4) !important;
+    background: hsl(0 0% 100%) !important;
+    border: 1.5px solid hsl(var(--border)) !important;
     color: hsl(var(--foreground)) !important;
   }
 
   :root[data-theme="light"] .theme-input:focus,
   .light .theme-input:focus {
     border-color: hsl(var(--gold)) !important;
-    box-shadow: 0 0 0 2px hsl(var(--gold) / 0.2) !important;
+    box-shadow: 0 0 0 3px hsl(var(--gold) / 0.15) !important;
   }
 
-  /* Light mode headings with gold glow */
+  /* Light mode headings - charcoal with subtle gold shadow */
   :root[data-theme="light"] .theme-heading,
   .light .theme-heading {
-    color: hsl(var(--foreground));
+    color: hsl(220 15% 15%);
     text-shadow:
-      0 0 1px hsl(var(--gold) / 0.8),
-      0 0 8px hsl(var(--gold) / 0.4),
-      1px 1px 0 hsl(var(--gold) / 0.25),
-      -1px -1px 0 hsl(var(--gold) / 0.25);
+      0 1px 2px hsl(var(--gold) / 0.2),
+      0 0 20px hsl(var(--gold) / 0.1);
+  }
+
+  /* Light mode luxury card - bright and clean */
+  :root[data-theme="light"] .luxury-card,
+  .light .luxury-card {
+    background: hsl(0 0% 100% / 0.9) !important;
+    border-color: hsl(var(--gold) / 0.25) !important;
+    box-shadow: 
+      0 4px 20px hsl(var(--shadow) / 0.06),
+      0 0 0 1px hsl(var(--gold) / 0.08) !important;
+  }
+
+  /* Light mode service buttons - cream with gold border */
+  :root[data-theme="light"] .service-button,
+  .light .service-button {
+    background: linear-gradient(
+      145deg,
+      hsl(45 40% 97%) 0%,
+      hsl(45 35% 95%) 50%,
+      hsl(45 30% 93%) 100%
+    ) !important;
+    border: 2px solid hsl(var(--gold) / 0.5) !important;
+    box-shadow: 
+      0 4px 12px hsl(var(--shadow) / 0.08),
+      0 0 20px hsl(var(--gold) / 0.08),
+      inset 0 1px 0 hsl(0 0% 100% / 0.8) !important;
+  }
+
+  :root[data-theme="light"] .service-button:hover,
+  .light .service-button:hover {
+    border-color: hsl(var(--gold) / 0.8) !important;
+    box-shadow: 
+      0 8px 24px hsl(var(--shadow) / 0.12),
+      0 0 30px hsl(var(--gold) / 0.15),
+      inset 0 1px 0 hsl(0 0% 100% / 0.9) !important;
+  }
+
+  /* Light mode text colors for contrast */
+  :root[data-theme="light"] .text-gold,
+  .light .text-gold {
+    color: hsl(var(--gold-dark)) !important;
   }
 
   /* Dark mode headings - neon gold */
