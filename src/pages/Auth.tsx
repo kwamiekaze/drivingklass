@@ -127,7 +127,7 @@ export default function Auth() {
                   <Input
                     id="signin-email"
                     type="email"
-                    placeholder="admin@drivingklass.com"
+                    placeholder="student@drivingklass.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={errors.email ? "border-destructive" : ""}
@@ -167,7 +167,7 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="admin@drivingklass.com"
+                    placeholder="student@drivingklass.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={errors.email ? "border-destructive" : ""}

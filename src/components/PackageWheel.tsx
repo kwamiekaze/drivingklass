@@ -313,7 +313,12 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         )}>
           <p 
             className="text-sm mb-2"
-            style={{ color: 'hsl(42 30% 65%)' }}
+            style={isLight ? { 
+              color: '#1C1C1C',
+              textShadow: '0 0 1px rgba(212,175,55,0.9), 0 0 6px rgba(212,175,55,0.35)',
+            } : { 
+              color: 'hsl(42 30% 65%)' 
+            }}
           >
             Selected Package
           </p>

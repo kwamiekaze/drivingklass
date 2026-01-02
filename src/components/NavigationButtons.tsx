@@ -131,14 +131,16 @@ function CallButton() {
               />
             </div>
             
-            {/* Button content with icon */}
-            <Phone 
-              className="relative z-10 w-4 h-4 sm:w-5 sm:h-5"
-              style={{
-                stroke: isDark ? 'hsl(43 80% 55%)' : 'hsl(30 10% 10%)',
-                filter: isDark ? 'drop-shadow(0 1px 1px hsl(0 0% 0% / 0.4))' : 'none',
-              }}
-            />
+            {/* Button content with icon - phone icon only in dark mode */}
+            {isDark && (
+              <Phone 
+                className="relative z-10 w-4 h-4 sm:w-5 sm:h-5"
+                style={{
+                  stroke: 'hsl(43 80% 55%)',
+                  filter: 'drop-shadow(0 1px 1px hsl(0 0% 0% / 0.4))',
+                }}
+              />
+            )}
             <span 
               className="relative z-10 text-center font-bold text-sm sm:text-base tracking-wide uppercase"
               style={{
