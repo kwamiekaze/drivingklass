@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type Theme = "dark" | "light";
+export type ThemePreference = "dark" | "light" | "system";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
-  defaultTheme?: Theme;
+  defaultTheme?: ThemePreference;
   storageKey?: string;
 };
 
 type ThemeProviderState = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  theme: ThemePreference;
+  setTheme: (theme: ThemePreference) => void;
   resolvedTheme: Theme;
 };
 
@@ -23,8 +24,22 @@ function getThemeColor(theme: Theme) {
   return theme === "dark" ? "hsl(30 10% 3%)" : "hsl(200 70% 88%)";
 }
 
-function isTheme(value: unknown): value is Theme {
-  return value === "dark" || value === "light";
+function isThemePreference(value: unknown): value is ThemePreference {
+  return value === "dark" || value === "light" || value === "system";
+}
+
+function getSystemTheme(): Theme {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return "dark";
+}
+
+function resolveTheme(preference: ThemePreference): Theme {
+  if (preference === "system") {
+    return getSystemTheme();
+  }
+  return preference;
 }
 
 /**
@@ -32,9 +47,8 @@ function isTheme(value: unknown): value is Theme {
  * - Sets data-theme attribute (CSS variable source of truth)
  * - Toggles .dark class (Tailwind dark: variants)
  * - Updates meta[name="theme-color"]
- * - Persists to localStorage
  */
-function applyTheme(theme: Theme, storageKey: string) {
+function applyTheme(theme: Theme) {
   const root = document.documentElement;
 
   // Single source of truth: data-theme attribute
@@ -43,9 +57,6 @@ function applyTheme(theme: Theme, storageKey: string) {
   // For Tailwind dark: variants compatibility
   root.classList.remove("dark", "light");
   root.classList.add(theme);
-
-  // Persist choice - user preference always wins
-  localStorage.setItem(storageKey, theme);
 
   // Update meta theme-color for browser chrome
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -56,38 +67,50 @@ function applyTheme(theme: Theme, storageKey: string) {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
+  defaultTheme = "system",
   storageKey = "theme",
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    // Priority: 1) DOM (from inline script), 2) localStorage, 3) default
-    if (typeof document !== "undefined") {
-      const fromDom = document.documentElement.dataset.theme;
-      if (isTheme(fromDom)) return fromDom;
-    }
-
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
+    // Priority: 1) localStorage (user's explicit choice), 2) default to 'system'
     if (typeof localStorage !== "undefined") {
       const fromStorage = localStorage.getItem(storageKey);
-      if (isTheme(fromStorage)) return fromStorage;
+      if (isThemePreference(fromStorage)) return fromStorage;
     }
-
     return defaultTheme;
   });
 
+  const resolvedTheme = useMemo(() => resolveTheme(themePreference), [themePreference]);
+
   // Apply theme on mount and whenever it changes
   useEffect(() => {
-    applyTheme(theme, storageKey);
-  }, [theme, storageKey]);
+    applyTheme(resolvedTheme);
+  }, [resolvedTheme]);
+
+  // Listen for system theme changes when preference is 'system'
+  useEffect(() => {
+    if (themePreference !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    
+    const handleChange = () => {
+      applyTheme(getSystemTheme());
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [themePreference]);
 
   const value = useMemo<ThemeProviderState>(
     () => ({
-      theme,
-      resolvedTheme: theme,
+      theme: themePreference,
+      resolvedTheme,
       setTheme: (next) => {
-        setThemeState(next);
+        setThemePreference(next);
+        // Persist choice - user preference always wins
+        localStorage.setItem(storageKey, next);
       },
     }),
-    [theme]
+    [themePreference, resolvedTheme, storageKey]
   );
 
   return (
