@@ -119,6 +119,12 @@ export function ContactForm() {
   };
 
   const onSubmit = async (data: FormData) => {
+    // Validate file is uploaded (required)
+    if (!selectedFile) {
+      setFileError("Please upload your ID - this is required");
+      return;
+    }
+
     setIsSubmitting(true);
     
     // Track contact form submission
@@ -414,10 +420,10 @@ export function ContactForm() {
               className="block text-sm font-medium tracking-wide"
               style={labelStyle}
             >
-              Upload ID (optional)
+              Upload ID *
             </label>
             <p className="text-xs" style={{ color: isLight ? '#555' : 'hsl(42 20% 50%)' }}>
-              You can upload or take a photo of your ID for verification. (JPG, PNG, PDF up to 20MB)
+              Please upload or take a photo of your ID for verification. (JPG, PNG, PDF up to 20MB)
             </p>
             
             {/* File preview */}

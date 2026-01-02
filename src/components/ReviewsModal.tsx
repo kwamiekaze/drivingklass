@@ -84,16 +84,35 @@ export function ReviewsModal({ isOpen, onClose }: ReviewsModalProps) {
             <ExternalLink className="w-4 h-4" />
           </button>
 
-          {/* Featured Reviews Placeholder */}
+          {/* Leave a Review Button */}
+          <button
+            onClick={() => window.open('https://g.page/r/CRABMUtSlA6IEBE/review/', '_blank', 'noopener,noreferrer')}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 mt-3",
+              "px-6 py-4 rounded-xl font-semibold tracking-wide uppercase text-sm",
+              "transition-all duration-200 hover:scale-[0.98] active:scale-[0.96]"
+            )}
+            style={{
+              background: 'transparent',
+              color: 'hsl(43 80% 55%)',
+              border: '2px solid hsl(43 70% 45%)',
+              boxShadow: '0 2px 10px hsl(43 80% 52% / 0.15)',
+            }}
+          >
+            <span>Leave a Review</span>
+            <ExternalLink className="w-4 h-4" />
+          </button>
+
+          {/* Featured Review */}
           <div className="mt-8">
             <h3 
               className="text-sm font-semibold tracking-wide uppercase mb-4"
               style={{ color: 'hsl(43 60% 55%)' }}
             >
-              Featured Reviews
+              Featured Review
             </h3>
             <div 
-              className="p-4 rounded-xl text-center"
+              className="p-4 rounded-xl"
               style={{
                 background: 'hsl(25 5% 8%)',
                 border: '1px solid hsl(43 50% 35% / 0.2)',
@@ -104,8 +123,11 @@ export function ReviewsModal({ isOpen, onClose }: ReviewsModalProps) {
                   <Star key={i} className="w-5 h-5 fill-current" style={{ color: 'hsl(43 80% 52%)' }} />
                 ))}
               </div>
-              <p className="text-sm italic" style={{ color: 'hsl(42 20% 60%)' }}>
-                "Review quotes will appear here..."
+              <p className="text-sm italic mb-3" style={{ color: 'hsl(42 20% 75%)' }}>
+                "Quamie is exceptional! His patience, clear guidance, and encouragement transformed me into a confident driver. I couldn't have asked for a better instructor!"
+              </p>
+              <p className="text-xs" style={{ color: 'hsl(42 20% 50%)' }}>
+                — Manaleek Mouzon • 11 months ago
               </p>
             </div>
           </div>
