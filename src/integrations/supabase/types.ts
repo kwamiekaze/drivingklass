@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          event_name: string | null
+          event_type: string
+          id: string
+          ip_hash: string | null
+          metadata: Json | null
+          page_title: string | null
+          path: string | null
+          referrer: string | null
+          session_id: string
+          user_agent: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          event_name?: string | null
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          page_title?: string | null
+          path?: string | null
+          referrer?: string | null
+          session_id: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          event_name?: string | null
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json | null
+          page_title?: string | null
+          path?: string | null
+          referrer?: string | null
+          session_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
+      analytics_sessions: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          duration_seconds: number
+          first_path: string | null
+          last_path: string | null
+          last_seen_at: string
+          page_count: number
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number
+          first_path?: string | null
+          last_path?: string | null
+          last_seen_at?: string
+          page_count?: number
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number
+          first_path?: string | null
+          last_path?: string | null
+          last_seen_at?: string
+          page_count?: number
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contact_submissions: {
         Row: {
           attachment_name: string | null

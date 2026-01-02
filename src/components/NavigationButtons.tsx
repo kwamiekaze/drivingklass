@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useTheme } from "./ThemeProvider";
 import { Phone } from "lucide-react";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import {
   Tooltip,
   TooltipContent,
@@ -78,8 +79,10 @@ function NavButton({ label, onClick }: NavButtonProps) {
 function CallButton() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { trackClick } = useAnalytics();
 
   const handleCall = () => {
+    trackClick("call_click");
     window.location.href = "tel:+14044045820";
   };
 

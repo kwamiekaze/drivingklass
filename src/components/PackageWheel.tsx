@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "./ThemeProvider";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { formatChipPrice } from "@/lib/priceFormatters";
 
 interface PackageWheelProps {
@@ -105,6 +106,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
   const [containerSize, setContainerSize] = useState(320);
+  const { trackClick } = useAnalytics();
   
   const isMobile = useIsMobile();
 
@@ -171,6 +173,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
 
   // Handle package click - also opens modal on double-tap of same package
   const handlePackageClick = useCallback((packageId: string) => {
+    trackClick("package_select", { package_id: packageId });
     if (selectedPackageId === packageId) {
       // Second tap on the same package opens the modal
       setIsModalOpen(true);
@@ -179,10 +182,11 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
       setHasUserSelected(true);
       onPackageSelect?.(packageId);
     }
-  }, [selectedPackageId, onPackageSelect]);
+  }, [selectedPackageId, onPackageSelect, trackClick]);
 
   const handleInfoClick = () => {
     if (selectedPackageId) {
+      trackClick("open_info", { package_id: selectedPackageId });
       setIsModalOpen(true);
     }
   };

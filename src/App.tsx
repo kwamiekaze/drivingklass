@@ -6,9 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeDebugBadge } from "@/components/ThemeDebugBadge";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AnalyticsProvider } from "@/hooks/useAnalytics";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,12 +24,15 @@ const App = () => (
           <Sonner />
           <ThemeDebugBadge />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AnalyticsProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AnalyticsProvider>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

@@ -1,13 +1,16 @@
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { trackClick } = useAnalytics();
 
   const toggleTheme = () => {
-    // When user toggles, set explicit preference (not 'system')
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+    trackClick("theme_toggle", { theme: newTheme });
+    setTheme(newTheme);
   };
 
   return (
