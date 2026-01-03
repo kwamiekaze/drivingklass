@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState } from "react";
@@ -100,7 +101,12 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   notifications.slice(0, 5).map((notif) => (
                     <DropdownMenuItem 
                       key={notif.id}
-                      onClick={() => markAsRead(notif.id)}
+                      onClick={() => {
+                        markAsRead(notif.id);
+                        if ((notif as any).link) {
+                          navigate((notif as any).link);
+                        }
+                      }}
                       className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
                     >
                       <div className="flex items-center gap-2 w-full">
@@ -120,8 +126,13 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
-                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0">
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+                    <AvatarImage src={(profile as any)?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
+                    <AvatarFallback className="text-xs sm:text-sm bg-primary/10 text-primary">
+                      {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover border z-50">

@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 export default function Login() {
-  const { signIn, user, role, isApproved, isLoading: authLoading } = usePortalAuth();
+  const { signIn, user, role, isApproved, isRejected, isPending, isLoading: authLoading } = usePortalAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,12 +28,19 @@ export default function Login() {
     if (user && role && !authLoading) {
       redirectBasedOnRole();
     }
-  }, [user, role, isApproved, authLoading]);
+  }, [user, role, isApproved, isRejected, isPending, authLoading]);
 
   const redirectBasedOnRole = () => {
     if (!role) return;
     
-    if (role === 'student' && !isApproved) {
+    // Handle rejected users
+    if (isRejected) {
+      navigate('/rejected');
+      return;
+    }
+
+    // Handle pending approval (students only)
+    if (role === 'student' && isPending) {
       navigate('/pending-approval');
       return;
     }

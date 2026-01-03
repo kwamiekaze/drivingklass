@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/portal/Login";
 import Signup from "./pages/portal/Signup";
 import PendingApproval from "./pages/portal/PendingApproval";
+import RejectedStatus from "./pages/portal/RejectedStatus";
 import StudentDashboard from "./pages/portal/StudentDashboard";
 import StudentProfile from "./pages/portal/StudentProfile";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
@@ -53,6 +54,7 @@ const App = () => (
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/pending-approval" element={<PendingApproval />} />
+                  <Route path="/rejected" element={<RejectedStatus />} />
                   
                   {/* Student Portal */}
                   <Route path="/student" element={<StudentDashboard />} />

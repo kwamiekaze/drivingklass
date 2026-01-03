@@ -27,11 +27,11 @@ export function useNotifications() {
   const markAsRead = async (notificationId: string) => {
     await supabase
       .from('notifications')
-      .update({ read: true })
+      .update({ read: true, read_at: new Date().toISOString() } as any)
       .eq('id', notificationId);
     
     setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      prev.map(n => n.id === notificationId ? { ...n, read: true, read_at: new Date().toISOString() } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
   };

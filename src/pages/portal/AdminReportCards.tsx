@@ -63,8 +63,8 @@ function AdminReportCardsContent() {
     const studentIds = new Set(studentRoles?.map(r => r.user_id) || []);
     const instructorIds = new Set(instructorRoles?.map(r => r.user_id) || []);
 
-    setStudents(profilesData?.filter(p => studentIds.has(p.id)) || []);
-    setInstructors(profilesData?.filter(p => instructorIds.has(p.id)) || []);
+    setStudents((profilesData?.filter(p => studentIds.has(p.id)) || []) as any);
+    setInstructors((profilesData?.filter(p => instructorIds.has(p.id)) || []) as any);
     setReportCards(reportCardsData || []);
     setLoading(false);
   };
