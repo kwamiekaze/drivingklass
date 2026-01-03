@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -66,6 +67,13 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Global Search - Admin/Staff Only */}
+            {(role === 'admin' || role === 'staff') && (
+              <div className="hidden sm:block">
+                <GlobalSearch />
+              </div>
+            )}
+            
             <ThemeToggle />
             
             {/* Notifications */}
@@ -215,6 +223,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
         { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
+        { href: '/admin/leads', label: 'Leads', icon: FileUser },
       );
       break;
     case 'instructor':
