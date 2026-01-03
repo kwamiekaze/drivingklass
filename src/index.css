@@ -522,4 +522,79 @@
   .delay-800 { animation-delay: 800ms; }
   .delay-900 { animation-delay: 900ms; }
   .delay-1000 { animation-delay: 1000ms; }
+
+  /* ============================================= */
+  /* PORTAL RESPONSIVE UTILITY CLASSES            */
+  /* ============================================= */
+
+  /* Prevent horizontal overflow globally */
+  .portal-container {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Consistent portal card styling */
+  .portal-card {
+    @apply rounded-2xl border bg-card/80 backdrop-blur p-4 sm:p-6 shadow-lg;
+    border-color: hsl(var(--border));
+  }
+
+  /* Mobile-safe touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Primary action button */
+  .btn-primary {
+    @apply min-h-[44px] px-4 sm:px-5 py-3 rounded-xl font-semibold transition-all;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Secondary/outline button */
+  .btn-secondary {
+    @apply min-h-[44px] px-4 sm:px-5 py-3 rounded-xl font-medium transition-all;
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+    @apply disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Danger/destructive button */
+  .btn-danger {
+    @apply min-h-[44px] px-4 sm:px-5 py-3 rounded-xl font-semibold transition-all;
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+    @apply disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Responsive text sizing */
+  .text-responsive-heading {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold;
+  }
+
+  .text-responsive-subheading {
+    @apply text-lg sm:text-xl md:text-2xl font-semibold;
+  }
+
+  .text-responsive-body {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-label {
+    @apply text-xs sm:text-sm;
+  }
+}
+
+/* Global overflow prevention for portal pages */
+body {
+  overflow-x: hidden;
+}
+
+/* Ensure dropdowns have proper z-index and background */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* Dropdown menu styling for proper backgrounds */
+[role="menu"],
+[role="listbox"] {
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
 }

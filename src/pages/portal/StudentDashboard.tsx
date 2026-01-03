@@ -91,26 +91,28 @@ function StudentDashboardContent() {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold theme-heading">
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
             Welcome, {profile?.full_name?.split(' ')[0] || 'Student'}!
           </h1>
-          <p className="text-muted-foreground">
-            {profile?.public_id && (
+          {profile?.public_id && (
+            <p className="text-sm text-muted-foreground mt-1">
               <span className="font-mono">ID: {profile.public_id}</span>
-            )}
-          </p>
+            </p>
+          )}
         </div>
         {instructor && (
-          <Card className="md:w-auto">
-            <CardContent className="flex items-center gap-3 p-4">
-              <User className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Your Instructor</p>
-                <p className="font-medium">{instructor.full_name}</p>
+          <Card className="w-full sm:w-auto sm:max-w-xs">
+            <CardContent className="flex items-center gap-3 p-3 sm:p-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Your Instructor</p>
+                <p className="font-medium text-sm sm:text-base truncate">{instructor.full_name}</p>
               </div>
             </CardContent>
           </Card>
@@ -118,47 +120,55 @@ function StudentDashboardContent() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{upcomingSessions.length}</p>
-                <p className="text-xs text-muted-foreground">Upcoming</p>
+                <p className="text-xl sm:text-2xl font-bold">{upcomingSessions.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{completedSessions.length}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-xl sm:text-2xl font-bold">{completedSessions.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{reportCards.length}</p>
-                <p className="text-xs text-muted-foreground">Report Cards</p>
+                <p className="text-xl sm:text-2xl font-bold">{reportCards.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Reports</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{averageRating ?? '-'}</p>
-                <p className="text-xs text-muted-foreground">Avg. Rating</p>
+                <p className="text-xl sm:text-2xl font-bold">{averageRating ?? '-'}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Rating</p>
               </div>
             </div>
           </CardContent>
@@ -167,14 +177,14 @@ function StudentDashboardContent() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="calendar" className="gap-2">
+        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+          <TabsTrigger value="calendar" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <Calendar className="h-4 w-4" />
-            Calendar
+            <span>Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="report-cards" className="gap-2">
+          <TabsTrigger value="report-cards" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <FileText className="h-4 w-4" />
-            Report Cards
+            <span>Reports</span>
           </TabsTrigger>
         </TabsList>
 

@@ -137,31 +137,31 @@ function AdminAssignmentsContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold theme-heading">Student Assignments</h1>
-          <p className="text-muted-foreground">Assign students to instructors</p>
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Student Assignments</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Assign students to instructors</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto min-h-[44px]">
               <UserPlus className="h-4 w-4" />
               New Assignment
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
             <DialogHeader>
-              <DialogTitle>Assign Student to Instructor</DialogTitle>
+              <DialogTitle className="text-lg">Assign Student to Instructor</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Student</label>
                 <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                  <SelectTrigger>
+                  <SelectTrigger className="min-h-[44px]">
                     <SelectValue placeholder="Select student" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     {students.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
                     ))}
@@ -171,17 +171,17 @@ function AdminAssignmentsContent() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Instructor</label>
                 <Select value={selectedInstructor} onValueChange={setSelectedInstructor}>
-                  <SelectTrigger>
+                  <SelectTrigger className="min-h-[44px]">
                     <SelectValue placeholder="Select instructor" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     {instructors.map(i => (
                       <SelectItem key={i.id} value={i.id}>{i.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full" onClick={handleAssign}>
+              <Button className="w-full min-h-[44px]" onClick={handleAssign}>
                 Create Assignment
               </Button>
             </div>
@@ -191,9 +191,9 @@ function AdminAssignmentsContent() {
 
       {/* Unassigned Students Alert */}
       {unassignedStudents.length > 0 && (
-        <Card className="border-orange-500/50">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+        <Card className="border-orange-500/50 portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
               <Users className="h-5 w-5 text-orange-500" />
               Unassigned Students ({unassignedStudents.length})
             </CardTitle>
@@ -201,7 +201,7 @@ function AdminAssignmentsContent() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {unassignedStudents.map(student => (
-                <Badge key={student.id} variant="secondary">
+                <Badge key={student.id} variant="secondary" className="text-xs sm:text-sm">
                   {student.full_name}
                 </Badge>
               ))}
@@ -210,76 +210,84 @@ function AdminAssignmentsContent() {
         </Card>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* By Instructor View */}
-        <Card>
-          <CardHeader>
-            <CardTitle>By Instructor</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">By Instructor</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {instructors.map(instructor => {
-              const instructorAssignments = getInstructorAssignments(instructor.id);
-              return (
-                <div key={instructor.id} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{instructor.full_name}</span>
-                    <Badge variant="outline">{instructorAssignments.length} students</Badge>
+          <CardContent className="space-y-3 sm:space-y-4">
+            {instructors.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4 text-sm">No instructors found</p>
+            ) : (
+              instructors.map(instructor => {
+                const instructorAssignments = getInstructorAssignments(instructor.id);
+                return (
+                  <div key={instructor.id} className="border rounded-xl p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="font-medium text-sm sm:text-base truncate">{instructor.full_name}</span>
+                      <Badge variant="outline" className="text-xs shrink-0">{instructorAssignments.length} students</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {instructorAssignments.map(a => (
+                        <Badge key={a.id} className="gap-1 text-xs sm:text-sm">
+                          <span className="truncate max-w-[100px] sm:max-w-none">{getStudentName(a.student_id)}</span>
+                          <button
+                            onClick={() => handleRemoveAssignment(a.id)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                      {instructorAssignments.length === 0 && (
+                        <span className="text-xs sm:text-sm text-muted-foreground">No students assigned</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {instructorAssignments.map(a => (
-                      <Badge key={a.id} className="gap-1">
-                        {getStudentName(a.student_id)}
-                        <button
-                          onClick={() => handleRemoveAssignment(a.id)}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                    {instructorAssignments.length === 0 && (
-                      <span className="text-sm text-muted-foreground">No students assigned</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </CardContent>
         </Card>
 
         {/* By Student View */}
-        <Card>
-          <CardHeader>
-            <CardTitle>By Student</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">By Student</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {students.map(student => {
-              const studentAssignments = getStudentAssignments(student.id);
-              return (
-                <div key={student.id} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{student.full_name}</span>
-                    {studentAssignments.length === 0 && (
-                      <Badge variant="destructive">Unassigned</Badge>
-                    )}
+          <CardContent className="space-y-3 sm:space-y-4">
+            {students.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4 text-sm">No approved students</p>
+            ) : (
+              students.map(student => {
+                const studentAssignments = getStudentAssignments(student.id);
+                return (
+                  <div key={student.id} className="border rounded-xl p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="font-medium text-sm sm:text-base truncate">{student.full_name}</span>
+                      {studentAssignments.length === 0 && (
+                        <Badge variant="destructive" className="text-xs shrink-0">Unassigned</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {studentAssignments.map(a => (
+                        <Badge key={a.id} variant="outline" className="gap-1 text-xs sm:text-sm">
+                          <LinkIcon className="h-3 w-3" />
+                          <span className="truncate max-w-[100px] sm:max-w-none">{getInstructorName(a.instructor_id)}</span>
+                          <button
+                            onClick={() => handleRemoveAssignment(a.id)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {studentAssignments.map(a => (
-                      <Badge key={a.id} variant="outline" className="gap-1">
-                        <LinkIcon className="h-3 w-3" />
-                        {getInstructorName(a.instructor_id)}
-                        <button
-                          onClick={() => handleRemoveAssignment(a.id)}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </CardContent>
         </Card>
       </div>

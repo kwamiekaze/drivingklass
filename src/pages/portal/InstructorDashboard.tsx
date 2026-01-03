@@ -89,57 +89,65 @@ function InstructorDashboardContent() {
   const completedSessions = sessions.filter(s => s.status === 'completed');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold theme-heading">
+        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
           Welcome, {profile?.full_name?.split(' ')[0] || 'Instructor'}!
         </h1>
-        <p className="text-muted-foreground">Manage your lessons and students</p>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{upcomingSessions.length}</p>
-                <p className="text-xs text-muted-foreground">Upcoming</p>
+                <p className="text-xl sm:text-2xl font-bold">{upcomingSessions.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{students.length}</p>
-                <p className="text-xs text-muted-foreground">Students</p>
+                <p className="text-xl sm:text-2xl font-bold">{students.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Students</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{completedSessions.length}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-xl sm:text-2xl font-bold">{completedSessions.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-500" />
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{sessionsNeedingReportCard.length}</p>
-                <p className="text-xs text-muted-foreground">Need Report</p>
+                <p className="text-xl sm:text-2xl font-bold">{sessionsNeedingReportCard.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Need Report</p>
               </div>
             </div>
           </CardContent>
@@ -148,25 +156,25 @@ function InstructorDashboardContent() {
 
       {/* Sessions needing report cards */}
       {sessionsNeedingReportCard.length > 0 && (
-        <Card className="border-orange-500/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-500">
+        <Card className="border-orange-500/50 portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-orange-500 text-base sm:text-lg">
               <Clock className="h-5 w-5" />
               Sessions Needing Report Cards
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:space-y-3">
               {sessionsNeedingReportCard.slice(0, 5).map(session => (
-                <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{session.student?.full_name || 'Student'}</p>
-                    <p className="text-sm text-muted-foreground">
+                <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm sm:text-base truncate">{session.student?.full_name || 'Student'}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
-                  <Link to={`/instructor/report-cards/new?session_id=${session.id}`}>
-                    <Button size="sm" className="gap-2">
+                  <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="w-full sm:w-auto">
+                    <Button size="sm" className="gap-2 w-full sm:w-auto min-h-[40px]">
                       <Plus className="h-4 w-4" />
                       Create Report
                     </Button>
@@ -180,18 +188,18 @@ function InstructorDashboardContent() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="calendar" className="gap-2">
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="calendar" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <Calendar className="h-4 w-4" />
-            Calendar
+            <span className="hidden xs:inline">Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="report-cards" className="gap-2">
+          <TabsTrigger value="report-cards" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <FileText className="h-4 w-4" />
-            Report Cards
+            <span className="hidden xs:inline">Reports</span>
           </TabsTrigger>
-          <TabsTrigger value="students" className="gap-2">
+          <TabsTrigger value="students" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <Users className="h-4 w-4" />
-            Students
+            <span className="hidden xs:inline">Students</span>
           </TabsTrigger>
         </TabsList>
 
@@ -212,36 +220,38 @@ function InstructorDashboardContent() {
         </TabsContent>
 
         <TabsContent value="students">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="portal-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Users className="h-5 w-5" />
                 Assigned Students ({students.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {students.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
+                <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                   No students assigned yet
                 </p>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
                   {students.map(assignment => (
                     <Link 
                       key={assignment.id} 
                       to={`/instructor/students/${assignment.student_id}`}
                     >
-                      <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                        <CardContent className="p-4">
+                      <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                        <CardContent className="p-3 sm:p-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                              <span className="text-lg font-bold text-primary">
+                            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                              <span className="text-base sm:text-lg font-bold text-primary">
                                 {assignment.student?.full_name?.charAt(0) || '?'}
                               </span>
                             </div>
-                            <div>
-                              <p className="font-medium">{assignment.student?.full_name || 'Student'}</p>
-                              <p className="text-sm text-muted-foreground">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm sm:text-base truncate">
+                                {assignment.student?.full_name || 'Student'}
+                              </p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 {assignment.student?.public_id || assignment.student?.email}
                               </p>
                             </div>

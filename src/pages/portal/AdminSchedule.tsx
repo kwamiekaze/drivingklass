@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle } from "lucide-react";
+import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO, addHours, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isAfter } from "date-fns";
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
@@ -221,11 +221,11 @@ function AdminScheduleContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold theme-heading">Schedule Management</h1>
-          <p className="text-muted-foreground">Create and manage driving sessions</p>
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Schedule Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Create and manage driving sessions</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
@@ -235,23 +235,23 @@ function AdminScheduleContent() {
           }
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto min-h-[44px]">
               <Plus className="h-4 w-4" />
               New Session
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
             <DialogHeader>
-              <DialogTitle>{editingSession ? 'Edit Session' : 'Create New Session'}</DialogTitle>
+              <DialogTitle className="text-lg">{editingSession ? 'Edit Session' : 'Create New Session'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Student</Label>
+                <Label className="text-sm">Student</Label>
                 <Select value={formData.student_id} onValueChange={v => setFormData(f => ({ ...f, student_id: v }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="min-h-[44px]">
                     <SelectValue placeholder="Select student" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     {students.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
                     ))}
@@ -259,43 +259,45 @@ function AdminScheduleContent() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Instructor</Label>
+                <Label className="text-sm">Instructor</Label>
                 <Select value={formData.instructor_id} onValueChange={v => setFormData(f => ({ ...f, instructor_id: v }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="min-h-[44px]">
                     <SelectValue placeholder="Select instructor" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     {instructors.map(i => (
                       <SelectItem key={i.id} value={i.id}>{i.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Date</Label>
+                  <Label className="text-sm">Date</Label>
                   <Input
                     type="date"
                     value={formData.date}
                     onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
+                    className="min-h-[44px]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Start Time</Label>
+                  <Label className="text-sm">Start Time</Label>
                   <Input
                     type="time"
                     value={formData.start_time}
                     onChange={e => setFormData(f => ({ ...f, start_time: e.target.value }))}
+                    className="min-h-[44px]"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Duration (hours)</Label>
+                <Label className="text-sm">Duration (hours)</Label>
                 <Select value={formData.duration} onValueChange={v => setFormData(f => ({ ...f, duration: v }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="min-h-[44px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     <SelectItem value="1">1 hour</SelectItem>
                     <SelectItem value="2">2 hours</SelectItem>
                     <SelectItem value="3">3 hours</SelectItem>
@@ -303,7 +305,7 @@ function AdminScheduleContent() {
                 </Select>
               </div>
               <Button
-                className="w-full"
+                className="w-full min-h-[44px]"
                 onClick={editingSession ? handleUpdateSession : handleCreateSession}
               >
                 {editingSession ? 'Update Session' : 'Create Session'}
@@ -314,25 +316,83 @@ function AdminScheduleContent() {
       </div>
 
       {/* Week Navigation */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => setSelectedDate(d => new Date(d.setDate(d.getDate() - 7)))}>
-          Previous Week
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <Button variant="outline" size="sm" className="min-h-[40px] gap-1" onClick={() => setSelectedDate(d => new Date(d.setDate(d.getDate() - 7)))}>
+          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden xs:inline">Previous</span>
         </Button>
-        <span className="font-medium">
+        <span className="font-medium text-sm sm:text-base flex-1 text-center sm:flex-none">
           {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
         </span>
-        <Button variant="outline" onClick={() => setSelectedDate(d => new Date(d.setDate(d.getDate() + 7)))}>
-          Next Week
+        <Button variant="outline" size="sm" className="min-h-[40px] gap-1" onClick={() => setSelectedDate(d => new Date(d.setDate(d.getDate() + 7)))}>
+          <span className="hidden xs:inline">Next</span>
+          <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" onClick={() => setSelectedDate(new Date())}>
+        <Button variant="ghost" size="sm" className="min-h-[40px]" onClick={() => setSelectedDate(new Date())}>
           Today
         </Button>
       </div>
 
-      {/* Week Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* Mobile: Session List View */}
+      <div className="md:hidden space-y-3">
+        {weekDays.map(day => {
+          const daySessions = getSessionsForDay(day);
+          if (daySessions.length === 0) return null;
+          
+          return (
+            <Card key={day.toISOString()} className={`portal-card ${isSameDay(day, new Date()) ? 'border-primary' : ''}`}>
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <span>{format(day, 'EEEE')}</span>
+                  <Badge variant="secondary" className="text-xs">{format(day, 'MMM d')}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-2">
+                {daySessions.map(session => (
+                  <div
+                    key={session.id}
+                    className={`p-3 rounded-lg ${statusColors[session.status || 'scheduled']}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{format(parseISO(session.starts_at), 'h:mm a')}</p>
+                        <p className="text-xs truncate">{getStudentName(session.student_id)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{getInstructorName(session.instructor_id)}</p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        {session.status === 'scheduled' && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditDialog(session)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {isAfter(parseISO(session.starts_at), new Date()) && (
+                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={() => openCancelDialog(session)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          );
+        })}
+        {weekDays.every(day => getSessionsForDay(day).length === 0) && (
+          <Card className="portal-card">
+            <CardContent className="py-8 text-center text-muted-foreground text-sm">
+              No sessions this week
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Desktop: Week Calendar Grid */}
+      <div className="hidden md:grid grid-cols-7 gap-2">
         {weekDays.map(day => (
-          <Card key={day.toISOString()} className={isSameDay(day, new Date()) ? 'border-primary' : ''}>
+          <Card key={day.toISOString()} className={`portal-card ${isSameDay(day, new Date()) ? 'border-primary' : ''}`}>
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-sm font-medium">
                 {format(day, 'EEE')}
@@ -371,15 +431,15 @@ function AdminScheduleContent() {
 
       {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Cancel Session
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>Are you sure you want to cancel this session?</p>
+            <p className="text-sm">Are you sure you want to cancel this session?</p>
             {sessionToCancel && (
               <div className="p-3 bg-muted rounded-lg text-sm">
                 <p><strong>Student:</strong> {getStudentName(sessionToCancel.student_id)}</p>
@@ -387,18 +447,19 @@ function AdminScheduleContent() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Reason for cancellation</Label>
+              <Label className="text-sm">Reason for cancellation</Label>
               <Textarea
                 value={cancellationReason}
                 onChange={e => setCancellationReason(e.target.value)}
                 placeholder="Optional reason..."
+                className="text-sm"
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setCancelDialogOpen(false)}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" className="flex-1 min-h-[44px]" onClick={() => setCancelDialogOpen(false)}>
                 Keep Session
               </Button>
-              <Button variant="destructive" className="flex-1" onClick={handleCancelSession}>
+              <Button variant="destructive" className="flex-1 min-h-[44px]" onClick={handleCancelSession}>
                 Cancel Session
               </Button>
             </div>

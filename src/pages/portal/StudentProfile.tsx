@@ -182,10 +182,10 @@ function StudentProfileContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold theme-heading">Your Profile</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Your Profile</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           {isIntakeSubmitted 
             ? "Keep your information up to date"
             : "Complete your intake form to get started"
@@ -196,47 +196,47 @@ function StudentProfileContent() {
       {!isIntakeSubmitted && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
+          <AlertDescription className="text-sm">
             Please complete all required fields and upload your permit to be approved for lessons.
           </AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Personal Information */}
-        <Card className="luxury-card">
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Personal Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
+                <Label htmlFor="full_name" className="text-sm">Full Name *</Label>
                 <Input
                   id="full_name"
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
+                {errors.full_name && <p className="text-xs text-destructive">{errors.full_name}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email" className="text-sm">Email *</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone" className="text-sm">Phone *</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -244,114 +244,114 @@ function StudentProfileContent() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="(555) 123-4567"
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
+                {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="public_id">Student ID (Optional)</Label>
+                <Label htmlFor="public_id" className="text-sm">Student ID (Optional)</Label>
                 <Input
                   id="public_id"
                   name="public_id"
                   value={formData.public_id}
                   onChange={handleInputChange}
                   placeholder="e.g., DK-12345"
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                 />
                 <p className="text-xs text-muted-foreground">A unique ID you can share</p>
-                {errors.public_id && <p className="text-sm text-destructive">{errors.public_id}</p>}
+                {errors.public_id && <p className="text-xs text-destructive">{errors.public_id}</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Addresses */}
-        <Card className="luxury-card">
-          <CardHeader>
-            <CardTitle>Pickup & Drop-off Locations</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Pickup & Drop-off Locations</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="pickup_address">Pickup Address *</Label>
+              <Label htmlFor="pickup_address" className="text-sm">Pickup Address *</Label>
               <Input
                 id="pickup_address"
                 name="pickup_address"
                 value={formData.pickup_address}
                 onChange={handleInputChange}
                 placeholder="123 Main St, City, State ZIP"
-                className="theme-input"
+                className="theme-input min-h-[44px]"
                 required
               />
-              {errors.pickup_address && <p className="text-sm text-destructive">{errors.pickup_address}</p>}
+              {errors.pickup_address && <p className="text-xs text-destructive">{errors.pickup_address}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dropoff_address">Drop-off Address *</Label>
+              <Label htmlFor="dropoff_address" className="text-sm">Drop-off Address *</Label>
               <Input
                 id="dropoff_address"
                 name="dropoff_address"
                 value={formData.dropoff_address}
                 onChange={handleInputChange}
                 placeholder="123 Main St, City, State ZIP"
-                className="theme-input"
+                className="theme-input min-h-[44px]"
                 required
               />
-              {errors.dropoff_address && <p className="text-sm text-destructive">{errors.dropoff_address}</p>}
+              {errors.dropoff_address && <p className="text-xs text-destructive">{errors.dropoff_address}</p>}
             </div>
           </CardContent>
         </Card>
 
         {/* Permit Information */}
-        <Card className="luxury-card">
-          <CardHeader>
-            <CardTitle>Permit Information</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Permit Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="permit_number">Permit Number *</Label>
+                <Label htmlFor="permit_number" className="text-sm">Permit Number *</Label>
                 <Input
                   id="permit_number"
                   name="permit_number"
                   value={formData.permit_number}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.permit_number && <p className="text-sm text-destructive">{errors.permit_number}</p>}
+                {errors.permit_number && <p className="text-xs text-destructive">{errors.permit_number}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="permit_issue_date">Issue Date *</Label>
+                <Label htmlFor="permit_issue_date" className="text-sm">Issue Date *</Label>
                 <Input
                   id="permit_issue_date"
                   name="permit_issue_date"
                   type="date"
                   value={formData.permit_issue_date}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.permit_issue_date && <p className="text-sm text-destructive">{errors.permit_issue_date}</p>}
+                {errors.permit_issue_date && <p className="text-xs text-destructive">{errors.permit_issue_date}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="permit_expiration_date">Expiration Date *</Label>
+                <Label htmlFor="permit_expiration_date" className="text-sm">Expiration Date *</Label>
                 <Input
                   id="permit_expiration_date"
                   name="permit_expiration_date"
                   type="date"
                   value={formData.permit_expiration_date}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.permit_expiration_date && <p className="text-sm text-destructive">{errors.permit_expiration_date}</p>}
+                {errors.permit_expiration_date && <p className="text-xs text-destructive">{errors.permit_expiration_date}</p>}
               </div>
             </div>
 
             {/* Permit Upload */}
             <div className="space-y-3">
-              <Label>Permit Photo *</Label>
-              <div className="flex flex-wrap gap-3">
+              <Label className="text-sm">Permit Photo *</Label>
+              <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -371,7 +371,7 @@ function StudentProfileContent() {
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="gap-2"
+                  className="gap-2 min-h-[44px] flex-1 xs:flex-none"
                 >
                   <Upload className="h-4 w-4" />
                   Choose File
@@ -380,7 +380,7 @@ function StudentProfileContent() {
                   type="button"
                   variant="outline"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="gap-2"
+                  className="gap-2 min-h-[44px] flex-1 xs:flex-none"
                 >
                   <Camera className="h-4 w-4" />
                   Take Photo
@@ -389,17 +389,17 @@ function StudentProfileContent() {
               
               {permitPreview && (
                 <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Preview:</p>
                   <img 
                     src={permitPreview} 
                     alt="Permit preview" 
-                    className="max-w-xs rounded-lg border"
+                    className="max-w-full sm:max-w-xs rounded-lg border"
                   />
                 </div>
               )}
               
               {!permitPreview && !profile?.permit_file_url && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Please upload a clear photo of your learner's permit
                 </p>
               )}
@@ -408,26 +408,26 @@ function StudentProfileContent() {
         </Card>
 
         {/* Guardian Information */}
-        <Card className="luxury-card">
-          <CardHeader>
-            <CardTitle>Parent/Guardian/Emergency Contact</CardTitle>
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Parent/Guardian/Emergency Contact</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="guardian_name">Full Name *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="guardian_name" className="text-sm">Full Name *</Label>
                 <Input
                   id="guardian_name"
                   name="guardian_name"
                   value={formData.guardian_name}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.guardian_name && <p className="text-sm text-destructive">{errors.guardian_name}</p>}
+                {errors.guardian_name && <p className="text-xs text-destructive">{errors.guardian_name}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="guardian_phone">Phone *</Label>
+                <Label htmlFor="guardian_phone" className="text-sm">Phone *</Label>
                 <Input
                   id="guardian_phone"
                   name="guardian_phone"
@@ -435,29 +435,29 @@ function StudentProfileContent() {
                   value={formData.guardian_phone}
                   onChange={handleInputChange}
                   placeholder="(555) 123-4567"
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.guardian_phone && <p className="text-sm text-destructive">{errors.guardian_phone}</p>}
+                {errors.guardian_phone && <p className="text-xs text-destructive">{errors.guardian_phone}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="guardian_email">Email *</Label>
+                <Label htmlFor="guardian_email" className="text-sm">Email *</Label>
                 <Input
                   id="guardian_email"
                   name="guardian_email"
                   type="email"
                   value={formData.guardian_email}
                   onChange={handleInputChange}
-                  className="theme-input"
+                  className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.guardian_email && <p className="text-sm text-destructive">{errors.guardian_email}</p>}
+                {errors.guardian_email && <p className="text-xs text-destructive">{errors.guardian_email}</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full cta-button" disabled={isLoading}>
+        <Button type="submit" className="w-full min-h-[48px] cta-button" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
