@@ -1,6 +1,7 @@
 // Lead Types for DrivingKlass
 
 export type LeadStatus = 'new' | 'contacted' | 'converted' | 'closed';
+export type LeadPipelineStatus = 'New' | 'Contacted' | 'Scheduled' | 'Converted' | 'Cold';
 
 export interface Lead {
   id: string;
@@ -20,6 +21,13 @@ export interface Lead {
   raw_text: string | null;
   status: LeadStatus | null;
   notes: string | null;
+  // New fields
+  dob: string | null;
+  age: number | null;
+  lead_status: LeadPipelineStatus | null;
+  next_follow_up_at: string | null;
+  updated_at: string | null;
+  converted_student_id: string | null;
 }
 
 export interface LeadNote {
@@ -30,6 +38,18 @@ export interface LeadNote {
   note: string;
   is_pinned: boolean;
   author?: {
+    full_name: string | null;
+  };
+}
+
+export interface LeadActivity {
+  id: string;
+  lead_id: string;
+  created_at: string;
+  actor_user_id: string | null;
+  action: string;
+  details: Record<string, unknown> | null;
+  actor?: {
     full_name: string | null;
   };
 }
@@ -46,4 +66,6 @@ export interface ParsedLeadData {
   guardian_email: string;
   home_address: string;
   pickup_locations: string;
+  dob: string;
+  age: number | null;
 }
