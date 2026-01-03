@@ -1,5 +1,7 @@
 // Lead Types for DrivingKlass
 
+export type LeadStatus = 'new' | 'contacted' | 'converted' | 'closed';
+
 export interface Lead {
   id: string;
   created_at: string;
@@ -16,6 +18,8 @@ export interface Lead {
   home_address: string | null;
   pickup_locations: string | null;
   raw_text: string | null;
+  status: LeadStatus | null;
+  notes: string | null;
 }
 
 export interface LeadNote {
