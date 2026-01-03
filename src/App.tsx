@@ -27,6 +27,9 @@ import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import ReportCardForm from "./pages/portal/ReportCardForm";
 import AdminDashboard from "./pages/portal/AdminDashboard";
 import AdminApprovals from "./pages/portal/AdminApprovals";
+import AdminSchedule from "./pages/portal/AdminSchedule";
+import AdminAssignments from "./pages/portal/AdminAssignments";
+import AdminReportCards from "./pages/portal/AdminReportCards";
 
 const queryClient = new QueryClient();
 
@@ -65,8 +68,9 @@ const App = () => (
                   {/* Admin Portal */}
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/approvals" element={<AdminApprovals />} />
-                  <Route path="/admin/schedule" element={<AdminDashboard />} />
-                  <Route path="/admin/report-cards" element={<AdminDashboard />} />
+                  <Route path="/admin/schedule" element={<AdminSchedule />} />
+                  <Route path="/admin/assignments" element={<AdminAssignments />} />
+                  <Route path="/admin/report-cards" element={<AdminReportCards />} />
                   <Route path="/admin/users/students" element={<AdminApprovals />} />
                   <Route path="/admin/users/instructors" element={<AdminApprovals />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
