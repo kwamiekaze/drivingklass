@@ -273,12 +273,14 @@ export type Database = {
           guardian_phone: string | null
           home_address: string | null
           id: string
+          notes: string | null
           permit_expiration_date: string | null
           permit_issue_date: string | null
           permit_number: string | null
           phone: string | null
           pickup_locations: string | null
           raw_text: string | null
+          status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -290,12 +292,14 @@ export type Database = {
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          notes?: string | null
           permit_expiration_date?: string | null
           permit_issue_date?: string | null
           permit_number?: string | null
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -307,12 +311,14 @@ export type Database = {
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          notes?: string | null
           permit_expiration_date?: string | null
           permit_issue_date?: string | null
           permit_number?: string | null
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          status?: string | null
         }
         Relationships: []
       }
