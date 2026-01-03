@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { DoorOpen } from "lucide-react";
+import { SteeringWheel } from "./icons/SteeringWheel";
 import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
 import goldCar from "@/assets/gold-car-transparent.png";
@@ -16,9 +16,10 @@ export function HeroSection() {
       <Link
         to="/auth"
         className="absolute top-4 right-4 z-20 p-2 rounded-full bg-card/30 border border-gold/20 text-muted-foreground hover:text-gold hover:border-gold/50 transition-colors backdrop-blur-sm"
-        title="Admin Login"
+        title="Driving Dashboard"
+        aria-label="Driving Dashboard"
       >
-        <DoorOpen className="w-5 h-5" />
+        <SteeringWheel className="w-5 h-5" />
       </Link>
 
       {/* Header with brand and stars - raised higher with clear separation from ring */}
