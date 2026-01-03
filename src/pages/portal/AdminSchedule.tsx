@@ -71,7 +71,7 @@ function AdminScheduleContent() {
         .select('*')
         .in('id', studentRoles.map(r => r.user_id))
         .eq('approved', true);
-      setStudents(studentProfiles || []);
+      setStudents((studentProfiles || []) as any);
     }
 
     // Fetch instructors
@@ -85,7 +85,7 @@ function AdminScheduleContent() {
         .from('profiles')
         .select('*')
         .in('id', instructorRoles.map(r => r.user_id));
-      setInstructors(instructorProfiles || []);
+      setInstructors((instructorProfiles || []) as any);
     }
 
     setLoading(false);

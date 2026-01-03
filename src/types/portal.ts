@@ -2,6 +2,8 @@
 
 export type UserRole = 'student' | 'instructor' | 'staff' | 'admin';
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Profile {
   id: string;
   created_at: string;
@@ -9,6 +11,11 @@ export interface Profile {
   full_name: string | null;
   email: string | null;
   approved: boolean;
+  approval_status: ApprovalStatus;
+  rejection_reason: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  avatar_url: string | null;
   intake_submitted: boolean;
   public_id: string | null;
   phone: string | null;
@@ -95,6 +102,23 @@ export interface InternalNote {
   creator?: Profile;
 }
 
+export type NotificationType = 
+  | 'approval' 
+  | 'rejection' 
+  | 'schedule' 
+  | 'report_card' 
+  | 'message' 
+  | 'system' 
+  | 'payment' 
+  | 'reminder'
+  | 'session_scheduled'
+  | 'session_updated'
+  | 'session_cancelled'
+  | 'report_card_posted'
+  | 'intake_submitted';
+
+export type NotificationSeverity = 'info' | 'success' | 'warning' | 'critical';
+
 export interface Notification {
   id: string;
   created_at: string;
@@ -102,7 +126,11 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
-  type: 'session_scheduled' | 'session_updated' | 'session_cancelled' | 'report_card_posted' | 'intake_submitted';
+  read_at: string | null;
+  type: NotificationType;
+  severity: NotificationSeverity;
+  link: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export const RATING_CATEGORIES = [

@@ -14,7 +14,7 @@ export function ProtectedRoute({
   allowedRoles,
   requireApproval = true 
 }: ProtectedRouteProps) {
-  const { user, role, isLoading, isApproved, isIntakeSubmitted } = usePortalAuth();
+  const { user, role, isLoading, isApproved, isRejected, isPending } = usePortalAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -30,10 +30,15 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Rejected users should see the rejected page
+  if (isRejected && location.pathname !== '/rejected') {
+    return <Navigate to="/rejected" replace />;
+  }
+
   // Check if user needs to complete intake or await approval (students only)
   if (requireApproval && role === 'student') {
-    // If not approved and not on pending-approval page
-    if (!isApproved && location.pathname !== '/pending-approval') {
+    // If pending and not on pending-approval page
+    if (isPending && location.pathname !== '/pending-approval') {
       return <Navigate to="/pending-approval" replace />;
     }
   }

@@ -3,6 +3,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
+import { AvatarUpload } from "@/components/portal/AvatarUpload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,8 @@ function StudentProfileContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
+  const [avatarUrl, setAvatarUrl] = useState<string | null>((profile as any)?.avatar_url || null);
+  
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     email: profile?.email || user?.email || '',
@@ -62,6 +65,11 @@ function StudentProfileContent() {
   const [permitPreview, setPermitPreview] = useState<string | null>(profile?.permit_file_url || null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleAvatarUpdate = (url: string) => {
+    setAvatarUrl(url);
+    refetchProfile();
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -203,6 +211,24 @@ function StudentProfileContent() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Profile Picture */}
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Profile Picture</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Upload or take a photo for your profile</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {user && (
+              <AvatarUpload
+                userId={user.id}
+                currentAvatarUrl={avatarUrl}
+                userName={formData.full_name}
+                onAvatarUpdate={handleAvatarUpdate}
+              />
+            )}
+          </CardContent>
+        </Card>
+
         {/* Personal Information */}
         <Card className="portal-card">
           <CardHeader className="pb-3 sm:pb-4">

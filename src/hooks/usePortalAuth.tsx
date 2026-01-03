@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRole, Profile } from "@/types/portal";
+import { UserRole, Profile, ApprovalStatus } from "@/types/portal";
 
 interface PortalAuthContextType {
   user: User | null;
@@ -10,6 +10,9 @@ interface PortalAuthContextType {
   role: UserRole | null;
   isLoading: boolean;
   isApproved: boolean;
+  isRejected: boolean;
+  isPending: boolean;
+  approvalStatus: ApprovalStatus | null;
   isIntakeSubmitted: boolean;
   isStaffOrAdmin: boolean;
   refetchProfile: () => Promise<void>;
@@ -115,7 +118,14 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
     setRole(null);
   };
 
-  const isApproved = profile?.approved ?? false;
+  // Determine approval status - check new field first, fallback to legacy boolean
+  const approvalStatus: ApprovalStatus | null = 
+    (profile as any)?.approval_status || 
+    (profile?.approved ? 'approved' : profile ? 'pending' : null);
+  
+  const isApproved = approvalStatus === 'approved';
+  const isRejected = approvalStatus === 'rejected';
+  const isPending = approvalStatus === 'pending';
   const isIntakeSubmitted = profile?.intake_submitted ?? false;
   const isStaffOrAdmin = role === 'staff' || role === 'admin';
 
@@ -127,6 +137,9 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       role,
       isLoading,
       isApproved,
+      isRejected,
+      isPending,
+      approvalStatus,
       isIntakeSubmitted,
       isStaffOrAdmin,
       refetchProfile,

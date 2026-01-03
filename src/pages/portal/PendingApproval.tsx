@@ -4,11 +4,11 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Clock, FileText, CheckCircle, ArrowRight, Car } from "lucide-react";
+import { Loader2, Clock, FileText, CheckCircle, ArrowRight, Car, XCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function PendingApproval() {
-  const { user, profile, role, isLoading, isApproved, isIntakeSubmitted, signOut, refetchProfile } = usePortalAuth();
+  const { user, profile, role, isLoading, isApproved, isRejected, isIntakeSubmitted, signOut, refetchProfile } = usePortalAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,8 +17,13 @@ export default function PendingApproval() {
       return;
     }
 
+    // Redirect rejected users
+    if (isRejected) {
+      navigate('/rejected');
+      return;
+    }
+
     if (isApproved && role) {
-      // Redirect to appropriate dashboard
       switch (role) {
         case 'admin':
         case 'staff':
@@ -33,18 +38,18 @@ export default function PendingApproval() {
           break;
       }
     }
-  }, [isLoading, user, isApproved, role]);
+  }, [isLoading, user, isApproved, isRejected, role]);
 
   // Periodically check for approval
   useEffect(() => {
-    if (!user || isApproved) return;
+    if (!user || isApproved || isRejected) return;
     
     const interval = setInterval(() => {
       refetchProfile();
-    }, 30000); // Check every 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [user, isApproved]);
+  }, [user, isApproved, isRejected]);
 
   const handleSignOut = async () => {
     await signOut();
