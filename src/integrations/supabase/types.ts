@@ -227,6 +227,95 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          author_id: string | null
+          created_at: string | null
+          id: string
+          is_pinned: boolean | null
+          lead_id: string
+          note: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          lead_id: string
+          note: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          lead_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          full_name: string | null
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          home_address: string | null
+          id: string
+          permit_expiration_date: string | null
+          permit_issue_date: string | null
+          permit_number: string | null
+          phone: string | null
+          pickup_locations: string | null
+          raw_text: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          full_name?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          home_address?: string | null
+          id?: string
+          permit_expiration_date?: string | null
+          permit_issue_date?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pickup_locations?: string | null
+          raw_text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          full_name?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          home_address?: string | null
+          id?: string
+          permit_expiration_date?: string | null
+          permit_issue_date?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pickup_locations?: string | null
+          raw_text?: string | null
+        }
+        Relationships: []
+      }
       media_uploads: {
         Row: {
           created_at: string
