@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type Theme = "dark" | "light";
-export type ThemePreference = "dark" | "light" | "system";
+export type ThemePreference = "dark" | "light" | "system" | "time-based";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ function getThemeColor(theme: Theme) {
 }
 
 function isThemePreference(value: unknown): value is ThemePreference {
-  return value === "dark" || value === "light" || value === "system";
+  return value === "dark" || value === "light" || value === "system" || value === "time-based";
 }
 
 function getSystemTheme(): Theme {
@@ -35,9 +35,25 @@ function getSystemTheme(): Theme {
   return "dark";
 }
 
+/**
+ * Time-based theme: Light from 7:00 AM to 6:00 PM, Dark otherwise
+ */
+function getTimeBasedTheme(): Theme {
+  const now = new Date();
+  const hour = now.getHours();
+  // Light theme: 7:00 AM (7) to 6:00 PM (18)
+  if (hour >= 7 && hour < 18) {
+    return "light";
+  }
+  return "dark";
+}
+
 function resolveTheme(preference: ThemePreference): Theme {
   if (preference === "system") {
     return getSystemTheme();
+  }
+  if (preference === "time-based") {
+    return getTimeBasedTheme();
   }
   return preference;
 }
@@ -67,11 +83,11 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "time-based", // Default to time-based
   storageKey = "theme",
 }: ThemeProviderProps) {
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
-    // Priority: 1) localStorage (user's explicit choice), 2) default to 'system'
+    // Priority: 1) localStorage (user's explicit choice), 2) default to 'time-based'
     if (typeof localStorage !== "undefined") {
       const fromStorage = localStorage.getItem(storageKey);
       if (isThemePreference(fromStorage)) return fromStorage;
@@ -98,6 +114,22 @@ export function ThemeProvider({
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [themePreference]);
+
+  // Check time-based theme every minute when preference is 'time-based'
+  useEffect(() => {
+    if (themePreference !== "time-based") return;
+
+    const checkAndApply = () => {
+      applyTheme(getTimeBasedTheme());
+    };
+
+    // Check immediately
+    checkAndApply();
+
+    // Check every minute
+    const interval = setInterval(checkAndApply, 60 * 1000);
+    return () => clearInterval(interval);
   }, [themePreference]);
 
   const value = useMemo<ThemeProviderState>(
