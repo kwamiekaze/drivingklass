@@ -35,8 +35,19 @@ import {
   TestTube
 } from 'lucide-react';
 import { Lead, LeadNote, LeadStatus, ParsedLeadData } from '@/types/leads';
-import { parseLeadData, getMissingFields, SAMPLE_RAW_DATA } from '@/lib/leadParser';
+import { parseLeadData, getMissingFields, SAMPLE_RAW_DATA, testParser } from '@/lib/leadParser';
 import { format } from 'date-fns';
+
+// Helper component for inline field warnings
+function FieldHint({ value, fieldLabel }: { value: string; fieldLabel: string }) {
+  if (value && value.trim()) return null;
+  return (
+    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+      <AlertCircle className="h-3 w-3" />
+      Not detected — please type to continue
+    </p>
+  );
+}
 
 export default function AdminLeads() {
   return (
@@ -198,13 +209,44 @@ function AdminLeadsContent() {
     setMissingFields(getMissingFields(updated));
   };
 
+  const handleRunTest = () => {
+    const { passed, results } = testParser();
+    console.log('Parser Test Results:', results);
+    
+    if (passed) {
+      toast({ 
+        title: 'Parser Test Passed ✅', 
+        description: 'All fields extracted correctly',
+      });
+    } else {
+      const failedFields = Object.entries(results)
+        .filter(([_, r]) => !r.match)
+        .map(([key]) => key);
+      toast({ 
+        title: 'Parser Test Failed ❌', 
+        description: `Failed fields: ${failedFields.join(', ')}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleSaveLead = async () => {
     if (!editableData) return;
     
-    if (!editableData.full_name || !editableData.phone) {
+    // Require: Full Name + (Phone OR Email)
+    if (!editableData.full_name) {
       toast({ 
         title: 'Missing required fields', 
-        description: 'Name and phone are required', 
+        description: 'Full Name is required', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    if (!editableData.phone && !editableData.email) {
+      toast({ 
+        title: 'Missing required fields', 
+        description: 'Phone or Email is required', 
         variant: 'destructive' 
       });
       return;
@@ -416,6 +458,15 @@ Phone: (555) 123-4567
                     Parse Data
                   </Button>
                 </div>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRunTest} 
+                  className="w-full text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Run Parser Test
+                </Button>
               </CardContent>
             </Card>
 
@@ -525,9 +576,9 @@ Phone: (555) 123-4567
                         </div>
 
                         <div className="border-t pt-4">
-                          <p className="text-sm font-medium mb-3">Parent/Guardian</p>
+                          <p className="text-sm font-medium mb-3">Parent/Guardian/Emergency Contact</p>
                           <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <Label htmlFor="guardian_name" className="text-sm">Name</Label>
                               <Input
                                 id="guardian_name"
@@ -535,8 +586,9 @@ Phone: (555) 123-4567
                                 onChange={(e) => handleFieldChange('guardian_name', e.target.value)}
                                 className="min-h-[44px]"
                               />
+                              <FieldHint value={editableData.guardian_name} fieldLabel="Parent Name" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <Label htmlFor="guardian_phone" className="text-sm">Phone</Label>
                               <Input
                                 id="guardian_phone"
@@ -544,8 +596,9 @@ Phone: (555) 123-4567
                                 onChange={(e) => handleFieldChange('guardian_phone', e.target.value)}
                                 className="min-h-[44px]"
                               />
+                              <FieldHint value={editableData.guardian_phone} fieldLabel="Parent Phone" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <Label htmlFor="guardian_email" className="text-sm">Email</Label>
                               <Input
                                 id="guardian_email"
@@ -554,12 +607,13 @@ Phone: (555) 123-4567
                                 onChange={(e) => handleFieldChange('guardian_email', e.target.value)}
                                 className="min-h-[44px]"
                               />
+                              <FieldHint value={editableData.guardian_email} fieldLabel="Parent Email" />
                             </div>
                           </div>
                         </div>
 
                         <div className="border-t pt-4 space-y-4">
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             <Label htmlFor="home_address" className="text-sm">Home Address</Label>
                             <Input
                               id="home_address"
@@ -567,8 +621,9 @@ Phone: (555) 123-4567
                               onChange={(e) => handleFieldChange('home_address', e.target.value)}
                               className="min-h-[44px]"
                             />
+                            <FieldHint value={editableData.home_address} fieldLabel="Home Address" />
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             <Label htmlFor="pickup_locations" className="text-sm">Pick-up Locations</Label>
                             <Textarea
                               id="pickup_locations"
@@ -577,6 +632,7 @@ Phone: (555) 123-4567
                               placeholder="School, Library, etc."
                               className="min-h-[80px]"
                             />
+                            <FieldHint value={editableData.pickup_locations} fieldLabel="Pickup Locations" />
                           </div>
                         </div>
                       </div>
