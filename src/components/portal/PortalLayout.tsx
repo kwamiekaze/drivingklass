@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -40,21 +40,21 @@ export function PortalLayout({ children }: PortalLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">
           {/* Logo/Brand */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-gold-shimmer">DrivingKlass</span>
-            <Badge variant="secondary" className="text-xs">Portal</Badge>
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className="text-lg sm:text-xl font-bold text-gold-shimmer">DrivingKlass</span>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs hidden xs:inline-flex">Portal</Badge>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => (
               <Link key={item.href} to={item.href}>
                 <Button 
                   variant={location.pathname === item.href ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2"
+                  className="gap-1.5 text-sm"
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
@@ -64,17 +64,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
           </nav>
 
           {/* Right Side Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                   {unreadCount > 0 && (
                     <Badge 
-                      className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                      className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs"
                       variant="destructive"
                     >
                       {unreadCount > 9 ? '9+' : unreadCount}
@@ -82,11 +82,11 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuContent align="end" className="w-72 sm:w-80 bg-popover border z-50">
                 <DropdownMenuLabel className="flex justify-between items-center">
-                  Notifications
+                  <span className="text-sm">Notifications</span>
                   {unreadCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                    <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
                       Mark all read
                     </Button>
                   )}
@@ -101,13 +101,13 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     <DropdownMenuItem 
                       key={notif.id}
                       onClick={() => markAsRead(notif.id)}
-                      className={cn("flex flex-col items-start gap-1 p-3", !notif.read && "bg-muted/50")}
+                      className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
                     >
                       <div className="flex items-center gap-2 w-full">
-                        <span className="font-medium text-sm">{notif.title}</span>
-                        {!notif.read && <div className="h-2 w-2 rounded-full bg-primary ml-auto" />}
+                        <span className="font-medium text-sm truncate flex-1">{notif.title}</span>
+                        {!notif.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                       </div>
-                      <span className="text-xs text-muted-foreground">{notif.message}</span>
+                      <span className="text-xs text-muted-foreground line-clamp-2">{notif.message}</span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(notif.created_at), 'MMM d, h:mm a')}
                       </span>
@@ -120,28 +120,28 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="bg-popover border z-50">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span>{profile?.full_name || 'User'}</span>
+                    <span className="text-sm">{profile?.full_name || 'User'}</span>
                     <span className="text-xs text-muted-foreground font-normal capitalize">{role}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/${role}/profile`)}>
+                <DropdownMenuItem onClick={() => navigate(`/${role}/profile`)} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/')}>
+                <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
                   <Home className="mr-2 h-4 w-4" />
                   Main Site
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -152,7 +152,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="lg:hidden h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -162,8 +162,8 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="md:hidden border-t p-4 bg-background">
-            <div className="flex flex-col gap-2">
+          <nav className="lg:hidden border-t p-3 sm:p-4 bg-background">
+            <div className="flex flex-col gap-1.5">
               {navItems.map((item) => (
                 <Link 
                   key={item.href} 
@@ -172,7 +172,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 >
                   <Button 
                     variant={location.pathname === item.href ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
+                    className="w-full justify-start gap-2 min-h-[44px] text-sm"
                   >
                     <item.icon className="h-4 w-4" />
                     {item.label}
@@ -185,7 +185,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="container py-6 px-4">
+      <main className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
         {children}
       </main>
     </div>
@@ -202,9 +202,8 @@ function getNavItems(role: string | null) {
         { href: '/admin', label: 'Dashboard', icon: Home },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
-        { href: '/admin/report-cards', label: 'Report Cards', icon: FileText },
-        { href: '/admin/users/students', label: 'Students', icon: Users },
-        { href: '/admin/users/instructors', label: 'Instructors', icon: Users },
+        { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
+        { href: '/admin/report-cards', label: 'Reports', icon: FileText },
       );
       break;
     case 'instructor':

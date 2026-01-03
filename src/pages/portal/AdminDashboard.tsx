@@ -101,88 +101,100 @@ function AdminDashboardContent() {
   };
 
   const quickLinks = [
-    { href: '/admin/approvals', label: 'Approvals', icon: UserPlus, count: stats.pendingApprovals, color: 'text-orange-500' },
-    { href: '/admin/schedule', label: 'Schedule', icon: Calendar, count: stats.upcomingSessions, color: 'text-blue-500' },
-    { href: '/admin/report-cards', label: 'Report Cards', icon: FileText, count: stats.recentReportCards, color: 'text-green-500' },
-    { href: '/admin/users/students', label: 'Students', icon: Users, count: stats.totalStudents, color: 'text-purple-500' },
+    { href: '/admin/approvals', label: 'Approvals', icon: UserPlus, count: stats.pendingApprovals, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+    { href: '/admin/schedule', label: 'Schedule', icon: Calendar, count: stats.upcomingSessions, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+    { href: '/admin/assignments', label: 'Assignments', icon: Users, count: stats.totalStudents, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+    { href: '/admin/report-cards', label: 'Reports', icon: FileText, count: stats.recentReportCards, color: 'text-green-500', bgColor: 'bg-green-500/10' },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold theme-heading">
+        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
           Admin Dashboard
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Welcome back, {profile?.full_name?.split(' ')[0] || 'Admin'}
         </p>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className={stats.pendingApprovals > 0 ? 'border-orange-500/50' : ''}>
-          <CardContent className="p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <Card className={`portal-card ${stats.pendingApprovals > 0 ? 'border-orange-500/50' : ''}`}>
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.pendingApprovals}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Clock className="h-4 w-4 text-orange-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.pendingApprovals}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Pending</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.totalStudents}</p>
-                <p className="text-xs text-muted-foreground">Students</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.totalStudents}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Students</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.totalInstructors}</p>
-                <p className="text-xs text-muted-foreground">Instructors</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.totalInstructors}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Instructors</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{stats.upcomingSessions}</p>
-                <p className="text-xs text-muted-foreground">Upcoming</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.upcomingSessions}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.completedToday}</p>
-                <p className="text-xs text-muted-foreground">Today</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.completedToday}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Today</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="portal-card">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.recentReportCards}</p>
-                <p className="text-xs text-muted-foreground">Reports/Week</p>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                <FileText className="h-4 w-4 text-green-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.recentReportCards}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Reports/Wk</p>
               </div>
             </div>
           </CardContent>
@@ -190,15 +202,17 @@ function AdminDashboardContent() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {quickLinks.map(link => (
           <Link key={link.href} to={link.href}>
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center text-center">
-                <link.icon className={`h-8 w-8 ${link.color} mb-2`} />
-                <p className="font-medium">{link.label}</p>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full portal-card">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center">
+                <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl ${link.bgColor} flex items-center justify-center mb-2 sm:mb-3`}>
+                  <link.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${link.color}`} />
+                </div>
+                <p className="font-medium text-sm sm:text-base">{link.label}</p>
                 {link.count > 0 && (
-                  <Badge variant="secondary" className="mt-1">
+                  <Badge variant="secondary" className="mt-1.5 text-xs">
                     {link.count}
                   </Badge>
                 )}
@@ -210,32 +224,32 @@ function AdminDashboardContent() {
 
       {/* Pending Approvals */}
       {recentActivity.length > 0 && (
-        <Card className="border-orange-500/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="border-orange-500/50 portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <AlertTriangle className="h-5 w-5 text-orange-500" />
               Awaiting Approval
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {recentActivity.map(profile => (
-                <div key={profile.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{profile.full_name || 'Unknown'}</p>
-                    <p className="text-sm text-muted-foreground">{profile.email}</p>
+                <div key={profile.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm sm:text-base truncate">{profile.full_name || 'Unknown'}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{profile.email}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {profile.intake_submitted ? (
-                      <Badge variant="outline" className="gap-1">
+                      <Badge variant="outline" className="gap-1 text-xs">
                         <CheckCircle className="h-3 w-3" />
                         Intake Complete
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Awaiting Intake</Badge>
+                      <Badge variant="secondary" className="text-xs">Awaiting Intake</Badge>
                     )}
                     <Link to="/admin/approvals">
-                      <Badge className="cursor-pointer">Review</Badge>
+                      <Badge className="cursor-pointer text-xs">Review</Badge>
                     </Link>
                   </div>
                 </div>
