@@ -48,6 +48,7 @@ function normalizePhone(phone: string): string {
 
 /**
  * Parse date from various formats (MM/DD/YYYY, MM-DD-YYYY, etc.)
+ * Returns ISO date string (YYYY-MM-DD)
  */
 function parseDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -62,6 +63,30 @@ function parseDate(dateStr: string): string {
   }
   
   return '';
+}
+
+/**
+ * Calculate age from date of birth
+ */
+function calculateAge(dob: string): number | null {
+  if (!dob) return null;
+  
+  try {
+    const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
+    
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age >= 0 ? age : null;
+  } catch {
+    return null;
+  }
 }
 
 // ============= REGEX PATTERNS =============
@@ -133,41 +158,6 @@ function findSectionEnd(lines: string[], startIdx: number, endPatterns: RegExp[]
 // ============= VALUE EXTRACTION =============
 
 /**
- * Extract value after a label on the same line or next line
- */
-function extractLabelValue(lines: string[], startIdx: number, labelPatterns: RegExp[]): { value: string; nextIdx: number } {
-  for (let i = startIdx; i < lines.length; i++) {
-    const line = lines[i];
-    
-    for (const pattern of labelPatterns) {
-      const match = line.match(pattern);
-      if (match) {
-        const valueAfterLabel = line.slice(match[0].length).trim().replace(/^[:|\-]\s*/, '').trim();
-        
-        if (valueAfterLabel && valueAfterLabel.length > 0) {
-          return { value: valueAfterLabel, nextIdx: i + 1 };
-        }
-        
-        // Value might be on next line
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          // Skip "Edit" alone
-          if (nextLine.toLowerCase() === 'edit') {
-            if (i + 2 < lines.length) {
-              return { value: lines[i + 2].trim(), nextIdx: i + 3 };
-            }
-          } else if (nextLine && !isLabelLine(nextLine)) {
-            return { value: nextLine, nextIdx: i + 2 };
-          }
-        }
-        return { value: '', nextIdx: i + 1 };
-      }
-    }
-  }
-  return { value: '', nextIdx: startIdx };
-}
-
-/**
  * Check if a line looks like a label line
  */
 function isLabelLine(line: string): boolean {
@@ -185,6 +175,7 @@ function isLabelLine(line: string): boolean {
     /^note:/i,
     /^danger zone/i,
     /^birthday/i,
+    /^date of birth/i,
     /^status/i,
     /^certificate/i,
   ];
@@ -396,6 +387,27 @@ function extractPickupLocations(lines: string[]): string {
   return locations.join('\n');
 }
 
+// ============= DOB/BIRTHDAY EXTRACTION =============
+
+function extractDOB(lines: string[]): { dob: string; age: number | null } {
+  for (const line of lines) {
+    const lineLower = line.toLowerCase();
+    
+    // Look for "Birthday" or "Date of Birth" labels
+    if (lineLower.includes('birthday') || lineLower.includes('date of birth') || lineLower.includes('dob')) {
+      // Extract date from same line
+      const dateMatch = line.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (dateMatch) {
+        const dob = parseDate(dateMatch[0]);
+        const age = calculateAge(dob);
+        return { dob, age };
+      }
+    }
+  }
+  
+  return { dob: '', age: null };
+}
+
 // ============= BASIC FIELD EXTRACTION =============
 
 function extractBasicField(lines: string[], labelPatterns: RegExp[]): string {
@@ -437,6 +449,8 @@ export function parseLeadData(rawText: string): ParsedLeadData {
     guardian_email: '',
     home_address: '',
     pickup_locations: '',
+    dob: '',
+    age: null,
   };
 
   if (!rawText || !rawText.trim()) return result;
@@ -475,6 +489,11 @@ export function parseLeadData(rawText: string): ParsedLeadData {
     /^permit\s+expir(?:ation|y)\s+date\s*[:|\-]?\s*/i,
     /^expir(?:ation|y)\s+date\s*[:|\-]?\s*/i,
   ]);
+
+  // ===== Extract DOB and Age =====
+  const dobData = extractDOB(lines);
+  result.dob = dobData.dob;
+  result.age = dobData.age;
 
   // ===== Extract Parent/Guardian Info (section-based) =====
   const parentHeaderPatterns = [
@@ -584,7 +603,7 @@ Student Pick-up Locations Edit
 export function testParser(): { passed: boolean; results: Record<string, { expected: string; actual: string; match: boolean }> } {
   const parsed = parseLeadData(SAMPLE_RAW_DATA);
   
-  const expected = {
+  const expected: Record<string, string> = {
     full_name: 'Isabella Roberson',
     email: 'isabella.roberson09@yahoo.com',
     phone: '(678) 704-1713',
@@ -596,17 +615,23 @@ export function testParser(): { passed: boolean; results: Record<string, { expec
     guardian_phone: '(404) 789-6319',
     home_address: '2725 Tradd Ct, Snellville, GA, 30039',
     pickup_locations: '2725 Tradd Ct, Snellville, GA 30039',
+    dob: '2009-08-19',
   };
 
   const results: Record<string, { expected: string; actual: string; match: boolean }> = {};
   let allPassed = true;
 
   for (const [key, expectedValue] of Object.entries(expected)) {
-    const actualValue = parsed[key as keyof ParsedLeadData] || '';
+    const actualValue = String(parsed[key as keyof ParsedLeadData] || '');
     const match = actualValue.toLowerCase().trim() === expectedValue.toLowerCase().trim();
     results[key] = { expected: expectedValue, actual: actualValue, match };
     if (!match) allPassed = false;
   }
+
+  // Also check age
+  const ageMatch = parsed.age !== null && parsed.age >= 15 && parsed.age <= 17; // Age should be ~16
+  results['age'] = { expected: '~16', actual: String(parsed.age), match: ageMatch };
+  if (!ageMatch) allPassed = false;
 
   return { passed: allPassed, results };
 }

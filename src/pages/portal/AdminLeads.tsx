@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PortalLayout } from '@/components/portal/PortalLayout';
 import { ProtectedRoute } from '@/components/portal/ProtectedRoute';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
@@ -32,15 +33,35 @@ import {
   MessageSquare,
   Send,
   Eye,
-  TestTube
+  TestTube,
+  Download,
+  Copy,
+  MessageCircle,
+  UserPlus,
+  Clock,
+  X,
+  AlertTriangle,
+  Activity,
+  Filter,
+  Cake
 } from 'lucide-react';
-import { Lead, LeadNote, LeadStatus, ParsedLeadData } from '@/types/leads';
+import { Lead, LeadNote, LeadActivity, LeadPipelineStatus, ParsedLeadData } from '@/types/leads';
 import { parseLeadData, getMissingFields, SAMPLE_RAW_DATA, testParser } from '@/lib/leadParser';
+import { 
+  logLeadActivity, 
+  fetchLeadActivity, 
+  exportLeadsToCSV, 
+  copyLeadInfo, 
+  convertLeadToStudent,
+  PIPELINE_STATUS_OPTIONS,
+  getMissingLeadFields,
+  getFollowUpStatus
+} from '@/lib/leadUtils';
 import { format } from 'date-fns';
 
 // Helper component for inline field warnings
-function FieldHint({ value, fieldLabel }: { value: string; fieldLabel: string }) {
-  if (value && value.trim()) return null;
+function FieldHint({ value, fieldLabel }: { value: string | number | null; fieldLabel: string }) {
+  if (value !== null && value !== '' && value !== 0) return null;
   return (
     <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
       <AlertCircle className="h-3 w-3" />
@@ -59,12 +80,9 @@ export default function AdminLeads() {
   );
 }
 
-const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
-  { value: 'new', label: 'New', color: 'bg-blue-500/10 text-blue-600 border-blue-200' },
-  { value: 'contacted', label: 'Contacted', color: 'bg-yellow-500/10 text-yellow-600 border-yellow-200' },
-  { value: 'converted', label: 'Converted', color: 'bg-green-500/10 text-green-600 border-green-200' },
-  { value: 'closed', label: 'Closed', color: 'bg-muted text-muted-foreground border-muted' },
-];
+// Filter types
+type FollowUpFilter = 'all' | 'due_today' | 'overdue' | 'scheduled';
+type MissingInfoFilter = 'dob' | 'parent_phone' | 'address' | 'permit';
 
 function AdminLeadsContent() {
   const { toast } = useToast();
@@ -75,6 +93,11 @@ function AdminLeadsContent() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [permitIssueDateFrom, setPermitIssueDateFrom] = useState('');
+  const [permitIssueDateTo, setPermitIssueDateTo] = useState('');
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>('all');
+  const [missingInfoFilters, setMissingInfoFilters] = useState<MissingInfoFilter[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   
   // Paste parser state
   const [rawText, setRawText] = useState('');
@@ -86,9 +109,11 @@ function AdminLeadsContent() {
   // Lead details state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadNotes, setLeadNotes] = useState<LeadNote[]>([]);
+  const [leadActivities, setLeadActivities] = useState<LeadActivity[]>([]);
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -115,7 +140,6 @@ function AdminLeadsContent() {
       .order('created_at', { ascending: false });
     
     if (data) {
-      // Fetch author names separately
       const notesWithAuthors = await Promise.all(
         data.map(async (note) => {
           let authorName: string | null = null;
@@ -140,7 +164,10 @@ function AdminLeadsContent() {
   const handleOpenDetails = async (lead: Lead) => {
     setSelectedLead(lead);
     setDetailsOpen(true);
-    await fetchLeadNotes(lead.id);
+    await Promise.all([
+      fetchLeadNotes(lead.id),
+      fetchLeadActivity(lead.id).then(setLeadActivities)
+    ]);
   };
 
   const handleAddNote = async () => {
@@ -162,24 +189,50 @@ function AdminLeadsContent() {
     } else {
       toast({ title: 'Note Added' });
       setNewNote('');
-      await fetchLeadNotes(selectedLead.id);
+      await logLeadActivity(selectedLead.id, 'note_added', { note: newNote.trim() });
+      await Promise.all([
+        fetchLeadNotes(selectedLead.id),
+        fetchLeadActivity(selectedLead.id).then(setLeadActivities)
+      ]);
     }
     setSavingNote(false);
   };
 
-  const handleUpdateStatus = async (leadId: string, status: LeadStatus) => {
-    const { error } = await supabase
-      .from('leads')
-      .update({ status })
+  const handleUpdateStatus = async (leadId: string, status: LeadPipelineStatus) => {
+    const oldLead = leads.find(l => l.id === leadId);
+    const oldStatus = oldLead?.lead_status;
+    
+    const { error } = await (supabase.from('leads') as any)
+      .update({ lead_status: status })
       .eq('id', leadId);
     
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Status Updated' });
+      await logLeadActivity(leadId, 'status_changed', { from: oldStatus, to: status });
       fetchLeads();
       if (selectedLead?.id === leadId) {
-        setSelectedLead({ ...selectedLead, status });
+        setSelectedLead({ ...selectedLead, lead_status: status });
+        fetchLeadActivity(leadId).then(setLeadActivities);
+      }
+    }
+  };
+
+  const handleUpdateFollowUp = async (leadId: string, followUpDate: string | null) => {
+    const { error } = await (supabase.from('leads') as any)
+      .update({ next_follow_up_at: followUpDate })
+      .eq('id', leadId);
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Follow-up Updated' });
+      await logLeadActivity(leadId, 'followup_set', { follow_up_at: followUpDate });
+      fetchLeads();
+      if (selectedLead?.id === leadId) {
+        setSelectedLead({ ...selectedLead, next_follow_up_at: followUpDate });
+        fetchLeadActivity(leadId).then(setLeadActivities);
       }
     }
   };
@@ -201,7 +254,7 @@ function AdminLeadsContent() {
     toast({ title: 'Sample Loaded', description: 'Click "Parse Data" to extract fields' });
   };
 
-  const handleFieldChange = (field: keyof ParsedLeadData, value: string) => {
+  const handleFieldChange = (field: keyof ParsedLeadData, value: string | number | null) => {
     if (!editableData) return;
     
     const updated = { ...editableData, [field]: value };
@@ -216,7 +269,7 @@ function AdminLeadsContent() {
     if (passed) {
       toast({ 
         title: 'Parser Test Passed ✅', 
-        description: 'All fields extracted correctly',
+        description: 'All fields extracted correctly (including DOB & Age)',
       });
     } else {
       const failedFields = Object.entries(results)
@@ -233,7 +286,6 @@ function AdminLeadsContent() {
   const handleSaveLead = async () => {
     if (!editableData) return;
     
-    // Require: Full Name + (Phone OR Email)
     if (!editableData.full_name) {
       toast({ 
         title: 'Missing required fields', 
@@ -256,8 +308,7 @@ function AdminLeadsContent() {
     
     const { data: userData } = await supabase.auth.getUser();
     
-    const { error } = await supabase
-      .from('leads')
+    const { data: newLead, error } = await (supabase.from('leads') as any)
       .insert({
         created_by: userData?.user?.id || null,
         full_name: editableData.full_name || null,
@@ -273,12 +324,20 @@ function AdminLeadsContent() {
         pickup_locations: editableData.pickup_locations || null,
         raw_text: rawText,
         status: 'new',
-      });
+        lead_status: 'New',
+        dob: editableData.dob || null,
+        age: editableData.age || null,
+      })
+      .select()
+      .single();
     
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Lead Created', description: 'Lead has been saved successfully' });
+      if (newLead) {
+        await logLeadActivity(newLead.id, 'lead_created', { full_name: editableData.full_name });
+      }
       setRawText('');
       setParsedData(null);
       setEditableData(null);
@@ -305,16 +364,130 @@ function AdminLeadsContent() {
     }
   };
 
+  const handleCopyLead = (lead: Lead) => {
+    const info = copyLeadInfo(lead);
+    navigator.clipboard.writeText(info);
+    toast({ title: 'Copied', description: 'Lead info copied to clipboard' });
+  };
+
+  const handleConvertLead = async () => {
+    if (!selectedLead) return;
+    
+    setConverting(true);
+    const result = await convertLeadToStudent(selectedLead);
+    
+    if (result.success) {
+      toast({ 
+        title: 'Lead Converted', 
+        description: 'Lead has been marked as converted. Create student account manually.'
+      });
+      fetchLeads();
+      if (selectedLead) {
+        setSelectedLead({ ...selectedLead, lead_status: 'Converted' });
+        fetchLeadActivity(selectedLead.id).then(setLeadActivities);
+      }
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+    setConverting(false);
+  };
+
+  const handleExportCSV = async () => {
+    exportLeadsToCSV(filteredLeads);
+    toast({ title: 'Exported', description: `${filteredLeads.length} leads exported to CSV` });
+    
+    // Log activity for first lead in export (just to have a record)
+    if (filteredLeads.length > 0) {
+      await logLeadActivity(filteredLeads[0].id, 'export_csv', { count: filteredLeads.length });
+    }
+  };
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setSearchQuery('');
+    setPermitIssueDateFrom('');
+    setPermitIssueDateTo('');
+    setFollowUpFilter('all');
+    setMissingInfoFilters([]);
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    return statusFilter !== 'all' || 
+           searchQuery || 
+           permitIssueDateFrom || 
+           permitIssueDateTo || 
+           followUpFilter !== 'all' || 
+           missingInfoFilters.length > 0;
+  }, [statusFilter, searchQuery, permitIssueDateFrom, permitIssueDateTo, followUpFilter, missingInfoFilters]);
+
   // Filter leads
-  const filteredLeads = leads.filter(lead => {
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchesSearch = !searchQuery || 
-      lead.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone?.includes(searchQuery) ||
-      lead.permit_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
+      
+      // Search across all fields
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        lead.full_name?.toLowerCase().includes(searchLower) ||
+        lead.email?.toLowerCase().includes(searchLower) ||
+        lead.phone?.includes(searchQuery) ||
+        lead.permit_number?.toLowerCase().includes(searchLower) ||
+        lead.home_address?.toLowerCase().includes(searchLower) ||
+        lead.pickup_locations?.toLowerCase().includes(searchLower) ||
+        lead.guardian_name?.toLowerCase().includes(searchLower) ||
+        lead.guardian_phone?.includes(searchQuery) ||
+        lead.guardian_email?.toLowerCase().includes(searchLower);
+      
+      // Permit issue date filter
+      let matchesPermitDate = true;
+      if (permitIssueDateFrom || permitIssueDateTo) {
+        const issueDate = lead.permit_issue_date ? new Date(lead.permit_issue_date) : null;
+        if (issueDate) {
+          if (permitIssueDateFrom && issueDate < new Date(permitIssueDateFrom)) {
+            matchesPermitDate = false;
+          }
+          if (permitIssueDateTo && issueDate > new Date(permitIssueDateTo)) {
+            matchesPermitDate = false;
+          }
+        } else {
+          matchesPermitDate = false;
+        }
+      }
+      
+      // Follow-up filter
+      let matchesFollowUp = true;
+      if (followUpFilter !== 'all') {
+        const status = getFollowUpStatus(lead.next_follow_up_at);
+        matchesFollowUp = status === followUpFilter;
+      }
+      
+      // Missing info filters
+      let matchesMissingInfo = true;
+      if (missingInfoFilters.length > 0) {
+        const missing = getMissingLeadFields(lead);
+        const missingMap: Record<MissingInfoFilter, string> = {
+          dob: 'DOB',
+          parent_phone: 'Parent Phone',
+          address: 'Address',
+          permit: 'Permit #',
+        };
+        matchesMissingInfo = missingInfoFilters.some(filter => 
+          missing.includes(missingMap[filter])
+        );
+      }
+      
+      return matchesStatus && matchesSearch && matchesPermitDate && matchesFollowUp && matchesMissingInfo;
+    });
+  }, [leads, statusFilter, searchQuery, permitIssueDateFrom, permitIssueDateTo, followUpFilter, missingInfoFilters]);
+
+  const toggleMissingFilter = (filter: MissingInfoFilter) => {
+    setMissingInfoFilters(prev => 
+      prev.includes(filter) 
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
+  };
 
   if (loading) {
     return (
@@ -349,36 +522,145 @@ function AdminLeadsContent() {
         <TabsContent value="list" className="mt-4">
           <Card className="portal-card">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/20 text-primary text-sm font-bold">
-                  {filteredLeads.length}
-                </span>
-                All Leads
-              </CardTitle>
-              
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, email, phone, permit..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 min-h-[44px]"
-                  />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/20 text-primary text-sm font-bold">
+                    {filteredLeads.length}
+                  </span>
+                  {hasActiveFilters ? 'Filtered Results' : 'All Leads'}
+                  {hasActiveFilters && (
+                    <Badge variant="secondary" className="text-xs">filtered</Badge>
+                  )}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleExportCSV}
+                    disabled={filteredLeads.length === 0}
+                    className="gap-1.5"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </Button>
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40 min-h-[44px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    {STATUS_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
+              
+              {/* Search Bar */}
+              <div className="relative mt-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search name, email, phone, permit, address, parent contact..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 min-h-[44px]"
+                />
+              </div>
+
+              {/* Filter Toggle */}
+              <div className="flex items-center gap-2 mt-3">
+                <Button
+                  variant={showFilters ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="gap-1.5"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {hasActiveFilters && (
+                    <Badge className="h-5 w-5 p-0 flex items-center justify-center rounded-full text-xs">
+                      !
+                    </Badge>
+                  )}
+                </Button>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                    <X className="h-4 w-4" />
+                    Clear all
+                  </Button>
+                )}
+              </div>
+
+              {/* Filters Panel */}
+              {showFilters && (
+                <div className="mt-3 p-4 bg-muted/30 rounded-lg space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Status Filter */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="min-h-[40px]">
+                          <SelectValue placeholder="All Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          {PIPELINE_STATUS_OPTIONS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Permit Issue Date From */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Permit Issue From</Label>
+                      <Input
+                        type="date"
+                        value={permitIssueDateFrom}
+                        onChange={(e) => setPermitIssueDateFrom(e.target.value)}
+                        className="min-h-[40px]"
+                      />
+                    </div>
+
+                    {/* Permit Issue Date To */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Permit Issue To</Label>
+                      <Input
+                        type="date"
+                        value={permitIssueDateTo}
+                        onChange={(e) => setPermitIssueDateTo(e.target.value)}
+                        className="min-h-[40px]"
+                      />
+                    </div>
+
+                    {/* Follow-up Filter */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Follow-up</Label>
+                      <Select value={followUpFilter} onValueChange={(v) => setFollowUpFilter(v as FollowUpFilter)}>
+                        <SelectTrigger className="min-h-[40px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="due_today">Due Today</SelectItem>
+                          <SelectItem value="overdue">Overdue</SelectItem>
+                          <SelectItem value="scheduled">Scheduled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Missing Info Chips */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Missing Info</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(['dob', 'parent_phone', 'address', 'permit'] as MissingInfoFilter[]).map(filter => (
+                        <Badge
+                          key={filter}
+                          variant={missingInfoFilters.includes(filter) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => toggleMissingFilter(filter)}
+                        >
+                          {filter === 'dob' && 'Missing DOB'}
+                          {filter === 'parent_phone' && 'Missing Parent Phone'}
+                          {filter === 'address' && 'Missing Address'}
+                          {filter === 'permit' && 'Missing Permit #'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {filteredLeads.length === 0 ? (
@@ -405,6 +687,7 @@ function AdminLeadsContent() {
                       onOpen={() => handleOpenDetails(lead)}
                       onDelete={() => handleDeleteLead(lead.id)}
                       onStatusChange={(status) => handleUpdateStatus(lead.id, status)}
+                      onCopy={() => handleCopyLead(lead)}
                     />
                   ))}
                 </div>
@@ -435,6 +718,7 @@ Supported formats:
 Name: John Doe
 Email: john@example.com
 Phone: (555) 123-4567
+Birthday: 01/15/2008
 ...`}
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
@@ -548,6 +832,47 @@ Phone: (555) 123-4567
                               value={editableData.permit_number}
                               onChange={(e) => handleFieldChange('permit_number', e.target.value)}
                               className="min-h-[44px]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* DOB & Age */}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="dob" className="text-sm flex items-center gap-1">
+                              <Cake className="h-3 w-3" /> Date of Birth
+                            </Label>
+                            <Input
+                              id="dob"
+                              type="date"
+                              value={editableData.dob}
+                              onChange={(e) => {
+                                handleFieldChange('dob', e.target.value);
+                                // Recalculate age
+                                if (e.target.value) {
+                                  const birthDate = new Date(e.target.value);
+                                  const today = new Date();
+                                  let age = today.getFullYear() - birthDate.getFullYear();
+                                  const monthDiff = today.getMonth() - birthDate.getMonth();
+                                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                                    age--;
+                                  }
+                                  handleFieldChange('age', age >= 0 ? age : null);
+                                }
+                              }}
+                              className="min-h-[44px]"
+                            />
+                            <FieldHint value={editableData.dob} fieldLabel="DOB" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="age" className="text-sm">Age</Label>
+                            <Input
+                              id="age"
+                              type="number"
+                              value={editableData.age ?? ''}
+                              onChange={(e) => handleFieldChange('age', e.target.value ? parseInt(e.target.value) : null)}
+                              className="min-h-[44px]"
+                              readOnly
                             />
                           </div>
                         </div>
@@ -690,23 +1015,100 @@ Phone: (555) 123-4567
               </SheetHeader>
 
               <div className="space-y-6">
-                {/* Status */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Select 
-                    value={selectedLead.status || 'new'} 
-                    onValueChange={(value) => handleUpdateStatus(selectedLead.id, value as LeadStatus)}
+                {/* Quick Actions */}
+                <div className="grid grid-cols-4 gap-2">
+                  {selectedLead.phone && (
+                    <Button variant="outline" size="sm" className="flex-col h-16 gap-1" asChild>
+                      <a href={`tel:${selectedLead.phone}`}>
+                        <Phone className="h-4 w-4" />
+                        <span className="text-xs">Call</span>
+                      </a>
+                    </Button>
+                  )}
+                  {selectedLead.phone && (
+                    <Button variant="outline" size="sm" className="flex-col h-16 gap-1" asChild>
+                      <a href={`sms:${selectedLead.phone}?body=Hi ${selectedLead.full_name?.split(' ')[0] || ''}, this is DrivingKlass.`}>
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="text-xs">Text</span>
+                      </a>
+                    </Button>
+                  )}
+                  {selectedLead.email && (
+                    <Button variant="outline" size="sm" className="flex-col h-16 gap-1" asChild>
+                      <a href={`mailto:${selectedLead.email}`}>
+                        <Mail className="h-4 w-4" />
+                        <span className="text-xs">Email</span>
+                      </a>
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-col h-16 gap-1"
+                    onClick={() => handleCopyLead(selectedLead)}
                   >
-                    <SelectTrigger className="min-h-[44px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Copy className="h-4 w-4" />
+                    <span className="text-xs">Copy</span>
+                  </Button>
                 </div>
+
+                {/* Missing Data Badges */}
+                {getMissingLeadFields(selectedLead).length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {getMissingLeadFields(selectedLead).map(field => (
+                      <Badge key={field} variant="outline" className="text-xs text-amber-600 border-amber-300 gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Missing {field}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Status & Follow-up */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Status</Label>
+                    <Select 
+                      value={selectedLead.lead_status || 'New'} 
+                      onValueChange={(value) => handleUpdateStatus(selectedLead.id, value as LeadPipelineStatus)}
+                    >
+                      <SelectTrigger className="min-h-[44px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PIPELINE_STATUS_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Next Follow-up
+                    </Label>
+                    <Input
+                      type="datetime-local"
+                      value={selectedLead.next_follow_up_at ? format(new Date(selectedLead.next_follow_up_at), "yyyy-MM-dd'T'HH:mm") : ''}
+                      onChange={(e) => handleUpdateFollowUp(selectedLead.id, e.target.value || null)}
+                      className="min-h-[44px]"
+                    />
+                  </div>
+                </div>
+
+                {/* DOB & Age */}
+                {(selectedLead.dob || selectedLead.age) && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Cake className="h-4 w-4" />
+                      Date of Birth
+                    </h4>
+                    <p className="text-sm">
+                      {selectedLead.dob ? format(new Date(selectedLead.dob), 'MMMM d, yyyy') : 'N/A'} 
+                      {selectedLead.age && ` (${selectedLead.age} years old)`}
+                    </p>
+                  </div>
+                )}
 
                 {/* Contact Info */}
                 <div className="space-y-3">
@@ -840,6 +1242,36 @@ Phone: (555) 123-4567
                   </div>
                 </div>
 
+                {/* Activity Log */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full">
+                    <ChevronDown className="h-4 w-4" />
+                    <Activity className="h-4 w-4" />
+                    Activity Log ({leadActivities.length})
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                      {leadActivities.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No activity yet</p>
+                      ) : (
+                        leadActivities.map(activity => (
+                          <div key={activity.id} className="p-2 bg-muted/30 rounded text-xs">
+                            <div className="flex justify-between">
+                              <span className="font-medium capitalize">{activity.action.replace(/_/g, ' ')}</span>
+                              <span className="text-muted-foreground">
+                                {format(new Date(activity.created_at), 'MMM d, h:mm a')}
+                              </span>
+                            </div>
+                            {activity.actor?.full_name && (
+                              <p className="text-muted-foreground">by {activity.actor.full_name}</p>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
                 {/* Raw Text Collapsible */}
                 {selectedLead.raw_text && (
                   <Collapsible>
@@ -855,15 +1287,62 @@ Phone: (555) 123-4567
                   </Collapsible>
                 )}
 
+                {/* Convert to Student */}
+                {selectedLead.lead_status !== 'Converted' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="w-full min-h-[44px] gap-2">
+                        <UserPlus className="h-4 w-4" />
+                        Convert to Student Profile
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Convert Lead to Student?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will mark the lead as "Converted". You'll need to manually create the student account to complete the conversion. The lead data won't be deleted.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConvertLead} disabled={converting}>
+                          {converting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Convert Lead
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+
                 {/* Delete Button */}
-                <Button
-                  variant="destructive"
-                  className="w-full min-h-[44px]"
-                  onClick={() => handleDeleteLead(selectedLead.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Lead
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="w-full min-h-[44px]"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Lead
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the lead and all associated notes.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDeleteLead(selectedLead.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </>
           )}
@@ -877,11 +1356,14 @@ interface LeadCardProps {
   lead: Lead;
   onOpen: () => void;
   onDelete: () => void;
-  onStatusChange: (status: LeadStatus) => void;
+  onStatusChange: (status: LeadPipelineStatus) => void;
+  onCopy: () => void;
 }
 
-function LeadCard({ lead, onOpen, onDelete, onStatusChange }: LeadCardProps) {
-  const statusConfig = STATUS_OPTIONS.find(s => s.value === lead.status) || STATUS_OPTIONS[0];
+function LeadCard({ lead, onOpen, onDelete, onStatusChange, onCopy }: LeadCardProps) {
+  const statusConfig = PIPELINE_STATUS_OPTIONS.find(s => s.value === lead.lead_status) || PIPELINE_STATUS_OPTIONS[0];
+  const missingFields = getMissingLeadFields(lead);
+  const followUpStatus = getFollowUpStatus(lead.next_follow_up_at);
 
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-xl bg-background/50 hover:bg-muted/30 transition-colors">
@@ -903,15 +1385,21 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange }: LeadCardProps) {
                 {lead.phone}
               </span>
             )}
+            {lead.age && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Cake className="h-3 w-3" />
+                {lead.age} yrs
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Select value={lead.status || 'new'} onValueChange={(val) => onStatusChange(val as LeadStatus)}>
+          <Select value={lead.lead_status || 'New'} onValueChange={(val) => onStatusChange(val as LeadPipelineStatus)}>
             <SelectTrigger className={`h-7 text-xs border px-2 ${statusConfig.color}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map(opt => (
+              {PIPELINE_STATUS_OPTIONS.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>
@@ -932,9 +1420,22 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange }: LeadCardProps) {
             Exp: {format(new Date(lead.permit_expiration_date), 'MM/dd/yyyy')}
           </Badge>
         )}
-        {lead.guardian_name && (
-          <Badge variant="outline" className="text-xs">
-            Guardian: {lead.guardian_name}
+        {followUpStatus === 'overdue' && (
+          <Badge variant="destructive" className="text-xs gap-1">
+            <Clock className="h-3 w-3" />
+            Overdue
+          </Badge>
+        )}
+        {followUpStatus === 'due_today' && (
+          <Badge className="text-xs gap-1 bg-amber-500">
+            <Clock className="h-3 w-3" />
+            Due Today
+          </Badge>
+        )}
+        {missingFields.length > 0 && (
+          <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
+            <AlertTriangle className="h-3 w-3" />
+            {missingFields.length} missing
           </Badge>
         )}
       </div>
@@ -952,7 +1453,15 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange }: LeadCardProps) {
         <span className="text-xs text-muted-foreground">
           Added {format(new Date(lead.created_at), 'MMM d, yyyy')}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onCopy}
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -962,14 +1471,34 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange }: LeadCardProps) {
             <Eye className="h-3 w-3 mr-1" />
             Open
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete {lead.full_name || 'this lead'}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

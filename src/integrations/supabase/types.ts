@@ -227,6 +227,41 @@ export type Database = {
           },
         ]
       }
+      lead_activity: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activity_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_notes: {
         Row: {
           author_id: string | null
@@ -264,8 +299,11 @@ export type Database = {
       }
       leads: {
         Row: {
+          age: number | null
+          converted_student_id: string | null
           created_at: string | null
           created_by: string | null
+          dob: string | null
           email: string | null
           full_name: string | null
           guardian_email: string | null
@@ -273,6 +311,8 @@ export type Database = {
           guardian_phone: string | null
           home_address: string | null
           id: string
+          lead_status: string | null
+          next_follow_up_at: string | null
           notes: string | null
           permit_expiration_date: string | null
           permit_issue_date: string | null
@@ -281,10 +321,14 @@ export type Database = {
           pickup_locations: string | null
           raw_text: string | null
           status: string | null
+          updated_at: string | null
         }
         Insert: {
+          age?: number | null
+          converted_student_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          dob?: string | null
           email?: string | null
           full_name?: string | null
           guardian_email?: string | null
@@ -292,6 +336,8 @@ export type Database = {
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          lead_status?: string | null
+          next_follow_up_at?: string | null
           notes?: string | null
           permit_expiration_date?: string | null
           permit_issue_date?: string | null
@@ -300,10 +346,14 @@ export type Database = {
           pickup_locations?: string | null
           raw_text?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Update: {
+          age?: number | null
+          converted_student_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          dob?: string | null
           email?: string | null
           full_name?: string | null
           guardian_email?: string | null
@@ -311,6 +361,8 @@ export type Database = {
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          lead_status?: string | null
+          next_follow_up_at?: string | null
           notes?: string | null
           permit_expiration_date?: string | null
           permit_issue_date?: string | null
@@ -319,6 +371,7 @@ export type Database = {
           pickup_locations?: string | null
           raw_text?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
