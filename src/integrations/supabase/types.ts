@@ -152,6 +152,81 @@ export type Database = {
         }
         Relationships: []
       }
+      instructor_students: {
+        Row: {
+          created_at: string | null
+          id: string
+          instructor_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instructor_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instructor_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_students_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructor_students_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_notes: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          note: string
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          note: string
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          note?: string
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_notes_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_uploads: {
         Row: {
           created_at: string
@@ -179,29 +254,224 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          approved: boolean | null
           created_at: string
+          dropoff_address: string | null
           email: string | null
           full_name: string | null
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
           id: string
+          intake_submitted: boolean | null
+          permit_expiration_date: string | null
+          permit_file_url: string | null
+          permit_issue_date: string | null
+          permit_number: string | null
+          phone: string | null
+          pickup_address: string | null
+          public_id: string | null
           updated_at: string
         }
         Insert: {
+          approved?: boolean | null
           created_at?: string
+          dropoff_address?: string | null
           email?: string | null
           full_name?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
           id: string
+          intake_submitted?: boolean | null
+          permit_expiration_date?: string | null
+          permit_file_url?: string | null
+          permit_issue_date?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pickup_address?: string | null
+          public_id?: string | null
           updated_at?: string
         }
         Update: {
+          approved?: boolean | null
           created_at?: string
+          dropoff_address?: string | null
           email?: string | null
           full_name?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
           id?: string
+          intake_submitted?: boolean | null
+          permit_expiration_date?: string | null
+          permit_file_url?: string | null
+          permit_issue_date?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pickup_address?: string | null
+          public_id?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      report_cards: {
+        Row: {
+          acceleration: number | null
+          blind_spots: number | null
+          braking: number | null
+          changing_lanes: number | null
+          created_at: string | null
+          distractions: number | null
+          following_distance: number | null
+          general_parking: number | null
+          id: string
+          instructor_id: string
+          internal_message: string | null
+          interstate: number | null
+          lane_maintenance: number | null
+          left_turns: number | null
+          lesson_audio_url: string | null
+          merging: number | null
+          message_to_student: string | null
+          overall: number | null
+          parallel_parking: number | null
+          reverse_parking: number | null
+          right_turns: number | null
+          road_sign_awareness: number | null
+          session_id: string
+          signal_usage: number | null
+          speed_maintenance: number | null
+          straight_line_backing: number | null
+          student_id: string
+          transcription_summary: string | null
+          turn_about: number | null
+        }
+        Insert: {
+          acceleration?: number | null
+          blind_spots?: number | null
+          braking?: number | null
+          changing_lanes?: number | null
+          created_at?: string | null
+          distractions?: number | null
+          following_distance?: number | null
+          general_parking?: number | null
+          id?: string
+          instructor_id: string
+          internal_message?: string | null
+          interstate?: number | null
+          lane_maintenance?: number | null
+          left_turns?: number | null
+          lesson_audio_url?: string | null
+          merging?: number | null
+          message_to_student?: string | null
+          overall?: number | null
+          parallel_parking?: number | null
+          reverse_parking?: number | null
+          right_turns?: number | null
+          road_sign_awareness?: number | null
+          session_id: string
+          signal_usage?: number | null
+          speed_maintenance?: number | null
+          straight_line_backing?: number | null
+          student_id: string
+          transcription_summary?: string | null
+          turn_about?: number | null
+        }
+        Update: {
+          acceleration?: number | null
+          blind_spots?: number | null
+          braking?: number | null
+          changing_lanes?: number | null
+          created_at?: string | null
+          distractions?: number | null
+          following_distance?: number | null
+          general_parking?: number | null
+          id?: string
+          instructor_id?: string
+          internal_message?: string | null
+          interstate?: number | null
+          lane_maintenance?: number | null
+          left_turns?: number | null
+          lesson_audio_url?: string | null
+          merging?: number | null
+          message_to_student?: string | null
+          overall?: number | null
+          parallel_parking?: number | null
+          reverse_parking?: number | null
+          right_turns?: number | null
+          road_sign_awareness?: number | null
+          session_id?: string
+          signal_usage?: number | null
+          speed_maintenance?: number | null
+          straight_line_backing?: number | null
+          student_id?: string
+          transcription_summary?: string | null
+          turn_about?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_cards_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_cards_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_cards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -236,6 +506,73 @@ export type Database = {
         }
         Relationships: []
       }
+      sessions: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          created_at: string | null
+          ends_at: string
+          id: string
+          instructor_id: string
+          report_card_id: string | null
+          starts_at: string
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_role?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          ends_at: string
+          id?: string
+          instructor_id: string
+          report_card_id?: string | null
+          starts_at: string
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_role?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          ends_at?: string
+          id?: string
+          instructor_id?: string
+          report_card_id?: string | null
+          starts_at?: string
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_report_card"
+            columns: ["report_card_id"]
+            isOneToOne: false
+            referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -259,6 +596,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -266,6 +604,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assigned_instructor: {
+        Args: { _instructor_id: string; _student_id: string }
+        Returns: boolean
+      }
+      is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "student" | "instructor" | "staff"
