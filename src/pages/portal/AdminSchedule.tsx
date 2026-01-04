@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight, FileText, CheckCircle, Eye } from "lucide-react";
+import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight, FileText, CheckCircle, Eye, MessageSquare } from "lucide-react";
 import { format, parseISO, addHours, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isAfter } from "date-fns";
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import { Link } from "react-router-dom";
 
 export default function AdminSchedule() {
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['admin', 'staff']}>
       <PortalLayout>
         <AdminScheduleContent />
       </PortalLayout>
@@ -38,6 +38,9 @@ function AdminScheduleContent() {
   const [sessionToCancel, setSessionToCancel] = useState<Session | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [detailSession, setDetailSession] = useState<Session | null>(null);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [noteForStudent, setNoteForStudent] = useState("");
+  const [noteForInstructor, setNoteForInstructor] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -197,29 +200,70 @@ function AdminScheduleContent() {
   };
 
   const handleCancelSession = async () => {
-    if (!sessionToCancel) return;
+    if (!sessionToCancel || !cancellationReason.trim()) return;
 
-    const { error } = await supabase
-      .from('sessions')
-      .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        cancelled_by_role: 'admin',
-        cancellation_reason: cancellationReason,
-      })
-      .eq('id', sessionToCancel.id);
+    try {
+      const { error } = await supabase.rpc('cancel_session', {
+        _session_id: sessionToCancel.id,
+        _reason: cancellationReason.trim()
+      });
 
-    if (error) {
+      if (error) throw error;
+
+      toast.success("Session cancelled");
+      setCancelDialogOpen(false);
+      setSessionToCancel(null);
+      setCancellationReason("");
+      fetchData();
+    } catch (error: any) {
       console.error('Session cancel error:', error);
       toast.error(`Failed to cancel session: ${error.message}`);
-      return;
     }
+  };
 
-    toast.success("Session cancelled");
-    setCancelDialogOpen(false);
-    setSessionToCancel(null);
-    setCancellationReason("");
-    fetchData();
+  const handleCompleteSession = async (session: Session) => {
+    try {
+      const { error } = await supabase.rpc('complete_session', {
+        _session_id: session.id,
+        _via: 'manual'
+      });
+
+      if (error) throw error;
+
+      toast.success("Session marked as completed");
+      setDetailSession(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Session complete error:', error);
+      toast.error(`Failed to complete session: ${error.message}`);
+    }
+  };
+
+  const openNotesDialog = (session: Session) => {
+    setNoteForStudent(session.note_for_student || "");
+    setNoteForInstructor(session.note_for_instructor || "");
+    setNotesDialogOpen(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!detailSession) return;
+
+    try {
+      const { error } = await supabase.rpc('update_session_notes', {
+        _session_id: detailSession.id,
+        _note_for_student: noteForStudent || null,
+        _note_for_instructor: noteForInstructor || null
+      });
+
+      if (error) throw error;
+
+      toast.success("Notes saved successfully");
+      setNotesDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error('Notes save error:', error);
+      toast.error(`Failed to save notes: ${error.message}`);
+    }
   };
 
   const resetForm = () => {
@@ -269,7 +313,7 @@ function AdminScheduleContent() {
   const statusColors: Record<string, string> = {
     scheduled: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
     completed: 'bg-green-500/20 text-green-700 dark:text-green-300',
-    cancelled: 'bg-red-500/20 text-red-700 dark:text-red-300',
+    cancelled: 'bg-gray-500/20 text-gray-700 dark:text-gray-300',
   };
 
   return (
@@ -571,10 +615,38 @@ function AdminScheduleContent() {
                 </div>
               </div>
 
+              {/* Session Notes */}
+              {(detailSession.note_for_student || detailSession.note_for_instructor) && (
+                <div className="space-y-2">
+                  {detailSession.note_for_student && (
+                    <div className="p-3 bg-blue-500/10 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Note for Student
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {detailSession.note_for_student}
+                      </p>
+                    </div>
+                  )}
+                  {detailSession.note_for_instructor && (
+                    <div className="p-3 bg-orange-500/10 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Note for Instructor
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {detailSession.note_for_instructor}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Cancelled Info */}
               {detailSession.status === 'cancelled' && (
-                <div className="p-3 bg-destructive/10 rounded-lg">
-                  <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <div className="p-3 bg-gray-500/10 rounded-lg">
+                  <p className="text-sm font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Cancelled by {detailSession.cancelled_by_role}
                   </p>
@@ -592,17 +664,45 @@ function AdminScheduleContent() {
               )}
 
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                {detailSession.report_card_id && (
-                  <Link to={`/instructor/report-cards/edit/${detailSession.report_card_id}`} className="flex-1">
-                    <Button variant="outline" className="w-full gap-2 min-h-[44px]">
-                      <Eye className="h-4 w-4" />
-                      View Report Card
-                    </Button>
-                  </Link>
-                )}
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {detailSession.report_card_id && (
+                    <Link to={`/instructor/report-cards/edit/${detailSession.report_card_id}`} className="flex-1">
+                      <Button variant="outline" className="w-full gap-2 min-h-[44px]">
+                        <Eye className="h-4 w-4" />
+                        View Report Card
+                      </Button>
+                    </Link>
+                  )}
+                  {/* Edit Notes button - available for all sessions */}
+                  <Button
+                    variant="outline"
+                    className="flex-1 min-h-[44px] gap-2"
+                    onClick={() => openNotesDialog(detailSession)}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Edit Notes
+                  </Button>
+                </div>
                 {detailSession.status === 'scheduled' && (
-                  <>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Grade Session link - only if no report card */}
+                    {!detailSession.report_card_id && (
+                      <Link to={`/instructor/report-cards/new?session_id=${detailSession.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full gap-2 min-h-[44px]">
+                          <FileText className="h-4 w-4" />
+                          Grade Session
+                        </Button>
+                      </Link>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="flex-1 min-h-[44px] gap-2"
+                      onClick={() => handleCompleteSession(detailSession)}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Mark Complete
+                    </Button>
                     <Button
                       variant="outline"
                       className="flex-1 min-h-[44px] gap-2"
@@ -614,20 +714,18 @@ function AdminScheduleContent() {
                       <Edit className="h-4 w-4" />
                       Edit
                     </Button>
-                    {isAfter(parseISO(detailSession.starts_at), new Date()) && (
-                      <Button
-                        variant="destructive"
-                        className="flex-1 min-h-[44px] gap-2"
-                        onClick={() => {
-                          setDetailSession(null);
-                          openCancelDialog(detailSession);
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                        Cancel
-                      </Button>
-                    )}
-                  </>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 min-h-[44px] gap-2"
+                      onClick={() => {
+                        setDetailSession(null);
+                        openCancelDialog(detailSession);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -672,6 +770,56 @@ function AdminScheduleContent() {
                 disabled={!cancellationReason.trim()}
               >
                 Cancel Session
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notes Dialog */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <MessageSquare className="h-5 w-5" />
+              Session Notes
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Add notes visible to the student or instructor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Note for Student</Label>
+              <Textarea
+                value={noteForStudent}
+                onChange={e => setNoteForStudent(e.target.value)}
+                placeholder="This note will be visible to the student..."
+                rows={3}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Visible to: Student, Admin, Staff</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Note for Instructor</Label>
+              <Textarea
+                value={noteForInstructor}
+                onChange={e => setNoteForInstructor(e.target.value)}
+                placeholder="This note will be visible to the instructor..."
+                rows={3}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Visible to: Instructor, Admin, Staff</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" className="flex-1 min-h-[44px]" onClick={() => setNotesDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 min-h-[44px]" 
+                onClick={handleSaveNotes}
+              >
+                Save Notes
               </Button>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Calendar, User, Star, MessageSquare, Volume2 } from "lucide-react";
+import { FileText, Calendar, User, Star, MessageSquare, Volume2, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface ReportCardListProps {
@@ -67,8 +67,15 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm text-muted-foreground truncate">
                         {userRole === 'student' 
-                          ? card.instructor?.full_name || 'Instructor'
-                          : card.student?.full_name || 'Student'}
+                          ? card.instructor?.full_name || card.instructor?.email || 'Instructor'
+                          : card.student?.full_name || card.student?.email || 'Student'}
+                      </span>
+                    </div>
+                    {/* Show submitted timestamp */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                      <span className="text-xs text-muted-foreground">
+                        Submitted: {format(parseISO(card.created_at), 'MMM d, yyyy h:mm a')}
                       </span>
                     </div>
                   </div>
@@ -123,11 +130,15 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.instructor?.full_name || 'N/A'}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.instructor?.full_name || selectedCard.instructor?.email || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.student?.full_name || 'N/A'}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.student?.full_name || selectedCard.student?.email || 'N/A'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
+                  <p className="font-medium text-sm sm:text-base">{format(parseISO(selectedCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                 </div>
               </div>
 
