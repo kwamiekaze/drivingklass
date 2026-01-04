@@ -2,6 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { UserRole } from "@/types/portal";
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,20 +15,32 @@ export function ProtectedRoute({
   allowedRoles,
   requireApproval = true 
 }: ProtectedRouteProps) {
-  const { user, role, isLoading, isApproved, isRejected, isPending } = usePortalAuth();
+  const { user, role, isLoading, isApproved, isRejected, isPending, profile } = usePortalAuth();
   const location = useLocation();
 
+  // ALWAYS show loading state - never blank screen
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
       </div>
     );
   }
 
-  // Not logged in
+  // Not logged in - redirect to login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Profile still loading or missing - show setup message with retry
+  if (!profile && user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Setting up your profile...</p>
+      </div>
+    );
   }
 
   // Rejected users should see the rejected page
@@ -41,21 +54,21 @@ export function ProtectedRoute({
   // Admin routes: ONLY admin allowed (staff cannot access /admin)
   if (pathname.startsWith('/admin')) {
     if (role !== 'admin') {
-      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+      return <Navigate to={getRedirectPath(role as UserRole, isApproved)} replace />;
     }
   }
 
   // Instructor routes: ONLY instructor allowed
   if (pathname.startsWith('/instructor')) {
     if (role !== 'instructor') {
-      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+      return <Navigate to={getRedirectPath(role as UserRole, isApproved)} replace />;
     }
   }
 
   // Student routes: ONLY student allowed
   if (pathname.startsWith('/student')) {
     if (role !== 'student') {
-      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+      return <Navigate to={getRedirectPath(role as UserRole, isApproved)} replace />;
     }
   }
 
@@ -69,14 +82,19 @@ export function ProtectedRoute({
 
   // Check role permissions (legacy check, still useful for explicit allowedRoles)
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    const redirectPath = getRedirectPath(role);
+    const redirectPath = getRedirectPath(role, isApproved);
     return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;
 }
 
-function getRedirectPath(role: UserRole | null | undefined): string {
+function getRedirectPath(role: UserRole | null | undefined, isApproved: boolean): string {
+  // If not approved, always go to pending
+  if (!isApproved && role === 'student') {
+    return '/pending-approval';
+  }
+  
   switch (role) {
     case 'admin':
       return '/admin';
@@ -85,7 +103,8 @@ function getRedirectPath(role: UserRole | null | undefined): string {
     case 'instructor':
       return '/instructor';
     case 'student':
-    default:
       return '/student';
+    default:
+      return '/login';
   }
 }
