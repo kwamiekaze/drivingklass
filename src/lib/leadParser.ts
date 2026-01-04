@@ -389,23 +389,176 @@ function extractPickupLocations(lines: string[]): string {
 
 // ============= DOB/BIRTHDAY EXTRACTION =============
 
-function extractDOB(lines: string[]): { dob: string; age: number | null } {
-  for (const line of lines) {
+/**
+ * Labels that indicate permit/certificate dates (to avoid grabbing as DOB)
+ */
+const PERMIT_DATE_LABELS = [
+  /permit\s*(?:issue|expir)/i,
+  /certificate\s*issue/i,
+  /expir(?:ation|y)\s*date/i,
+  /issue\s*date/i,
+  /drive\s*deadline/i,
+];
+
+/**
+ * Check if a line is related to permit/certificate dates
+ */
+function isPermitDateContext(lines: string[], currentIdx: number, windowSize: number = 2): boolean {
+  const start = Math.max(0, currentIdx - windowSize);
+  const end = Math.min(lines.length, currentIdx + windowSize + 1);
+  
+  for (let i = start; i < end; i++) {
+    const line = lines[i];
+    if (PERMIT_DATE_LABELS.some(pattern => pattern.test(line))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Extract age from text patterns like "16 years old", "16 years", "16 yrs"
+ */
+function extractAgeFromText(text: string): number | null {
+  // Match patterns: "16 years old", "16 years", "16 yrs old", "(16 years old)"
+  const ageMatch = text.match(/\b(\d{1,2})\s*(?:years?\s*old|years?|yrs?\s*old?)\b/i);
+  if (ageMatch) {
+    const age = parseInt(ageMatch[1], 10);
+    // Reasonable age range for student drivers: 14-25
+    if (age >= 14 && age <= 25) {
+      return age;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract DOB and Age with multiple fallback strategies
+ * Priority:
+ * 1. Primary: Find "Birthday" label and extract date + age from same/next line
+ * 2. Positional: Look after Phone line for date + "years old"
+ * 3. Global: Find first date followed by "years old" that isn't near permit dates
+ */
+function extractDOB(lines: string[], normalizedText: string): { dob: string; age: number | null } {
+  let result = { dob: '', age: null as number | null };
+  
+  // Create a flattened version for fallback matching
+  const flattenedText = normalizedText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+  
+  // ===== STEP A: Primary "Birthday line" match =====
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const lineLower = line.toLowerCase();
     
     // Look for "Birthday" or "Date of Birth" labels
-    if (lineLower.includes('birthday') || lineLower.includes('date of birth') || lineLower.includes('dob')) {
-      // Extract date from same line
+    if (lineLower.includes('birthday') || lineLower.includes('date of birth') || lineLower === 'dob' || lineLower.startsWith('dob ') || lineLower.startsWith('dob:')) {
+      
+      // Try to extract date from same line first
       const dateMatch = line.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
       if (dateMatch) {
-        const dob = parseDate(dateMatch[0]);
-        const age = calculateAge(dob);
-        return { dob, age };
+        result.dob = parseDate(dateMatch[0]);
+        result.age = extractAgeFromText(line) || calculateAge(result.dob);
+        
+        console.log('[DOB Parser] Primary match on same line:', { line, dob: result.dob, age: result.age });
+        return result;
+      }
+      
+      // Date might be on the next line(s) - check next 2 lines
+      for (let j = 1; j <= 2 && i + j < lines.length; j++) {
+        const nextLine = lines[i + j];
+        const nextDateMatch = nextLine.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+        if (nextDateMatch) {
+          result.dob = parseDate(nextDateMatch[0]);
+          // Check for age in both lines
+          result.age = extractAgeFromText(nextLine) || extractAgeFromText(line) || calculateAge(result.dob);
+          
+          console.log('[DOB Parser] Primary match on next line:', { birthdayLine: line, dateLine: nextLine, dob: result.dob, age: result.age });
+          return result;
+        }
+      }
+      
+      // Birthday label found but no date - try to find age at least
+      const ageFromLabel = extractAgeFromText(line);
+      if (ageFromLabel) {
+        result.age = ageFromLabel;
       }
     }
   }
   
-  return { dob: '', age: null };
+  // ===== STEP B: Positional fallback - look after Phone line =====
+  // Birthday usually appears directly after Phone in the data format
+  let phoneLineIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^(?:student\s+)?(?:phone|cell|mobile)/i.test(lines[i])) {
+      phoneLineIdx = i;
+      break;
+    }
+  }
+  
+  if (phoneLineIdx !== -1) {
+    // Scan next 4 lines after phone for a date + "years old" pattern
+    for (let i = phoneLineIdx + 1; i < Math.min(phoneLineIdx + 5, lines.length); i++) {
+      const line = lines[i];
+      
+      // Skip if this looks like a permit/certificate date context
+      if (isPermitDateContext(lines, i)) continue;
+      
+      const dateMatch = line.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (dateMatch) {
+        // Check if "years old" is present (strong indicator this is DOB, not permit date)
+        const hasYearsOld = /\b\d{1,2}\s*(?:years?\s*old|years?|yrs?)\b/i.test(line);
+        
+        if (hasYearsOld) {
+          result.dob = parseDate(dateMatch[0]);
+          result.age = extractAgeFromText(line) || calculateAge(result.dob);
+          
+          console.log('[DOB Parser] Positional fallback after Phone:', { line, dob: result.dob, age: result.age });
+          return result;
+        }
+      }
+    }
+  }
+  
+  // ===== STEP C: Global scan for date + "years old" pattern =====
+  // Look for any occurrence of a date immediately followed by "years old"
+  // But avoid permit date contexts
+  
+  // Pattern: date followed by "X years old" within same line
+  const globalPattern = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\s+(\d{1,2})\s*(?:years?\s*old|years?)/i;
+  const globalMatch = flattenedText.match(globalPattern);
+  
+  if (globalMatch) {
+    const matchIdx = flattenedText.indexOf(globalMatch[0]);
+    const contextBefore = flattenedText.substring(Math.max(0, matchIdx - 60), matchIdx);
+    
+    // Check if this is near permit-related text
+    const isNearPermit = PERMIT_DATE_LABELS.some(p => p.test(contextBefore));
+    
+    if (!isNearPermit) {
+      result.dob = parseDate(globalMatch[0]);
+      result.age = parseInt(globalMatch[4], 10);
+      
+      console.log('[DOB Parser] Global fallback:', { match: globalMatch[0], dob: result.dob, age: result.age });
+      return result;
+    }
+  }
+  
+  // ===== STEP D: Try Birthday regex on flattened text =====
+  // Handle cases where Birthday and date are separated by newlines/tabs
+  const birthdayBlockMatch = flattenedText.match(/\bbirthday\b[:\s]*([\s\S]{0,80})/i);
+  if (birthdayBlockMatch) {
+    const block = birthdayBlockMatch[1];
+    const dateMatch = block.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (dateMatch) {
+      result.dob = parseDate(dateMatch[0]);
+      result.age = extractAgeFromText(block) || calculateAge(result.dob);
+      
+      console.log('[DOB Parser] Birthday block fallback:', { block, dob: result.dob, age: result.age });
+      return result;
+    }
+  }
+  
+  return result;
 }
 
 // ============= BASIC FIELD EXTRACTION =============
@@ -491,7 +644,7 @@ export function parseLeadData(rawText: string): ParsedLeadData {
   ]);
 
   // ===== Extract DOB and Age =====
-  const dobData = extractDOB(lines);
+  const dobData = extractDOB(lines, normalized);
   result.dob = dobData.dob;
   result.age = dobData.age;
 
