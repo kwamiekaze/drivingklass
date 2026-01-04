@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { GoldSportcar } from "./icons/GoldSportcar";
 import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
 import goldCar from "@/assets/gold-car-transparent.png";
+import portalCarIcon from "@/assets/portal-car-icon.png";
 
 export function HeroSection() {
   const handlePackageSelect = (packageId: string) => {
@@ -15,11 +15,15 @@ export function HeroSection() {
       {/* Portal link - top right - Gold Sportcar icon */}
       <Link
         to="/auth"
-        className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group"
+        className="absolute top-4 right-4 z-20 p-1.5 rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group"
         title="Klassroom Portal"
         aria-label="Klassroom Portal"
       >
-        <GoldSportcar className="w-6 h-6 text-gold group-hover:scale-110 transition-transform" />
+        <img 
+          src={portalCarIcon} 
+          alt="Klassroom Portal" 
+          className="w-8 h-8 object-contain group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(212,175,55,0.5)]"
+        />
       </Link>
 
       {/* Header with brand and stars - raised higher with clear separation from ring */}
