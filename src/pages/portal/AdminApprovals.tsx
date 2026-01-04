@@ -18,7 +18,7 @@ import { format } from "date-fns";
 
 export default function AdminApprovals() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminApprovalsContent />
       </PortalLayout>

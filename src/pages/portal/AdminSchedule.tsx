@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 export default function AdminSchedule() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminScheduleContent />
       </PortalLayout>

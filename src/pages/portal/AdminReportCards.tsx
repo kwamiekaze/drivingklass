@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 
 export default function AdminReportCards() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminReportCardsContent />
       </PortalLayout>

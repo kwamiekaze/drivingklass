@@ -17,7 +17,7 @@ import { format, parseISO } from "date-fns";
 
 export default function ReportCardForm() {
   return (
-    <ProtectedRoute allowedRoles={['instructor', 'staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
       <PortalLayout>
         <ReportCardFormContent />
       </PortalLayout>

@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 export default function AdminAssignments() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminAssignmentsContent />
       </PortalLayout>

@@ -93,7 +93,7 @@ function InstructorDashboardContent() {
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-          Welcome, {profile?.full_name?.split(' ')[0] || 'Instructor'}!
+          Welcome Teacher
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
       </div>
