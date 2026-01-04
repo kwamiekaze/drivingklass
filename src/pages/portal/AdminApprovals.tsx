@@ -62,16 +62,22 @@ function AdminApprovalsContent() {
     setLoading(false);
   };
 
-  const handleApprove = async (profile: Profile) => {
+  const handleApprove = async (profile: Profile & { role?: string }) => {
     setActionLoading(profile.id);
+    
+    const { data: { user } } = await supabase.auth.getUser();
     
     const { error } = await supabase
       .from('profiles')
       .update({ 
         approved: true,
-        approval_status: 'approved' as any,
+        approval_status: 'approved',
         approved_at: new Date().toISOString(),
-      } as any)
+        approved_by: user?.id || null,
+        rejected_at: null,
+        rejected_by: null,
+        rejection_reason: null,
+      })
       .eq('id', profile.id);
 
     if (error) {
@@ -96,14 +102,19 @@ function AdminApprovalsContent() {
     setActionLoading(selectedProfile.id);
     setRejectModalOpen(false);
     
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { error } = await supabase
       .from('profiles')
       .update({ 
         approved: false,
-        approval_status: 'rejected' as any,
+        approval_status: 'rejected',
         rejected_at: new Date().toISOString(),
+        rejected_by: user?.id || null,
         rejection_reason: reason || null,
-      } as any)
+        approved_at: null,
+        approved_by: null,
+      })
       .eq('id', selectedProfile.id);
 
     if (error) {
@@ -130,8 +141,8 @@ function AdminApprovalsContent() {
     }
   };
 
-  const pendingProfiles = profiles.filter(p => (p as any).approval_status === 'pending' || (!p.approved && !(p as any).approval_status));
-  const approvedProfiles = profiles.filter(p => (p as any).approval_status === 'approved' || (p.approved && (p as any).approval_status !== 'rejected'));
+  const pendingProfiles = profiles.filter(p => (p as any).approval_status === 'pending');
+  const approvedProfiles = profiles.filter(p => (p as any).approval_status === 'approved');
   const rejectedProfiles = profiles.filter(p => (p as any).approval_status === 'rejected');
 
   if (loading) {
