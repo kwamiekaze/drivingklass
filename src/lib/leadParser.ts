@@ -116,11 +116,28 @@ const ADDRESS_SECTION_END_HEADERS = [
   /how did you hear/i,
 ];
 
-// Section headers that END the pickup locations block
+// Section headers that END the pickup locations block (strict stop triggers)
 const PICKUP_SECTION_END_HEADERS = [
-  /note:/i,
-  /danger zone/i,
-  /how did you hear/i,
+  /^notes?$/i,
+  /^note:/i,
+  /^overview$/i,
+  /^time\s+scheduled/i,
+  /^time\s+purchased/i,
+  /^drive$/i,
+  /^road\s+test/i,
+  /^certificate/i,
+  /^danger\s+zone/i,
+  /^how\s+did\s+you\s+hear/i,
+  /^parent[\s/]guardian/i,
+  /^student$/i,
+  /^instructor$/i,
+  /^status$/i,
+  /^upcoming$/i,
+  /^total\s+balance/i,
+  /^email$/i,
+  /^phone$/i,
+  /^birthday$/i,
+  /^driving\s+lessons?$/i,
 ];
 
 // ============= SECTION DETECTION =============
@@ -344,6 +361,83 @@ function extractHomeAddress(lines: string[]): string {
 
 // ============= PICKUP LOCATIONS EXTRACTION =============
 
+// Common US street suffixes for address validation
+const STREET_SUFFIXES = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|parkway|pkwy|way|pl|place|ter|terrace|hwy|highway|trail|trl)\b/i;
+
+/**
+ * Validate if a line is a valid US address
+ * Returns true if the line matches common address patterns
+ */
+function isValidAddress(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  
+  // Pattern A: Full address with street number, city, state, and optional zip
+  // e.g., "123 Main St, Atlanta, GA 30301" or "456 Oak Avenue, Marietta, GA"
+  const patternA = /^\d{1,6}\s+.+,\s*.+,\s*[A-Z]{2}(\s*\d{5}(-\d{4})?)?$/i;
+  
+  // Pattern B: Highway-style addresses
+  // e.g., "4925 GA-92, Douglasville, GA 30135"
+  const patternB = /^\d{1,6}\s+(GA|US|I|SR|State\s+Route|Highway|Hwy)[-\s]?\d+.*,\s*.+,\s*[A-Z]{2}(\s*\d{5}(-\d{4})?)?$/i;
+  
+  // Check main patterns first
+  if (patternA.test(trimmed) || patternB.test(trimmed)) {
+    return true;
+  }
+  
+  // Fallback: Check if line has street number + street suffix + comma (for partial matches)
+  const hasStreetNumber = /^\d{1,6}\s+/.test(trimmed);
+  const hasStreetSuffix = STREET_SUFFIXES.test(trimmed);
+  const hasComma = trimmed.includes(',');
+  
+  if (hasStreetNumber && hasStreetSuffix && hasComma) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a line is a stop trigger for pickup locations extraction
+ * Returns true if we should stop capturing
+ */
+function isPickupStopTrigger(line: string): boolean {
+  const trimmed = line.trim();
+  const lower = trimmed.toLowerCase();
+  
+  // Check against section end headers
+  for (const pattern of PICKUP_SECTION_END_HEADERS) {
+    if (pattern.test(trimmed)) {
+      return true;
+    }
+  }
+  
+  // Check for percentage patterns: 100%, 0%, or any digit%
+  if (/\d+%/.test(trimmed)) {
+    return true;
+  }
+  
+  // Check for time patterns: "2 hours 0 minutes", "3 hours", "30 minutes"
+  if (/\d+\s*(hours?|minutes?)/i.test(trimmed)) {
+    return true;
+  }
+  
+  // Check for common non-address keywords
+  const stopKeywords = [
+    'notes', 'overview', 'time scheduled', 'time purchased', 'road test',
+    'certificate', 'danger zone', 'how did you hear', 'parent', 'guardian',
+    'instructor', 'upcoming', 'total balance', 'driving lessons', 'observation'
+  ];
+  
+  for (const keyword of stopKeywords) {
+    if (lower.includes(keyword)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 function extractPickupLocations(lines: string[]): string {
   const headerPatterns = [
     /^(?:student\s+)?pick[\s-]*up\s+location/i,
@@ -361,15 +455,14 @@ function extractPickupLocations(lines: string[]): string {
     .replace(/^edit\s*/i, '')
     .trim();
   
-  if (afterLabel && looksLikeAddress(afterLabel)) {
+  if (afterLabel && isValidAddress(afterLabel)) {
     return afterLabel;
   }
   
-  // Collect all location lines until end section
-  const endIdx = findSectionEnd(lines, startIdx, PICKUP_SECTION_END_HEADERS);
+  // Collect only valid address lines until a stop trigger is detected
   const locations: string[] = [];
   
-  for (let i = startIdx + 1; i < endIdx; i++) {
+  for (let i = startIdx + 1; i < lines.length; i++) {
     const line = lines[i].trim();
     
     // Skip "Edit" alone
@@ -378,10 +471,25 @@ function extractPickupLocations(lines: string[]): string {
     // Skip empty lines
     if (!line) continue;
     
+    // Check for stop triggers FIRST - before checking if it's an address
+    if (isPickupStopTrigger(line)) {
+      break; // Stop capturing immediately
+    }
+    
     // Skip label-like lines
     if (isLabelLine(line)) continue;
     
-    locations.push(line);
+    // Only add if it's a valid address
+    if (isValidAddress(line)) {
+      // Check for duplicates
+      if (!locations.includes(line)) {
+        locations.push(line);
+      }
+    } else {
+      // If we encounter a non-address line that's not empty/edit/label, stop
+      // This prevents capturing random text after addresses
+      break;
+    }
   }
   
   return locations.join('\n');
@@ -785,6 +893,78 @@ export function testParser(): { passed: boolean; results: Record<string, { expec
   const ageMatch = parsed.age !== null && parsed.age >= 15 && parsed.age <= 17; // Age should be ~16
   results['age'] = { expected: '~16', actual: String(parsed.age), match: ageMatch };
   if (!ageMatch) allPassed = false;
+
+  return { passed: allPassed, results };
+}
+
+/**
+ * Test function specifically for pickup locations parsing
+ * Ensures only valid addresses are captured and stop triggers are respected
+ */
+export function testPickupLocationsParsing(): { passed: boolean; results: { input: string; expected: string; actual: string; match: boolean }[] } {
+  const testCases = [
+    {
+      name: 'Basic two addresses with trailing noise',
+      input: `Student Pick-up Location
+3757 Greenbrook Dr, Douglasville, GA 30135
+4925 GA-92, Douglasville, GA 30135
+Notes
+First1Last
+Driving Lessons
+Overview
+Time Scheduled
+2 hours 0 minutes
+100%`,
+      expected: `3757 Greenbrook Dr, Douglasville, GA 30135
+4925 GA-92, Douglasville, GA 30135`,
+    },
+    {
+      name: 'Single address before Notes',
+      input: `Pick-up Location
+123 Main St, Atlanta, GA 30301
+Notes
+Some other content`,
+      expected: '123 Main St, Atlanta, GA 30301',
+    },
+    {
+      name: 'Address followed by percentages',
+      input: `Student Pick-up Location
+456 Oak Avenue, Marietta, GA 30060
+50%
+0%`,
+      expected: '456 Oak Avenue, Marietta, GA 30060',
+    },
+    {
+      name: 'Address followed by time patterns',
+      input: `Pick-up Location
+789 Pine Rd, Decatur, GA 30030
+2 hours 30 minutes`,
+      expected: '789 Pine Rd, Decatur, GA 30030',
+    },
+  ];
+
+  const results: { input: string; expected: string; actual: string; match: boolean }[] = [];
+  let allPassed = true;
+
+  for (const tc of testCases) {
+    const parsed = parseLeadData(tc.input);
+    const actual = parsed.pickup_locations;
+    const match = actual.trim() === tc.expected.trim();
+    
+    results.push({
+      input: tc.name,
+      expected: tc.expected,
+      actual: actual,
+      match,
+    });
+    
+    if (!match) {
+      allPassed = false;
+      console.warn(`[Pickup Test FAILED] ${tc.name}:`);
+      console.warn(`  Expected: "${tc.expected}"`);
+      console.warn(`  Actual:   "${actual}"`);
+    }
+  }
 
   return { passed: allPassed, results };
 }
