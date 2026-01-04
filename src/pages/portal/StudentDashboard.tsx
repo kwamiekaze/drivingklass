@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, CheckCircle, Clock, User, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, FileText, CheckCircle, Clock, User, AlertTriangle, RefreshCw } from "lucide-react";
 import { Session, ReportCard, Profile } from "@/types/portal";
 import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
@@ -33,6 +34,7 @@ function StudentDashboardContent() {
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [instructor, setInstructor] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -43,45 +45,59 @@ function StudentDashboardContent() {
   const fetchData = async () => {
     if (!user) return;
     
-    // Fetch sessions with instructor info
-    const { data: sessionsData } = await supabase
-      .from('sessions')
-      .select('*, instructor:profiles!sessions_instructor_id_fkey(*)')
-      .eq('student_id', user.id)
-      .order('starts_at', { ascending: true });
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch sessions with instructor info
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*, instructor:profiles!sessions_instructor_id_fkey(*)')
+        .eq('student_id', user.id)
+        .order('starts_at', { ascending: true });
 
-    if (sessionsData) {
-      setSessions(sessionsData as Session[]);
+      if (sessionsError) throw sessionsError;
+      
+      if (sessionsData) {
+        setSessions(sessionsData as Session[]);
+      }
+
+      // Fetch report cards (excluding internal_message for students)
+      const { data: reportCardsData, error: reportCardsError } = await supabase
+        .from('report_cards')
+        .select('*, session:sessions(*), instructor:profiles!report_cards_instructor_id_fkey(*)')
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (reportCardsError) throw reportCardsError;
+      
+      if (reportCardsData) {
+        // Remove internal_message from student view
+        const sanitized = reportCardsData.map(rc => ({
+          ...rc,
+          internal_message: null
+        }));
+        setReportCards(sanitized as ReportCard[]);
+      }
+
+      // Fetch assigned instructor
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('instructor_students')
+        .select('instructor:profiles!instructor_students_instructor_id_fkey(*)')
+        .eq('student_id', user.id)
+        .maybeSingle();
+
+      if (assignmentError) throw assignmentError;
+      
+      if (assignmentData?.instructor) {
+        setInstructor(assignmentData.instructor as Profile);
+      }
+    } catch (err: any) {
+      console.error('Error fetching student data:', err);
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
-
-    // Fetch report cards (excluding internal_message for students)
-    const { data: reportCardsData } = await supabase
-      .from('report_cards')
-      .select('*, session:sessions(*), instructor:profiles!report_cards_instructor_id_fkey(*)')
-      .eq('student_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (reportCardsData) {
-      // Remove internal_message from student view
-      const sanitized = reportCardsData.map(rc => ({
-        ...rc,
-        internal_message: null
-      }));
-      setReportCards(sanitized as ReportCard[]);
-    }
-
-    // Fetch assigned instructor
-    const { data: assignmentData } = await supabase
-      .from('instructor_students')
-      .select('instructor:profiles!instructor_students_instructor_id_fkey(*)')
-      .eq('student_id', user.id)
-      .maybeSingle();
-
-    if (assignmentData?.instructor) {
-      setInstructor(assignmentData.instructor as Profile);
-    }
-
-    setLoading(false);
   };
 
   const upcomingSessions = sessions.filter(s => 
@@ -126,6 +142,22 @@ function StudentDashboardContent() {
           </>
         )}
       </div>
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive/50">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center gap-4 py-4">
+              <AlertTriangle className="h-12 w-12 text-destructive" />
+              <p className="text-muted-foreground text-center">{error}</p>
+              <Button onClick={fetchData} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Welcome Header */}
       <div className="flex flex-col gap-4">
@@ -139,7 +171,9 @@ function StudentDashboardContent() {
             </p>
           )}
         </div>
-        {instructor && (
+        {loading ? (
+          <Skeleton className="h-16 w-full sm:w-64" />
+        ) : instructor && (
           <Card className="w-full sm:w-auto sm:max-w-xs">
             <CardContent className="flex items-center gap-3 p-3 sm:p-4">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -163,7 +197,11 @@ function StudentDashboardContent() {
                 <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{upcomingSessions.length}</p>
+                {loading ? (
+                  <Skeleton className="h-7 w-8 mb-1" />
+                ) : (
+                  <p className="text-xl sm:text-2xl font-bold">{upcomingSessions.length}</p>
+                )}
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Upcoming</p>
               </div>
             </div>
@@ -176,7 +214,11 @@ function StudentDashboardContent() {
                 <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{completedSessions.length}</p>
+                {loading ? (
+                  <Skeleton className="h-7 w-8 mb-1" />
+                ) : (
+                  <p className="text-xl sm:text-2xl font-bold">{completedSessions.length}</p>
+                )}
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
@@ -189,7 +231,11 @@ function StudentDashboardContent() {
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{reportCards.length}</p>
+                {loading ? (
+                  <Skeleton className="h-7 w-8 mb-1" />
+                ) : (
+                  <p className="text-xl sm:text-2xl font-bold">{reportCards.length}</p>
+                )}
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Reports</p>
               </div>
             </div>
@@ -202,7 +248,11 @@ function StudentDashboardContent() {
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{averageRating ?? '-'}</p>
+                {loading ? (
+                  <Skeleton className="h-7 w-8 mb-1" />
+                ) : (
+                  <p className="text-xl sm:text-2xl font-bold">{averageRating ?? '-'}</p>
+                )}
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Rating</p>
               </div>
             </div>

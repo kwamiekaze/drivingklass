@@ -33,6 +33,8 @@ import AdminAssignments from "./pages/portal/AdminAssignments";
 import AdminReportCards from "./pages/portal/AdminReportCards";
 import AdminLeads from "./pages/portal/AdminLeads";
 import AdminQA from "./pages/portal/AdminQA";
+import AdminStudents from "./pages/portal/AdminStudents";
+import AdminInstructors from "./pages/portal/AdminInstructors";
 
 const queryClient = new QueryClient();
 
@@ -77,8 +79,8 @@ const App = () => (
                   <Route path="/admin/report-cards" element={<AdminReportCards />} />
                   <Route path="/admin/leads" element={<AdminLeads />} />
                   <Route path="/admin/qa" element={<AdminQA />} />
-                  <Route path="/admin/users/students" element={<AdminApprovals />} />
-                  <Route path="/admin/users/instructors" element={<AdminApprovals />} />
+                  <Route path="/admin/students" element={<AdminStudents />} />
+                  <Route path="/admin/instructors" element={<AdminInstructors />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   
                   {/* Legacy Admin */}
