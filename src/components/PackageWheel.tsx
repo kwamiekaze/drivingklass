@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
@@ -7,9 +7,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "./ThemeProvider";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { formatChipPrice } from "@/lib/priceFormatters";
+import carHeadlightsOff from "@/assets/car-headlights-off.png";
+import carHeadlightsOn from "@/assets/car-headlights-on.png";
 
 interface PackageWheelProps {
-  carImageSrc: string;
   onPackageSelect?: (packageId: string) => void;
 }
 
@@ -97,20 +98,60 @@ function PriceChip({
   );
 }
 
-export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps) {
+export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [headlightsOn, setHeadlightsOn] = useState(false);
+  const flickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
   const [containerSize, setContainerSize] = useState(320);
   const { trackClick } = useAnalytics();
   
   const isMobile = useIsMobile();
+  
+  // Check for reduced motion preference
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   const packages = useMemo(() => getPackagesSortedByPosition(), []);
+  
+  // Cleanup flicker timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (flickerTimeoutRef.current) {
+        clearTimeout(flickerTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Trigger headlight flicker animation
+  const triggerFlicker = useCallback(() => {
+    // Clear any existing flicker
+    if (flickerTimeoutRef.current) {
+      clearTimeout(flickerTimeoutRef.current);
+    }
+    
+    // If user prefers reduced motion, just turn on without flicker
+    if (prefersReducedMotion) {
+      setHeadlightsOn(true);
+      return;
+    }
+    
+    // Flicker sequence: on -> off -> on
+    setHeadlightsOn(true);
+    flickerTimeoutRef.current = setTimeout(() => {
+      setHeadlightsOn(false);
+      flickerTimeoutRef.current = setTimeout(() => {
+        setHeadlightsOn(true);
+      }, 90);
+    }, 90);
+  }, [prefersReducedMotion]);
   const totalButtons = packages.length;
 
   // Determine which price chip to show
@@ -181,8 +222,10 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
       setSelectedPackageId(packageId);
       setHasUserSelected(true);
       onPackageSelect?.(packageId);
+      // Trigger headlight flicker on new selection
+      triggerFlicker();
     }
-  }, [selectedPackageId, onPackageSelect, trackClick]);
+  }, [selectedPackageId, onPackageSelect, trackClick, triggerFlicker]);
 
   const handleInfoClick = () => {
     if (selectedPackageId) {
@@ -226,7 +269,7 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
         }}
       >
         
-        {/* HERO CENTER LAYER - Completely isolated, static, no interaction effects */}
+        {/* HERO CENTER LAYER - Car with headlight switching */}
         <div 
           className="absolute inset-0 flex items-center justify-center z-10"
           style={{ pointerEvents: 'none' }}
@@ -244,6 +287,18 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               }}
             />
             
+            {/* Headlight glow overlay - visible when headlights on */}
+            <div 
+              className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
+              style={{
+                opacity: headlightsOn ? 1 : 0,
+                background: 'radial-gradient(ellipse 60% 30% at 25% 55%, hsl(45 100% 70% / 0.25) 0%, transparent 50%), radial-gradient(ellipse 60% 30% at 75% 55%, hsl(45 100% 70% / 0.25) 0%, transparent 50%)',
+                filter: 'blur(12px)',
+                transform: 'scale(1.1)',
+                pointerEvents: 'none',
+              }}
+            />
+            
             {/* Static cinematic shadow/reflection under car */}
             <div 
               className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-10"
@@ -254,16 +309,31 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               }}
             />
             
-            {/* Static car image - no transition, no brightness changes */}
-            <img 
-              src={carImageSrc} 
-              alt="DRIVINGKLASS Gold Car" 
-              className="w-full h-auto object-contain relative z-10"
-              style={{
-                filter: 'contrast(1.08) saturate(1.05)',
-                pointerEvents: 'none',
-              }}
-            />
+            {/* Car images container - crossfade between off and on */}
+            <div className="relative w-full h-auto">
+              {/* Headlights OFF image */}
+              <img 
+                src={carHeadlightsOff} 
+                alt="DrivingKlass car headlights off" 
+                className="w-full h-auto object-contain relative z-10 transition-opacity duration-200"
+                style={{
+                  filter: 'contrast(1.08) saturate(1.05)',
+                  pointerEvents: 'none',
+                  opacity: headlightsOn ? 0 : 1,
+                }}
+              />
+              {/* Headlights ON image - overlaid */}
+              <img 
+                src={carHeadlightsOn} 
+                alt="DrivingKlass car headlights on" 
+                className="absolute inset-0 w-full h-auto object-contain z-10 transition-opacity duration-200"
+                style={{
+                  filter: 'contrast(1.08) saturate(1.05)',
+                  pointerEvents: 'none',
+                  opacity: headlightsOn ? 1 : 0,
+                }}
+              />
+            </div>
           </div>
         </div>
 
