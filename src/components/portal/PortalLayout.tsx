@@ -19,6 +19,7 @@ import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface PortalLayoutProps {
   children: ReactNode;
@@ -30,10 +31,23 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out.",
+      });
+      navigate('/login');
+    } catch (error: any) {
+      toast({
+        title: "Sign out failed",
+        description: "Please retry.",
+        variant: "destructive",
+      });
+    }
   };
 
   const navItems = getNavItems(role);

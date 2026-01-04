@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { AvatarUpload } from "@/components/portal/AvatarUpload";
+import { PermitPreview } from "@/components/portal/PermitPreview";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -414,7 +415,8 @@ function StudentProfileContent() {
                 </Button>
               </div>
               
-              {permitPreview && (
+              {/* Preview - show newly selected file preview or existing permit */}
+              {permitPreview ? (
                 <div className="mt-4">
                   <p className="text-xs sm:text-sm text-muted-foreground mb-2">Preview:</p>
                   <img 
@@ -423,9 +425,15 @@ function StudentProfileContent() {
                     className="max-w-full sm:max-w-xs rounded-lg border"
                   />
                 </div>
-              )}
-              
-              {!permitPreview && !profile?.permit_file_url && (
+              ) : profile?.permit_file_url ? (
+                <div className="mt-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Current Permit:</p>
+                  <PermitPreview 
+                    permitFileUrl={profile.permit_file_url} 
+                    className="max-w-full sm:max-w-xs"
+                  />
+                </div>
+              ) : (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Please upload a clear photo of your learner's permit
                 </p>
