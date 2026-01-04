@@ -55,10 +55,12 @@ function AdminApprovalsContent() {
             .from('user_roles')
             .select('role')
             .eq('user_id', profile.id)
+            .limit(1)
             .maybeSingle();
           return { 
             ...profile, 
-            role: roleData?.role || 'student',
+            // Don't default to 'student' - show actual role or 'No role'
+            role: roleData?.role || undefined,
             approval_status: (profile as any).approval_status || (profile.approved ? 'approved' : 'pending'),
           } as Profile & { role?: string };
         })
@@ -189,11 +191,36 @@ function AdminApprovalsContent() {
   };
 
   const handleRoleChange = async (profileId: string, newRole: UserRole) => {
-    await supabase.from('user_roles').delete().eq('user_id', profileId);
-    const { error } = await supabase.from('user_roles').insert({ user_id: profileId, role: newRole });
+    // First check current role - if same, do nothing
+    const { data: currentRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', profileId);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    // If user already has exactly this role and no others, skip
+    if (currentRoles?.length === 1 && currentRoles[0].role === newRole) {
+      toast({ title: "No Change", description: "User already has this role." });
+      return;
+    }
+
+    // Delete ALL existing roles for this user first
+    const { error: deleteError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', profileId);
+
+    if (deleteError) {
+      toast({ title: "Error", description: `Failed to clear roles: ${deleteError.message}`, variant: "destructive" });
+      return;
+    }
+
+    // Now insert the new single role
+    const { error: insertError } = await supabase
+      .from('user_roles')
+      .insert({ user_id: profileId, role: newRole });
+
+    if (insertError) {
+      toast({ title: "Error", description: `Failed to set role: ${insertError.message}`, variant: "destructive" });
     } else {
       toast({ title: "Role Updated", description: `Role changed to ${newRole}.` });
       fetchProfiles();
@@ -493,13 +520,15 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUs
       </div>
 
       <div className="flex items-center gap-2 w-full sm:w-auto">
-        <Badge className="capitalize shrink-0">{profile.role}</Badge>
+        <Badge className="capitalize shrink-0" variant={profile.role ? "default" : "outline"}>
+          {profile.role || 'No role'}
+        </Badge>
         <Select 
-          value={profile.role} 
+          value={profile.role || ''} 
           onValueChange={(v) => onRoleChange(profile.id, v as UserRole)}
         >
           <SelectTrigger className="flex-1 sm:w-36 min-h-[40px] text-sm">
-            <SelectValue placeholder="Change role" />
+            <SelectValue placeholder="Set role" />
           </SelectTrigger>
           <SelectContent className="bg-popover border z-50">
             <SelectItem value="student">Student</SelectItem>
