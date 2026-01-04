@@ -89,10 +89,18 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "headlight-blink": {
+          "0%": { opacity: "0" },
+          "20%": { opacity: "1" },
+          "40%": { opacity: "0.55" },
+          "60%": { opacity: "1" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "headlight-blink": "headlight-blink 0.55s ease-out forwards",
       },
       boxShadow: {
         gold: "0 4px 20px hsl(43 74% 49% / 0.3)",
