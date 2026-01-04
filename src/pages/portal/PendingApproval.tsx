@@ -66,8 +66,11 @@ export default function PendingApproval() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
+      {/* Theme toggle on the left, sign out on the right */}
+      <div className="absolute top-4 left-4">
         <ThemeToggle />
+      </div>
+      <div className="absolute top-4 right-4">
         <Button variant="ghost" onClick={handleSignOut}>
           Sign Out
         </Button>
