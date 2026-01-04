@@ -151,6 +151,7 @@ function AdminScheduleContent() {
       instructor_id: formData.instructor_id,
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
+      duration_minutes: parseInt(formData.duration_minutes),
       status: 'scheduled',
     });
 
@@ -185,6 +186,7 @@ function AdminScheduleContent() {
         instructor_id: formData.instructor_id,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
+        duration_minutes: parseInt(formData.duration_minutes),
       })
       .eq('id', editingSession.id);
 
@@ -348,30 +350,28 @@ function AdminScheduleContent() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">Start Time</Label>
-                  <Input
-                    type="time"
-                    step="1800"
-                    value={formData.start_time}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setFormData(f => ({ ...f, start_time: val }));
-                      // Check if time needs adjustment
-                      if (val) {
-                        const [hours, mins] = val.split(':').map(Number);
-                        if (mins !== 0 && mins !== 30) {
-                          setStartTimeAdjusted(true);
-                        } else {
-                          setStartTimeAdjusted(false);
-                        }
-                      }
-                    }}
-                    className="min-h-[44px]"
-                  />
-                  {startTimeAdjusted && (
-                    <p className="text-xs text-amber-600">
-                      Start time will be adjusted to the next 30-minute slot
-                    </p>
-                  )}
+                  <Select 
+                    value={formData.start_time} 
+                    onValueChange={v => setFormData(f => ({ ...f, start_time: v }))}
+                  >
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                      {Array.from({ length: 48 }, (_, i) => {
+                        const hours = Math.floor(i / 2);
+                        const mins = (i % 2) * 30;
+                        const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                        const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                        const ampm = hours < 12 ? 'AM' : 'PM';
+                        const displayTime = `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
+                        return (
+                          <SelectItem key={timeValue} value={timeValue}>{displayTime}</SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Sessions start on :00 or :30 only</p>
                 </div>
               </div>
               <div className="space-y-2">

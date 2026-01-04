@@ -741,6 +741,7 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string | null
+          duration_minutes: number | null
           ends_at: string
           id: string
           instructor_id: string
@@ -757,6 +758,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string | null
+          duration_minutes?: number | null
           ends_at: string
           id?: string
           instructor_id: string
@@ -773,6 +775,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string | null
+          duration_minutes?: number | null
           ends_at?: string
           id?: string
           instructor_id?: string
@@ -848,6 +851,7 @@ export type Database = {
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      round_up_to_30min: { Args: { ts: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user" | "student" | "instructor" | "staff"
