@@ -450,12 +450,14 @@ export type Database = {
           created_at: string
           dropoff_address: string | null
           email: string | null
+          first_name: string | null
           full_name: string | null
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
           id: string
           intake_submitted: boolean | null
+          last_name: string | null
           permit_expiration_date: string | null
           permit_file_url: string | null
           permit_issue_date: string | null
@@ -477,12 +479,14 @@ export type Database = {
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id: string
           intake_submitted?: boolean | null
+          last_name?: string | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
@@ -504,12 +508,14 @@ export type Database = {
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id?: string
           intake_submitted?: boolean | null
+          last_name?: string | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
