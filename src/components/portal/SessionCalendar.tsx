@@ -389,7 +389,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
 
       {/* Session Details Dialog */}
       <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Session Details</DialogTitle>
           </DialogHeader>
@@ -514,7 +514,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Cancel Session</DialogTitle>
             <DialogDescription className="text-sm">
@@ -551,7 +551,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
 
       {/* Complete Confirmation Dialog */}
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Mark Session Complete</DialogTitle>
             <DialogDescription className="text-sm">
@@ -576,7 +576,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
 
       {/* Notes Dialog (Staff/Admin only) */}
       <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Session Notes</DialogTitle>
             <DialogDescription className="text-sm">

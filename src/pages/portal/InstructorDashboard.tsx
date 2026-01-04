@@ -42,10 +42,10 @@ function InstructorDashboardContent() {
     if (!user) return;
     
     try {
-      // Fetch sessions with student info - instructor's sessions only
+      // Fetch sessions with student AND instructor info - instructor's sessions only
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
-        .select('*, student:profiles!sessions_student_id_fkey(*)')
+        .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*)')
         .eq('instructor_id', user.id)
         .order('starts_at', { ascending: true });
 
@@ -55,10 +55,10 @@ function InstructorDashboardContent() {
         setSessions(sessionsData as Session[]);
       }
 
-      // Fetch report cards
+      // Fetch report cards with explicit FK names
       const { data: reportCardsData, error: reportCardsError } = await supabase
         .from('report_cards')
-        .select('*, session:sessions(*), student:profiles!report_cards_student_id_fkey(*)')
+        .select('*, session:sessions!report_cards_session_id_fkey(*), student:profiles!report_cards_student_id_fkey(*), instructor:profiles!report_cards_instructor_id_fkey(*)')
         .eq('instructor_id', user.id)
         .order('created_at', { ascending: false });
 

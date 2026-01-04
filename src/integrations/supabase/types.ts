@@ -798,13 +798,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_report_card"
-            columns: ["report_card_id"]
-            isOneToOne: false
-            referencedRelation: "report_cards"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "sessions_cancelled_by_fkey"
             columns: ["cancelled_by"]
             isOneToOne: false

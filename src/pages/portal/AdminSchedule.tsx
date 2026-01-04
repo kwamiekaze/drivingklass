@@ -57,10 +57,10 @@ function AdminScheduleContent() {
   }, []);
 
   const fetchData = async () => {
-    // Fetch all sessions
+    // Fetch all sessions with student and instructor profiles
     const { data: sessionsData } = await supabase
       .from('sessions')
-      .select('*')
+      .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*)')
       .order('starts_at', { ascending: true });
 
     setSessions((sessionsData || []) as Session[]);
@@ -307,8 +307,8 @@ function AdminScheduleContent() {
     return sessions.filter(s => isSameDay(parseISO(s.starts_at), day));
   };
 
-  const getStudentName = (id: string) => students.find(s => s.id === id)?.full_name || 'Unknown';
-  const getInstructorName = (id: string) => instructors.find(i => i.id === id)?.full_name || 'Unknown';
+  const getStudentName = (session: Session) => session.student?.full_name || session.student?.email || 'Unknown';
+  const getInstructorName = (session: Session) => session.instructor?.full_name || session.instructor?.email || 'Unknown';
 
   const statusColors: Record<string, string> = {
     scheduled: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
@@ -336,7 +336,7 @@ function AdminScheduleContent() {
               New Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="text-lg">{editingSession ? 'Edit Session' : 'Create New Session'}</DialogTitle>
             </DialogHeader>
@@ -483,8 +483,8 @@ function AdminScheduleContent() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm">{format(parseISO(session.starts_at), 'h:mm a')}</p>
-                        <p className="text-xs truncate">{getStudentName(session.student_id)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{getInstructorName(session.instructor_id)}</p>
+                        <p className="text-xs truncate">{getStudentName(session)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{getInstructorName(session)}</p>
                         {session.status === 'cancelled' && (
                           <Badge variant="destructive" className="text-[10px] mt-1">Cancelled</Badge>
                         )}
@@ -560,8 +560,8 @@ function AdminScheduleContent() {
                       </button>
                     )}
                   </div>
-                  <p className="truncate">{getStudentName(session.student_id)}</p>
-                  <p className="truncate text-muted-foreground">{getInstructorName(session.instructor_id)}</p>
+                  <p className="truncate">{getStudentName(session)}</p>
+                  <p className="truncate text-muted-foreground">{getInstructorName(session)}</p>
                 </div>
               ))}
             </CardContent>
@@ -571,7 +571,7 @@ function AdminScheduleContent() {
 
       {/* Session Detail Dialog */}
       <Dialog open={!!detailSession} onOpenChange={(open) => !open && setDetailSession(null)}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Session Details</DialogTitle>
           </DialogHeader>
@@ -607,11 +607,11 @@ function AdminScheduleContent() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm">{getStudentName(detailSession.student_id)}</p>
+                  <p className="font-medium text-sm">{getStudentName(detailSession)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm">{getInstructorName(detailSession.instructor_id)}</p>
+                  <p className="font-medium text-sm">{getInstructorName(detailSession)}</p>
                 </div>
               </div>
 
@@ -735,7 +735,7 @@ function AdminScheduleContent() {
 
       {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -746,7 +746,7 @@ function AdminScheduleContent() {
             <p className="text-sm">Are you sure you want to cancel this session?</p>
             {sessionToCancel && (
               <div className="p-3 bg-muted rounded-lg text-sm">
-                <p><strong>Student:</strong> {getStudentName(sessionToCancel.student_id)}</p>
+                <p><strong>Student:</strong> {getStudentName(sessionToCancel)}</p>
                 <p><strong>Date:</strong> {format(parseISO(sessionToCancel.starts_at), 'MMM d, yyyy h:mm a')}</p>
               </div>
             )}
@@ -778,7 +778,7 @@ function AdminScheduleContent() {
 
       {/* Notes Dialog */}
       <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <MessageSquare className="h-5 w-5" />
