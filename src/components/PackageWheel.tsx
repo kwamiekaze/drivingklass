@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
+import { HeadlightShineOverlay } from "./HeadlightShineOverlay";
 import { cn } from "@/lib/utils";
 import { getPackagesSortedByPosition, getPackageById } from "@/data/packages";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -103,6 +104,8 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [headlightsOn, setHeadlightsOn] = useState(false);
+  const [shineKey, setShineKey] = useState(0);
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
   const [containerSize, setContainerSize] = useState(320);
@@ -174,6 +177,11 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
   // Handle package click - also opens modal on double-tap of same package
   const handlePackageClick = useCallback((packageId: string) => {
     trackClick("package_select", { package_id: packageId });
+    
+    // Trigger headlights on every package click
+    setHeadlightsOn(true);
+    setShineKey(prev => prev + 1);
+    
     if (selectedPackageId === packageId) {
       // Second tap on the same package opens the modal
       setIsModalOpen(true);
@@ -253,6 +261,9 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
                 pointerEvents: 'none',
               }}
             />
+            
+            {/* Headlight shine overlay - positioned relative to car container */}
+            <HeadlightShineOverlay isOn={headlightsOn} triggerKey={shineKey} />
             
             {/* Static car image - no transition, no brightness changes */}
             <img 
