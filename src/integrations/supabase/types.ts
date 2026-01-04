@@ -446,6 +446,7 @@ export type Database = {
           approved: boolean | null
           approved_at: string | null
           approved_by: string | null
+          avatar_url: string | null
           created_at: string
           dropoff_address: string | null
           email: string | null
@@ -472,6 +473,7 @@ export type Database = {
           approved?: boolean | null
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
@@ -498,6 +500,7 @@ export type Database = {
           approved?: boolean | null
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
