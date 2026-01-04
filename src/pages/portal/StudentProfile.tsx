@@ -25,7 +25,7 @@ const profileSchema = z.object({
   permit_expiration_date: z.string().min(1, "Expiration date is required"),
   guardian_name: z.string().min(2, "Guardian name is required").max(100),
   guardian_phone: z.string().min(10, "Guardian phone is required").max(20),
-  guardian_email: z.string().email("Invalid guardian email").max(255),
+  guardian_email: z.string().email("Invalid guardian email").max(255).optional().or(z.literal('')),
 });
 
 export default function StudentProfile() {
@@ -467,7 +467,7 @@ function StudentProfileContent() {
                 {errors.guardian_phone && <p className="text-xs text-destructive">{errors.guardian_phone}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="guardian_email" className="text-sm">Email *</Label>
+                <Label htmlFor="guardian_email" className="text-sm">Email (Optional)</Label>
                 <Input
                   id="guardian_email"
                   name="guardian_email"
@@ -475,7 +475,7 @@ function StudentProfileContent() {
                   value={formData.guardian_email}
                   onChange={handleInputChange}
                   className="theme-input min-h-[44px]"
-                  required
+                  placeholder="Optional"
                 />
                 {errors.guardian_email && <p className="text-xs text-destructive">{errors.guardian_email}</p>}
               </div>

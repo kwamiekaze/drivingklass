@@ -1,7 +1,8 @@
-import { Moon, Sun, Clock } from "lucide-react";
+import { Moon, Sun, Clock, Smartphone, Laptop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme, ThemePreference } from "@/components/ThemeProvider";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +13,15 @@ import {
 export function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { trackClick } = useAnalytics();
+  const isMobile = useIsMobile();
 
   const handleThemeChange = (newTheme: ThemePreference) => {
     trackClick("theme_toggle", { theme: newTheme });
     setTheme(newTheme);
   };
+
+  // System icon changes based on device type
+  const SystemIcon = isMobile ? Smartphone : Laptop;
 
   return (
     <DropdownMenu>
@@ -51,7 +56,7 @@ export function ThemeToggle() {
           Auto (7AM-6PM)
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleThemeChange("system")}>
-          <span className="mr-2">💻</span>
+          <SystemIcon className="mr-2 h-4 w-4" />
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

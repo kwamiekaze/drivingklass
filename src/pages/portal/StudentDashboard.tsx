@@ -13,6 +13,9 @@ import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { Link } from "react-router-dom";
+import { useTheme } from "@/components/ThemeProvider";
+import { GalaxyStars } from "@/components/GalaxyStars";
+import { LightModeBackground } from "@/components/LightModeBackground";
 
 export default function StudentDashboard() {
   return (
@@ -90,13 +93,45 @@ function StudentDashboardContent() {
     ? Math.round(reportCards.reduce((acc, rc) => acc + (rc.overall || 0), 0) / reportCards.length * 10) / 10
     : null;
 
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
+      {/* Background matching homepage theme */}
+      <div className="fixed inset-0 -z-10" style={{ pointerEvents: 'none' }}>
+        {isDark ? (
+          <>
+            {/* Dark mode - rich black gradient matching homepage */}
+            <div 
+              className="absolute inset-0 transition-colors duration-500"
+              style={{
+                background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
+              }}
+            />
+            {/* Subtle gold atmospheric glow */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
+              }}
+            />
+            {/* Galaxy stars */}
+            <GalaxyStars />
+          </>
+        ) : (
+          <>
+            {/* Light mode - same as homepage */}
+            <LightModeBackground />
+          </>
+        )}
+      </div>
+      
       {/* Welcome Header */}
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-            Welcome, {profile?.full_name?.split(' ')[0] || 'Student'}!
+            Klassroom Dashboard
           </h1>
           {profile?.public_id && (
             <p className="text-sm text-muted-foreground mt-1">
