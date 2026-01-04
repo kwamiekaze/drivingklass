@@ -32,6 +32,7 @@ import AdminSchedule from "./pages/portal/AdminSchedule";
 import AdminAssignments from "./pages/portal/AdminAssignments";
 import AdminReportCards from "./pages/portal/AdminReportCards";
 import AdminLeads from "./pages/portal/AdminLeads";
+import AdminQA from "./pages/portal/AdminQA";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
                   <Route path="/admin/assignments" element={<AdminAssignments />} />
                   <Route path="/admin/report-cards" element={<AdminReportCards />} />
                   <Route path="/admin/leads" element={<AdminLeads />} />
+                  <Route path="/admin/qa" element={<AdminQA />} />
                   <Route path="/admin/users/students" element={<AdminApprovals />} />
                   <Route path="/admin/users/instructors" element={<AdminApprovals />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
