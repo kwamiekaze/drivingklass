@@ -442,7 +442,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approval_status: string
           approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           dropoff_address: string | null
           email: string | null
@@ -459,10 +462,16 @@ export type Database = {
           phone: string | null
           pickup_address: string | null
           public_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           updated_at: string
         }
         Insert: {
+          approval_status?: string
           approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
@@ -479,10 +488,16 @@ export type Database = {
           phone?: string | null
           pickup_address?: string | null
           public_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           updated_at?: string
         }
         Update: {
+          approval_status?: string
           approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           dropoff_address?: string | null
           email?: string | null
@@ -499,6 +514,9 @@ export type Database = {
           phone?: string | null
           pickup_address?: string | null
           public_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           updated_at?: string
         }
         Relationships: []

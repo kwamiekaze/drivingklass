@@ -732,15 +732,6 @@ Birthday: 01/15/2008
                   <FileText className="h-4 w-4" />
                   Extract Data
                 </Button>
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRunTest} 
-                  className="w-full text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <TestTube className="h-3 w-3 mr-1" />
-                  Run Parser Test
-                </Button>
               </CardContent>
             </Card>
 
