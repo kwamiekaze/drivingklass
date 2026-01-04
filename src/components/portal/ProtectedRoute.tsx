@@ -35,6 +35,30 @@ export function ProtectedRoute({
     return <Navigate to="/rejected" replace />;
   }
 
+  // ====== STRICT ROUTE ENFORCEMENT ======
+  const pathname = location.pathname;
+
+  // Admin routes: ONLY admin allowed (staff cannot access /admin)
+  if (pathname.startsWith('/admin')) {
+    if (role !== 'admin') {
+      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+    }
+  }
+
+  // Instructor routes: ONLY instructor allowed
+  if (pathname.startsWith('/instructor')) {
+    if (role !== 'instructor') {
+      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+    }
+  }
+
+  // Student routes: ONLY student allowed
+  if (pathname.startsWith('/student')) {
+    if (role !== 'student') {
+      return <Navigate to={getRedirectPath(role as UserRole)} replace />;
+    }
+  }
+
   // Check if user needs to complete intake or await approval (students only)
   if (requireApproval && role === 'student') {
     // If pending and not on pending-approval page
@@ -43,9 +67,8 @@ export function ProtectedRoute({
     }
   }
 
-  // Check role permissions
+  // Check role permissions (legacy check, still useful for explicit allowedRoles)
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    // Redirect to appropriate dashboard based on role
     const redirectPath = getRedirectPath(role);
     return <Navigate to={redirectPath} replace />;
   }
@@ -53,11 +76,12 @@ export function ProtectedRoute({
   return <>{children}</>;
 }
 
-function getRedirectPath(role: UserRole): string {
+function getRedirectPath(role: UserRole | null | undefined): string {
   switch (role) {
     case 'admin':
-    case 'staff':
       return '/admin';
+    case 'staff':
+      return '/admin'; // Staff goes to admin but will be blocked by route guard
     case 'instructor':
       return '/instructor';
     case 'student':

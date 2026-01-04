@@ -16,7 +16,7 @@ import { ReportCardList } from "@/components/portal/ReportCardList";
 
 export default function InstructorStudentView() {
   return (
-    <ProtectedRoute allowedRoles={['instructor', 'staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
       <PortalLayout>
         <InstructorStudentViewContent />
       </PortalLayout>

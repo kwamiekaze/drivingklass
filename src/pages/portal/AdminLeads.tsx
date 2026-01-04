@@ -33,7 +33,7 @@ import {
   MessageSquare,
   Send,
   Eye,
-  TestTube,
+  
   Download,
   Copy,
   MessageCircle,
@@ -46,7 +46,7 @@ import {
   Cake
 } from 'lucide-react';
 import { Lead, LeadNote, LeadActivity, LeadPipelineStatus, ParsedLeadData } from '@/types/leads';
-import { parseLeadData, getMissingFields, SAMPLE_RAW_DATA, testParser } from '@/lib/leadParser';
+import { parseLeadData, getMissingFields } from '@/lib/leadParser';
 import { 
   logLeadActivity, 
   fetchLeadActivity, 
@@ -72,7 +72,7 @@ function FieldHint({ value, fieldLabel }: { value: string | number | null; field
 
 export default function AdminLeads() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminLeadsContent />
       </PortalLayout>
@@ -249,38 +249,12 @@ function AdminLeadsContent() {
     setMissingFields(getMissingFields(parsed));
   };
 
-  const handleLoadSample = () => {
-    setRawText(SAMPLE_RAW_DATA);
-    toast({ title: 'Sample Loaded', description: 'Click "Parse Data" to extract fields' });
-  };
-
   const handleFieldChange = (field: keyof ParsedLeadData, value: string | number | null) => {
     if (!editableData) return;
     
     const updated = { ...editableData, [field]: value };
     setEditableData(updated);
     setMissingFields(getMissingFields(updated));
-  };
-
-  const handleRunTest = () => {
-    const { passed, results } = testParser();
-    console.log('Parser Test Results:', results);
-    
-    if (passed) {
-      toast({ 
-        title: 'Parser Test Passed ✅', 
-        description: 'All fields extracted correctly (including DOB & Age)',
-      });
-    } else {
-      const failedFields = Object.entries(results)
-        .filter(([_, r]) => !r.match)
-        .map(([key]) => key);
-      toast({ 
-        title: 'Parser Test Failed ❌', 
-        description: `Failed fields: ${failedFields.join(', ')}`,
-        variant: 'destructive'
-      });
-    }
   };
 
   const handleSaveLead = async () => {

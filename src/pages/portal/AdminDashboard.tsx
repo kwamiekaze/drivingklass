@@ -12,7 +12,7 @@ import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
 
 export default function AdminDashboard() {
   return (
-    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']}>
       <PortalLayout>
         <AdminDashboardContent />
       </PortalLayout>
