@@ -38,19 +38,19 @@ function AdminDashboardContent() {
   }, []);
 
   const fetchStats = async () => {
-    // Pending approvals
+    // Pending approvals: single source of truth = approval_status = 'pending'
     const { count: pendingCount } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('approved', false);
+      .eq('approval_status', 'pending');
 
-    // Total students
+    // Total students (by role)
     const { count: studentCount } = await supabase
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'student');
 
-    // Total instructors
+    // Total instructors (by role)
     const { count: instructorCount } = await supabase
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
@@ -87,12 +87,11 @@ function AdminDashboardContent() {
       recentReportCards: reportCount || 0,
     });
 
-    // Fetch recent activity
+    // Fetch recent activity with same filter as count (approval_status = 'pending')
     const { data: recentProfiles } = await supabase
       .from('profiles')
       .select('*')
-      .eq('intake_submitted', true)
-      .eq('approved', false)
+      .eq('approval_status', 'pending')
       .order('created_at', { ascending: false })
       .limit(5);
 

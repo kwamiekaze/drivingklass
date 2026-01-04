@@ -736,52 +736,58 @@ export type Database = {
         Row: {
           cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
           cancelled_by_role: string | null
           completed: boolean | null
           completed_at: string | null
           completed_by: string | null
-          created_at: string | null
-          duration_minutes: number | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
           ends_at: string
           id: string
           instructor_id: string
           report_card_id: string | null
           starts_at: string
-          status: string | null
+          status: string
           student_id: string
         }
         Insert: {
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           cancelled_by_role?: string | null
           completed?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
-          created_at?: string | null
-          duration_minutes?: number | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes: number
           ends_at: string
           id?: string
           instructor_id: string
           report_card_id?: string | null
           starts_at: string
-          status?: string | null
+          status?: string
           student_id: string
         }
         Update: {
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           cancelled_by_role?: string | null
           completed?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
-          created_at?: string | null
-          duration_minutes?: number | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
           ends_at?: string
           id?: string
           instructor_id?: string
           report_card_id?: string | null
           starts_at?: string
-          status?: string | null
+          status?: string
           student_id?: string
         }
         Relationships: [
@@ -793,8 +799,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sessions_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sessions_completed_by_fkey"
             columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -838,6 +858,77 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_session_admin: {
+        Args: {
+          _duration_minutes: number
+          _instructor_id: string
+          _starts_at: string
+          _student_id: string
+        }
+        Returns: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          instructor_id: string
+          report_card_id: string | null
+          starts_at: string
+          status: string
+          student_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ensure_profile: {
+        Args: never
+        Returns: {
+          approval_status: string
+          approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          avatar_url: string | null
+          created_at: string
+          dropoff_address: string | null
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          id: string
+          intake_submitted: boolean | null
+          last_name: string | null
+          permit_expiration_date: string | null
+          permit_file_url: string | null
+          permit_issue_date: string | null
+          permit_number: string | null
+          phone: string | null
+          pickup_address: string | null
+          public_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

@@ -200,9 +200,10 @@ function AdminApprovalsContent() {
     }
   };
 
-  const pendingProfiles = profiles.filter(p => (p as any).approval_status === 'pending');
-  const approvedProfiles = profiles.filter(p => (p as any).approval_status === 'approved');
-  const rejectedProfiles = profiles.filter(p => (p as any).approval_status === 'rejected');
+  // Use approval_status as single source of truth
+  const pendingProfiles = profiles.filter(p => p.approval_status === 'pending');
+  const approvedProfiles = profiles.filter(p => p.approval_status === 'approved');
+  const rejectedProfiles = profiles.filter(p => p.approval_status === 'rejected');
 
   if (loading) {
     return (

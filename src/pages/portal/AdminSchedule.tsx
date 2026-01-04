@@ -127,32 +127,25 @@ function AdminScheduleContent() {
       return;
     }
 
-    // Create starts_at from date + time and snap to 30-min boundary
-    let startsAt = new Date(`${formData.date}T${formData.start_time}`);
-    startsAt = snapTo30Min(startsAt);
-
-    // Calculate ends_at and ensure it's on 30-min boundary
-    const durationMs = parseInt(formData.duration_minutes) * 60 * 1000;
-    let endsAt = new Date(startsAt.getTime() + durationMs);
-    endsAt = roundEndTo30Min(endsAt);
+    // Build timestamp from date + time
+    const startsAt = new Date(`${formData.date}T${formData.start_time}`);
+    const durationMinutes = parseInt(formData.duration_minutes);
 
     const debugPayload = {
-      action: 'create_session',
+      action: 'create_session_rpc',
       starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      duration_minutes: parseInt(formData.duration_minutes),
+      duration_minutes: durationMinutes,
       student_id: formData.student_id,
       instructor_id: formData.instructor_id,
     };
     console.log('Session creation payload:', debugPayload);
 
-    const { error } = await supabase.from('sessions').insert({
-      student_id: formData.student_id,
-      instructor_id: formData.instructor_id,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      duration_minutes: parseInt(formData.duration_minutes),
-      status: 'scheduled',
+    // Use RPC for validated, atomic session creation
+    const { error } = await supabase.rpc('create_session_admin', {
+      _student_id: formData.student_id,
+      _instructor_id: formData.instructor_id,
+      _starts_at: startsAt.toISOString(),
+      _duration_minutes: durationMinutes,
     });
 
     if (error) {
