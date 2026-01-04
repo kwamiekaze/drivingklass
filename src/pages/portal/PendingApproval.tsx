@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Clock, FileText, CheckCircle, ArrowRight, Car, XCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PendingApproval() {
   const { user, profile, role, isLoading, isApproved, isRejected, isIntakeSubmitted, signOut, refetchProfile } = usePortalAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -52,8 +54,20 @@ export default function PendingApproval() {
   }, [user, isApproved, isRejected]);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out.",
+      });
+      navigate('/login');
+    } catch (error: any) {
+      toast({
+        title: "Sign out failed",
+        description: "Please retry.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {

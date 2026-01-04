@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { SteeringWheel } from "./icons/SteeringWheel";
+import { GoldSportcar } from "./icons/GoldSportcar";
 import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
 import goldCar from "@/assets/gold-car-transparent.png";
@@ -12,14 +12,14 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-start overflow-hidden px-4 py-6 sm:py-8">
-      {/* Admin link - top right */}
+      {/* Portal link - top right - Gold Sportcar icon */}
       <Link
         to="/auth"
-        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-card/30 border border-gold/20 text-muted-foreground hover:text-gold hover:border-gold/50 transition-colors backdrop-blur-sm"
-        title="Driving Dashboard"
-        aria-label="Driving Dashboard"
+        className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group"
+        title="Klassroom Portal"
+        aria-label="Klassroom Portal"
       >
-        <SteeringWheel className="w-5 h-5" />
+        <GoldSportcar className="w-6 h-6 text-gold group-hover:scale-110 transition-transform" />
       </Link>
 
       {/* Header with brand and stars - raised higher with clear separation from ring */}

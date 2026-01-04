@@ -83,11 +83,11 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "time-based", // Default to time-based
+  defaultTheme = "system", // Default to system (Auto) - follows device preference
   storageKey = "theme",
 }: ThemeProviderProps) {
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
-    // Priority: 1) localStorage (user's explicit choice), 2) default to 'time-based'
+    // Priority: 1) localStorage (user's explicit choice), 2) default to 'system' (Auto)
     if (typeof localStorage !== "undefined") {
       const fromStorage = localStorage.getItem(storageKey);
       if (isThemePreference(fromStorage)) return fromStorage;

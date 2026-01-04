@@ -33,6 +33,8 @@ export function ThemeToggle() {
         >
           {theme === "time-based" ? (
             <Clock className="h-5 w-5 text-gold" />
+          ) : theme === "system" ? (
+            <SystemIcon className="h-5 w-5 text-gold" />
           ) : (
             <>
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all text-gold dark:-rotate-90 dark:scale-0" />
@@ -51,13 +53,13 @@ export function ThemeToggle() {
           <Moon className="mr-2 h-4 w-4" />
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("time-based")}>
-          <Clock className="mr-2 h-4 w-4" />
-          Auto (7AM-6PM)
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           <SystemIcon className="mr-2 h-4 w-4" />
-          System
+          Auto (System)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleThemeChange("time-based")}>
+          <Clock className="mr-2 h-4 w-4" />
+          Time-based (7AM-6PM)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
