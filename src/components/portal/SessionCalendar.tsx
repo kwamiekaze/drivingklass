@@ -416,14 +416,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     {format(parseISO(selectedSession.starts_at), 'h:mm a')} - {format(parseISO(selectedSession.ends_at), 'h:mm a')}
                   </p>
                 </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    {userRole === 'student' ? 'Instructor' : 'Student'}
-                  </p>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                   <p className="font-medium text-sm sm:text-base">
-                    {userRole === 'student' 
-                      ? selectedSession.instructor?.full_name || 'Not assigned'
-                      : selectedSession.student?.full_name || 'Not assigned'}
+                    {selectedSession.student?.full_name || selectedSession.student?.email || 'Not assigned'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
+                  <p className="font-medium text-sm sm:text-base">
+                    {selectedSession.instructor?.full_name || selectedSession.instructor?.email || 'Not assigned'}
                   </p>
                 </div>
               </div>
