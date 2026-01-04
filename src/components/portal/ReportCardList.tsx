@@ -98,7 +98,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
 
       {/* Report Card Detail Dialog */}
       <Dialog open={!!selectedCard} onOpenChange={(open) => !open && setSelectedCard(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+        <DialogContent className="w-[min(92vw,640px)] max-w-[640px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileText className="h-5 w-5" />
