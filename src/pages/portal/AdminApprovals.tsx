@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, User, FileText, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, User, FileText, Loader2, Eye, Download } from "lucide-react";
 import { Profile, UserRole, ApprovalStatus } from "@/types/portal";
 import { RejectUserModal } from "@/components/portal/RejectUserModal";
+import { IntakePreviewModal } from "@/components/portal/IntakePreviewModal";
+import { BatchDownloadModal } from "@/components/portal/BatchDownloadModal";
 import { sendApprovalNotification, sendRejectionNotification } from "@/lib/notifications";
 import { format } from "date-fns";
 
@@ -31,6 +33,10 @@ function AdminApprovalsContent() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
+  const [showDownloadInPreview, setShowDownloadInPreview] = useState(false);
+  const [batchDownloadOpen, setBatchDownloadOpen] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
@@ -62,6 +68,54 @@ function AdminApprovalsContent() {
     setLoading(false);
   };
 
+  const handlePreviewIntake = (profile: Profile, showDownload: boolean = false) => {
+    setPreviewProfile(profile);
+    setShowDownloadInPreview(showDownload);
+    setPreviewModalOpen(true);
+  };
+
+  const saveApprovedIntake = async (profile: Profile, approvedBy: string) => {
+    try {
+      // Create snapshot of intake data
+      const snapshotJson = {
+        fullName: profile.full_name || `${(profile as any).first_name || ''} ${(profile as any).last_name || ''}`.trim(),
+        firstName: (profile as any).first_name,
+        lastName: (profile as any).last_name,
+        email: profile.email,
+        phone: profile.phone,
+        pickupAddress: profile.pickup_address,
+        dropoffAddress: profile.dropoff_address,
+        permitNumber: profile.permit_number,
+        permitIssueDate: profile.permit_issue_date,
+        permitExpirationDate: profile.permit_expiration_date,
+        guardianName: profile.guardian_name,
+        guardianPhone: profile.guardian_phone,
+        guardianEmail: profile.guardian_email,
+        submittedAt: profile.created_at,
+      };
+
+      const files = profile.permit_file_url 
+        ? { permitFile: profile.permit_file_url }
+        : null;
+
+      // Save to approved_intakes table
+      const { error } = await supabase
+        .from('approved_intakes')
+        .insert({
+          user_id: profile.id,
+          approved_by: approvedBy,
+          snapshot_json: snapshotJson,
+          files: files,
+        });
+
+      if (error) {
+        console.error('Failed to save approved intake:', error);
+      }
+    } catch (err) {
+      console.error('Error saving approved intake:', err);
+    }
+  };
+
   const handleApprove = async (profile: Profile & { role?: string }) => {
     setActionLoading(profile.id);
     
@@ -83,6 +137,11 @@ function AdminApprovalsContent() {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Save approved intake record
+      if (user?.id) {
+        await saveApprovedIntake(profile, user.id);
+      }
+      
       await sendApprovalNotification(profile.id);
       toast({ title: "Approved", description: "User has been approved and notified." });
       fetchProfiles();
@@ -155,11 +214,21 @@ function AdminApprovalsContent() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">User Approvals</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Manage user registrations and roles
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">User Approvals</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            Manage user registrations and roles
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setBatchDownloadOpen(true)}
+          className="gap-2 self-start sm:self-auto"
+        >
+          <Download className="h-4 w-4" />
+          Download Approved (Batch)
+        </Button>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
@@ -201,6 +270,7 @@ function AdminApprovalsContent() {
                       onApprove={() => handleApprove(profile)}
                       onReject={() => openRejectModal(profile)}
                       onRoleChange={handleRoleChange}
+                      onPreviewIntake={() => handlePreviewIntake(profile, false)}
                       isLoading={actionLoading === profile.id}
                     />
                   ))}
@@ -228,6 +298,7 @@ function AdminApprovalsContent() {
                       key={profile.id}
                       profile={profile}
                       onRoleChange={handleRoleChange}
+                      onPreviewIntake={() => handlePreviewIntake(profile, true)}
                     />
                   ))}
                 </div>
@@ -272,6 +343,20 @@ function AdminApprovalsContent() {
         onConfirm={handleReject}
         isLoading={actionLoading === selectedProfile?.id}
       />
+
+      {/* Intake Preview Modal */}
+      <IntakePreviewModal
+        open={previewModalOpen}
+        onOpenChange={setPreviewModalOpen}
+        profile={previewProfile}
+        showDownload={showDownloadInPreview}
+      />
+
+      {/* Batch Download Modal */}
+      <BatchDownloadModal
+        open={batchDownloadOpen}
+        onOpenChange={setBatchDownloadOpen}
+      />
     </div>
   );
 }
@@ -281,10 +366,11 @@ interface UserApprovalCardProps {
   onApprove: () => void;
   onReject: () => void;
   onRoleChange: (id: string, role: UserRole) => void;
+  onPreviewIntake: () => void;
   isLoading: boolean;
 }
 
-function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, isLoading }: UserApprovalCardProps) {
+function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPreviewIntake, isLoading }: UserApprovalCardProps) {
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-xl bg-background/50">
       {/* User Info Row */}
@@ -313,6 +399,16 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, isLoadin
             )}
           </div>
         </div>
+        {/* Eye icon for preview */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onPreviewIntake}
+          className="flex-shrink-0 h-9 w-9"
+          title="View Intake Submission"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Role Dropdown */}
@@ -365,9 +461,10 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, isLoadin
 interface ApprovedUserCardProps {
   profile: Profile & { role?: string };
   onRoleChange: (id: string, role: UserRole) => void;
+  onPreviewIntake: () => void;
 }
 
-function ApprovedUserCard({ profile, onRoleChange }: ApprovedUserCardProps) {
+function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUserCardProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border rounded-xl bg-background/50">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -382,6 +479,16 @@ function ApprovedUserCard({ profile, onRoleChange }: ApprovedUserCardProps) {
             {profile.email}
           </p>
         </div>
+        {/* Eye icon for preview */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onPreviewIntake}
+          className="flex-shrink-0 h-9 w-9"
+          title="View & Download Intake"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 w-full sm:w-auto">

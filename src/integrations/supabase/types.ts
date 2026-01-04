@@ -113,6 +113,57 @@ export type Database = {
         }
         Relationships: []
       }
+      approved_intakes: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          files: Json | null
+          id: string
+          intake_submission_id: string | null
+          pdf_path: string | null
+          snapshot_json: Json
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          files?: Json | null
+          id?: string
+          intake_submission_id?: string | null
+          pdf_path?: string | null
+          snapshot_json: Json
+          user_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          files?: Json | null
+          id?: string
+          intake_submission_id?: string | null
+          pdf_path?: string | null
+          snapshot_json?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approved_intakes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approved_intakes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           attachment_name: string | null
