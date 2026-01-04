@@ -105,11 +105,10 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [headlightsOn, setHeadlightsOn] = useState(false);
-  const [hasTurnedOnThisSession, setHasTurnedOnThisSession] = useState(false);
   const flickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === "light";
   const isDark = resolvedTheme === "dark";
+  const isLight = resolvedTheme === "light";
   const [containerSize, setContainerSize] = useState(320);
   const { trackClick } = useAnalytics();
   
@@ -132,8 +131,14 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     };
   }, []);
   
-  // Trigger headlight flicker animation based on theme
+  // Trigger headlight flicker animation - DARK THEME ONLY
   const triggerFlicker = useCallback(() => {
+    // Light theme: never turn on headlights
+    if (!isDark) {
+      setHeadlightsOn(false);
+      return;
+    }
+    
     // Clear any existing flicker
     if (flickerTimeoutRef.current) {
       clearTimeout(flickerTimeoutRef.current);
@@ -142,31 +147,18 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     // If user prefers reduced motion, just turn on without flicker
     if (prefersReducedMotion) {
       setHeadlightsOn(true);
-      if (isLight) {
-        setHasTurnedOnThisSession(true);
-      }
       return;
     }
     
-    // Dark theme: always flicker on every selection
-    // Light theme: only flicker if hasn't turned on this session yet
-    if (isDark || !hasTurnedOnThisSession) {
-      // Flicker sequence: on -> off -> on
-      setHeadlightsOn(true);
+    // Dark theme: flicker sequence on -> off -> on
+    setHeadlightsOn(true);
+    flickerTimeoutRef.current = setTimeout(() => {
+      setHeadlightsOn(false);
       flickerTimeoutRef.current = setTimeout(() => {
-        setHeadlightsOn(false);
-        flickerTimeoutRef.current = setTimeout(() => {
-          setHeadlightsOn(true);
-          if (isLight) {
-            setHasTurnedOnThisSession(true);
-          }
-        }, 90);
+        setHeadlightsOn(true);
       }, 90);
-    } else {
-      // Light theme after first turn on: just keep on, no flicker
-      setHeadlightsOn(true);
-    }
-  }, [prefersReducedMotion, isDark, isLight, hasTurnedOnThisSession]);
+    }, 90);
+  }, [prefersReducedMotion, isDark]);
   
   const totalButtons = packages.length;
 
