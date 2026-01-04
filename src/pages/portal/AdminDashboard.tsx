@@ -101,6 +101,9 @@ function AdminDashboardContent() {
   };
 
   const quickLinks = [
+    { href: '/admin/approvals', label: 'Pending', icon: Clock, count: stats.pendingApprovals, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+    { href: '/admin/schedule', label: 'Upcoming', icon: Calendar, count: stats.upcomingSessions, color: 'text-primary', bgColor: 'bg-primary/10' },
+    { href: '/admin/report-cards', label: 'Reports/Wk', icon: FileText, count: stats.recentReportCards, color: 'text-green-500', bgColor: 'bg-green-500/10' },
     { href: '/admin/approvals', label: 'Approvals', icon: UserPlus, count: stats.pendingApprovals, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
     { href: '/admin/students', label: 'Students', icon: Users, count: stats.totalStudents, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
     { href: '/admin/instructors', label: 'Instructors', icon: Users, count: stats.totalInstructors, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
@@ -121,87 +124,7 @@ function AdminDashboardContent() {
         </p>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <Card className={`portal-card ${stats.pendingApprovals > 0 ? 'border-orange-500/50' : ''}`}>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Clock className="h-4 w-4 text-orange-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.pendingApprovals}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="portal-card">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-purple-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalStudents}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Students</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="portal-card">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-blue-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalInstructors}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Instructors</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="portal-card">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Calendar className="h-4 w-4 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.upcomingSessions}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Upcoming</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="portal-card">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.completedToday}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Today</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="portal-card">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                <FileText className="h-4 w-4 text-green-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold">{stats.recentReportCards}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Reports/Wk</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quick Links */}
 
       {/* Quick Links */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
