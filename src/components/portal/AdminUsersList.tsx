@@ -165,7 +165,7 @@ export function AdminUsersList({
                   <SelectTrigger className="w-full sm:w-[160px]">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border z-50">
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
