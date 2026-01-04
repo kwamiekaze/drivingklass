@@ -14,10 +14,10 @@ import { Loader2, Save, Upload, Camera, FileText, CheckCircle, AlertCircle } fro
 import { z } from "zod";
 
 const profileSchema = z.object({
-  full_name: z.string().min(2, "Name is required").max(100),
+  first_name: z.string().min(1, "First name is required").max(50),
+  last_name: z.string().min(1, "Last name is required").max(50),
   email: z.string().email("Invalid email"),
   phone: z.string().min(10, "Phone number is required").max(20),
-  public_id: z.string().min(3, "Student ID must be at least 3 characters").max(20).optional().or(z.literal('')),
   pickup_address: z.string().min(5, "Pickup address is required").max(500),
   dropoff_address: z.string().min(5, "Drop-off address is required").max(500),
   permit_number: z.string().min(3, "Permit number is required").max(50),
@@ -47,10 +47,10 @@ function StudentProfileContent() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>((profile as any)?.avatar_url || null);
   
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
+    first_name: (profile as any)?.first_name || '',
+    last_name: (profile as any)?.last_name || '',
     email: profile?.email || user?.email || '',
     phone: profile?.phone || '',
-    public_id: profile?.public_id || '',
     pickup_address: profile?.pickup_address || '',
     dropoff_address: profile?.dropoff_address || '',
     permit_number: profile?.permit_number || '',
@@ -145,12 +145,12 @@ function StudentProfileContent() {
         permitUrl = urlData.publicUrl;
       }
 
-      // Update profile
+      // Update profile - also set full_name for backwards compatibility
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           ...formData,
-          public_id: formData.public_id || null,
+          full_name: `${formData.first_name} ${formData.last_name}`.trim(),
           permit_file_url: permitUrl,
           intake_submitted: true,
         })
@@ -222,7 +222,7 @@ function StudentProfileContent() {
               <AvatarUpload
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
-                userName={formData.full_name}
+                userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
               />
             )}
@@ -237,16 +237,30 @@ function StudentProfileContent() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name" className="text-sm">Full Name *</Label>
+                <Label htmlFor="first_name" className="text-sm">First Name *</Label>
                 <Input
-                  id="full_name"
-                  name="full_name"
-                  value={formData.full_name}
+                  id="first_name"
+                  name="first_name"
+                  value={formData.first_name}
                   onChange={handleInputChange}
+                  placeholder="John"
                   className="theme-input min-h-[44px]"
                   required
                 />
-                {errors.full_name && <p className="text-xs text-destructive">{errors.full_name}</p>}
+                {errors.first_name && <p className="text-xs text-destructive">{errors.first_name}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name" className="text-sm">Last Name *</Label>
+                <Input
+                  id="last_name"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  placeholder="Doe"
+                  className="theme-input min-h-[44px]"
+                  required
+                />
+                {errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm">Email *</Label>
@@ -274,19 +288,6 @@ function StudentProfileContent() {
                   required
                 />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="public_id" className="text-sm">Student ID (Optional)</Label>
-                <Input
-                  id="public_id"
-                  name="public_id"
-                  value={formData.public_id}
-                  onChange={handleInputChange}
-                  placeholder="e.g., DK-12345"
-                  className="theme-input min-h-[44px]"
-                />
-                <p className="text-xs text-muted-foreground">A unique ID you can share</p>
-                {errors.public_id && <p className="text-xs text-destructive">{errors.public_id}</p>}
               </div>
             </div>
           </CardContent>
