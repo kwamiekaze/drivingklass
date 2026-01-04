@@ -262,11 +262,11 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               }}
             />
             
-            {/* Headlight image swap overlay with flicker animation */}
+            {/* Headlight CSS overlay with flicker animation */}
             <HeadlightShineOverlay 
               isOn={headlightsOn} 
               triggerKey={shineKey} 
-              carOffSrc={carImageSrc}
+              carImageSrc={carImageSrc}
             />
           </div>
         </div>
