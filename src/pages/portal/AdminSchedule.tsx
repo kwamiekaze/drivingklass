@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight, FileText, CheckCircle, Eye } from "lucide-react";
 import { format, parseISO, addHours, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isAfter } from "date-fns";
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 export default function AdminSchedule() {
   return (
@@ -36,6 +37,7 @@ function AdminScheduleContent() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [sessionToCancel, setSessionToCancel] = useState<Session | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [detailSession, setDetailSession] = useState<Session | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -114,7 +116,8 @@ function AdminScheduleContent() {
     });
 
     if (error) {
-      toast.error("Failed to create session");
+      console.error('Session creation error:', error);
+      toast.error(`Failed to create session: ${error.message}`);
       return;
     }
 
@@ -141,7 +144,8 @@ function AdminScheduleContent() {
       .eq('id', editingSession.id);
 
     if (error) {
-      toast.error("Failed to update session");
+      console.error('Session update error:', error);
+      toast.error(`Failed to update session: ${error.message}`);
       return;
     }
 
@@ -166,7 +170,8 @@ function AdminScheduleContent() {
       .eq('id', sessionToCancel.id);
 
     if (error) {
-      toast.error("Failed to cancel session");
+      console.error('Session cancel error:', error);
+      toast.error(`Failed to cancel session: ${error.message}`);
       return;
     }
 
@@ -364,26 +369,40 @@ function AdminScheduleContent() {
                 {daySessions.map(session => (
                   <div
                     key={session.id}
-                    className={`p-3 rounded-lg ${statusColors[session.status || 'scheduled']}`}
+                    className={`p-3 rounded-lg cursor-pointer hover:opacity-80 ${statusColors[session.status || 'scheduled']}`}
+                    onClick={() => setDetailSession(session)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm">{format(parseISO(session.starts_at), 'h:mm a')}</p>
                         <p className="text-xs truncate">{getStudentName(session.student_id)}</p>
                         <p className="text-xs text-muted-foreground truncate">{getInstructorName(session.instructor_id)}</p>
+                        {session.status === 'cancelled' && (
+                          <Badge variant="destructive" className="text-[10px] mt-1">Cancelled</Badge>
+                        )}
+                        {session.status === 'completed' && (
+                          <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 text-[10px] mt-1">Completed</Badge>
+                        )}
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {session.status === 'scheduled' && (
                           <>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditDialog(session)}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditDialog(session); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             {isAfter(parseISO(session.starts_at), new Date()) && (
-                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={() => openCancelDialog(session)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={(e) => { e.stopPropagation(); openCancelDialog(session); }}>
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
                           </>
+                        )}
+                        {session.report_card_id && (
+                          <Link to={`/instructor/report-cards/edit/${session.report_card_id}`} onClick={(e) => e.stopPropagation()}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         )}
                       </div>
                     </div>
@@ -417,7 +436,7 @@ function AdminScheduleContent() {
                 <div
                   key={session.id}
                   className={`p-2 rounded text-xs ${statusColors[session.status || 'scheduled']} cursor-pointer hover:opacity-80`}
-                  onClick={() => session.status === 'scheduled' && openEditDialog(session)}
+                  onClick={() => setDetailSession(session)}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{format(parseISO(session.starts_at), 'h:mm a')}</span>
@@ -442,6 +461,116 @@ function AdminScheduleContent() {
         ))}
       </div>
 
+      {/* Session Detail Dialog */}
+      <Dialog open={!!detailSession} onOpenChange={(open) => !open && setDetailSession(null)}>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Session Details</DialogTitle>
+          </DialogHeader>
+          {detailSession && (
+            <div className="space-y-4">
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                <Badge className={statusColors[detailSession.status || 'scheduled']}>
+                  {detailSession.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                  {detailSession.status === 'cancelled' && <X className="h-3 w-3 mr-1" />}
+                  {detailSession.status === 'scheduled' && <Clock className="h-3 w-3 mr-1" />}
+                  {detailSession.status?.charAt(0).toUpperCase() + detailSession.status?.slice(1)}
+                </Badge>
+                {detailSession.completed && detailSession.report_card_id && (
+                  <Badge variant="outline" className="gap-1">
+                    <FileText className="h-3 w-3" />
+                    Report Filed
+                  </Badge>
+                )}
+              </div>
+
+              {/* Session Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium text-sm">{format(parseISO(detailSession.starts_at), 'MMM d, yyyy')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="font-medium text-sm">
+                    {format(parseISO(detailSession.starts_at), 'h:mm a')} - {format(parseISO(detailSession.ends_at), 'h:mm a')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Student</p>
+                  <p className="font-medium text-sm">{getStudentName(detailSession.student_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Instructor</p>
+                  <p className="font-medium text-sm">{getInstructorName(detailSession.instructor_id)}</p>
+                </div>
+              </div>
+
+              {/* Cancelled Info */}
+              {detailSession.status === 'cancelled' && (
+                <div className="p-3 bg-destructive/10 rounded-lg">
+                  <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Cancelled by {detailSession.cancelled_by_role}
+                  </p>
+                  {detailSession.cancellation_reason && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Reason: {detailSession.cancellation_reason}
+                    </p>
+                  )}
+                  {detailSession.cancelled_at && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(parseISO(detailSession.cancelled_at), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {detailSession.report_card_id && (
+                  <Link to={`/instructor/report-cards/edit/${detailSession.report_card_id}`} className="flex-1">
+                    <Button variant="outline" className="w-full gap-2 min-h-[44px]">
+                      <Eye className="h-4 w-4" />
+                      View Report Card
+                    </Button>
+                  </Link>
+                )}
+                {detailSession.status === 'scheduled' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1 min-h-[44px] gap-2"
+                      onClick={() => {
+                        setDetailSession(null);
+                        openEditDialog(detailSession);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    {isAfter(parseISO(detailSession.starts_at), new Date()) && (
+                      <Button
+                        variant="destructive"
+                        className="flex-1 min-h-[44px] gap-2"
+                        onClick={() => {
+                          setDetailSession(null);
+                          openCancelDialog(detailSession);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent className="max-w-md mx-4 sm:mx-auto">
@@ -460,11 +589,11 @@ function AdminScheduleContent() {
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-sm">Reason for cancellation</Label>
+              <Label className="text-sm">Reason for cancellation *</Label>
               <Textarea
                 value={cancellationReason}
                 onChange={e => setCancellationReason(e.target.value)}
-                placeholder="Optional reason..."
+                placeholder="Enter reason for cancellation..."
                 className="text-sm"
               />
             </div>
@@ -472,7 +601,12 @@ function AdminScheduleContent() {
               <Button variant="outline" className="flex-1 min-h-[44px]" onClick={() => setCancelDialogOpen(false)}>
                 Keep Session
               </Button>
-              <Button variant="destructive" className="flex-1 min-h-[44px]" onClick={handleCancelSession}>
+              <Button 
+                variant="destructive" 
+                className="flex-1 min-h-[44px]" 
+                onClick={handleCancelSession}
+                disabled={!cancellationReason.trim()}
+              >
                 Cancel Session
               </Button>
             </div>
