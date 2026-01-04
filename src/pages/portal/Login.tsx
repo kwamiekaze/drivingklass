@@ -99,7 +99,7 @@ export default function Login() {
             <Car className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-gold-shimmer">DrivingKlass</span>
           </Link>
-          <p className="text-muted-foreground">Student & Instructor Portal</p>
+          <p className="text-muted-foreground">Klassroom Portal</p>
         </div>
 
         <Card className="luxury-card">
