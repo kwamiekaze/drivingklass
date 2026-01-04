@@ -41,12 +41,15 @@ export interface Session {
   ends_at: string;
   status: 'scheduled' | 'cancelled' | 'completed';
   cancelled_at: string | null;
+  cancelled_by: string | null;
   cancelled_by_role: 'student' | 'instructor' | 'staff' | 'admin' | null;
   cancellation_reason: string | null;
   completed: boolean;
   completed_at: string | null;
   completed_by: string | null;
   report_card_id: string | null;
+  note_for_student: string | null;
+  note_for_instructor: string | null;
   // Joined fields
   student?: Profile;
   instructor?: Profile;

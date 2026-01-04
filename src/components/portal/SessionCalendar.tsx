@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -21,12 +21,16 @@ interface SessionCalendarProps {
 }
 
 export function SessionCalendar({ sessions, userRole, onSessionUpdate }: SessionCalendarProps) {
-  const { user, role } = usePortalAuth();
+  const { user, role, isStaffOrAdmin } = usePortalAuth();
   const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [noteForStudent, setNoteForStudent] = useState("");
+  const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
 
@@ -39,33 +43,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   };
 
   const handleCancelSession = async () => {
-    if (!selectedSession || !cancellationReason.trim() || !user || !role) return;
+    if (!selectedSession || !cancellationReason.trim() || !user) return;
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          cancelled_by_role: role,
-          cancellation_reason: cancellationReason.trim(),
-        })
-        .eq('id', selectedSession.id);
+      const { error } = await supabase.rpc('cancel_session', {
+        _session_id: selectedSession.id,
+        _reason: cancellationReason.trim()
+      });
 
       if (error) throw error;
-
-      // Create notification for the other party
-      const notifyUserId = role === 'student' 
-        ? selectedSession.instructor_id 
-        : selectedSession.student_id;
-
-      await supabase.from('notifications').insert({
-        user_id: notifyUserId,
-        title: 'Session Cancelled',
-        message: `A session on ${format(parseISO(selectedSession.starts_at), 'MMM d, h:mm a')} has been cancelled.`,
-        type: 'session_cancelled',
-      });
 
       toast({
         title: "Session Cancelled",
@@ -87,32 +74,127 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     }
   };
 
+  const handleCompleteSession = async () => {
+    if (!selectedSession || !user) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc('complete_session', {
+        _session_id: selectedSession.id,
+        _via: 'manual'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Session Completed",
+        description: "The session has been marked as completed.",
+      });
+
+      setCompleteDialogOpen(false);
+      setSelectedSession(null);
+      onSessionUpdate?.();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete session",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedSession || !user) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc('update_session_notes', {
+        _session_id: selectedSession.id,
+        _note_for_student: noteForStudent || null,
+        _note_for_instructor: noteForInstructor || null
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Notes Saved",
+        description: "Session notes have been updated.",
+      });
+
+      setNotesDialogOpen(false);
+      onSessionUpdate?.();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save notes",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openNotesDialog = (session: Session) => {
+    setNoteForStudent(session.note_for_student || "");
+    setNoteForInstructor(session.note_for_instructor || "");
+    setNotesDialogOpen(true);
+  };
+
   const getStatusBadge = (session: Session) => {
     switch (session.status) {
       case 'completed':
         return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
       case 'cancelled':
-        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+        return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
       default:
         return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
     }
   };
 
+  const getCalendarColor = (session: Session) => {
+    if (session.status === 'cancelled') return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
+    if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
+    return "bg-primary/20 text-primary";
+  };
+
   const canCancel = (session: Session) => {
     if (session.status !== 'scheduled') return false;
-    if (!isAfter(parseISO(session.starts_at), new Date())) return false;
     if (userRole === 'student' && session.student_id === user?.id) return true;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
-    if (userRole === 'staff' || userRole === 'admin') return true;
+    if (isStaffOrAdmin) return true;
+    return false;
+  };
+
+  const canComplete = (session: Session) => {
+    if (session.status !== 'scheduled') return false;
+    // Students cannot complete sessions
+    if (userRole === 'student') return false;
+    if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
+    if (isStaffOrAdmin) return true;
     return false;
   };
 
   const canGrade = (session: Session) => {
-    // Instructor can grade if session is scheduled and session time has passed
-    if (session.status === 'completed' && session.report_card_id) return false; // Already has report card
+    // Cannot grade if already has report card
+    if (session.report_card_id) return false;
     if (session.status === 'cancelled') return false;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
-    if (userRole === 'admin') return true;
+    if (isStaffOrAdmin) return true;
+    return false;
+  };
+
+  // Check if user can see specific notes
+  const canSeeNoteForStudent = (session: Session) => {
+    if (isStaffOrAdmin) return true;
+    if (userRole === 'student' && session.student_id === user?.id) return true;
+    return false;
+  };
+
+  const canSeeNoteForInstructor = (session: Session) => {
+    if (isStaffOrAdmin) return true;
+    if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     return false;
   };
 
@@ -259,9 +341,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                           onClick={() => setSelectedSession(session)}
                           className={cn(
                             "w-full text-[10px] sm:text-xs p-0.5 sm:p-1 rounded truncate text-left",
-                            session.status === 'completed' && "bg-green-500/20 text-green-700 dark:text-green-300",
-                            session.status === 'cancelled' && "bg-destructive/20 text-destructive",
-                            session.status === 'scheduled' && "bg-primary/20 text-primary"
+                            getCalendarColor(session)
                           )}
                         >
                           {format(parseISO(session.starts_at), 'h:mma')}
@@ -308,7 +388,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
       </Card>
 
       {/* Session Details Dialog */}
-      <Dialog open={!!selectedSession && !cancelDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
+      <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-md mx-4 sm:mx-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">Session Details</DialogTitle>
@@ -317,9 +397,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 {getStatusBadge(selectedSession)}
-                {selectedSession.completed && (
+                {selectedSession.report_card_id && (
                   <Badge variant="outline" className="gap-1">
-                    <CheckCircle className="h-3 w-3" />
+                    <FileText className="h-3 w-3" />
                     Report Submitted
                   </Badge>
                 )}
@@ -348,9 +428,34 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                 </div>
               </div>
 
+              {/* Show notes based on role */}
+              {canSeeNoteForStudent(selectedSession) && selectedSession.note_for_student && (
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Note from Staff
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedSession.note_for_student}
+                  </p>
+                </div>
+              )}
+
+              {canSeeNoteForInstructor(selectedSession) && selectedSession.note_for_instructor && (
+                <div className="p-3 bg-orange-500/10 rounded-lg">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Staff Note (Instructor)
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedSession.note_for_instructor}
+                  </p>
+                </div>
+              )}
+
               {selectedSession.status === 'cancelled' && (
-                <div className="p-3 bg-destructive/10 rounded-lg">
-                  <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <div className="p-3 bg-gray-500/10 rounded-lg">
+                  <p className="text-sm font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Cancelled by {selectedSession.cancelled_by_role}
                   </p>
@@ -368,6 +473,28 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       Grade Session
                     </Button>
                   </Link>
+                )}
+
+                {canComplete(selectedSession) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setCompleteDialogOpen(true)}
+                    className="flex-1 min-h-[44px] gap-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Mark Completed
+                  </Button>
+                )}
+
+                {isStaffOrAdmin && (
+                  <Button
+                    variant="outline"
+                    onClick={() => openNotesDialog(selectedSession)}
+                    className="flex-1 min-h-[44px] gap-2"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Edit Notes
+                  </Button>
                 )}
 
                 {canCancel(selectedSession) && (
@@ -406,17 +533,90 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
               />
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} className="w-full sm:w-auto min-h-[44px]">
-              Keep Session
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} className="min-h-[44px]">
+              Go Back
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleCancelSession}
               disabled={!cancellationReason.trim() || isLoading}
-              className="w-full sm:w-auto min-h-[44px]"
+              className="min-h-[44px]"
             >
-              {isLoading ? "Cancelling..." : "Confirm Cancellation"}
+              {isLoading ? "Cancelling..." : "Confirm Cancel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Confirmation Dialog */}
+      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Mark Session Complete</DialogTitle>
+            <DialogDescription className="text-sm">
+              Are you sure you want to mark this session as completed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)} className="min-h-[44px]">
+              Go Back
+            </Button>
+            <Button
+              onClick={handleCompleteSession}
+              disabled={isLoading}
+              className="min-h-[44px] gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {isLoading ? "Completing..." : "Confirm Complete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notes Dialog (Staff/Admin only) */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Session Notes</DialogTitle>
+            <DialogDescription className="text-sm">
+              Add notes visible to the student or instructor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Note for Student</Label>
+              <Textarea
+                value={noteForStudent}
+                onChange={(e) => setNoteForStudent(e.target.value)}
+                placeholder="This note will be visible to the student..."
+                rows={3}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Visible to: Student, Admin, Staff</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Note for Instructor</Label>
+              <Textarea
+                value={noteForInstructor}
+                onChange={(e) => setNoteForInstructor(e.target.value)}
+                placeholder="This note will be visible to the instructor..."
+                rows={3}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Visible to: Instructor, Admin, Staff</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setNotesDialogOpen(false)} className="min-h-[44px]">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveNotes}
+              disabled={isLoading}
+              className="min-h-[44px]"
+            >
+              {isLoading ? "Saving..." : "Save Notes"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -41,39 +41,49 @@ function InstructorDashboardContent() {
   const fetchData = async () => {
     if (!user) return;
     
-    // Fetch sessions with student info
-    const { data: sessionsData } = await supabase
-      .from('sessions')
-      .select('*, student:profiles!sessions_student_id_fkey(*)')
-      .eq('instructor_id', user.id)
-      .order('starts_at', { ascending: true });
+    try {
+      // Fetch sessions with student info - instructor's sessions only
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*, student:profiles!sessions_student_id_fkey(*)')
+        .eq('instructor_id', user.id)
+        .order('starts_at', { ascending: true });
 
-    if (sessionsData) {
-      setSessions(sessionsData as Session[]);
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError);
+      } else if (sessionsData) {
+        setSessions(sessionsData as Session[]);
+      }
+
+      // Fetch report cards
+      const { data: reportCardsData, error: reportCardsError } = await supabase
+        .from('report_cards')
+        .select('*, session:sessions(*), student:profiles!report_cards_student_id_fkey(*)')
+        .eq('instructor_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (reportCardsError) {
+        console.error('Error fetching report cards:', reportCardsError);
+      } else if (reportCardsData) {
+        setReportCards(reportCardsData as ReportCard[]);
+      }
+
+      // Fetch assigned students
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('instructor_students')
+        .select('*, student:profiles!instructor_students_student_id_fkey(*)')
+        .eq('instructor_id', user.id);
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+      } else if (studentsData) {
+        setStudents(studentsData as InstructorStudent[]);
+      }
+    } catch (error) {
+      console.error('Error fetching instructor data:', error);
+    } finally {
+      setLoading(false);
     }
-
-    // Fetch report cards
-    const { data: reportCardsData } = await supabase
-      .from('report_cards')
-      .select('*, session:sessions(*), student:profiles!report_cards_student_id_fkey(*)')
-      .eq('instructor_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (reportCardsData) {
-      setReportCards(reportCardsData as ReportCard[]);
-    }
-
-    // Fetch assigned students
-    const { data: studentsData } = await supabase
-      .from('instructor_students')
-      .select('*, student:profiles!instructor_students_student_id_fkey(*)')
-      .eq('instructor_id', user.id);
-
-    if (studentsData) {
-      setStudents(studentsData as InstructorStudent[]);
-    }
-
-    setLoading(false);
   };
 
   const upcomingSessions = sessions.filter(s => 

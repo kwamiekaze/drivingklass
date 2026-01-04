@@ -747,6 +747,8 @@ export type Database = {
           ends_at: string
           id: string
           instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -766,6 +768,8 @@ export type Database = {
           ends_at: string
           id?: string
           instructor_id: string
+          note_for_instructor?: string | null
+          note_for_student?: string | null
           report_card_id?: string | null
           starts_at: string
           status?: string
@@ -785,6 +789,8 @@ export type Database = {
           ends_at?: string
           id?: string
           instructor_id?: string
+          note_for_instructor?: string | null
+          note_for_student?: string | null
           report_card_id?: string | null
           starts_at?: string
           status?: string
@@ -858,6 +864,66 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_session: {
+        Args: { _reason: string; _session_id: string }
+        Returns: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          report_card_id: string | null
+          starts_at: string
+          status: string
+          student_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_session: {
+        Args: { _session_id: string; _via?: string }
+        Returns: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          report_card_id: string | null
+          starts_at: string
+          status: string
+          student_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_session_admin: {
         Args: {
           _duration_minutes: number
@@ -879,6 +945,8 @@ export type Database = {
           ends_at: string
           id: string
           instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -943,6 +1011,40 @@ export type Database = {
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
+      update_session_notes: {
+        Args: {
+          _note_for_instructor?: string
+          _note_for_student?: string
+          _session_id: string
+        }
+        Returns: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          report_card_id: string | null
+          starts_at: string
+          status: string
+          student_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "student" | "instructor" | "staff"
