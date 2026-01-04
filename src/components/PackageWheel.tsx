@@ -105,9 +105,11 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [headlightsOn, setHeadlightsOn] = useState(false);
+  const [hasTurnedOnThisSession, setHasTurnedOnThisSession] = useState(false);
   const flickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
+  const isDark = resolvedTheme === "dark";
   const [containerSize, setContainerSize] = useState(320);
   const { trackClick } = useAnalytics();
   
@@ -130,7 +132,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     };
   }, []);
   
-  // Trigger headlight flicker animation
+  // Trigger headlight flicker animation based on theme
   const triggerFlicker = useCallback(() => {
     // Clear any existing flicker
     if (flickerTimeoutRef.current) {
@@ -140,18 +142,32 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     // If user prefers reduced motion, just turn on without flicker
     if (prefersReducedMotion) {
       setHeadlightsOn(true);
+      if (isLight) {
+        setHasTurnedOnThisSession(true);
+      }
       return;
     }
     
-    // Flicker sequence: on -> off -> on
-    setHeadlightsOn(true);
-    flickerTimeoutRef.current = setTimeout(() => {
-      setHeadlightsOn(false);
+    // Dark theme: always flicker on every selection
+    // Light theme: only flicker if hasn't turned on this session yet
+    if (isDark || !hasTurnedOnThisSession) {
+      // Flicker sequence: on -> off -> on
+      setHeadlightsOn(true);
       flickerTimeoutRef.current = setTimeout(() => {
-        setHeadlightsOn(true);
+        setHeadlightsOn(false);
+        flickerTimeoutRef.current = setTimeout(() => {
+          setHeadlightsOn(true);
+          if (isLight) {
+            setHasTurnedOnThisSession(true);
+          }
+        }, 90);
       }, 90);
-    }, 90);
-  }, [prefersReducedMotion]);
+    } else {
+      // Light theme after first turn on: just keep on, no flicker
+      setHeadlightsOn(true);
+    }
+  }, [prefersReducedMotion, isDark, isLight, hasTurnedOnThisSession]);
+  
   const totalButtons = packages.length;
 
   // Determine which price chip to show
@@ -287,18 +303,6 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
               }}
             />
             
-            {/* Headlight glow overlay - visible when headlights on */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-              style={{
-                opacity: headlightsOn ? 1 : 0,
-                background: 'radial-gradient(ellipse 60% 30% at 25% 55%, hsl(45 100% 70% / 0.25) 0%, transparent 50%), radial-gradient(ellipse 60% 30% at 75% 55%, hsl(45 100% 70% / 0.25) 0%, transparent 50%)',
-                filter: 'blur(12px)',
-                transform: 'scale(1.1)',
-                pointerEvents: 'none',
-              }}
-            />
-            
             {/* Static cinematic shadow/reflection under car */}
             <div 
               className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-10"
@@ -315,7 +319,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
               <img 
                 src={carHeadlightsOff} 
                 alt="DrivingKlass car headlights off" 
-                className="w-full h-auto object-contain relative z-10 transition-opacity duration-200"
+                className="w-full h-auto object-contain relative z-10 transition-opacity duration-150"
                 style={{
                   filter: 'contrast(1.08) saturate(1.05)',
                   pointerEvents: 'none',
@@ -326,7 +330,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
               <img 
                 src={carHeadlightsOn} 
                 alt="DrivingKlass car headlights on" 
-                className="absolute inset-0 w-full h-auto object-contain z-10 transition-opacity duration-200"
+                className="absolute inset-0 w-full h-auto object-contain z-10 transition-opacity duration-150"
                 style={{
                   filter: 'contrast(1.08) saturate(1.05)',
                   pointerEvents: 'none',
