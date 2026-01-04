@@ -71,12 +71,28 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message || "Failed to sign in. Please check your credentials.");
+    try {
+      const { error: signInError } = await signIn(email, password);
+      
+      if (signInError) {
+        // Provide user-friendly error messages
+        if (signInError.message.includes('Invalid login credentials')) {
+          setError("Invalid email or password. Please check your credentials and try again.");
+        } else if (signInError.message.includes('Email not confirmed')) {
+          setError("Please confirm your email address before signing in. Check your inbox for a confirmation link.");
+        } else {
+          setError(signInError.message || "Failed to sign in. Please try again.");
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      // Sign-in successful - redirect will happen via useEffect when user/role updates
+      // Keep loading state active until redirect
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred. Please try again.");
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   if (authLoading) {

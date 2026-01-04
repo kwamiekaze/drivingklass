@@ -95,7 +95,16 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // If sign-in successful, immediately fetch profile and role for faster routing
+    if (data?.user && !error) {
+      await Promise.all([
+        fetchProfile(data.user.id),
+        fetchRole(data.user.id)
+      ]);
+    }
+    
     return { error: error as Error | null };
   };
 
