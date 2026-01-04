@@ -59,33 +59,38 @@ function AdminScheduleContent() {
 
     setSessions((sessionsData || []) as Session[]);
 
-    // Fetch students
+    // Fetch approved students using user_roles + profiles with approval_status
     const { data: studentRoles } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('role', 'student');
 
-    if (studentRoles) {
+    if (studentRoles && studentRoles.length > 0) {
       const { data: studentProfiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', studentRoles.map(r => r.user_id))
-        .eq('approved', true);
-      setStudents((studentProfiles || []) as any);
+        .eq('approval_status', 'approved');
+      setStudents((studentProfiles || []) as Profile[]);
+    } else {
+      setStudents([]);
     }
 
-    // Fetch instructors
+    // Fetch approved instructors using user_roles + profiles with approval_status
     const { data: instructorRoles } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('role', 'instructor');
 
-    if (instructorRoles) {
+    if (instructorRoles && instructorRoles.length > 0) {
       const { data: instructorProfiles } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', instructorRoles.map(r => r.user_id));
-      setInstructors((instructorProfiles || []) as any);
+        .in('id', instructorRoles.map(r => r.user_id))
+        .eq('approval_status', 'approved');
+      setInstructors((instructorProfiles || []) as Profile[]);
+    } else {
+      setInstructors([]);
     }
 
     setLoading(false);
@@ -252,9 +257,13 @@ function AdminScheduleContent() {
                     <SelectValue placeholder="Select student" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border z-50">
-                    {students.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
-                    ))}
+                    {students.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No approved students</div>
+                    ) : (
+                      students.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.full_name || s.email || 'Unknown'}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -265,9 +274,13 @@ function AdminScheduleContent() {
                     <SelectValue placeholder="Select instructor" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border z-50">
-                    {instructors.map(i => (
-                      <SelectItem key={i.id} value={i.id}>{i.full_name}</SelectItem>
-                    ))}
+                    {instructors.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No approved instructors</div>
+                    ) : (
+                      instructors.map(i => (
+                        <SelectItem key={i.id} value={i.id}>{i.full_name || i.email || 'Unknown'}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
