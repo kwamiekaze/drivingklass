@@ -214,7 +214,7 @@ function StudentProfileContent() {
         {/* Profile Picture */}
         <Card className="portal-card">
           <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-base sm:text-lg">Profile Picture</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Profile Picture <span className="text-muted-foreground font-normal">(Optional)</span></CardTitle>
             <CardDescription className="text-xs sm:text-sm">Upload or take a photo for your profile</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
