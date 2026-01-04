@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
-import goldCar from "@/assets/gold-car-transparent.png";
 import portalCarIcon from "@/assets/portal-car-icon.png";
 
 export function HeroSection() {
@@ -31,7 +30,6 @@ export function HeroSection() {
 
       {/* Package Wheel with car */}
       <PackageWheel 
-        carImageSrc={goldCar}
         onPackageSelect={handlePackageSelect}
       />
     </section>
