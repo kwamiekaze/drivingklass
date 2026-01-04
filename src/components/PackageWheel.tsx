@@ -262,18 +262,11 @@ export function PackageWheel({ carImageSrc, onPackageSelect }: PackageWheelProps
               }}
             />
             
-            {/* Headlight shine overlay - positioned relative to car container */}
-            <HeadlightShineOverlay isOn={headlightsOn} triggerKey={shineKey} />
-            
-            {/* Static car image - no transition, no brightness changes */}
-            <img 
-              src={carImageSrc} 
-              alt="DRIVINGKLASS Gold Car" 
-              className="w-full h-auto object-contain relative z-10"
-              style={{
-                filter: 'contrast(1.08) saturate(1.05)',
-                pointerEvents: 'none',
-              }}
+            {/* Headlight image swap overlay with flicker animation */}
+            <HeadlightShineOverlay 
+              isOn={headlightsOn} 
+              triggerKey={shineKey} 
+              carOffSrc={carImageSrc}
             />
           </div>
         </div>

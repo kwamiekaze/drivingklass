@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import goldCarHeadlightsOn from "@/assets/gold-car-headlights-on.png";
 
 interface HeadlightShineOverlayProps {
   isOn: boolean;
   triggerKey: number;
+  carOffSrc: string;
 }
 
-export function HeadlightShineOverlay({ isOn, triggerKey }: HeadlightShineOverlayProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
+export function HeadlightShineOverlay({ isOn, triggerKey, carOffSrc }: HeadlightShineOverlayProps) {
+  const [isFlickering, setIsFlickering] = useState(false);
+  const [flickerPhase, setFlickerPhase] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // Detect reduced motion preference
@@ -20,154 +22,83 @@ export function HeadlightShineOverlay({ isOn, triggerKey }: HeadlightShineOverla
     return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
-  // Trigger blink animation on key change
+  // Handle flicker animation when triggerKey changes
   useEffect(() => {
-    if (isOn && triggerKey > 0 && !prefersReducedMotion) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 550);
-      return () => clearTimeout(timer);
+    if (triggerKey === 0) return;
+    
+    if (prefersReducedMotion) {
+      // No animation, just turn on instantly
+      return;
     }
-  }, [triggerKey, isOn, prefersReducedMotion]);
+    
+    // Start flicker sequence: OFF → ON → OFF → ON (total ~350ms)
+    setIsFlickering(true);
+    setFlickerPhase(0);
+    
+    const phases = [
+      { delay: 0, phase: 0 },      // Start OFF
+      { delay: 80, phase: 1 },     // ON
+      { delay: 160, phase: 0 },    // OFF
+      { delay: 260, phase: 1 },    // ON (final)
+      { delay: 350, phase: 2 },    // End flicker, stay ON
+    ];
+    
+    const timeouts = phases.map(({ delay, phase }) => 
+      setTimeout(() => {
+        setFlickerPhase(phase);
+        if (phase === 2) setIsFlickering(false);
+      }, delay)
+    );
+    
+    return () => timeouts.forEach(clearTimeout);
+  }, [triggerKey, prefersReducedMotion]);
 
-  if (!isOn) return null;
+  // Determine if headlights ON image should be visible
+  const showHeadlightsOn = isOn && (
+    prefersReducedMotion || 
+    (!isFlickering) || 
+    (isFlickering && flickerPhase === 1)
+  );
 
   return (
-    <div 
-      className="absolute inset-0 pointer-events-none z-[5]"
-      aria-hidden="true"
-    >
-      {/* Left headlight beam */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
+    <>
+      {/* Headlights OFF image (default) */}
+      <img 
+        src={carOffSrc} 
+        alt="DRIVINGKLASS Gold Car" 
+        className="w-full h-auto object-contain relative z-10"
         style={{
-          // Position at left headlight area (front-left of car)
-          left: '18%',
-          top: '42%',
-          width: '35%',
-          height: '45%',
-          background: `
-            conic-gradient(
-              from 200deg at 100% 35%,
-              transparent 0deg,
-              hsl(43 85% 55% / 0.03) 15deg,
-              hsl(43 80% 60% / 0.12) 25deg,
-              hsl(45 90% 65% / 0.18) 35deg,
-              hsl(43 80% 60% / 0.12) 45deg,
-              hsl(43 85% 55% / 0.03) 55deg,
-              transparent 70deg
-            )
-          `,
-          filter: 'blur(8px)',
-          opacity: prefersReducedMotion ? 1 : undefined,
-          transformOrigin: 'right center',
+          filter: 'contrast(1.08) saturate(1.05)',
+          pointerEvents: 'none',
+          opacity: showHeadlightsOn ? 0 : 1,
+          transition: isFlickering ? 'none' : 'opacity 0.15s ease-out',
         }}
       />
       
-      {/* Left headlight glow (close bloom) */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
+      {/* Headlights ON image (overlaid) */}
+      <img 
+        src={goldCarHeadlightsOn} 
+        alt="DRIVINGKLASS Gold Car with Headlights On" 
+        className="w-full h-auto object-contain absolute inset-0 z-10"
         style={{
-          left: '32%',
-          top: '45%',
-          width: '18%',
-          height: '14%',
-          background: 'radial-gradient(ellipse 100% 80% at center, hsl(43 90% 70% / 0.35) 0%, hsl(43 85% 60% / 0.15) 40%, transparent 70%)',
-          filter: 'blur(6px)',
-          opacity: prefersReducedMotion ? 1 : undefined,
-        }}
-      />
-
-      {/* Right headlight beam */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
-        style={{
-          // Position at right headlight area (front-right of car)
-          right: '18%',
-          top: '42%',
-          width: '35%',
-          height: '45%',
-          background: `
-            conic-gradient(
-              from -20deg at 0% 35%,
-              transparent 0deg,
-              hsl(43 85% 55% / 0.03) 15deg,
-              hsl(43 80% 60% / 0.12) 25deg,
-              hsl(45 90% 65% / 0.18) 35deg,
-              hsl(43 80% 60% / 0.12) 45deg,
-              hsl(43 85% 55% / 0.03) 55deg,
-              transparent 70deg
-            )
-          `,
-          filter: 'blur(8px)',
-          opacity: prefersReducedMotion ? 1 : undefined,
-          transformOrigin: 'left center',
+          filter: `contrast(1.08) saturate(1.05) ${showHeadlightsOn ? 'brightness(1.02)' : 'brightness(1)'}`,
+          pointerEvents: 'none',
+          opacity: showHeadlightsOn ? 1 : 0,
+          transition: isFlickering ? 'none' : 'opacity 0.15s ease-out',
         }}
       />
       
-      {/* Right headlight glow (close bloom) */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
-        style={{
-          right: '32%',
-          top: '45%',
-          width: '18%',
-          height: '14%',
-          background: 'radial-gradient(ellipse 100% 80% at center, hsl(43 90% 70% / 0.35) 0%, hsl(43 85% 60% / 0.15) 40%, transparent 70%)',
-          filter: 'blur(6px)',
-          opacity: prefersReducedMotion ? 1 : undefined,
-        }}
-      />
-
-      {/* Center ambient glow when lights are on */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
-        style={{
-          left: '25%',
-          right: '25%',
-          top: '38%',
-          height: '30%',
-          background: 'radial-gradient(ellipse 100% 100% at center 60%, hsl(43 70% 55% / 0.08) 0%, transparent 60%)',
-          filter: 'blur(15px)',
-          opacity: prefersReducedMotion ? 1 : undefined,
-        }}
-      />
-
-      {/* Subtle sparkle dust particles */}
-      <div
-        className={cn(
-          "absolute",
-          isAnimating && "animate-headlight-blink"
-        )}
-        style={{
-          left: '20%',
-          right: '20%',
-          top: '40%',
-          height: '35%',
-          background: `
-            radial-gradient(1px 1px at 20% 30%, hsl(43 90% 75% / 0.6) 0%, transparent 100%),
-            radial-gradient(1px 1px at 80% 25%, hsl(43 90% 75% / 0.5) 0%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 45% 50%, hsl(43 90% 75% / 0.4) 0%, transparent 100%),
-            radial-gradient(1px 1px at 60% 70%, hsl(43 90% 75% / 0.5) 0%, transparent 100%),
-            radial-gradient(1px 1px at 35% 80%, hsl(43 90% 75% / 0.4) 0%, transparent 100%)
-          `,
-          opacity: prefersReducedMotion ? 1 : undefined,
-        }}
-      />
-    </div>
+      {/* Subtle ambient glow when headlights are on */}
+      {isOn && !isFlickering && (
+        <div 
+          className="absolute inset-0 z-5 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse 100% 80% at 35% 45%, hsl(43 70% 55% / 0.08) 0%, transparent 50%)',
+            filter: 'blur(15px)',
+            animation: 'fade-in 0.3s ease-out',
+          }}
+        />
+      )}
+    </>
   );
 }
