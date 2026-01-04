@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -103,6 +104,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     if (userRole === 'student' && session.student_id === user?.id) return true;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     if (userRole === 'staff' || userRole === 'admin') return true;
+    return false;
+  };
+
+  const canGrade = (session: Session) => {
+    // Instructor can grade if session is scheduled and session time has passed
+    if (session.status === 'completed' && session.report_card_id) return false; // Already has report card
+    if (session.status === 'cancelled') return false;
+    if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
+    if (userRole === 'admin') return true;
     return false;
   };
 
@@ -350,15 +360,26 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                 </div>
               )}
 
-              {canCancel(selectedSession) && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setCancelDialogOpen(true)}
-                  className="w-full min-h-[44px]"
-                >
-                  Cancel Session
-                </Button>
-              )}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {canGrade(selectedSession) && (
+                  <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
+                    <Button className="w-full min-h-[44px] gap-2">
+                      <FileText className="h-4 w-4" />
+                      Grade Session
+                    </Button>
+                  </Link>
+                )}
+
+                {canCancel(selectedSession) && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setCancelDialogOpen(true)}
+                    className="flex-1 min-h-[44px]"
+                  >
+                    Cancel Session
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>

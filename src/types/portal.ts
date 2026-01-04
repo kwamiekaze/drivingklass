@@ -44,6 +44,8 @@ export interface Session {
   cancelled_by_role: 'student' | 'instructor' | 'staff' | 'admin' | null;
   cancellation_reason: string | null;
   completed: boolean;
+  completed_at: string | null;
+  completed_by: string | null;
   report_card_id: string | null;
   // Joined fields
   student?: Profile;

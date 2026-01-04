@@ -738,6 +738,8 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by_role: string | null
           completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           ends_at: string
           id: string
@@ -752,6 +754,8 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by_role?: string | null
           completed?: boolean | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           ends_at: string
           id?: string
@@ -766,6 +770,8 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by_role?: string | null
           completed?: boolean | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           ends_at?: string
           id?: string
@@ -781,6 +787,13 @@ export type Database = {
             columns: ["report_card_id"]
             isOneToOne: false
             referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
