@@ -724,24 +724,14 @@ Birthday: 01/15/2008
                   onChange={(e) => setRawText(e.target.value)}
                   className="min-h-[280px] font-mono text-sm"
                 />
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={handleLoadSample} 
-                    className="flex-1 min-h-[44px] gap-2"
-                  >
-                    <TestTube className="h-4 w-4" />
-                    Load Sample
-                  </Button>
-                  <Button 
-                    onClick={handleParse} 
-                    className="flex-1 min-h-[44px] gap-2"
-                    disabled={!rawText.trim()}
-                  >
-                    <FileText className="h-4 w-4" />
-                    Parse Data
-                  </Button>
-                </div>
+                <Button 
+                  onClick={handleParse} 
+                  className="w-full min-h-[44px] gap-2"
+                  disabled={!rawText.trim()}
+                >
+                  <FileText className="h-4 w-4" />
+                  Extract Data
+                </Button>
                 <Button 
                   variant="ghost"
                   size="sm"
