@@ -5,7 +5,7 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, FileText, CheckCircle, Clock, AlertTriangle, UserPlus } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
@@ -101,9 +101,6 @@ function AdminDashboardContent() {
   };
 
   const quickLinks = [
-    { href: '/admin/approvals', label: 'Pending', icon: Clock, count: stats.pendingApprovals, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-    { href: '/admin/schedule', label: 'Upcoming', icon: Calendar, count: stats.upcomingSessions, color: 'text-primary', bgColor: 'bg-primary/10' },
-    { href: '/admin/report-cards', label: 'Reports/Wk', icon: FileText, count: stats.recentReportCards, color: 'text-green-500', bgColor: 'bg-green-500/10' },
     { href: '/admin/approvals', label: 'Approvals', icon: UserPlus, count: stats.pendingApprovals, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
     { href: '/admin/students', label: 'Students', icon: Users, count: stats.totalStudents, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
     { href: '/admin/instructors', label: 'Instructors', icon: Users, count: stats.totalInstructors, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },

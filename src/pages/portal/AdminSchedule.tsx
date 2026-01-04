@@ -45,8 +45,9 @@ function AdminScheduleContent() {
     instructor_id: "",
     date: "",
     start_time: "",
-    duration: "2",
+    duration_minutes: "120", // Store as minutes internally
   });
+  const [startTimeAdjusted, setStartTimeAdjusted] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -98,14 +99,52 @@ function AdminScheduleContent() {
     setLoading(false);
   };
 
+  // Helper: snap time to next 30-minute boundary
+  const snapTo30Min = (date: Date): Date => {
+    const mins = date.getMinutes();
+    if (mins === 0 || mins === 30) return date;
+    const nextSlot = mins < 30 ? 30 : 60;
+    const snapped = new Date(date);
+    snapped.setMinutes(nextSlot === 60 ? 0 : nextSlot, 0, 0);
+    if (nextSlot === 60) snapped.setHours(snapped.getHours() + 1);
+    return snapped;
+  };
+
+  // Helper: ensure ends_at is on 30-min boundary (round up)
+  const roundEndTo30Min = (date: Date): Date => {
+    const mins = date.getMinutes();
+    if (mins === 0 || mins === 30) return date;
+    const rounded = new Date(date);
+    const nextSlot = mins < 30 ? 30 : 60;
+    rounded.setMinutes(nextSlot === 60 ? 0 : nextSlot, 0, 0);
+    if (nextSlot === 60) rounded.setHours(rounded.getHours() + 1);
+    return rounded;
+  };
+
   const handleCreateSession = async () => {
     if (!formData.student_id || !formData.instructor_id || !formData.date || !formData.start_time) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const startsAt = new Date(`${formData.date}T${formData.start_time}`);
-    const endsAt = addHours(startsAt, parseInt(formData.duration));
+    // Create starts_at from date + time and snap to 30-min boundary
+    let startsAt = new Date(`${formData.date}T${formData.start_time}`);
+    startsAt = snapTo30Min(startsAt);
+
+    // Calculate ends_at and ensure it's on 30-min boundary
+    const durationMs = parseInt(formData.duration_minutes) * 60 * 1000;
+    let endsAt = new Date(startsAt.getTime() + durationMs);
+    endsAt = roundEndTo30Min(endsAt);
+
+    const debugPayload = {
+      action: 'create_session',
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      duration_minutes: parseInt(formData.duration_minutes),
+      student_id: formData.student_id,
+      instructor_id: formData.instructor_id,
+    };
+    console.log('Session creation payload:', debugPayload);
 
     const { error } = await supabase.from('sessions').insert({
       student_id: formData.student_id,
@@ -116,8 +155,8 @@ function AdminScheduleContent() {
     });
 
     if (error) {
-      console.error('Session creation error:', error);
-      toast.error(`Failed to create session: ${error.message}`);
+      console.error('Session creation error:', { ...debugPayload, error });
+      toast.error(`Failed to create session: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
       return;
     }
 
@@ -130,8 +169,14 @@ function AdminScheduleContent() {
   const handleUpdateSession = async () => {
     if (!editingSession) return;
 
-    const startsAt = new Date(`${formData.date}T${formData.start_time}`);
-    const endsAt = addHours(startsAt, parseInt(formData.duration));
+    // Create starts_at from date + time and snap to 30-min boundary
+    let startsAt = new Date(`${formData.date}T${formData.start_time}`);
+    startsAt = snapTo30Min(startsAt);
+
+    // Calculate ends_at and ensure it's on 30-min boundary
+    const durationMs = parseInt(formData.duration_minutes) * 60 * 1000;
+    let endsAt = new Date(startsAt.getTime() + durationMs);
+    endsAt = roundEndTo30Min(endsAt);
 
     const { error } = await supabase
       .from('sessions')
@@ -145,7 +190,7 @@ function AdminScheduleContent() {
 
     if (error) {
       console.error('Session update error:', error);
-      toast.error(`Failed to update session: ${error.message}`);
+      toast.error(`Failed to update session: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
       return;
     }
 
@@ -188,23 +233,25 @@ function AdminScheduleContent() {
       instructor_id: "",
       date: "",
       start_time: "",
-      duration: "2",
+      duration_minutes: "120",
     });
+    setStartTimeAdjusted(false);
   };
 
   const openEditDialog = (session: Session) => {
     setEditingSession(session);
     const startsAt = parseISO(session.starts_at);
     const endsAt = parseISO(session.ends_at);
-    const durationHours = Math.round((endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60));
+    const durationMins = Math.round((endsAt.getTime() - startsAt.getTime()) / (1000 * 60));
 
     setFormData({
       student_id: session.student_id,
       instructor_id: session.instructor_id,
       date: format(startsAt, 'yyyy-MM-dd'),
       start_time: format(startsAt, 'HH:mm'),
-      duration: durationHours.toString(),
+      duration_minutes: durationMins.toString(),
     });
+    setStartTimeAdjusted(false);
     setDialogOpen(true);
   };
 
@@ -303,22 +350,46 @@ function AdminScheduleContent() {
                   <Label className="text-sm">Start Time</Label>
                   <Input
                     type="time"
+                    step="1800"
                     value={formData.start_time}
-                    onChange={e => setFormData(f => ({ ...f, start_time: e.target.value }))}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormData(f => ({ ...f, start_time: val }));
+                      // Check if time needs adjustment
+                      if (val) {
+                        const [hours, mins] = val.split(':').map(Number);
+                        if (mins !== 0 && mins !== 30) {
+                          setStartTimeAdjusted(true);
+                        } else {
+                          setStartTimeAdjusted(false);
+                        }
+                      }
+                    }}
                     className="min-h-[44px]"
                   />
+                  {startTimeAdjusted && (
+                    <p className="text-xs text-amber-600">
+                      Start time will be adjusted to the next 30-minute slot
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">Duration (hours)</Label>
-                <Select value={formData.duration} onValueChange={v => setFormData(f => ({ ...f, duration: v }))}>
+                <Label className="text-sm">Duration</Label>
+                <Select value={formData.duration_minutes} onValueChange={v => setFormData(f => ({ ...f, duration_minutes: v }))}>
                   <SelectTrigger className="min-h-[44px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border z-50">
-                    <SelectItem value="1">1 hour</SelectItem>
-                    <SelectItem value="2">2 hours</SelectItem>
-                    <SelectItem value="3">3 hours</SelectItem>
+                    <SelectItem value="30">30 min</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                    <SelectItem value="90">1.5 hours</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
+                    <SelectItem value="150">2.5 hours</SelectItem>
+                    <SelectItem value="180">3 hours</SelectItem>
+                    <SelectItem value="240">4 hours</SelectItem>
+                    <SelectItem value="360">6 hours</SelectItem>
+                    <SelectItem value="480">8 hours</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
