@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -7,10 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, Copy, Check, ShieldX } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
-import { ReportCardAudioPlayer } from "@/components/portal/ReportCardAudioPlayer";
 
 interface ReportCardDetails {
   id: string;
@@ -18,12 +17,6 @@ interface ReportCardDetails {
   session_id: string;
   student_id: string;
   instructor_id: string;
-  lesson_audio_url: string | null; // legacy public URL
-  audio_path: string | null; // canonical storage path
-  audio_mime: string | null;
-  audio_size_bytes: number | null;
-  audio_original_name: string | null;
-  audio_uploaded_at: string | null;
   transcription_summary: string | null;
   message_to_student: string | null;
   internal_message: string | null;
@@ -60,7 +53,7 @@ interface ReportCardDetails {
 export default function ReportCardView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+  
   const { user, role, isLoading: authLoading } = usePortalAuth();
   const { toast } = useToast();
   
@@ -70,9 +63,8 @@ export default function ReportCardView() {
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Check if we came from splash with autoplay flag
-  const locationState = location.state as { fromSplash?: boolean; attemptAutoplay?: boolean } | null;
-  const shouldAttemptAutoplay = locationState?.attemptAutoplay === true;
+  // Check if admin/instructor/staff for copy link visibility
+  const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
 
   const fetchReportCard = async () => {
     if (!id) {
@@ -165,8 +157,16 @@ export default function ReportCardView() {
     }
   };
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      const redirectPath = encodeURIComponent(`/report-cards/${id}`);
+      navigate(`/login?redirect=${redirectPath}`);
+    }
+  }, [user, authLoading, navigate, id]);
+
   // Show loading while checking auth
-  if (authLoading || (!user && !loading)) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -174,9 +174,13 @@ export default function ReportCardView() {
     );
   }
 
-  // If not authenticated, will redirect via useEffect
+  // If not authenticated, redirecting via useEffect
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -232,30 +236,34 @@ export default function ReportCardView() {
           </Card>
         ) : reportCard ? (
           <div className="space-y-4 sm:space-y-6">
-            {/* Copy Link Button */}
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopyLink}
-                className="gap-2"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy Link
-                  </>
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground text-right -mt-2">
-              Recipient must sign in to view.
-            </p>
+            {/* Copy Link Button (admin/instructor/staff only) */}
+            {canCopyLink && (
+              <>
+                <div className="flex justify-end">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCopyLink}
+                    className="gap-2"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground text-right -mt-2">
+                  Recipient must sign in to view.
+                </p>
+              </>
+            )}
 
             {/* Header Info */}
             <Card className="portal-card">
@@ -347,18 +355,6 @@ export default function ReportCardView() {
               </CardContent>
             </Card>
 
-            {/* Audio Section */}
-            <Card className="portal-card">
-              <CardContent className="p-4 sm:p-6">
-                <ReportCardAudioPlayer
-                  reportCardId={reportCard.id}
-                  audioPath={reportCard.audio_path}
-                  legacyUrl={reportCard.lesson_audio_url}
-                  autoPlay={shouldAttemptAutoplay}
-                  showDebug={role === 'admin' || role === 'staff'}
-                />
-              </CardContent>
-            </Card>
 
             {/* Transcription */}
             {reportCard.transcription_summary && (

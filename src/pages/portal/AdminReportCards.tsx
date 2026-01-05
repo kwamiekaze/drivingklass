@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
+import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { ReportCard, Profile, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
-import { ReportCardAudioPlayer } from "@/components/portal/ReportCardAudioPlayer";
 
 
 export default function AdminReportCards() {
@@ -230,12 +229,6 @@ function AdminReportCardsContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
-                    {/* Audio indicator */}
-                    {(rc as any).audio_path || rc.lesson_audio_url ? (
-                      <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center" title="Audio attached">
-                        <Volume2 className="h-4 w-4 text-primary" />
-                      </div>
-                    ) : null}
                     <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
                       Overall: {rc.overall || 'N/A'}
                     </Badge>
@@ -281,17 +274,6 @@ function AdminReportCardsContent() {
                       );
                     })}
                   </div>
-
-                   {/* Audio Player */}
-                   {((rc as any).audio_path || rc.lesson_audio_url) && (
-                     <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
-                       <ReportCardAudioPlayer
-                         reportCardId={rc.id}
-                         audioPath={(rc as any).audio_path}
-                         legacyUrl={rc.lesson_audio_url}
-                       />
-                     </div>
-                   )}
 
                   {/* Messages */}
                   {rc.message_to_student && (
