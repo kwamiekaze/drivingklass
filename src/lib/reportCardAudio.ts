@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const REPORT_CARD_AUDIO_BUCKET = "report_card_audio" as const;
-export const REPORT_CARD_AUDIO_MAX_BYTES = 20 * 1024 * 1024;
+export const REPORT_CARD_AUDIO_MAX_BYTES = 25 * 1024 * 1024; // 25MB
 
 export type GetReportCardAudioUrlResponse = {
   signedUrl?: string | null;
@@ -11,16 +11,22 @@ export type GetReportCardAudioUrlResponse = {
 };
 
 export async function getReportCardAudioUrl(reportCardId: string): Promise<GetReportCardAudioUrlResponse> {
-  const { data, error } = await supabase.functions.invoke<GetReportCardAudioUrlResponse>(
-    "get-report-card-audio-url",
-    { body: { report_card_id: reportCardId } }
-  );
+  try {
+    const { data, error } = await supabase.functions.invoke<GetReportCardAudioUrlResponse>(
+      "get-report-card-audio-url",
+      { body: { report_card_id: reportCardId } }
+    );
 
-  if (error) {
-    throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+
+    return data ?? {};
+  } catch (err) {
+    console.error("Failed to fetch audio URL:", err);
+    throw err;
   }
-
-  return data ?? {};
 }
 
 export function sanitizeFilename(filename: string) {

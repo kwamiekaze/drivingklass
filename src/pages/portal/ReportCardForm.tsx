@@ -160,11 +160,11 @@ function ReportCardFormContent() {
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Max 20MB (tolerant but prevents mobile failures)
+      // Max 25MB
       if (file.size > REPORT_CARD_AUDIO_MAX_BYTES) {
         toast({
           title: "File too large",
-          description: "Please select an audio file under 20MB",
+          description: "Please select an audio file under 25MB",
           variant: "destructive",
         });
         return;
