@@ -4,6 +4,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
+import { ReportCardSplash } from "@/components/portal/ReportCardSplash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,20 @@ import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 
 export default function ReportCardForm() {
+  const { user, role } = usePortalAuth();
+  const [splashComplete, setSplashComplete] = useState(false);
+
+  // Show splash for instructor only (admin skips splash)
+  if (user && !splashComplete) {
+    return (
+      <ReportCardSplash
+        userId={user.id}
+        userRole={role}
+        onComplete={() => setSplashComplete(true)}
+      />
+    );
+  }
+
   return (
     <ProtectedRoute allowedRoles={['instructor', 'admin']}>
       <PortalLayout>
