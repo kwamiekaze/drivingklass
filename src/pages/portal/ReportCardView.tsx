@@ -67,6 +67,7 @@ export default function ReportCardView() {
   const [reportCard, setReportCard] = useState<ReportCardDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
   
   // Check if we came from splash with autoplay flag
@@ -74,13 +75,28 @@ export default function ReportCardView() {
   const shouldAttemptAutoplay = locationState?.attemptAutoplay === true;
 
   const fetchReportCard = async () => {
-    if (!id) return;
+    if (!id) {
+      setFetchError(true);
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
+    setFetchError(false);
+    setUnauthorized(false);
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setFetchError(true);
+      setLoading(false);
+    }, 10000);
+
     try {
       const { data, error } = await supabase.rpc('get_report_card_details', {
         p_report_card_id: id
       });
+
+      clearTimeout(timeoutId);
 
       if (error) throw error;
 
@@ -90,12 +106,26 @@ export default function ReportCardView() {
         setReportCard(data[0] as ReportCardDetails);
       }
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.error('Error fetching report card:', err);
-      setUnauthorized(true);
+      // Check if it's a permission error vs a general fetch error
+      if (err?.code === 'PGRST116' || err?.message?.includes('permission')) {
+        setUnauthorized(true);
+      } else {
+        setFetchError(true);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Trigger fetch on mount or when id changes
+  useEffect(() => {
+    if (user && id) {
+      fetchReportCard();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, id]);
 
   const getRatingColor = (rating: number | null) => {
     if (!rating) return 'bg-muted';
@@ -169,6 +199,24 @@ export default function ReportCardView() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : fetchError ? (
+          <Card className="portal-card">
+            <CardContent className="py-12 text-center">
+              <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h2 className="text-xl font-semibold mb-2">Unable to Load</h2>
+              <p className="text-muted-foreground mb-6">
+                There was an issue loading this report card. Please try again.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={fetchReportCard} variant="outline">
+                  Retry
+                </Button>
+                <Button onClick={handleGoBack} className="cta-button">
+                  Go to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : unauthorized ? (
           <Card className="portal-card">
             <CardContent className="py-12 text-center">
@@ -305,6 +353,7 @@ export default function ReportCardView() {
                 <CardContent className="p-4 sm:p-6">
                   <ReportCardAudioPlayer
                     reportCardId={reportCard.id}
+                    audioPath={reportCard.audio_path}
                     legacyUrl={reportCard.lesson_audio_url}
                     autoPlay={shouldAttemptAutoplay}
                   />

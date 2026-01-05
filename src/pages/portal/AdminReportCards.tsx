@@ -287,6 +287,7 @@ function AdminReportCardsContent() {
                      <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
                        <ReportCardAudioPlayer
                          reportCardId={rc.id}
+                         audioPath={(rc as any).audio_path}
                          legacyUrl={rc.lesson_audio_url}
                        />
                      </div>

@@ -1,70 +1,100 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Volume2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Volume2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getReportCardAudioUrl } from "@/lib/reportCardAudio";
+import { getReportCardAudioUrl, GetReportCardAudioUrlResponse } from "@/lib/reportCardAudio";
 
 type Props = {
   reportCardId: string;
   /** Legacy public URL fallback (older report cards) */
   legacyUrl?: string | null;
+  /** Audio path in storage (new report cards) */
+  audioPath?: string | null;
   /** When true, will try to auto-play once after the URL is resolved */
   autoPlay?: boolean;
 };
 
-export function ReportCardAudioPlayer({ reportCardId, legacyUrl, autoPlay }: Props) {
+export function ReportCardAudioPlayer({ reportCardId, legacyUrl, audioPath, autoPlay }: Props) {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(legacyUrl ?? null);
-  const [mime, setMime] = useState<string | null>(null);
+  // Only show the player if there's actually audio
+  const hasAudio = !!(audioPath || legacyUrl);
+
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [needsUserGesture, setNeedsUserGesture] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(legacyUrl ? "ready" : "idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [retryCount, setRetryCount] = useState(0);
+  const attemptedAutoplay = useRef(false);
 
-  const hasAnyAudio = useMemo(() => true, []);
+  // Reset state when report card changes
+  useEffect(() => {
+    setResolvedUrl(null);
+    setStatus("idle");
+    setRetryCount(0);
+    setNeedsUserGesture(false);
+    attemptedAutoplay.current = false;
+  }, [reportCardId]);
 
-  const resolveUrl = async () => {
-    if (resolvedUrl) return resolvedUrl;
-
-    setStatus("loading");
-    const resp = await getReportCardAudioUrl(reportCardId);
-
-    const url = resp.signedUrl || resp.legacyUrl || null;
-    setResolvedUrl(url);
-    setMime(resp.mime ?? null);
-
-    if (!url) {
-      setStatus("error");
-      throw new Error("No audio available");
+  const resolveUrl = async (): Promise<string | null> => {
+    // If we have a legacy URL and no storage path, use it directly
+    if (legacyUrl && !audioPath) {
+      setResolvedUrl(legacyUrl);
+      setStatus("ready");
+      return legacyUrl;
     }
 
-    setStatus("ready");
-    return url;
+    // Otherwise fetch signed URL from edge function
+    setStatus("loading");
+    
+    try {
+      const resp: GetReportCardAudioUrlResponse = await getReportCardAudioUrl(reportCardId);
+      const url = resp.signedUrl || resp.legacyUrl || null;
+      
+      if (!url) {
+        setStatus("error");
+        return null;
+      }
+
+      setResolvedUrl(url);
+      setStatus("ready");
+      return url;
+    } catch (err) {
+      console.error("Failed to get audio URL:", err);
+      setStatus("error");
+      return null;
+    }
   };
 
-  const playWithResolvedUrl = async (url: string) => {
+  const playWithUrl = async (url: string) => {
     if (!audioRef.current) return;
 
-    // Assign src directly so the play() call is tied to the same user gesture handler.
+    // Set src if needed
     if (audioRef.current.src !== url) {
       audioRef.current.src = url;
+      audioRef.current.load();
     }
 
     try {
       await audioRef.current.play();
       setNeedsUserGesture(false);
       setStatus("ready");
-    } catch {
-      // Autoplay / playback blocked
+    } catch (err) {
+      // Autoplay blocked
+      console.log("Autoplay blocked, user gesture needed");
       setNeedsUserGesture(true);
     }
   };
 
   const handleUserPlay = async () => {
     try {
-      const url = await resolveUrl();
-      await playWithResolvedUrl(url);
+      let url = resolvedUrl;
+      if (!url) {
+        url = await resolveUrl();
+      }
+      if (url) {
+        await playWithUrl(url);
+      }
     } catch {
       setStatus("error");
       toast({
@@ -75,24 +105,32 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, autoPlay }: Pro
     }
   };
 
-  // Auto-play after splash (best-effort)
+  const handleRetry = async () => {
+    setRetryCount(0);
+    setResolvedUrl(null);
+    setStatus("idle");
+    await handleUserPlay();
+  };
+
+  // Auto-play after splash (best-effort, only once)
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay || !hasAudio || attemptedAutoplay.current) return;
+    attemptedAutoplay.current = true;
 
     let cancelled = false;
 
     const run = async () => {
       try {
         const url = await resolveUrl();
-        if (cancelled) return;
+        if (cancelled || !url) return;
 
-        // Delay to ensure the page has rendered and the <audio> element is mounted.
+        // Small delay to ensure audio element is ready
         setTimeout(() => {
           if (cancelled) return;
-          playWithResolvedUrl(url);
-        }, 250);
+          playWithUrl(url);
+        }, 300);
       } catch {
-        // swallow
+        // Silent fail for autoplay
       }
     };
 
@@ -101,26 +139,33 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, autoPlay }: Pro
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPlay, reportCardId]);
+  }, [autoPlay, hasAudio, reportCardId]);
 
   const handleAudioError = async () => {
-    // One automatic refresh attempt (signed URLs can expire)
+    // One automatic retry (signed URLs can expire)
     if (retryCount >= 1) {
       setStatus("error");
       return;
     }
 
+    console.log("Audio playback error, attempting to refresh URL");
+    setRetryCount(prev => prev + 1);
+    setResolvedUrl(null);
+    
     try {
-      setRetryCount(1);
-      setResolvedUrl(null);
       const url = await resolveUrl();
-      await playWithResolvedUrl(url);
+      if (url) {
+        await playWithUrl(url);
+      }
     } catch {
       setStatus("error");
     }
   };
 
-  if (!hasAnyAudio) return null;
+  // Don't render if no audio exists
+  if (!hasAudio) return null;
+
+  const showPlayButton = !resolvedUrl || needsUserGesture || status === "error" || status === "idle";
 
   return (
     <div className="space-y-3">
@@ -129,19 +174,37 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, autoPlay }: Pro
         <span className="font-medium text-sm">Lesson Audio</span>
       </div>
 
-      {/* Primary action when we don't yet have a URL (private audio) */}
-      {(!resolvedUrl || needsUserGesture || status === "error") && (
-        <Button onClick={handleUserPlay} className="w-full cta-button">
-          {status === "loading" ? "Loading audio…" : needsUserGesture ? "Tap to Play Audio" : "Tap to Play Audio"}
+      {/* Play/Retry button */}
+      {showPlayButton && (
+        <Button 
+          onClick={status === "error" ? handleRetry : handleUserPlay} 
+          className="w-full cta-button"
+          disabled={status === "loading"}
+        >
+          {status === "loading" ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Loading audio…
+            </>
+          ) : status === "error" ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tap to Retry
+            </>
+          ) : needsUserGesture ? (
+            "Tap to Play Audio"
+          ) : (
+            "Tap to Play Audio"
+          )}
         </Button>
       )}
 
-      {/* Audio element (controls visible once URL is resolved; legacy URLs render immediately) */}
+      {/* Audio element - always rendered but only visible when URL is resolved */}
       <audio
         ref={audioRef}
         controls
-        preload="none"
-        className="w-full"
+        preload="metadata"
+        className={`w-full ${resolvedUrl && !needsUserGesture ? 'block' : 'hidden'}`}
         onError={handleAudioError}
       />
 
@@ -149,15 +212,9 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, autoPlay }: Pro
         <p className="text-xs text-muted-foreground">Audio is temporarily unavailable. Tap to retry.</p>
       )}
 
-      {/* Hint for iOS / autoplay restrictions */}
-      {needsUserGesture && (
-        <p className="text-xs text-muted-foreground">If playback doesn’t start automatically, tap the button again.</p>
+      {needsUserGesture && status === "ready" && (
+        <p className="text-xs text-muted-foreground">Tap the button to start playback.</p>
       )}
-
-      {/* Apply MIME when we have it (helps some browsers) */}
-      {mime ? (
-        <style>{``}</style>
-      ) : null}
     </div>
   );
 }
