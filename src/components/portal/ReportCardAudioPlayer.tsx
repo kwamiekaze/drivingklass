@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Volume2, RefreshCw } from "lucide-react";
+import { Volume2, RefreshCw, Bug, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getReportCardAudioUrl, GetReportCardAudioUrlResponse } from "@/lib/reportCardAudio";
+import { supabase } from "@/integrations/supabase/client";
+import { REPORT_CARD_AUDIO_BUCKET } from "@/lib/reportCardAudio";
 
 type Props = {
   reportCardId: string;
@@ -12,104 +13,127 @@ type Props = {
   audioPath?: string | null;
   /** When true, will try to auto-play once after the URL is resolved */
   autoPlay?: boolean;
+  /** Show debug info (admin only) */
+  showDebug?: boolean;
 };
 
-export function ReportCardAudioPlayer({ reportCardId, legacyUrl, audioPath, autoPlay }: Props) {
-  const { toast } = useToast();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+type AudioStatus = "idle" | "loading" | "playing" | "error" | "ready";
 
-  // Only show the player if there's actually audio
+export function ReportCardAudioPlayer({ 
+  reportCardId, 
+  legacyUrl, 
+  audioPath, 
+  autoPlay,
+  showDebug = false 
+}: Props) {
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   const hasAudio = !!(audioPath || legacyUrl);
 
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
-  const [needsUserGesture, setNeedsUserGesture] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [retryCount, setRetryCount] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<AudioStatus>("idle");
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const attemptedAutoplay = useRef(false);
 
   // Reset state when report card changes
   useEffect(() => {
-    setResolvedUrl(null);
+    setAudioUrl(null);
     setStatus("idle");
-    setRetryCount(0);
-    setNeedsUserGesture(false);
+    setLastError(null);
     attemptedAutoplay.current = false;
   }, [reportCardId]);
 
-  const resolveUrl = async (): Promise<string | null> => {
-    // If we have a legacy URL and no storage path, use it directly
-    if (legacyUrl && !audioPath) {
-      setResolvedUrl(legacyUrl);
-      setStatus("ready");
-      return legacyUrl;
-    }
-
-    // Otherwise fetch signed URL from edge function
-    setStatus("loading");
-    
+  /**
+   * Always refresh the signed URL on tap - never rely on cached URLs
+   */
+  const onTapPlay = async () => {
     try {
-      const resp: GetReportCardAudioUrlResponse = await getReportCardAudioUrl(reportCardId);
-      const url = resp.signedUrl || resp.legacyUrl || null;
-      
-      if (!url) {
-        setStatus("error");
-        return null;
+      setStatus("loading");
+      setLastError(null);
+
+      // If only legacy URL exists (no storage path), use it directly
+      if (legacyUrl && !audioPath) {
+        setAudioUrl(legacyUrl);
+        await playAudioWithUrl(legacyUrl);
+        return;
       }
 
-      setResolvedUrl(url);
-      setStatus("ready");
-      return url;
-    } catch (err) {
-      console.error("Failed to get audio URL:", err);
+      if (!audioPath) {
+        throw new Error("No audio attached to this report.");
+      }
+
+      // Always create a fresh signed URL on tap
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(REPORT_CARD_AUDIO_BUCKET)
+        .createSignedUrl(audioPath, 60 * 30); // 30 minutes
+
+      if (signErr || !signed?.signedUrl) {
+        console.error("Signed URL error:", signErr);
+        throw new Error("Could not load audio link.");
+      }
+
+      const url = signed.signedUrl;
+      setAudioUrl(url);
+      await playAudioWithUrl(url);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Unable to play audio.";
       setStatus("error");
-      return null;
-    }
-  };
-
-  const playWithUrl = async (url: string) => {
-    if (!audioRef.current) return;
-
-    // Set src if needed
-    if (audioRef.current.src !== url) {
-      audioRef.current.src = url;
-      audioRef.current.load();
-    }
-
-    try {
-      await audioRef.current.play();
-      setNeedsUserGesture(false);
-      setStatus("ready");
-    } catch (err) {
-      // Autoplay blocked
-      console.log("Autoplay blocked, user gesture needed");
-      setNeedsUserGesture(true);
-    }
-  };
-
-  const handleUserPlay = async () => {
-    try {
-      let url = resolvedUrl;
-      if (!url) {
-        url = await resolveUrl();
-      }
-      if (url) {
-        await playWithUrl(url);
-      }
-    } catch {
-      setStatus("error");
+      setLastError(message);
       toast({
         title: "Audio unavailable",
-        description: "Audio is temporarily unavailable. Tap to retry.",
+        description: message,
         variant: "destructive",
       });
     }
   };
 
-  const handleRetry = async () => {
-    setRetryCount(0);
-    setResolvedUrl(null);
-    setStatus("idle");
-    await handleUserPlay();
+  /**
+   * Load and play audio with proper Safari/iOS handling
+   */
+  const playAudioWithUrl = async (url: string) => {
+    const el = audioRef.current;
+    if (!el) {
+      throw new Error("Audio player not available.");
+    }
+
+    // Stop any current playback and set new source
+    el.pause();
+    el.src = url;
+    el.load();
+
+    // Wait until browser confirms it can play (Safari needs this)
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Audio timed out loading."));
+      }, 7000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        el.removeEventListener("canplay", onCanPlay);
+        el.removeEventListener("error", onError);
+      };
+
+      const onCanPlay = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error("Audio file can't be played."));
+      };
+
+      el.addEventListener("canplay", onCanPlay, { once: true });
+      el.addEventListener("error", onError, { once: true });
+    });
+
+    // Now play inside the user gesture context
+    await el.play();
+    setStatus("playing");
   };
 
   // Auto-play after splash (best-effort, only once)
@@ -117,55 +141,61 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, audioPath, auto
     if (!autoPlay || !hasAudio || attemptedAutoplay.current) return;
     attemptedAutoplay.current = true;
 
-    let cancelled = false;
+    // Small delay to ensure component is mounted
+    const timer = setTimeout(() => {
+      onTapPlay().catch(() => {
+        // Silent fail for autoplay - user can tap manually
+        setStatus("idle");
+      });
+    }, 300);
 
-    const run = async () => {
-      try {
-        const url = await resolveUrl();
-        if (cancelled || !url) return;
-
-        // Small delay to ensure audio element is ready
-        setTimeout(() => {
-          if (cancelled) return;
-          playWithUrl(url);
-        }, 300);
-      } catch {
-        // Silent fail for autoplay
-      }
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPlay, hasAudio, reportCardId]);
 
-  const handleAudioError = async () => {
-    // One automatic retry (signed URLs can expire)
-    if (retryCount >= 1) {
-      setStatus("error");
-      return;
-    }
+  // Handle audio element events
+  const handleAudioEnded = () => {
+    setStatus("ready");
+  };
 
-    console.log("Audio playback error, attempting to refresh URL");
-    setRetryCount(prev => prev + 1);
-    setResolvedUrl(null);
-    
-    try {
-      const url = await resolveUrl();
-      if (url) {
-        await playWithUrl(url);
-      }
-    } catch {
+  const handleAudioPlay = () => {
+    setStatus("playing");
+  };
+
+  const handleAudioPause = () => {
+    if (status === "playing") {
+      setStatus("ready");
+    }
+  };
+
+  const handleAudioError = () => {
+    if (status === "loading" || status === "playing") {
       setStatus("error");
+      setLastError("Playback failed. Tap to retry.");
+    }
+  };
+
+  const copyAudioUrl = async () => {
+    if (audioUrl) {
+      await navigator.clipboard.writeText(audioUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
   // Don't render if no audio exists
-  if (!hasAudio) return null;
+  if (!hasAudio) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium text-sm text-muted-foreground">No audio attached</span>
+        </div>
+      </div>
+    );
+  }
 
-  const showPlayButton = !resolvedUrl || needsUserGesture || status === "error" || status === "idle";
+  const showPlayButton = status === "idle" || status === "error" || status === "loading";
 
   return (
     <div className="space-y-3">
@@ -174,12 +204,13 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, audioPath, auto
         <span className="font-medium text-sm">Lesson Audio</span>
       </div>
 
-      {/* Play/Retry button */}
+      {/* Play/Retry button - shown when not actively playing */}
       {showPlayButton && (
         <Button 
-          onClick={status === "error" ? handleRetry : handleUserPlay} 
+          onClick={onTapPlay} 
           className="w-full cta-button"
           disabled={status === "loading"}
+          type="button"
         >
           {status === "loading" ? (
             <>
@@ -191,29 +222,64 @@ export function ReportCardAudioPlayer({ reportCardId, legacyUrl, audioPath, auto
               <RefreshCw className="h-4 w-4 mr-2" />
               Tap to Retry
             </>
-          ) : needsUserGesture ? (
-            "Tap to Play Audio"
           ) : (
             "Tap to Play Audio"
           )}
         </Button>
       )}
 
-      {/* Audio element - always rendered but only visible when URL is resolved */}
+      {/* Audio element - always rendered, visible when playing/ready */}
       <audio
         ref={audioRef}
         controls
+        playsInline
         preload="metadata"
-        className={`w-full ${resolvedUrl && !needsUserGesture ? 'block' : 'hidden'}`}
+        crossOrigin="anonymous"
+        className={`w-full ${status === "playing" || status === "ready" ? "block" : "hidden"}`}
+        onEnded={handleAudioEnded}
+        onPlay={handleAudioPlay}
+        onPause={handleAudioPause}
         onError={handleAudioError}
       />
 
-      {status === "error" && (
-        <p className="text-xs text-muted-foreground">Audio is temporarily unavailable. Tap to retry.</p>
+      {status === "error" && lastError && (
+        <p className="text-xs text-muted-foreground">{lastError}</p>
       )}
 
-      {needsUserGesture && status === "ready" && (
-        <p className="text-xs text-muted-foreground">Tap the button to start playback.</p>
+      {/* Debug section (admin only) */}
+      {showDebug && (
+        <div className="mt-2">
+          <button 
+            onClick={() => setDebugOpen(!debugOpen)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            type="button"
+          >
+            <Bug className="h-3 w-3" />
+            {debugOpen ? "Hide debug" : "Show debug"}
+          </button>
+          
+          {debugOpen && (
+            <div className="mt-2 p-2 bg-muted/50 rounded text-xs space-y-1 font-mono">
+              <div>audio_path: {audioPath ? "✓" : "✗"}</div>
+              <div>legacyUrl: {legacyUrl ? "✓" : "✗"}</div>
+              <div>audioUrl: {audioUrl ? "✓" : "✗"}</div>
+              <div>status: {status}</div>
+              {lastError && <div className="text-destructive">error: {lastError}</div>}
+              {audioUrl && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={copyAudioUrl}
+                  className="mt-1 h-6 text-xs"
+                  type="button"
+                >
+                  {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                  {copied ? "Copied" : "Copy audio URL"}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
