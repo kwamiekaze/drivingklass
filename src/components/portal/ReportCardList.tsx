@@ -52,7 +52,8 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
   };
 
   const handleOpenReportCard = (reportCardId: string) => {
-    navigate(`/report-cards/${reportCardId}`);
+    // Route through splash screen for student/instructor
+    navigate(`/report-cards/open/${reportCardId}`);
   };
 
   const canSeeInternalMessage = userRole === 'staff' || userRole === 'admin';

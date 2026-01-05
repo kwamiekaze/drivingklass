@@ -30,6 +30,7 @@ import InstructorDashboard from "./pages/portal/InstructorDashboard";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import ReportCardForm from "./pages/portal/ReportCardForm";
 import ReportCardView from "./pages/portal/ReportCardView";
+import ReportCardOpen from "./pages/portal/ReportCardOpen";
 import AdminDashboard from "./pages/portal/AdminDashboard";
 import AdminApprovals from "./pages/portal/AdminApprovals";
 import AdminSchedule from "./pages/portal/AdminSchedule";
@@ -90,7 +91,8 @@ const App = () => (
                   <Route path="/instructor/report-cards/new" element={<ReportCardForm />} />
                   <Route path="/instructor/report-cards/edit/:id" element={<ReportCardForm />} />
                   
-                  {/* Shareable Report Card Route */}
+                  {/* Report Card Routes */}
+                  <Route path="/report-cards/open/:id" element={<ReportCardOpen />} />
                   <Route path="/report-cards/:id" element={<ReportCardView />} />
                   
                   {/* Admin Portal */}

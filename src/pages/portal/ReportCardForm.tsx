@@ -4,34 +4,20 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
-import { ReportCardSplash } from "@/components/portal/ReportCardSplash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Upload, Calendar, User } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Upload, Calendar, User, Check, X, RefreshCw } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 
 export default function ReportCardForm() {
-  const { user, role } = usePortalAuth();
-  const [splashComplete, setSplashComplete] = useState(false);
-
-  // Show splash for instructor only (admin skips splash)
-  if (user && !splashComplete) {
-    return (
-      <ReportCardSplash
-        userId={user.id}
-        userRole={role}
-        onComplete={() => setSplashComplete(true)}
-      />
-    );
-  }
-
   return (
     <ProtectedRoute allowedRoles={['instructor', 'admin']}>
       <PortalLayout>
@@ -57,6 +43,8 @@ function ReportCardFormContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
 
   const [formData, setFormData] = useState({
     lesson_audio_url: '',
@@ -148,18 +136,54 @@ function ReportCardFormContent() {
     setLoading(false);
   };
 
+  // Helper to validate audio file type
+  const isValidAudioFile = (file: File): boolean => {
+    const validMimeTypes = [
+      'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+      'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/ogg',
+      'video/mp4', // iOS sometimes uses this for audio recordings
+    ];
+    const validExtensions = ['mp3', 'm4a', 'mp4', 'aac', 'wav', 'webm', 'ogg'];
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    
+    // Check MIME type OR extension (be tolerant)
+    return validMimeTypes.includes(file.type) || validExtensions.includes(extension);
+  };
+
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
+      // Max 25MB
+      if (file.size > 25 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select an audio file under 50MB",
+          description: "Please select an audio file under 25MB",
           variant: "destructive",
         });
         return;
       }
+      
+      // Validate file type (be tolerant for mobile)
+      if (!isValidAudioFile(file)) {
+        toast({
+          title: "Unsupported file type",
+          description: "Please select an audio file (mp3, m4a, wav, aac)",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setAudioFile(file);
+      setUploadStatus('idle');
+    }
+  };
+  
+  const clearAudioFile = () => {
+    setAudioFile(null);
+    setUploadStatus('idle');
+    setUploadProgress(0);
+    if (audioInputRef.current) {
+      audioInputRef.current.value = '';
     }
   };
 
@@ -332,24 +356,61 @@ function ReportCardFormContent() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Audio File (Optional)</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
                   ref={audioInputRef}
                   type="file"
-                  accept="audio/*"
+                  accept="audio/*,.m4a,.mp3,.wav,.aac,.mp4"
                   onChange={handleAudioSelect}
                   className="hidden"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => audioInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Audio
-                </Button>
-                {audioFile && <span className="text-sm text-muted-foreground">{audioFile.name}</span>}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => audioInputRef.current?.click()}
+                    className="gap-2"
+                    disabled={saving}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {audioFile ? 'Change Audio' : 'Upload Audio'}
+                  </Button>
+                  {audioFile && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearAudioFile}
+                      className="h-8 w-8"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Selected file info */}
+                {audioFile && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border">
+                    {uploadStatus === 'success' ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : uploadStatus === 'error' ? (
+                      <RefreshCw className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{audioFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Upload progress */}
+                {uploadStatus === 'uploading' && (
+                  <Progress value={uploadProgress} className="h-2" />
+                )}
               </div>
             </div>
 
