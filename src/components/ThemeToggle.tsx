@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme, ThemePreference } from "@/components/ThemeProvider";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePortalAuth } from "@/hooks/usePortalAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,16 @@ export function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { trackClick } = useAnalytics();
   const isMobile = useIsMobile();
+  
+  // Get role - will be null if not logged in or context not available
+  let isAdmin = false;
+  try {
+    const { role } = usePortalAuth();
+    isAdmin = role === 'admin';
+  } catch {
+    // Not inside PortalAuthProvider - treat as non-admin
+    isAdmin = false;
+  }
 
   const handleThemeChange = (newTheme: ThemePreference) => {
     trackClick("theme_toggle", { theme: newTheme });
@@ -53,14 +64,19 @@ export function ThemeToggle() {
           <Moon className="mr-2 h-4 w-4" />
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
-          <SystemIcon className="mr-2 h-4 w-4" />
-          Auto (System)
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("time-based")}>
-          <Clock className="mr-2 h-4 w-4" />
-          Time-based (7AM-6PM)
-        </DropdownMenuItem>
+        {/* Admin-only options */}
+        {isAdmin && (
+          <>
+            <DropdownMenuItem onClick={() => handleThemeChange("system")}>
+              <SystemIcon className="mr-2 h-4 w-4" />
+              Auto (System)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleThemeChange("time-based")}>
+              <Clock className="mr-2 h-4 w-4" />
+              Time-based (7AM-6PM)
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

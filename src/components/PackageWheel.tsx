@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
 import { cn } from "@/lib/utils";
@@ -7,9 +8,50 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "./ThemeProvider";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { formatChipPrice } from "@/lib/priceFormatters";
+import { supabase } from "@/integrations/supabase/client";
 import carHeadlightsOff from "@/assets/car-headlights-off.png";
 import carHeadlightsOn from "@/assets/car-headlights-on.png";
 
+// Clickable car center - routes to auth or dashboard based on login state/role
+function CarCenterLink({ children }: { children: React.ReactNode }) {
+  const [destination, setDestination] = useState("/auth");
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setDestination("/auth");
+        return;
+      }
+      // Fetch role from user_roles
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      
+      const role = roleData?.role;
+      if (role === 'admin' || role === 'staff') {
+        setDestination("/admin");
+      } else if (role === 'instructor') {
+        setDestination("/instructor");
+      } else {
+        setDestination("/student");
+      }
+    };
+    checkAuth();
+  }, []);
+
+  return (
+    <Link
+      to={destination}
+      className="absolute inset-0 flex items-center justify-center z-10 cursor-pointer transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+      aria-label={destination === "/auth" ? "Sign in" : "Go to dashboard"}
+    >
+      {children}
+    </Link>
+  );
+}
 interface PackageWheelProps {
   onPackageSelect?: (packageId: string) => void;
 }
@@ -277,12 +319,8 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
         }}
       >
         
-        {/* HERO CENTER LAYER - Car with headlight switching */}
-        <div 
-          className="absolute inset-0 flex items-center justify-center z-10"
-          style={{ pointerEvents: 'none' }}
-          aria-hidden="true"
-        >
+        {/* HERO CENTER LAYER - Car with headlight switching - CLICKABLE */}
+        <CarCenterLink>
           <div className="relative w-[58%] flex items-center justify-center">
             {/* Static radial glow behind car - never changes */}
             <div 
@@ -331,7 +369,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
               />
             </div>
           </div>
-        </div>
+        </CarCenterLink>
 
         {/* Price chip layer - shows during glow animation, hover (desktop), or selection */}
         {chipIndexToShow && (
@@ -390,7 +428,10 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
           </p>
           <p 
             className="text-lg sm:text-xl font-bold mb-1"
-            style={{
+            style={isLight ? {
+              color: '#111827',
+              fontWeight: 700,
+            } : {
               background: 'linear-gradient(135deg, hsl(43 85% 55%) 0%, hsl(48 90% 72%) 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
@@ -401,7 +442,10 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
           </p>
           <p 
             className="text-2xl sm:text-3xl font-bold mb-5"
-            style={{
+            style={isLight ? {
+              color: '#111827',
+              fontWeight: 700,
+            } : {
               background: 'linear-gradient(135deg, hsl(38 75% 45%) 0%, hsl(43 85% 55%) 50%, hsl(48 90% 72%) 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
