@@ -19,7 +19,7 @@ export function useNotifications() {
       .limit(50);
     
     if (data) {
-      setNotifications(data as Notification[]);
+      setNotifications(data as unknown as Notification[]);
       setUnreadCount(data.filter(n => !n.read).length);
     }
   };

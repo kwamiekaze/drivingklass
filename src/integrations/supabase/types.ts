@@ -455,33 +455,75 @@ export type Database = {
       }
       notifications: {
         Row: {
+          actor_id: string | null
           created_at: string | null
+          dedupe_key: string | null
           id: string
+          link: string | null
           message: string
+          metadata: Json | null
           read: boolean | null
+          report_card_id: string | null
+          session_id: string | null
+          severity: string | null
           title: string
           type: string | null
           user_id: string
         }
         Insert: {
+          actor_id?: string | null
           created_at?: string | null
+          dedupe_key?: string | null
           id?: string
+          link?: string | null
           message: string
+          metadata?: Json | null
           read?: boolean | null
+          report_card_id?: string | null
+          session_id?: string | null
+          severity?: string | null
           title: string
           type?: string | null
           user_id: string
         }
         Update: {
+          actor_id?: string | null
           created_at?: string | null
+          dedupe_key?: string | null
           id?: string
+          link?: string | null
           message?: string
+          metadata?: Json | null
           read?: boolean | null
+          report_card_id?: string | null
+          session_id?: string | null
+          severity?: string | null
           title?: string
           type?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_report_card_id_fkey"
+            columns: ["report_card_id"]
+            isOneToOne: false
+            referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]

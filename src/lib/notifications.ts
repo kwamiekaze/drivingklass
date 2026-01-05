@@ -1,5 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
-import { NotificationType, NotificationSeverity } from "@/types/portal";
+import { Json } from "@/integrations/supabase/types";
+
+type NotificationType = 
+  | 'approval' 
+  | 'rejection' 
+  | 'schedule' 
+  | 'report_card' 
+  | 'message' 
+  | 'system' 
+  | 'session_created'
+  | 'session_cancelled'
+  | 'session_rescheduled'
+  | 'session_completed';
+
+type NotificationSeverity = 'info' | 'success' | 'warning' | 'critical';
 
 interface SendNotificationParams {
   userId: string;
@@ -8,7 +22,7 @@ interface SendNotificationParams {
   type: NotificationType;
   severity?: NotificationSeverity;
   link?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Json;
 }
 
 /**
@@ -24,16 +38,16 @@ export async function sendNotification({
   link,
   metadata,
 }: SendNotificationParams): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from('notifications').insert({
+  const { error } = await supabase.from('notifications').insert([{
     user_id: userId,
     title,
     message: body,
     type,
     severity,
     link,
-    metadata,
+    metadata: metadata ?? null,
     read: false,
-  });
+  }]);
 
   if (error) {
     console.error('Failed to send notification:', error);
