@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Volume2, RefreshCw, Bug, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { REPORT_CARD_AUDIO_BUCKET } from "@/lib/reportCardAudio";
+import { getReportCardAudioUrl } from "@/lib/reportCardAudio";
 
 type Props = {
   reportCardId: string;
@@ -47,39 +46,34 @@ export function ReportCardAudioPlayer({
   }, [reportCardId]);
 
   /**
-   * Always refresh the signed URL on tap - never rely on cached URLs
+   * Always refresh the signed URL via edge function (service role) - never direct storage
    */
   const onTapPlay = async () => {
     try {
       setStatus("loading");
       setLastError(null);
 
-      // If only legacy URL exists (no storage path), use it directly
-      if (legacyUrl && !audioPath) {
-        setAudioUrl(legacyUrl);
-        await playAudioWithUrl(legacyUrl);
-        return;
+      // Use edge function to get signed URL (bypasses storage RLS)
+      const result = await getReportCardAudioUrl(reportCardId);
+
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      if (!audioPath) {
-        throw new Error("No audio attached to this report.");
+      // Prefer signed URL from edge function, fallback to legacy URL
+      const url = result.signedUrl || result.legacyUrl || legacyUrl;
+
+      if (!url) {
+        throw new Error("No audio available for this report.");
       }
 
-      // Always create a fresh signed URL on tap
-      const { data: signed, error: signErr } = await supabase.storage
-        .from(REPORT_CARD_AUDIO_BUCKET)
-        .createSignedUrl(audioPath, 60 * 30); // 30 minutes
-
-      if (signErr || !signed?.signedUrl) {
-        console.error("Signed URL error:", signErr);
-        throw new Error("Could not load audio link.");
-      }
-
-      const url = signed.signedUrl;
+      console.log("Audio URL resolved:", { hasSignedUrl: !!result.signedUrl, hasLegacy: !!result.legacyUrl });
+      
       setAudioUrl(url);
       await playAudioWithUrl(url);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Unable to play audio.";
+      console.error("Audio playback error:", e);
       setStatus("error");
       setLastError(message);
       toast({
