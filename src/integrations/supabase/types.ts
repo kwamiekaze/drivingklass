@@ -509,6 +509,7 @@ export type Database = {
           id: string
           intake_submitted: boolean | null
           last_name: string | null
+          last_sign_in_at: string | null
           permit_expiration_date: string | null
           permit_file_url: string | null
           permit_issue_date: string | null
@@ -538,6 +539,7 @@ export type Database = {
           id: string
           intake_submitted?: boolean | null
           last_name?: string | null
+          last_sign_in_at?: string | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
@@ -567,6 +569,7 @@ export type Database = {
           id?: string
           intake_submitted?: boolean | null
           last_name?: string | null
+          last_sign_in_at?: string | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
@@ -971,6 +974,7 @@ export type Database = {
           id: string
           intake_submitted: boolean | null
           last_name: string | null
+          last_sign_in_at: string | null
           permit_expiration_date: string | null
           permit_file_url: string | null
           permit_issue_date: string | null

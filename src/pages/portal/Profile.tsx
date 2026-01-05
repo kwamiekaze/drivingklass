@@ -128,9 +128,12 @@ function ProfileContent() {
     e.preventDefault();
     if (!user) return;
 
-    // Use appropriate schema based on role
-    const schema = isStaffOrAdmin ? adminProfileSchema : profileSchema;
-    const dataToValidate = isStaffOrAdmin ? formData : {
+    // Determine if user can edit permit fields
+    const userCanEditPermit = isStaffOrAdmin || !profile?.intake_submitted;
+    
+    // Use appropriate schema based on whether permit fields are editable
+    const schema = userCanEditPermit ? adminProfileSchema : profileSchema;
+    const dataToValidate = userCanEditPermit ? formData : {
       first_name: formData.first_name,
       last_name: formData.last_name,
       phone: formData.phone,
@@ -163,8 +166,8 @@ function ProfileContent() {
     try {
       let permitUrl = profile?.permit_file_url;
 
-      // Upload permit file if selected (admin/staff only can update permit)
-      if (permitFile && isStaffOrAdmin) {
+      // Upload permit file if selected and user can edit permit
+      if (permitFile && userCanEditPermit) {
         const fileExt = permitFile.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         
@@ -190,7 +193,7 @@ function ProfileContent() {
       };
 
       // Include address and guardian fields for students
-      if (role === 'student') {
+      if (role === 'student' || isStaffOrAdmin) {
         Object.assign(updatePayload, {
           pickup_address: formData.pickup_address,
           dropoff_address: formData.dropoff_address,
@@ -200,17 +203,12 @@ function ProfileContent() {
         });
       }
 
-      // Admin/staff can update permit fields
-      if (isStaffOrAdmin) {
+      // Users can update permit fields if they haven't submitted intake, or admin/staff
+      if (userCanEditPermit) {
         Object.assign(updatePayload, {
-          pickup_address: formData.pickup_address,
-          dropoff_address: formData.dropoff_address,
           permit_number: formData.permit_number,
           permit_issue_date: formData.permit_issue_date || null,
           permit_expiration_date: formData.permit_expiration_date || null,
-          guardian_name: formData.guardian_name,
-          guardian_phone: formData.guardian_phone,
-          guardian_email: formData.guardian_email,
           permit_file_url: permitUrl,
         });
       }
@@ -241,7 +239,18 @@ function ProfileContent() {
   };
 
   const isStudent = role === 'student';
-  const canEditPermit = isStaffOrAdmin;
+  
+  // Determine if permit fields can be edited:
+  // - Admin/Staff can always edit
+  // - Users can edit ONLY if intake is not submitted (no auto-gathered data)
+  const hasAutoGatheredPermitData = profile?.intake_submitted && (
+    profile?.permit_number ||
+    profile?.permit_issue_date ||
+    profile?.permit_expiration_date ||
+    profile?.permit_file_url
+  );
+  const canEditPermit = isStaffOrAdmin || (!profile?.intake_submitted);
+  const isPermitLockedAfterIntake = !isStaffOrAdmin && hasAutoGatheredPermitData;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
@@ -373,11 +382,11 @@ function ProfileContent() {
             <CardHeader className="pb-3 sm:pb-4">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base sm:text-lg">Permit/Driver's License Information</CardTitle>
-                {!canEditPermit && <Lock className="h-4 w-4 text-muted-foreground" />}
+                {isPermitLockedAfterIntake && <Lock className="h-4 w-4 text-muted-foreground" />}
               </div>
-              {!canEditPermit && (
-                <CardDescription className="text-xs sm:text-sm text-muted-foreground">
-                  Contact staff to update permit information
+              {isPermitLockedAfterIntake && (
+                <CardDescription className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
+                  Locked after intake approval — contact staff to update.
                 </CardDescription>
               )}
             </CardHeader>
