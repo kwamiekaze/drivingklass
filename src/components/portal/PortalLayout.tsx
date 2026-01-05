@@ -165,7 +165,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/${role}/profile`)} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
@@ -260,7 +260,7 @@ function getNavItems(role: string | null) {
     default:
       items.push(
         { href: '/student', label: 'Dashboard', icon: Home },
-        { href: '/student/profile', label: 'Profile', icon: User },
+        { href: '/profile', label: 'Profile', icon: User },
       );
       break;
   }

@@ -23,6 +23,8 @@ import PendingApproval from "./pages/portal/PendingApproval";
 import RejectedStatus from "./pages/portal/RejectedStatus";
 import StudentDashboard from "./pages/portal/StudentDashboard";
 import StudentProfile from "./pages/portal/StudentProfile";
+import Profile from "./pages/portal/Profile";
+import ProfileRedirect from "./pages/portal/ProfileRedirect";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import ReportCardForm from "./pages/portal/ReportCardForm";
@@ -60,9 +62,20 @@ const App = () => (
                   <Route path="/pending-approval" element={<PendingApproval />} />
                   <Route path="/rejected" element={<RejectedStatus />} />
                   
+                  {/* Canonical Profile Route (all roles) */}
+                  <Route path="/profile" element={<Profile />} />
+                  
+                  {/* Legacy Profile Redirects */}
+                  <Route path="/student/profile" element={<ProfileRedirect />} />
+                  <Route path="/instructor/profile" element={<ProfileRedirect />} />
+                  <Route path="/admin/profile" element={<ProfileRedirect />} />
+                  <Route path="/staff/profile" element={<ProfileRedirect />} />
+                  <Route path="/teacher/profile" element={<ProfileRedirect />} />
+                  <Route path="/settings/profile" element={<ProfileRedirect />} />
+                  <Route path="/klassroom/profile" element={<ProfileRedirect />} />
+                  
                   {/* Student Portal */}
                   <Route path="/student" element={<StudentDashboard />} />
-                  <Route path="/student/profile" element={<StudentProfile />} />
                   
                   {/* Instructor Portal */}
                   <Route path="/instructor" element={<InstructorDashboard />} />
