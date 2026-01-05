@@ -55,6 +55,30 @@ export interface Session {
   // Joined fields
   student?: Profile;
   instructor?: Profile;
+  // Pre-computed names from RPC
+  student_name?: string;
+  instructor_name?: string;
+}
+
+// Session details from RPC (guaranteed names)
+export interface SessionDetails {
+  session_id: string;
+  starts_at: string;
+  ends_at: string;
+  duration_minutes: number;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  student_id: string;
+  instructor_id: string;
+  student_name: string;
+  instructor_name: string;
+  student_email: string | null;
+  instructor_email: string | null;
+  note_for_student: string | null;
+  note_for_instructor: string | null;
+  cancellation_reason: string | null;
+  report_card_id: string | null;
+  completed: boolean;
+  completed_at: string | null;
 }
 
 export interface ReportCard {
