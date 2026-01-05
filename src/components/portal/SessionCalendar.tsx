@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Session } from "@/types/portal";
+import { useState, useEffect, useCallback } from "react";
+import { Session, SessionDetails } from "@/types/portal";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2 } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -26,6 +26,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -34,6 +37,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
+
+  // Fetch session details via RPC when a session is selected
+  const fetchSessionDetails = useCallback(async (sessionId: string) => {
+    setDetailsLoading(true);
+    setDetailsError(null);
+    setSessionDetails(null);
+    
+    try {
+      const { data, error } = await supabase.rpc('get_session_details', {
+        p_session_id: sessionId
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setSessionDetails(data[0] as SessionDetails);
+      } else {
+        setDetailsError('Unable to load session details');
+      }
+    } catch (err: any) {
+      console.error('Error fetching session details:', err);
+      setDetailsError(err.message || 'Failed to load session details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  }, []);
+
+  // When selectedSession changes, fetch details
+  useEffect(() => {
+    if (selectedSession?.id) {
+      fetchSessionDetails(selectedSession.id);
+    } else {
+      setSessionDetails(null);
+      setDetailsError(null);
+    }
+  }, [selectedSession?.id, fetchSessionDetails]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -396,124 +435,143 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {getStatusBadge(selectedSession)}
-                {selectedSession.report_card_id && (
-                  <Badge variant="outline" className="gap-1">
-                    <FileText className="h-3 w-3" />
-                    Report Submitted
-                  </Badge>
-                )}
-              </div>
+              {/* Loading state for details */}
+              {detailsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              )}
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm sm:text-base">{format(parseISO(selectedSession.starts_at), 'EEEE, MMMM d, yyyy')}</p>
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
-                  <p className="font-medium text-sm sm:text-base">
-                    {format(parseISO(selectedSession.starts_at), 'h:mm a')} - {format(parseISO(selectedSession.ends_at), 'h:mm a')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm sm:text-base">
-                    {selectedSession.student_id 
-                      ? getDisplayName(selectedSession.student, 'Loading...')
-                      : 'Not assigned'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm sm:text-base">
-                    {selectedSession.instructor_id 
-                      ? getDisplayName(selectedSession.instructor, 'Loading...')
-                      : 'Not assigned'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Show notes based on role */}
-              {canSeeNoteForStudent(selectedSession) && selectedSession.note_for_student && (
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Note from Staff
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedSession.note_for_student}
-                  </p>
+              {/* Error state */}
+              {detailsError && !detailsLoading && (
+                <div className="flex flex-col items-center justify-center py-6 gap-2">
+                  <AlertTriangle className="h-8 w-8 text-destructive" />
+                  <p className="text-sm text-muted-foreground">{detailsError}</p>
+                  <Button size="sm" variant="outline" onClick={() => fetchSessionDetails(selectedSession.id)}>
+                    Retry
+                  </Button>
                 </div>
               )}
+              
+              {/* Session details content - only show when loaded */}
+              {sessionDetails && !detailsLoading && !detailsError && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {getStatusBadge(selectedSession)}
+                    {sessionDetails.report_card_id && (
+                      <Badge variant="outline" className="gap-1">
+                        <FileText className="h-3 w-3" />
+                        Report Submitted
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
+                      <p className="font-medium text-sm sm:text-base">{format(parseISO(sessionDetails.starts_at), 'EEEE, MMMM d, yyyy')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                      <p className="font-medium text-sm sm:text-base">
+                        {format(parseISO(sessionDetails.starts_at), 'h:mm a')} - {format(parseISO(sessionDetails.ends_at), 'h:mm a')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
+                      <p className="font-medium text-sm sm:text-base">
+                        {sessionDetails.student_id ? sessionDetails.student_name : 'Not assigned'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
+                      <p className="font-medium text-sm sm:text-base">
+                        {sessionDetails.instructor_id ? sessionDetails.instructor_name : 'Not assigned'}
+                      </p>
+                    </div>
+                  </div>
 
-              {canSeeNoteForInstructor(selectedSession) && selectedSession.note_for_instructor && (
-                <div className="p-3 bg-orange-500/10 rounded-lg">
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Staff Note (Instructor)
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedSession.note_for_instructor}
-                  </p>
-                </div>
+                  {/* Show notes based on role */}
+                  {canSeeNoteForStudent(selectedSession) && sessionDetails.note_for_student && (
+                    <div className="p-3 bg-blue-500/10 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Note from Staff
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {sessionDetails.note_for_student}
+                      </p>
+                    </div>
+                  )}
+
+                  {canSeeNoteForInstructor(selectedSession) && sessionDetails.note_for_instructor && (
+                    <div className="p-3 bg-orange-500/10 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Staff Note (Instructor)
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {sessionDetails.note_for_instructor}
+                      </p>
+                    </div>
+                  )}
+
+                  {sessionDetails.status === 'cancelled' && sessionDetails.cancellation_reason && (
+                    <div className="p-3 bg-gray-500/10 rounded-lg">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Cancelled
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Reason: {sessionDetails.cancellation_reason}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {canGrade(selectedSession) && (
+                      <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
+                        <Button className="w-full min-h-[44px] gap-2">
+                          <FileText className="h-4 w-4" />
+                          Grade Session
+                        </Button>
+                      </Link>
+                    )}
+
+                    {canComplete(selectedSession) && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setCompleteDialogOpen(true)}
+                        className="flex-1 min-h-[44px] gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Mark Completed
+                      </Button>
+                    )}
+
+                    {isStaffOrAdmin && (
+                      <Button
+                        variant="outline"
+                        onClick={() => openNotesDialog(selectedSession)}
+                        className="flex-1 min-h-[44px] gap-2"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Edit Notes
+                      </Button>
+                    )}
+
+                    {canCancel(selectedSession) && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setCancelDialogOpen(true)}
+                        className="flex-1 min-h-[44px]"
+                      >
+                        Cancel Session
+                      </Button>
+                    )}
+                  </div>
+                </>
               )}
-
-              {selectedSession.status === 'cancelled' && (
-                <div className="p-3 bg-gray-500/10 rounded-lg">
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Cancelled by {selectedSession.cancelled_by_role}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Reason: {selectedSession.cancellation_reason}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                {canGrade(selectedSession) && (
-                  <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
-                    <Button className="w-full min-h-[44px] gap-2">
-                      <FileText className="h-4 w-4" />
-                      Grade Session
-                    </Button>
-                  </Link>
-                )}
-
-                {canComplete(selectedSession) && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setCompleteDialogOpen(true)}
-                    className="flex-1 min-h-[44px] gap-2"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Mark Completed
-                  </Button>
-                )}
-
-                {isStaffOrAdmin && (
-                  <Button
-                    variant="outline"
-                    onClick={() => openNotesDialog(selectedSession)}
-                    className="flex-1 min-h-[44px] gap-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Edit Notes
-                  </Button>
-                )}
-
-                {canCancel(selectedSession) && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setCancelDialogOpen(true)}
-                    className="flex-1 min-h-[44px]"
-                  >
-                    Cancel Session
-                  </Button>
-                )}
-              </div>
             </div>
           )}
         </DialogContent>

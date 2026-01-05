@@ -990,6 +990,50 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_my_sessions: {
+        Args: never
+        Returns: {
+          cancellation_reason: string
+          completed: boolean
+          completed_at: string
+          duration_minutes: number
+          ends_at: string
+          instructor_email: string
+          instructor_id: string
+          instructor_name: string
+          note_for_instructor: string
+          note_for_student: string
+          report_card_id: string
+          session_id: string
+          starts_at: string
+          status: string
+          student_email: string
+          student_id: string
+          student_name: string
+        }[]
+      }
+      get_session_details: {
+        Args: { p_session_id: string }
+        Returns: {
+          cancellation_reason: string
+          completed: boolean
+          completed_at: string
+          duration_minutes: number
+          ends_at: string
+          instructor_email: string
+          instructor_id: string
+          instructor_name: string
+          note_for_instructor: string
+          note_for_student: string
+          report_card_id: string
+          session_id: string
+          starts_at: string
+          status: string
+          student_email: string
+          student_id: string
+          student_name: string
+        }[]
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
