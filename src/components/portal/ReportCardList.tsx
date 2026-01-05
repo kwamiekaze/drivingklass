@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Progress } from "@/components/ui/progress";
 import { FileText, Calendar, User, Star, MessageSquare, Volume2, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { getDisplayName } from "@/lib/profileUtils";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
@@ -67,8 +68,8 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm text-muted-foreground truncate">
                         {userRole === 'student' 
-                          ? card.instructor?.full_name || card.instructor?.email || 'Instructor'
-                          : card.student?.full_name || card.student?.email || 'Student'}
+                          ? getDisplayName(card.instructor, 'Instructor')
+                          : getDisplayName(card.student, 'Student')}
                       </span>
                     </div>
                     {/* Show submitted timestamp */}
@@ -130,11 +131,11 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.instructor?.full_name || selectedCard.instructor?.email || 'N/A'}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.instructor, 'N/A')}</p>
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{selectedCard.student?.full_name || selectedCard.student?.email || 'N/A'}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.student, 'N/A')}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>

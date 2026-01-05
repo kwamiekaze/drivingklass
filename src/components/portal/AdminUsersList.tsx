@@ -10,9 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, User, Mail, Phone, RefreshCw, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
+import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 
 interface UserProfile {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   email: string | null;
   phone: string | null;
@@ -69,7 +72,7 @@ export function AdminUsersList({
       // Then fetch profiles for those users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, avatar_url, approval_status, created_at, permit_number')
+        .select('id, first_name, last_name, full_name, email, phone, avatar_url, approval_status, created_at, permit_number')
         .in('id', userIds)
         .order('created_at', { ascending: false });
 
@@ -96,12 +99,14 @@ export function AdminUsersList({
     // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(u => 
-        (u.full_name?.toLowerCase().includes(term)) ||
-        (u.email?.toLowerCase().includes(term)) ||
-        (u.phone?.includes(term)) ||
-        (u.permit_number?.toLowerCase().includes(term))
-      );
+      result = result.filter(u => {
+        const displayName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase() || 
+                            u.full_name?.toLowerCase() || '';
+        return displayName.includes(term) ||
+          (u.email?.toLowerCase().includes(term)) ||
+          (u.phone?.includes(term)) ||
+          (u.permit_number?.toLowerCase().includes(term));
+      });
     }
     
     return result;
@@ -118,11 +123,6 @@ export function AdminUsersList({
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
-  };
-
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (error) {
@@ -222,14 +222,14 @@ export function AdminUsersList({
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={user.avatar_url || undefined} />
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {getInitials(user.full_name)}
+                      {getProfileInitials(user as any)}
                     </AvatarFallback>
                   </Avatar>
                   
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm sm:text-base truncate">
-                      {user.full_name || 'Unknown'}
+                      {getDisplayName(user as any, 'Unknown')}
                     </p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                       {user.email && (

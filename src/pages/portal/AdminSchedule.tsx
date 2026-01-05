@@ -15,6 +15,7 @@ import { format, parseISO, addHours, startOfWeek, endOfWeek, eachDayOfInterval, 
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { getDisplayName } from "@/lib/profileUtils";
 
 export default function AdminSchedule() {
   return (
@@ -307,8 +308,8 @@ function AdminScheduleContent() {
     return sessions.filter(s => isSameDay(parseISO(s.starts_at), day));
   };
 
-  const getStudentName = (session: Session) => session.student?.full_name || session.student?.email || 'Unknown';
-  const getInstructorName = (session: Session) => session.instructor?.full_name || session.instructor?.email || 'Unknown';
+  const getStudentName = (session: Session) => getDisplayName(session.student, 'Unknown');
+  const getInstructorName = (session: Session) => getDisplayName(session.instructor, 'Unknown');
 
   const statusColors: Record<string, string> = {
     scheduled: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
@@ -352,7 +353,7 @@ function AdminScheduleContent() {
                       <div className="px-3 py-2 text-sm text-muted-foreground">No approved students</div>
                     ) : (
                       students.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.full_name || s.email || 'Unknown'}</SelectItem>
+                        <SelectItem key={s.id} value={s.id}>{getDisplayName(s, 'Unknown')}</SelectItem>
                       ))
                     )}
                   </SelectContent>
@@ -369,7 +370,7 @@ function AdminScheduleContent() {
                       <div className="px-3 py-2 text-sm text-muted-foreground">No approved instructors</div>
                     ) : (
                       instructors.map(i => (
-                        <SelectItem key={i.id} value={i.id}>{i.full_name || i.email || 'Unknown'}</SelectItem>
+                        <SelectItem key={i.id} value={i.id}>{getDisplayName(i, 'Unknown')}</SelectItem>
                       ))
                     )}
                   </SelectContent>

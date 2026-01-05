@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Loader2, Upload, Calendar, User } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
+import { getDisplayName } from "@/lib/profileUtils";
 
 export default function ReportCardForm() {
   return (
@@ -247,7 +248,7 @@ function ReportCardFormContent() {
             {isEditing ? 'Edit Report Card' : 'New Report Card'}
           </h1>
           <p className="text-muted-foreground">
-            {session.student?.full_name} - {format(parseISO(session.starts_at), 'MMMM d, yyyy h:mm a')}
+            {getDisplayName(session.student, 'Student')} - {format(parseISO(session.starts_at), 'MMMM d, yyyy h:mm a')}
           </p>
         </div>
       </div>
@@ -260,7 +261,7 @@ function ReportCardFormContent() {
               <User className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Student</p>
-                <p className="font-medium">{session.student?.full_name}</p>
+                <p className="font-medium">{getDisplayName(session.student, 'Student')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

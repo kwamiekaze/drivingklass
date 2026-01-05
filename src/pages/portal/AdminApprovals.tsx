@@ -15,6 +15,7 @@ import { IntakePreviewModal } from "@/components/portal/IntakePreviewModal";
 import { BatchDownloadModal } from "@/components/portal/BatchDownloadModal";
 import { sendApprovalNotification, sendRejectionNotification } from "@/lib/notifications";
 import { format } from "date-fns";
+import { getDisplayName } from "@/lib/profileUtils";
 
 export default function AdminApprovals() {
   return (
@@ -367,7 +368,7 @@ function AdminApprovalsContent() {
       <RejectUserModal
         open={rejectModalOpen}
         onOpenChange={setRejectModalOpen}
-        userName={selectedProfile?.full_name || 'Unknown User'}
+        userName={getDisplayName(selectedProfile, 'Unknown User')}
         onConfirm={handleReject}
         isLoading={actionLoading === selectedProfile?.id}
       />
@@ -408,7 +409,7 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm sm:text-base truncate">
-            {profile.full_name || 'Unknown User'}
+            {getDisplayName(profile, 'Unknown User')}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground break-words">
             {profile.email}
@@ -501,7 +502,7 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUs
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm sm:text-base truncate">
-            {profile.full_name || 'Unknown'}
+            {getDisplayName(profile, 'Unknown')}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {profile.email}
@@ -557,7 +558,7 @@ function RejectedUserCard({ profile, onReApprove, isLoading }: RejectedUserCardP
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm sm:text-base truncate">
-            {profile.full_name || 'Unknown'}
+            {getDisplayName(profile, 'Unknown')}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {profile.email}
