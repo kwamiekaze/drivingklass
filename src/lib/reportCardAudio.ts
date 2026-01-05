@@ -7,9 +7,13 @@ export type GetReportCardAudioUrlResponse = {
   signedUrl?: string | null;
   legacyUrl?: string | null;
   mime?: string | null;
-  error?: string;
+  error?: string | null;
 };
 
+/**
+ * Fetch audio URL via edge function (always returns 200 with JSON).
+ * Never throws - always returns a valid response object.
+ */
 export async function getReportCardAudioUrl(reportCardId: string): Promise<GetReportCardAudioUrlResponse> {
   try {
     const { data, error } = await supabase.functions.invoke<GetReportCardAudioUrlResponse>(
@@ -17,15 +21,28 @@ export async function getReportCardAudioUrl(reportCardId: string): Promise<GetRe
       { body: { report_card_id: reportCardId } }
     );
 
+    // Edge function network/invoke error (rare)
     if (error) {
-      console.error("Edge function error:", error);
-      throw error;
+      console.error("Edge function invoke error:", error);
+      return { 
+        signedUrl: null, 
+        legacyUrl: null, 
+        mime: null, 
+        error: "Network error. Please check your connection and try again." 
+      };
     }
 
-    return data ?? {};
+    // Edge function returned valid JSON (even on logical errors)
+    return data ?? { signedUrl: null, legacyUrl: null, mime: null, error: null };
   } catch (err) {
+    // Unexpected client-side error
     console.error("Failed to fetch audio URL:", err);
-    throw err;
+    return { 
+      signedUrl: null, 
+      legacyUrl: null, 
+      mime: null, 
+      error: "Failed to load audio. Please try again." 
+    };
   }
 }
 
