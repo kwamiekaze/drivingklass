@@ -25,6 +25,7 @@ import StudentDashboard from "./pages/portal/StudentDashboard";
 import StudentProfile from "./pages/portal/StudentProfile";
 import Profile from "./pages/portal/Profile";
 import ProfileRedirect from "./pages/portal/ProfileRedirect";
+import IntakeForm from "./pages/portal/IntakeForm";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import ReportCardForm from "./pages/portal/ReportCardForm";
@@ -61,6 +62,10 @@ const App = () => (
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/pending-approval" element={<PendingApproval />} />
                   <Route path="/rejected" element={<RejectedStatus />} />
+                  
+                  {/* Intake Form (separate from profile) */}
+                  <Route path="/intake" element={<IntakeForm />} />
+                  <Route path="/intake-form" element={<IntakeForm />} />
                   
                   {/* Canonical Profile Route (all roles) */}
                   <Route path="/profile" element={<Profile />} />

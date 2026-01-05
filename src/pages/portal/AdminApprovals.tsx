@@ -134,6 +134,7 @@ function AdminApprovalsContent() {
         rejected_at: null,
         rejected_by: null,
         rejection_reason: null,
+        intake_submitted: true, // Ensure intake_submitted is true when approving
       })
       .eq('id', profile.id);
 
