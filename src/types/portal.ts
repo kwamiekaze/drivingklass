@@ -159,11 +159,14 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
-  read_at: string | null;
-  type: NotificationType;
-  severity: NotificationSeverity;
+  type: string | null;
+  severity: string | null;
   link: string | null;
   metadata: Record<string, unknown> | null;
+  session_id: string | null;
+  report_card_id: string | null;
+  actor_id: string | null;
+  dedupe_key: string | null;
 }
 
 export const RATING_CATEGORIES = [
