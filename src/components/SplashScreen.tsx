@@ -91,23 +91,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         }}
       />
 
-      {/* Skip hint - positioned safely from edges */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: '0.75rem',
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          color: 'rgba(212, 165, 116, 0.4)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      >
-        Tap to enter
-      </div>
+      {/* Skip hint removed - tap functionality still works */}
     </div>
   );
 }

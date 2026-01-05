@@ -55,9 +55,9 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   const navItems = getNavItems(role);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">
           {/* Logo/Brand */}
           <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -204,7 +204,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="lg:hidden border-t p-3 sm:p-4 bg-background">
+          <nav className="lg:hidden border-t border-border/40 p-3 sm:p-4 bg-background/80 backdrop-blur-xl">
             <div className="flex flex-col gap-1.5">
               {navItems.map((item) => (
                 <Link 
