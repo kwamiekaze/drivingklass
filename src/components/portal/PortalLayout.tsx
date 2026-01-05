@@ -20,6 +20,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { resolveNotificationRoute, buildNotificationUrl } from "@/lib/notificationRouter";
+import { Notification, UserRole } from "@/types/portal";
 
 interface PortalLayoutProps {
   children: ReactNode;
@@ -120,27 +122,34 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     No notifications
                   </div>
                 ) : (
-                  notifications.slice(0, 5).map((notif) => (
-                    <DropdownMenuItem 
-                      key={notif.id}
-                      onClick={() => {
-                        markAsRead(notif.id);
-                        if ((notif as any).link) {
-                          navigate((notif as any).link);
-                        }
-                      }}
-                      className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <span className="font-medium text-sm truncate flex-1">{notif.title}</span>
-                        {!notif.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
-                      </div>
-                      <span className="text-xs text-muted-foreground line-clamp-2">{notif.message}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(notif.created_at), 'MMM d, h:mm a')}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
+                  notifications.slice(0, 5).map((notif) => {
+                    const handleNotificationClick = () => {
+                      // Mark as read immediately (optimistic)
+                      markAsRead(notif.id);
+                      
+                      // Resolve the route based on notification type and user role
+                      const resolved = resolveNotificationRoute(notif, role as UserRole);
+                      const targetUrl = buildNotificationUrl(resolved);
+                      navigate(targetUrl);
+                    };
+
+                    return (
+                      <DropdownMenuItem 
+                        key={notif.id}
+                        onClick={handleNotificationClick}
+                        className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <span className="font-medium text-sm truncate flex-1">{notif.title}</span>
+                          {!notif.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                        </div>
+                        <span className="text-xs text-muted-foreground line-clamp-2">{notif.message}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(notif.created_at), 'MMM d, h:mm a')}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

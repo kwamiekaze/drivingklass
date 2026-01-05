@@ -25,15 +25,17 @@ export function useNotifications() {
   };
 
   const markAsRead = async (notificationId: string) => {
-    await supabase
-      .from('notifications')
-      .update({ read: true, read_at: new Date().toISOString() } as any)
-      .eq('id', notificationId);
-    
+    // Optimistic update first
     setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, read: true, read_at: new Date().toISOString() } : n)
+      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
+    
+    // Then update in database
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId);
   };
 
   const markAllAsRead = async () => {
