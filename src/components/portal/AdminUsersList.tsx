@@ -22,6 +22,7 @@ interface UserProfile {
   avatar_url: string | null;
   approval_status: string;
   created_at: string;
+  last_sign_in_at: string | null;
   permit_number?: string | null;
 }
 
@@ -72,7 +73,7 @@ export function AdminUsersList({
       // Then fetch profiles for those users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, full_name, email, phone, avatar_url, approval_status, created_at, permit_number')
+        .select('id, first_name, last_name, full_name, email, phone, avatar_url, approval_status, created_at, last_sign_in_at, permit_number')
         .in('id', userIds)
         .order('created_at', { ascending: false });
 
@@ -245,9 +246,14 @@ export function AdminUsersList({
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      Joined {format(parseISO(user.created_at), 'MMM d, yyyy')}
-                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground mt-1">
+                      <span>Signed up: {format(parseISO(user.created_at), 'MMM d, yyyy • h:mm a')}</span>
+                      <span>
+                        Last sign-in: {user.last_sign_in_at 
+                          ? format(parseISO(user.last_sign_in_at), 'MMM d, yyyy • h:mm a')
+                          : 'Never signed in'}
+                      </span>
+                    </div>
                   </div>
                   
                   {/* Status and Actions */}

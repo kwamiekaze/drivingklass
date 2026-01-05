@@ -99,6 +99,12 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
     
     // If sign-in successful, immediately fetch profile and role for faster routing
     if (data?.user && !error) {
+      // Update last_sign_in_at timestamp
+      await supabase
+        .from('profiles')
+        .update({ last_sign_in_at: new Date().toISOString() })
+        .eq('id', data.user.id);
+      
       await Promise.all([
         fetchProfile(data.user.id),
         fetchRole(data.user.id)

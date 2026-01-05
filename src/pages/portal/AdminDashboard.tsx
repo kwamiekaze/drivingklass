@@ -5,7 +5,7 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3 } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
@@ -106,6 +106,7 @@ function AdminDashboardContent() {
     { href: '/admin/schedule', label: 'Schedule', icon: Calendar, count: stats.upcomingSessions, color: 'text-primary', bgColor: 'bg-primary/10' },
     { href: '/admin/report-cards', label: 'Reports', icon: FileText, count: stats.recentReportCards, color: 'text-green-500', bgColor: 'bg-green-500/10' },
     { href: '/admin/assignments', label: 'Assignments', icon: Users, count: 0, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: 0, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
   ];
 
   return (
