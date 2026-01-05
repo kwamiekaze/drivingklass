@@ -1016,6 +1016,48 @@ export type Database = {
           student_name: string
         }[]
       }
+      get_report_card_details: {
+        Args: { p_report_card_id: string }
+        Returns: {
+          acceleration: number
+          blind_spots: number
+          braking: number
+          can_see_internal: boolean
+          changing_lanes: number
+          created_at: string
+          distractions: number
+          following_distance: number
+          general_parking: number
+          id: string
+          instructor_email: string
+          instructor_id: string
+          instructor_name: string
+          internal_message: string
+          interstate: number
+          lane_maintenance: number
+          left_turns: number
+          lesson_audio_url: string
+          merging: number
+          message_to_student: string
+          overall: number
+          parallel_parking: number
+          reverse_parking: number
+          right_turns: number
+          road_sign_awareness: number
+          session_ends_at: string
+          session_id: string
+          session_starts_at: string
+          session_status: string
+          signal_usage: number
+          speed_maintenance: number
+          straight_line_backing: number
+          student_email: string
+          student_id: string
+          student_name: string
+          transcription_summary: string
+          turn_about: number
+        }[]
+      }
       get_session_details: {
         Args: { p_session_id: string }
         Returns: {

@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Calendar, User, Star, MessageSquare, Volume2, Clock } from "lucide-react";
+import { FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, ExternalLink, Copy, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
@@ -16,7 +18,10 @@ interface ReportCardListProps {
 }
 
 export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardListProps) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedCard, setSelectedCard] = useState<ReportCard | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const getRatingColor = (rating: number | null) => {
     if (!rating) return 'bg-muted';
@@ -24,6 +29,30 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
     if (rating >= 6) return 'bg-yellow-500';
     if (rating >= 4) return 'bg-orange-500';
     return 'bg-red-500';
+  };
+
+  const handleCopyLink = async (reportCardId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/report-cards/${reportCardId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({
+        title: "Link Copied",
+        description: "Report card link copied. Recipient must sign in to view.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Copy Failed",
+        description: "Please copy the URL manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenReportCard = (reportCardId: string) => {
+    navigate(`/report-cards/${reportCardId}`);
   };
 
   const canSeeInternalMessage = userRole === 'staff' || userRole === 'admin';
@@ -87,10 +116,34 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
                 
                 {card.message_to_student && (
-                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-3">
                     {card.message_to_student}
                   </p>
                 )}
+                
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 gap-1 text-xs h-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenReportCard(card.id);
+                    }}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-1 text-xs h-8"
+                    onClick={(e) => handleCopyLink(card.id, e)}
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

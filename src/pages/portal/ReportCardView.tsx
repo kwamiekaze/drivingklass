@@ -1,0 +1,379 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { PortalLayout } from "@/components/portal/PortalLayout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, Copy, Check, ShieldX } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { RATING_CATEGORIES } from "@/types/portal";
+
+interface ReportCardDetails {
+  id: string;
+  created_at: string;
+  session_id: string;
+  student_id: string;
+  instructor_id: string;
+  lesson_audio_url: string | null;
+  transcription_summary: string | null;
+  message_to_student: string | null;
+  internal_message: string | null;
+  acceleration: number | null;
+  braking: number | null;
+  left_turns: number | null;
+  right_turns: number | null;
+  speed_maintenance: number | null;
+  lane_maintenance: number | null;
+  blind_spots: number | null;
+  signal_usage: number | null;
+  changing_lanes: number | null;
+  following_distance: number | null;
+  road_sign_awareness: number | null;
+  distractions: number | null;
+  general_parking: number | null;
+  reverse_parking: number | null;
+  parallel_parking: number | null;
+  straight_line_backing: number | null;
+  turn_about: number | null;
+  merging: number | null;
+  interstate: number | null;
+  overall: number | null;
+  session_starts_at: string | null;
+  session_ends_at: string | null;
+  session_status: string | null;
+  student_name: string;
+  instructor_name: string;
+  student_email: string | null;
+  instructor_email: string | null;
+  can_see_internal: boolean;
+}
+
+export default function ReportCardView() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, role, isLoading: authLoading } = usePortalAuth();
+  const { toast } = useToast();
+  
+  const [reportCard, setReportCard] = useState<ReportCardDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      const redirectPath = encodeURIComponent(location.pathname);
+      navigate(`/login?redirect=${redirectPath}`);
+    }
+  }, [user, authLoading, navigate, location.pathname]);
+
+  // Fetch report card once authenticated
+  useEffect(() => {
+    if (user && id) {
+      fetchReportCard();
+    }
+  }, [user, id]);
+
+  const fetchReportCard = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_report_card_details', {
+        p_report_card_id: id
+      });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setUnauthorized(true);
+      } else {
+        setReportCard(data[0] as ReportCardDetails);
+      }
+    } catch (err: any) {
+      console.error('Error fetching report card:', err);
+      setUnauthorized(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRatingColor = (rating: number | null) => {
+    if (!rating) return 'bg-muted';
+    if (rating >= 8) return 'bg-green-500';
+    if (rating >= 6) return 'bg-yellow-500';
+    if (rating >= 4) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const handleCopyLink = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({
+        title: "Link Copied",
+        description: "Report card link copied to clipboard. Recipient must sign in to view.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Copy Failed",
+        description: "Please copy the URL from the address bar.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGoBack = () => {
+    // Navigate to appropriate dashboard based on role
+    if (role === 'student') {
+      navigate('/student');
+    } else if (role === 'instructor') {
+      navigate('/instructor');
+    } else {
+      navigate('/admin');
+    }
+  };
+
+  // Show loading while checking auth
+  if (authLoading || (!user && !loading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If not authenticated, will redirect via useEffect
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <PortalLayout>
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={handleGoBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold theme-heading flex items-center gap-2">
+              <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+              Report Card
+            </h1>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : unauthorized ? (
+          <Card className="portal-card">
+            <CardContent className="py-12 text-center">
+              <ShieldX className="h-16 w-16 mx-auto mb-4 text-destructive opacity-50" />
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-muted-foreground mb-6">
+                You don't have access to this report card.
+              </p>
+              <Button onClick={handleGoBack} className="cta-button">
+                Go to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        ) : reportCard ? (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Copy Link Button */}
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyLink}
+                className="gap-2"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy Link
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-right -mt-2">
+              Recipient must sign in to view.
+            </p>
+
+            {/* Header Info */}
+            <Card className="portal-card">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
+                      <p className="font-medium text-sm sm:text-base">
+                        {reportCard.session_starts_at 
+                          ? format(parseISO(reportCard.session_starts_at), 'MMMM d, yyyy')
+                          : format(parseISO(reportCard.created_at), 'MMMM d, yyyy')
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                    <p className="font-medium text-sm sm:text-base">
+                      {reportCard.session_starts_at && reportCard.session_ends_at
+                        ? `${format(parseISO(reportCard.session_starts_at), 'h:mm a')} - ${format(parseISO(reportCard.session_ends_at), 'h:mm a')}`
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
+                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.instructor_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
+                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.student_name}</p>
+                    </div>
+                  </div>
+                  <div className="col-span-2 flex items-start gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
+                      <p className="font-medium text-sm sm:text-base">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Overall Rating */}
+            <Card className="portal-card">
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center p-4 bg-primary/10 rounded-lg">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                    <span className="text-3xl sm:text-4xl font-bold">{reportCard.overall || '-'}</span>
+                    <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Rating Categories */}
+            <Card className="portal-card">
+              <CardContent className="p-4 sm:p-6">
+                <h4 className="font-medium mb-4 text-sm sm:text-base">Skill Ratings</h4>
+                <div className="grid gap-2">
+                  {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
+                    const rating = reportCard[category.key as keyof ReportCardDetails] as number | null;
+                    return (
+                      <div key={category.key} className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                        <div className="flex-1">
+                          <Progress 
+                            value={rating ? rating * 10 : 0} 
+                            className="h-2"
+                          />
+                        </div>
+                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right">
+                          {rating || '-'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Audio Link */}
+            {reportCard.lesson_audio_url && (
+              <Card className="portal-card">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Volume2 className="h-4 w-4" />
+                    <span className="font-medium text-sm">Lesson Audio</span>
+                  </div>
+                  <a 
+                    href={reportCard.lesson_audio_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Listen to Recording
+                  </a>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Transcription */}
+            {reportCard.transcription_summary && (
+              <Card className="portal-card">
+                <CardContent className="p-4 sm:p-6">
+                  <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+                    {reportCard.transcription_summary}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Message to Student */}
+            {reportCard.message_to_student && (
+              <Card className="portal-card">
+                <CardContent className="p-4 sm:p-6 bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="font-medium text-sm">Instructor's Message</span>
+                  </div>
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.message_to_student}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Internal Message (staff/admin only) */}
+            {reportCard.can_see_internal && reportCard.internal_message && (
+              <Card className="portal-card border-destructive/20">
+                <CardContent className="p-4 sm:p-6 bg-destructive/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4 text-destructive" />
+                    <span className="font-medium text-sm text-destructive">Internal Notes (Staff Only)</span>
+                  </div>
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.internal_message}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Edit Button for instructor/admin */}
+            {(role === 'instructor' || role === 'admin' || role === 'staff') && (
+              <Button 
+                onClick={() => navigate(`/instructor/report-cards/edit/${reportCard.id}`)} 
+                className="w-full cta-button min-h-[44px]"
+              >
+                Edit Report Card
+              </Button>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </PortalLayout>
+  );
+}
