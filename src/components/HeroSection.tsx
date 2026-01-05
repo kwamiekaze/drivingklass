@@ -3,7 +3,11 @@ import { HeaderBrand } from "./HeaderBrand";
 import { PackageWheel } from "./PackageWheel";
 import portalCarIcon from "@/assets/portal-car-icon.png";
 
-export function HeroSection() {
+interface HeroSectionProps {
+  splashComplete?: boolean;
+}
+
+export function HeroSection({ splashComplete = true }: HeroSectionProps) {
   const handlePackageSelect = (packageId: string) => {
     console.log("Selected package:", packageId);
     // TODO: Link to Square payment when ready
@@ -28,9 +32,10 @@ export function HeroSection() {
       {/* Header with brand and stars - raised higher with clear separation from ring */}
       <HeaderBrand className="relative z-10 mt-6 sm:mt-8 mb-8 sm:mb-12 md:mb-16" />
 
-      {/* Package Wheel with car */}
+      {/* Package Wheel with car - pass splashComplete for animation delay */}
       <PackageWheel 
         onPackageSelect={handlePackageSelect}
+        splashComplete={splashComplete}
       />
     </section>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
@@ -21,12 +21,23 @@ const Index = () => {
     }
     return true;
   });
+  
+  // Track when splash is complete (for animation delay)
+  const [splashComplete, setSplashComplete] = useState(() => {
+    // If we skip splash (desktop), it's already complete
+    if (typeof window !== 'undefined') {
+      return window.matchMedia("(min-width: 768px)").matches;
+    }
+    return false;
+  });
+  
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  const handleSplashComplete = () => {
+  const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
-  };
+    setSplashComplete(true);
+  }, []);
 
   return (
     <>
@@ -76,8 +87,8 @@ const Index = () => {
 
         {/* Content wrapper */}
         <div className="relative" style={{ zIndex: 10 }}>
-          {/* Hero Section with car and package wheel */}
-          <HeroSection />
+          {/* Hero Section with car and package wheel - pass splashComplete */}
+          <HeroSection splashComplete={splashComplete} />
 
           {/* Navigation Buttons */}
           <NavigationButtons 

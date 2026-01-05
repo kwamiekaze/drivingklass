@@ -54,6 +54,7 @@ function CarCenterLink({ children }: { children: React.ReactNode }) {
 }
 interface PackageWheelProps {
   onPackageSelect?: (packageId: string) => void;
+  splashComplete?: boolean;
 }
 
 // Price chip component - positioned inside the circle between button and car
@@ -140,7 +141,7 @@ function PriceChip({
   );
 }
 
-export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
+export function PackageWheel({ onPackageSelect, splashComplete = true }: PackageWheelProps) {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -240,7 +241,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Auto-orbit animation - runs ONLY on mobile (<768px) and before user selection
+  // Auto-orbit animation - runs ONLY on mobile (<768px), before user selection, and AFTER splash is complete
   useEffect(() => {
     // Only run on mobile
     if (!isMobile) {
@@ -253,14 +254,21 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
       setHighlightedIndex(null);
       return;
     }
+    
+    // Wait for splash to complete before starting animation
+    if (!splashComplete) {
+      setHighlightedIndex(null);
+      return;
+    }
 
     setHighlightedIndex(0);
+    // Animation runs at 1800ms (50% slower than original 900ms)
     const intervalId = setInterval(() => {
       setHighlightedIndex((prev) => ((prev ?? 0) + 1) % totalButtons);
     }, 1800);
 
     return () => clearInterval(intervalId);
-  }, [isMobile, hasUserSelected, totalButtons]);
+  }, [isMobile, hasUserSelected, totalButtons, splashComplete]);
 
   // Handle package click - also opens modal on double-tap of same package
   const handlePackageClick = useCallback((packageId: string) => {
