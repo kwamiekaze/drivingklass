@@ -13,6 +13,7 @@ import { Profile, Session, ReportCard } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
+import { getDisplayName } from "@/lib/profileUtils";
 
 export default function InstructorStudentView() {
   return (
@@ -118,7 +119,7 @@ function InstructorStudentViewContent() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold theme-heading">{student.full_name}</h1>
+          <h1 className="text-3xl font-bold theme-heading">{getDisplayName(student, 'Student')}</h1>
           {student.public_id && (
             <p className="text-muted-foreground font-mono">ID: {student.public_id}</p>
           )}

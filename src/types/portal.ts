@@ -8,6 +8,8 @@ export interface Profile {
   id: string;
   created_at: string;
   updated_at: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   email: string | null;
   approved: boolean | null;

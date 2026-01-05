@@ -13,6 +13,7 @@ import { format, parseISO, isAfter } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { Link, useNavigate } from "react-router-dom";
+import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 
 export default function InstructorDashboard() {
   return (
@@ -178,7 +179,7 @@ function InstructorDashboardContent() {
               {sessionsNeedingReportCard.slice(0, 5).map(session => (
                 <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
                   <div className="min-w-0">
-                    <p className="font-medium text-sm sm:text-base truncate">{session.student?.full_name || 'Student'}</p>
+                    <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
                     </p>
@@ -254,12 +255,12 @@ function InstructorDashboardContent() {
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                               <span className="text-base sm:text-lg font-bold text-primary">
-                                {assignment.student?.full_name?.charAt(0) || '?'}
+                                {getProfileInitials(assignment.student)}
                               </span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm sm:text-base truncate">
-                                {assignment.student?.full_name || 'Student'}
+                                {getDisplayName(assignment.student, 'Student')}
                               </p>
                               <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 {assignment.student?.public_id || assignment.student?.email}

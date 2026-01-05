@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { getDisplayName } from "@/lib/profileUtils";
 
 export default function StudentDashboard() {
   return (
@@ -181,7 +182,7 @@ function StudentDashboardContent() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground">Your Instructor</p>
-                <p className="font-medium text-sm sm:text-base truncate">{instructor.full_name}</p>
+                <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, 'Not assigned')}</p>
               </div>
             </CardContent>
           </Card>

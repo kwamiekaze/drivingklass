@@ -13,6 +13,7 @@ import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { getDisplayName } from "@/lib/profileUtils";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -288,8 +289,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       <User className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm truncate">
                         {userRole === 'student' 
-                          ? session.instructor?.full_name || 'Instructor'
-                          : session.student?.full_name || 'Student'}
+                          ? getDisplayName(session.instructor, 'Instructor')
+                          : getDisplayName(session.student, 'Student')}
                       </span>
                     </div>
                   </div>
@@ -419,13 +420,17 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                   <p className="font-medium text-sm sm:text-base">
-                    {selectedSession.student?.full_name || selectedSession.student?.email || 'Not assigned'}
+                    {selectedSession.student_id 
+                      ? getDisplayName(selectedSession.student, 'Loading...')
+                      : 'Not assigned'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
                   <p className="font-medium text-sm sm:text-base">
-                    {selectedSession.instructor?.full_name || selectedSession.instructor?.email || 'Not assigned'}
+                    {selectedSession.instructor_id 
+                      ? getDisplayName(selectedSession.instructor, 'Loading...')
+                      : 'Not assigned'}
                   </p>
                 </div>
               </div>
