@@ -168,24 +168,7 @@ export default function ReportCardOpen() {
         </div>
       )}
 
-      {/* Skip hint - tap anywhere */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: '0.75rem',
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          color: 'rgba(212, 165, 116, 0.6)',
-          textShadow: '0 0 20px rgba(212, 165, 116, 0.3)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      >
-        Tap to skip
-      </div>
+      {/* Skip hint removed - tap functionality still works */}
 
       {/* Loading text */}
       <div

@@ -9,6 +9,9 @@ import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarCha
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
+import { useTheme } from "@/components/ThemeProvider";
+import { GalaxyStars } from "@/components/GalaxyStars";
+import { LightModeBackground } from "@/components/LightModeBackground";
 
 export default function AdminDashboard() {
   return (
@@ -109,12 +112,44 @@ function AdminDashboardContent() {
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: 0, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
   ];
 
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
+      {/* Background matching homepage theme */}
+      <div className="fixed inset-0 -z-10" style={{ pointerEvents: 'none' }}>
+        {isDark ? (
+          <>
+            {/* Dark mode - rich black gradient matching homepage */}
+            <div 
+              className="absolute inset-0 transition-colors duration-500"
+              style={{
+                background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
+              }}
+            />
+            {/* Subtle gold atmospheric glow */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
+              }}
+            />
+            {/* Galaxy stars */}
+            <GalaxyStars />
+          </>
+        ) : (
+          <>
+            {/* Light mode - same as homepage */}
+            <LightModeBackground />
+          </>
+        )}
+      </div>
+
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-          Admin Dashboard
+          Klassroom Dashboard
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Welcome back, {profile?.full_name?.split(' ')[0] || 'Admin'}

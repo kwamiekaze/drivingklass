@@ -14,6 +14,9 @@ import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { Link, useNavigate } from "react-router-dom";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
+import { useTheme } from "@/components/ThemeProvider";
+import { GalaxyStars } from "@/components/GalaxyStars";
+import { LightModeBackground } from "@/components/LightModeBackground";
 
 export default function InstructorDashboard() {
   return (
@@ -99,12 +102,44 @@ function InstructorDashboardContent() {
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
 
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
+      {/* Background matching homepage theme */}
+      <div className="fixed inset-0 -z-10" style={{ pointerEvents: 'none' }}>
+        {isDark ? (
+          <>
+            {/* Dark mode - rich black gradient matching homepage */}
+            <div 
+              className="absolute inset-0 transition-colors duration-500"
+              style={{
+                background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
+              }}
+            />
+            {/* Subtle gold atmospheric glow */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
+              }}
+            />
+            {/* Galaxy stars */}
+            <GalaxyStars />
+          </>
+        ) : (
+          <>
+            {/* Light mode - same as homepage */}
+            <LightModeBackground />
+          </>
+        )}
+      </div>
+
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-          Welcome Teacher
+          Klassroom Dashboard
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
       </div>
