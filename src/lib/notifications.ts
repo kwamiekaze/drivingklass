@@ -23,6 +23,8 @@ interface SendNotificationParams {
   severity?: NotificationSeverity;
   link?: string;
   metadata?: Json;
+  sessionId?: string;
+  reportCardId?: string;
 }
 
 /**
@@ -37,6 +39,8 @@ export async function sendNotification({
   severity = 'info',
   link,
   metadata,
+  sessionId,
+  reportCardId,
 }: SendNotificationParams): Promise<{ error: Error | null }> {
   const { error } = await supabase.from('notifications').insert([{
     user_id: userId,
@@ -46,6 +50,8 @@ export async function sendNotification({
     severity,
     link,
     metadata: metadata ?? null,
+    session_id: sessionId ?? null,
+    report_card_id: reportCardId ?? null,
     read: false,
   }]);
 
@@ -130,13 +136,16 @@ export async function sendSessionCancelledNotification(
 /**
  * Send report card notification
  */
-export async function sendReportCardNotification(userId: string): Promise<{ error: Error | null }> {
+export async function sendReportCardNotification(
+  userId: string,
+  reportCardId?: string
+): Promise<{ error: Error | null }> {
   return sendNotification({
     userId,
     title: 'New Report Card',
     body: 'Your instructor has submitted a report card for your lesson.',
     type: 'report_card',
     severity: 'info',
-    link: '/student',
+    reportCardId,
   });
 }
