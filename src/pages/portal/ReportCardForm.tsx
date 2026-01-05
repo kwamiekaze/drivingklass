@@ -16,6 +16,13 @@ import { ArrowLeft, Save, Loader2, Upload, Calendar, User, Check, X, RefreshCw }
 import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
+import {
+  REPORT_CARD_AUDIO_BUCKET,
+  REPORT_CARD_AUDIO_MAX_BYTES,
+  buildReportCardAudioPath,
+  inferAudioMime,
+  sanitizeFilename,
+} from "@/lib/reportCardAudio";
 
 export default function ReportCardForm() {
   return (
@@ -153,11 +160,11 @@ function ReportCardFormContent() {
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Max 25MB
-      if (file.size > 25 * 1024 * 1024) {
+      // Max 20MB (tolerant but prevents mobile failures)
+      if (file.size > REPORT_CARD_AUDIO_MAX_BYTES) {
         toast({
           title: "File too large",
-          description: "Please select an audio file under 25MB",
+          description: "Please select an audio file under 20MB",
           variant: "destructive",
         });
         return;
@@ -167,7 +174,7 @@ function ReportCardFormContent() {
       if (!isValidAudioFile(file)) {
         toast({
           title: "Unsupported file type",
-          description: "Please select an audio file (mp3, m4a, wav, aac)",
+          description: "Please select an audio file (mp3, m4a, wav, aac, mp4)",
           variant: "destructive",
         });
         return;
@@ -198,47 +205,89 @@ function ReportCardFormContent() {
     setSaving(true);
 
     try {
-      let audioUrl = formData.lesson_audio_url;
+      setUploadProgress(0);
+      setUploadStatus("idle");
 
-      // Upload audio file if selected
-      if (audioFile) {
-        const fileExt = audioFile.name.split('.').pop();
-        const fileName = `${session.id}/${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('lesson-audio')
-          .upload(fileName, audioFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('lesson-audio')
-          .getPublicUrl(fileName);
-        
-        audioUrl = urlData.publicUrl;
-      }
-
-      const reportData = {
+      const reportDataBase = {
         ...formData,
-        lesson_audio_url: audioUrl || null,
+        lesson_audio_url: formData.lesson_audio_url || null, // legacy/manual URL fallback
         session_id: session.id,
         student_id: session.student_id,
         instructor_id: session.instructor_id,
       };
 
+      let reportCardId = existingCard?.id ?? null;
+
+      // 1) Save report card row first (so we have a report_card_id for storage path)
       if (isEditing && existingCard) {
         const { error } = await supabase
-          .from('report_cards')
-          .update(reportData)
-          .eq('id', existingCard.id);
-
+          .from("report_cards")
+          .update(reportDataBase)
+          .eq("id", existingCard.id);
         if (error) throw error;
+        reportCardId = existingCard.id;
       } else {
-        const { error } = await supabase
-          .from('report_cards')
-          .insert(reportData);
-
+        const { data: created, error } = await supabase
+          .from("report_cards")
+          .insert(reportDataBase)
+          .select("id")
+          .single();
         if (error) throw error;
+        reportCardId = created.id;
+      }
+
+      // 2) Optional audio upload (reliable private storage + metadata)
+      if (audioFile && reportCardId) {
+        setUploadStatus("uploading");
+        setUploadProgress(25);
+
+        const contentType = inferAudioMime(audioFile);
+        const originalName = sanitizeFilename(audioFile.name);
+        const objectPath = buildReportCardAudioPath(reportCardId, originalName);
+
+        const { error: uploadError } = await supabase.storage
+          .from(REPORT_CARD_AUDIO_BUCKET)
+          .upload(objectPath, audioFile, {
+            upsert: true,
+            contentType,
+            cacheControl: "3600",
+          });
+
+        if (uploadError) {
+          // If this is a new report card submission, roll back the row so we don't save partial changes.
+          if (!isEditing) {
+            await supabase.from("report_cards").delete().eq("id", reportCardId);
+          }
+          throw uploadError;
+        }
+
+        setUploadProgress(75);
+
+        const audioMeta = {
+          audio_path: objectPath,
+          audio_mime: contentType,
+          audio_size_bytes: audioFile.size,
+          audio_original_name: audioFile.name,
+          audio_uploaded_at: new Date().toISOString(),
+          audio_uploaded_by: user.id,
+        };
+
+        const { error: metaError } = await supabase
+          .from("report_cards")
+          .update(audioMeta)
+          .eq("id", reportCardId);
+
+        if (metaError) {
+          // best-effort cleanup (ignore failures)
+          await supabase.storage.from(REPORT_CARD_AUDIO_BUCKET).remove([objectPath]);
+          if (!isEditing) {
+            await supabase.from("report_cards").delete().eq("id", reportCardId);
+          }
+          throw metaError;
+        }
+
+        setUploadProgress(100);
+        setUploadStatus("success");
       }
 
       toast({
@@ -248,6 +297,7 @@ function ReportCardFormContent() {
 
       navigate(-1);
     } catch (error: any) {
+      setUploadStatus("error");
       toast({
         title: "Error",
         description: error.message || "Failed to save report card",

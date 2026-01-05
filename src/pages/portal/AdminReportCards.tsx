@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
@@ -7,15 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp, Volume2, Play, Pause, RefreshCw } from "lucide-react";
+import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
 import { ReportCard, Profile, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { ReportCardAudioPlayer } from "@/components/portal/ReportCardAudioPlayer";
+
 
 export default function AdminReportCards() {
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['admin', 'staff']}>
       <PortalLayout>
         <AdminReportCardsContent />
       </PortalLayout>
@@ -25,7 +26,6 @@ export default function AdminReportCards() {
 
 function AdminReportCardsContent() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
@@ -35,10 +35,6 @@ function AdminReportCardsContent() {
   const [instructorFilter, setInstructorFilter] = useState<string>("all");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Audio playback state
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -109,70 +105,6 @@ function AdminReportCardsContent() {
     if (rating >= 3) return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300';
     return 'bg-red-500/20 text-red-700 dark:text-red-300';
   };
-
-  // Audio playback handlers
-  const handlePlayAudio = async (rc: ReportCard, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!rc.lesson_audio_url) {
-      toast({
-        title: "No Audio",
-        description: "This report card doesn't have any audio attached.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If already playing this audio, pause it
-    if (playingAudioId === rc.id && audioRef.current) {
-      audioRef.current.pause();
-      setPlayingAudioId(null);
-      return;
-    }
-
-    // Stop any currently playing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-
-    // Create new audio element
-    const audio = new Audio(rc.lesson_audio_url);
-    audioRef.current = audio;
-    
-    audio.onended = () => {
-      setPlayingAudioId(null);
-    };
-    
-    audio.onerror = () => {
-      toast({
-        title: "Playback Error",
-        description: "Unable to play audio. The file may be unavailable.",
-        variant: "destructive",
-      });
-      setPlayingAudioId(null);
-    };
-
-    try {
-      await audio.play();
-      setPlayingAudioId(rc.id);
-    } catch (err) {
-      toast({
-        title: "Playback Error",
-        description: "Unable to start audio playback.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -299,21 +231,11 @@ function AdminReportCardsContent() {
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
                     {/* Audio indicator */}
-                    {rc.lesson_audio_url && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 sm:h-9 sm:w-9"
-                        onClick={(e) => handlePlayAudio(rc, e)}
-                        title={playingAudioId === rc.id ? "Pause Audio" : "Play Audio"}
-                      >
-                        {playingAudioId === rc.id ? (
-                          <Pause className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Volume2 className="h-4 w-4 text-primary" />
-                        )}
-                      </Button>
-                    )}
+                    {(rc as any).audio_path || rc.lesson_audio_url ? (
+                      <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center" title="Audio attached">
+                        <Volume2 className="h-4 w-4 text-primary" />
+                      </div>
+                    ) : null}
                     <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
                       Overall: {rc.overall || 'N/A'}
                     </Badge>
@@ -360,39 +282,15 @@ function AdminReportCardsContent() {
                     })}
                   </div>
 
-                  {/* Audio Player for Admin */}
-                  {rc.lesson_audio_url && (
-                    <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Volume2 className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-medium text-primary">Lesson Audio</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-auto h-7 px-2 gap-1 text-xs"
-                          onClick={(e) => handlePlayAudio(rc, e)}
-                        >
-                          {playingAudioId === rc.id ? (
-                            <>
-                              <Pause className="h-3 w-3" />
-                              Pause
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3 w-3" />
-                              Play
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      <audio
-                        src={rc.lesson_audio_url}
-                        controls
-                        className="w-full h-8"
-                        style={{ maxHeight: '32px' }}
-                      />
-                    </div>
-                  )}
+                   {/* Audio Player */}
+                   {((rc as any).audio_path || rc.lesson_audio_url) && (
+                     <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
+                       <ReportCardAudioPlayer
+                         reportCardId={rc.id}
+                         legacyUrl={rc.lesson_audio_url}
+                       />
+                     </div>
+                   )}
 
                   {/* Messages */}
                   {rc.message_to_student && (

@@ -629,6 +629,12 @@ export type Database = {
       report_cards: {
         Row: {
           acceleration: number | null
+          audio_mime: string | null
+          audio_original_name: string | null
+          audio_path: string | null
+          audio_size_bytes: number | null
+          audio_uploaded_at: string | null
+          audio_uploaded_by: string | null
           blind_spots: number | null
           braking: number | null
           changing_lanes: number | null
@@ -660,6 +666,12 @@ export type Database = {
         }
         Insert: {
           acceleration?: number | null
+          audio_mime?: string | null
+          audio_original_name?: string | null
+          audio_path?: string | null
+          audio_size_bytes?: number | null
+          audio_uploaded_at?: string | null
+          audio_uploaded_by?: string | null
           blind_spots?: number | null
           braking?: number | null
           changing_lanes?: number | null
@@ -691,6 +703,12 @@ export type Database = {
         }
         Update: {
           acceleration?: number | null
+          audio_mime?: string | null
+          audio_original_name?: string | null
+          audio_path?: string | null
+          audio_size_bytes?: number | null
+          audio_uploaded_at?: string | null
+          audio_uploaded_by?: string | null
           blind_spots?: number | null
           braking?: number | null
           changing_lanes?: number | null
@@ -902,6 +920,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_read_report_card: {
+        Args: { p_report_card_id: string }
+        Returns: boolean
+      }
+      can_write_report_card_audio: {
+        Args: { p_report_card_id: string }
+        Returns: boolean
+      }
       cancel_session: {
         Args: { _reason: string; _session_id: string }
         Returns: {
@@ -1062,6 +1088,11 @@ export type Database = {
         Args: { p_report_card_id: string }
         Returns: {
           acceleration: number
+          audio_mime: string
+          audio_original_name: string
+          audio_path: string
+          audio_size_bytes: number
+          audio_uploaded_at: string
           blind_spots: number
           braking: number
           can_see_internal: boolean
@@ -1136,6 +1167,7 @@ export type Database = {
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
+      try_uuid: { Args: { p_text: string }; Returns: string }
       update_session_notes: {
         Args: {
           _note_for_instructor?: string

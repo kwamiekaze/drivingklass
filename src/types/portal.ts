@@ -87,7 +87,12 @@ export interface ReportCard {
   session_id: string;
   student_id: string;
   instructor_id: string;
-  lesson_audio_url: string | null;
+  lesson_audio_url: string | null; // legacy public URL
+  audio_path?: string | null; // canonical private storage path
+  audio_mime?: string | null;
+  audio_size_bytes?: number | null;
+  audio_original_name?: string | null;
+  audio_uploaded_at?: string | null;
   transcription_summary: string | null;
   message_to_student: string | null;
   internal_message: string | null;

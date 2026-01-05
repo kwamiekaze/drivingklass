@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, Copy, Check, ShieldX, Play } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, Copy, Check, ShieldX } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
+import { ReportCardAudioPlayer } from "@/components/portal/ReportCardAudioPlayer";
 
 interface ReportCardDetails {
   id: string;
@@ -17,7 +18,12 @@ interface ReportCardDetails {
   session_id: string;
   student_id: string;
   instructor_id: string;
-  lesson_audio_url: string | null;
+  lesson_audio_url: string | null; // legacy public URL
+  audio_path: string | null; // canonical storage path
+  audio_mime: string | null;
+  audio_size_bytes: number | null;
+  audio_original_name: string | null;
+  audio_uploaded_at: string | null;
   transcription_summary: string | null;
   message_to_student: string | null;
   internal_message: string | null;
@@ -63,70 +69,9 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Audio autoplay state
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [showPlayButton, setShowPlayButton] = useState(false);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  
   // Check if we came from splash with autoplay flag
   const locationState = location.state as { fromSplash?: boolean; attemptAutoplay?: boolean } | null;
   const shouldAttemptAutoplay = locationState?.attemptAutoplay === true;
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      const redirectPath = encodeURIComponent(location.pathname);
-      navigate(`/login?redirect=${redirectPath}`);
-    }
-  }, [user, authLoading, navigate, location.pathname]);
-
-  // Fetch report card once authenticated
-  useEffect(() => {
-    if (user && id) {
-      fetchReportCard();
-    }
-  }, [user, id]);
-
-  // Attempt autoplay after report card loads
-  useEffect(() => {
-    if (shouldAttemptAutoplay && reportCard?.lesson_audio_url && audioRef.current) {
-      // Small delay to ensure audio element is ready
-      const timer = setTimeout(() => {
-        attemptAutoplay();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [shouldAttemptAutoplay, reportCard?.lesson_audio_url]);
-
-  const attemptAutoplay = async () => {
-    if (!audioRef.current) return;
-    
-    try {
-      await audioRef.current.play();
-      setAudioPlaying(true);
-      setShowPlayButton(false);
-    } catch (err) {
-      // Autoplay blocked by browser - show play button
-      console.log('Autoplay blocked, showing play button');
-      setShowPlayButton(true);
-    }
-  };
-
-  const handlePlayAudio = async () => {
-    if (!audioRef.current) return;
-    
-    try {
-      await audioRef.current.play();
-      setAudioPlaying(true);
-      setShowPlayButton(false);
-    } catch (err) {
-      toast({
-        title: "Playback Error",
-        description: "Unable to play audio. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const fetchReportCard = async () => {
     if (!id) return;
@@ -355,34 +300,13 @@ export default function ReportCardView() {
             </Card>
 
             {/* Audio Section */}
-            {reportCard.lesson_audio_url && (
+            {(reportCard.audio_path || reportCard.lesson_audio_url) && (
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Volume2 className="h-4 w-4" />
-                    <span className="font-medium text-sm">Lesson Audio</span>
-                  </div>
-                  
-                  {/* Show play button if autoplay was blocked */}
-                  {showPlayButton && (
-                    <Button 
-                      onClick={handlePlayAudio}
-                      className="w-full mb-3 gap-2 cta-button"
-                    >
-                      <Play className="h-4 w-4" />
-                      Tap to Play Audio
-                    </Button>
-                  )}
-                  
-                  {/* Audio player */}
-                  <audio 
-                    ref={audioRef}
-                    src={reportCard.lesson_audio_url}
-                    controls
-                    className="w-full"
-                    onPlay={() => setAudioPlaying(true)}
-                    onPause={() => setAudioPlaying(false)}
-                    onEnded={() => setAudioPlaying(false)}
+                  <ReportCardAudioPlayer
+                    reportCardId={reportCard.id}
+                    legacyUrl={reportCard.lesson_audio_url}
+                    autoPlay={shouldAttemptAutoplay}
                   />
                 </CardContent>
               </Card>
