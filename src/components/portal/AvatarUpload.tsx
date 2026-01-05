@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Upload, Loader2, User } from "lucide-react";
+import { Camera, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageCropModal } from "./ImageCropModal";
 
 interface AvatarUploadProps {
   userId: string;
@@ -20,6 +21,8 @@ export function AvatarUpload({
 }: AvatarUploadProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,81 +36,13 @@ export function AvatarUpload({
       .slice(0, 2);
   };
 
-  const compressImage = async (file: File): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      const img = new Image();
-
-      img.onload = () => {
-        const MAX_SIZE = 512;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height = (height * MAX_SIZE) / width;
-            width = MAX_SIZE;
-          }
-        } else {
-          if (height > MAX_SIZE) {
-            width = (width * MAX_SIZE) / height;
-            height = MAX_SIZE;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error("Failed to compress image"));
-            }
-          },
-          "image/jpeg",
-          0.85
-        );
-      };
-
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleUpload = async (file: File) => {
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file",
-        description: "Please select an image file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select an image under 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleUploadCropped = async (croppedBlob: Blob) => {
+    setCropModalOpen(false);
+    setSelectedImage(null);
     setUploading(true);
 
     try {
-      // Compress image
-      const compressedBlob = await compressImage(file);
-      const fileName = `${userId}/avatar_${Date.now()}.jpg`;
+      const fileName = `${userId}/avatar_${Date.now()}.png`;
 
       // Delete old avatar if exists
       if (currentAvatarUrl) {
@@ -117,22 +52,22 @@ export function AvatarUpload({
         }
       }
 
-      // Upload new avatar
+      // Upload cropped avatar
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(fileName, compressedBlob, {
-          contentType: "image/jpeg",
+        .upload(fileName, croppedBlob, {
+          contentType: "image/png",
           upsert: true,
         });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL with cache-busting
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(fileName);
 
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       // Update profile with avatar URL
       const { error: updateError } = await supabase
@@ -161,11 +96,45 @@ export function AvatarUpload({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      handleUpload(file);
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
     }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // Create object URL and open crop modal
+    const imageUrl = URL.createObjectURL(file);
+    setSelectedImage(imageUrl);
+    setCropModalOpen(true);
+
     // Reset input
     e.target.value = "";
+  };
+
+  const handleCropClose = () => {
+    setCropModalOpen(false);
+    if (selectedImage) {
+      URL.revokeObjectURL(selectedImage);
+      setSelectedImage(null);
+    }
   };
 
   return (
@@ -221,6 +190,16 @@ export function AvatarUpload({
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Crop Modal */}
+      {selectedImage && (
+        <ImageCropModal
+          open={cropModalOpen}
+          imageSrc={selectedImage}
+          onClose={handleCropClose}
+          onSave={handleUploadCropped}
+        />
+      )}
     </div>
   );
 }
