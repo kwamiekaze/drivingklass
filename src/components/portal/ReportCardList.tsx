@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Calendar, User, Star, MessageSquare, Volume2, Clock, ExternalLink, Copy, Check } from "lucide-react";
+import { FileText, Calendar, User, Star, MessageSquare, Clock, ExternalLink, Copy, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +57,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
   };
 
   const canSeeInternalMessage = userRole === 'staff' || userRole === 'admin';
+  const canCopyLink = userRole === 'staff' || userRole === 'admin' || userRole === 'instructor';
 
   return (
     <div className="space-y-4">
@@ -136,14 +137,16 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     <ExternalLink className="h-3 w-3" />
                     Open
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="gap-1 text-xs h-8"
-                    onClick={(e) => handleCopyLink(card.id, e)}
-                  >
-                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                  </Button>
+                  {canCopyLink && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-xs h-8"
+                      onClick={(e) => handleCopyLink(card.id, e)}
+                    >
+                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -231,23 +234,6 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
               </div>
 
-              {/* Audio Link */}
-              {selectedCard.lesson_audio_url && (
-                <div className="p-3 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Volume2 className="h-4 w-4" />
-                    <span className="font-medium text-sm">Lesson Audio</span>
-                  </div>
-                  <a 
-                    href={selectedCard.lesson_audio_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Listen to Recording
-                  </a>
-                </div>
-              )}
 
               {/* Transcription */}
               {selectedCard.transcription_summary && (

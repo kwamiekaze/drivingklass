@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,23 +6,14 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Upload, Calendar, User, Check, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calendar, User } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
-import {
-  REPORT_CARD_AUDIO_BUCKET,
-  REPORT_CARD_AUDIO_MAX_BYTES,
-  buildReportCardAudioPath,
-  inferAudioMime,
-  sanitizeFilename,
-} from "@/lib/reportCardAudio";
 
 export default function ReportCardForm() {
   return (
@@ -40,7 +31,6 @@ function ReportCardFormContent() {
   const navigate = useNavigate();
   const { user } = usePortalAuth();
   const { toast } = useToast();
-  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const sessionId = searchParams.get('session_id');
   const isEditing = !!id;
@@ -49,12 +39,8 @@ function ReportCardFormContent() {
   const [existingCard, setExistingCard] = useState<ReportCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
 
   const [formData, setFormData] = useState({
-    lesson_audio_url: '',
     transcription_summary: '',
     message_to_student: '',
     internal_message: '',
@@ -114,7 +100,6 @@ function ReportCardFormContent() {
       setExistingCard(data as ReportCard);
       setSession(data.session as Session);
       setFormData({
-        lesson_audio_url: data.lesson_audio_url || '',
         transcription_summary: data.transcription_summary || '',
         message_to_student: data.message_to_student || '',
         internal_message: data.internal_message || '',
@@ -143,57 +128,6 @@ function ReportCardFormContent() {
     setLoading(false);
   };
 
-  // Helper to validate audio file type
-  const isValidAudioFile = (file: File): boolean => {
-    const validMimeTypes = [
-      'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
-      'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/ogg',
-      'video/mp4', // iOS sometimes uses this for audio recordings
-    ];
-    const validExtensions = ['mp3', 'm4a', 'mp4', 'aac', 'wav', 'webm', 'ogg'];
-    const extension = file.name.split('.').pop()?.toLowerCase() || '';
-    
-    // Check MIME type OR extension (be tolerant)
-    return validMimeTypes.includes(file.type) || validExtensions.includes(extension);
-  };
-
-  const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Max 25MB
-      if (file.size > REPORT_CARD_AUDIO_MAX_BYTES) {
-        toast({
-          title: "File too large",
-          description: "Please select an audio file under 25MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Validate file type (be tolerant for mobile)
-      if (!isValidAudioFile(file)) {
-        toast({
-          title: "Unsupported file type",
-          description: "Please select an audio file (mp3, m4a, wav, aac, mp4)",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setAudioFile(file);
-      setUploadStatus('idle');
-    }
-  };
-  
-  const clearAudioFile = () => {
-    setAudioFile(null);
-    setUploadStatus('idle');
-    setUploadProgress(0);
-    if (audioInputRef.current) {
-      audioInputRef.current.value = '';
-    }
-  };
-
   const handleRatingChange = (key: string, value: number[]) => {
     setFormData(prev => ({ ...prev, [key]: value[0] }));
   };
@@ -205,89 +139,24 @@ function ReportCardFormContent() {
     setSaving(true);
 
     try {
-      setUploadProgress(0);
-      setUploadStatus("idle");
-
       const reportDataBase = {
         ...formData,
-        lesson_audio_url: formData.lesson_audio_url || null, // legacy/manual URL fallback
         session_id: session.id,
         student_id: session.student_id,
         instructor_id: session.instructor_id,
       };
 
-      let reportCardId = existingCard?.id ?? null;
-
-      // 1) Save report card row first (so we have a report_card_id for storage path)
       if (isEditing && existingCard) {
         const { error } = await supabase
           .from("report_cards")
           .update(reportDataBase)
           .eq("id", existingCard.id);
         if (error) throw error;
-        reportCardId = existingCard.id;
       } else {
-        const { data: created, error } = await supabase
+        const { error } = await supabase
           .from("report_cards")
-          .insert(reportDataBase)
-          .select("id")
-          .single();
+          .insert(reportDataBase);
         if (error) throw error;
-        reportCardId = created.id;
-      }
-
-      // 2) Optional audio upload (reliable private storage + metadata)
-      if (audioFile && reportCardId) {
-        setUploadStatus("uploading");
-        setUploadProgress(25);
-
-        const contentType = inferAudioMime(audioFile);
-        const originalName = sanitizeFilename(audioFile.name);
-        const objectPath = buildReportCardAudioPath(reportCardId, originalName);
-
-        const { error: uploadError } = await supabase.storage
-          .from(REPORT_CARD_AUDIO_BUCKET)
-          .upload(objectPath, audioFile, {
-            upsert: true,
-            contentType,
-            cacheControl: "3600",
-          });
-
-        if (uploadError) {
-          // If this is a new report card submission, roll back the row so we don't save partial changes.
-          if (!isEditing) {
-            await supabase.from("report_cards").delete().eq("id", reportCardId);
-          }
-          throw uploadError;
-        }
-
-        setUploadProgress(75);
-
-        const audioMeta = {
-          audio_path: objectPath,
-          audio_mime: contentType,
-          audio_size_bytes: audioFile.size,
-          audio_original_name: audioFile.name,
-          audio_uploaded_at: new Date().toISOString(),
-          audio_uploaded_by: user.id,
-        };
-
-        const { error: metaError } = await supabase
-          .from("report_cards")
-          .update(audioMeta)
-          .eq("id", reportCardId);
-
-        if (metaError) {
-          // best-effort cleanup (ignore failures)
-          await supabase.storage.from(REPORT_CARD_AUDIO_BUCKET).remove([objectPath]);
-          if (!isEditing) {
-            await supabase.from("report_cards").delete().eq("id", reportCardId);
-          }
-          throw metaError;
-        }
-
-        setUploadProgress(100);
-        setUploadStatus("success");
       }
 
       toast({
@@ -297,7 +166,6 @@ function ReportCardFormContent() {
 
       navigate(-1);
     } catch (error: any) {
-      setUploadStatus("error");
       toast({
         title: "Error",
         description: error.message || "Failed to save report card",
@@ -398,85 +266,14 @@ function ReportCardFormContent() {
           </CardContent>
         </Card>
 
-        {/* Audio & Summary */}
+        {/* Lesson Summary */}
         <Card className="luxury-card">
           <CardHeader>
-            <CardTitle>Lesson Recording</CardTitle>
+            <CardTitle>Lesson Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Audio File (Optional)</Label>
-              <div className="flex flex-col gap-2">
-                <input
-                  ref={audioInputRef}
-                  type="file"
-                  accept="audio/*,.m4a,.mp3,.wav,.aac,.mp4"
-                  onChange={handleAudioSelect}
-                  className="hidden"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => audioInputRef.current?.click()}
-                    className="gap-2"
-                    disabled={saving}
-                  >
-                    <Upload className="h-4 w-4" />
-                    {audioFile ? 'Change Audio' : 'Upload Audio'}
-                  </Button>
-                  {audioFile && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={clearAudioFile}
-                      className="h-8 w-8"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                
-                {/* Selected file info */}
-                {audioFile && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border">
-                    {uploadStatus === 'success' ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : uploadStatus === 'error' ? (
-                      <RefreshCw className="h-4 w-4 text-destructive" />
-                    ) : (
-                      <Upload className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate">{audioFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Upload progress */}
-                {uploadStatus === 'uploading' && (
-                  <Progress value={uploadProgress} className="h-2" />
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="audio_url">Or Audio URL</Label>
-              <Input
-                id="audio_url"
-                value={formData.lesson_audio_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, lesson_audio_url: e.target.value }))}
-                placeholder="https://..."
-                className="theme-input"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="transcription">Transcription Summary</Label>
+              <Label htmlFor="transcription">Summary Notes</Label>
               <Textarea
                 id="transcription"
                 value={formData.transcription_summary}
