@@ -262,31 +262,57 @@ function StudentDashboardContent() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
-          <TabsTrigger value="calendar" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
+      <Tabs defaultValue="calendar" className="space-y-6 mt-6">
+        <TabsList className="w-full grid grid-cols-2 gap-2 h-auto p-1 bg-muted/50 backdrop-blur-sm">
+          <TabsTrigger 
+            value="calendar" 
+            className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
             <Calendar className="h-4 w-4" />
             <span>Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="report-cards" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
+          <TabsTrigger 
+            value="report-cards" 
+            className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
             <FileText className="h-4 w-4" />
             <span>Reports</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar">
-          <SessionCalendar 
-            sessions={sessions} 
-            userRole="student"
-            onSessionUpdate={fetchData}
-          />
+        <TabsContent value="calendar" className="mt-4">
+          <Card className="portal-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Calendar className="h-5 w-5 text-primary" />
+                All Sessions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SessionCalendar 
+                sessions={sessions} 
+                userRole="student"
+                onSessionUpdate={fetchData}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="report-cards">
-          <ReportCardList 
-            reportCards={reportCards}
-            userRole="student"
-          />
+        <TabsContent value="report-cards" className="mt-4">
+          <Card className="portal-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                Report Cards ({reportCards.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ReportCardList 
+                reportCards={reportCards}
+                userRole="student"
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

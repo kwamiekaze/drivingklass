@@ -61,12 +61,6 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Report Cards ({reportCards.length})
-        </h3>
-      </div>
 
       {reportCards.length === 0 ? (
         <Card className="portal-card">
