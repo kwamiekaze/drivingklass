@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,14 @@ const loginSchema = z.object({
 export default function Login() {
   const { signIn, user, role, isApproved, isRejected, isPending, isLoading: authLoading } = usePortalAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get redirect URL from query params
+  const redirectUrl = searchParams.get('redirect');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,6 +46,12 @@ export default function Login() {
     // Handle pending approval (students only)
     if (role === 'student' && isPending) {
       navigate('/pending-approval');
+      return;
+    }
+
+    // If there's a redirect URL and user is authorized, go there
+    if (redirectUrl) {
+      navigate(decodeURIComponent(redirectUrl));
       return;
     }
 
