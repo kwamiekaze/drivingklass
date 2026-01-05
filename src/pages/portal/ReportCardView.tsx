@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
+import { ReportCardSplash } from "@/components/portal/ReportCardSplash";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -62,6 +63,7 @@ export default function ReportCardView() {
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [splashComplete, setSplashComplete] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -152,6 +154,17 @@ export default function ReportCardView() {
   // If not authenticated, will redirect via useEffect
   if (!user) {
     return null;
+  }
+
+  // Show splash for student/instructor only (not admin/staff)
+  if (!splashComplete) {
+    return (
+      <ReportCardSplash
+        userId={user.id}
+        userRole={role}
+        onComplete={() => setSplashComplete(true)}
+      />
+    );
   }
 
   return (
