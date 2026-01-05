@@ -9,30 +9,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Camera, AlertCircle } from "lucide-react";
+import { Loader2, Save, Upload, Camera, Lock } from "lucide-react";
 import { z } from "zod";
 
-// Base schema for all roles
-const baseProfileSchema = z.object({
+// Schema for profile editing (non-admin users)
+const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(50),
   last_name: z.string().min(1, "Last name is required").max(50),
-  email: z.string().email("Invalid email"),
   phone: z.string().max(20).optional().or(z.literal('')),
+  pickup_address: z.string().max(500).optional().or(z.literal('')),
+  dropoff_address: z.string().max(500).optional().or(z.literal('')),
+  guardian_name: z.string().max(100).optional().or(z.literal('')),
+  guardian_phone: z.string().max(20).optional().or(z.literal('')),
+  guardian_email: z.string().email("Invalid guardian email").max(255).optional().or(z.literal('')),
 });
 
-// Extended schema for students
-const studentProfileSchema = baseProfileSchema.extend({
-  phone: z.string().min(10, "Phone number is required").max(20),
-  pickup_address: z.string().min(5, "Pickup address is required").max(500),
-  dropoff_address: z.string().min(5, "Drop-off address is required").max(500),
-  permit_number: z.string().min(3, "Permit number is required").max(50),
-  permit_issue_date: z.string().min(1, "Issue date is required"),
-  permit_expiration_date: z.string().min(1, "Expiration date is required"),
-  guardian_name: z.string().min(2, "Guardian name is required").max(100),
-  guardian_phone: z.string().min(10, "Guardian phone is required").max(20),
-  guardian_email: z.string().email("Invalid guardian email").max(255).optional().or(z.literal('')),
+// Schema for admin/staff editing (includes permit fields)
+const adminProfileSchema = profileSchema.extend({
+  permit_number: z.string().max(50).optional().or(z.literal('')),
+  permit_issue_date: z.string().optional().or(z.literal('')),
+  permit_expiration_date: z.string().optional().or(z.literal('')),
 });
 
 export default function Profile() {
@@ -46,7 +43,7 @@ export default function Profile() {
 }
 
 function ProfileContent() {
-  const { profile, user, role, refetchProfile, isIntakeSubmitted } = usePortalAuth();
+  const { profile, user, role, refetchProfile, isStaffOrAdmin } = usePortalAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -132,12 +129,16 @@ function ProfileContent() {
     if (!user) return;
 
     // Use appropriate schema based on role
-    const schema = role === 'student' ? studentProfileSchema : baseProfileSchema;
-    const dataToValidate = role === 'student' ? formData : {
+    const schema = isStaffOrAdmin ? adminProfileSchema : profileSchema;
+    const dataToValidate = isStaffOrAdmin ? formData : {
       first_name: formData.first_name,
       last_name: formData.last_name,
-      email: formData.email,
       phone: formData.phone,
+      pickup_address: formData.pickup_address,
+      dropoff_address: formData.dropoff_address,
+      guardian_name: formData.guardian_name,
+      guardian_phone: formData.guardian_phone,
+      guardian_email: formData.guardian_email,
     };
 
     const validation = schema.safeParse(dataToValidate);
@@ -162,8 +163,8 @@ function ProfileContent() {
     try {
       let permitUrl = profile?.permit_file_url;
 
-      // Upload permit file if selected (students only)
-      if (permitFile && role === 'student') {
+      // Upload permit file if selected (admin/staff only can update permit)
+      if (permitFile && isStaffOrAdmin) {
         const fileExt = permitFile.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         
@@ -188,18 +189,29 @@ function ProfileContent() {
         phone: formData.phone,
       };
 
+      // Include address and guardian fields for students
       if (role === 'student') {
         Object.assign(updatePayload, {
           pickup_address: formData.pickup_address,
           dropoff_address: formData.dropoff_address,
+          guardian_name: formData.guardian_name,
+          guardian_phone: formData.guardian_phone,
+          guardian_email: formData.guardian_email,
+        });
+      }
+
+      // Admin/staff can update permit fields
+      if (isStaffOrAdmin) {
+        Object.assign(updatePayload, {
+          pickup_address: formData.pickup_address,
+          dropoff_address: formData.dropoff_address,
           permit_number: formData.permit_number,
-          permit_issue_date: formData.permit_issue_date,
-          permit_expiration_date: formData.permit_expiration_date,
+          permit_issue_date: formData.permit_issue_date || null,
+          permit_expiration_date: formData.permit_expiration_date || null,
           guardian_name: formData.guardian_name,
           guardian_phone: formData.guardian_phone,
           guardian_email: formData.guardian_email,
           permit_file_url: permitUrl,
-          intake_submitted: true,
         });
       }
 
@@ -214,9 +226,7 @@ function ProfileContent() {
       
       toast({
         title: "Profile Updated",
-        description: role === 'student' && !isIntakeSubmitted 
-          ? "Your intake form has been submitted. You'll be notified once approved."
-          : "Your profile has been saved successfully.",
+        description: "Your profile has been saved successfully.",
       });
 
     } catch (error: any) {
@@ -231,27 +241,16 @@ function ProfileContent() {
   };
 
   const isStudent = role === 'student';
+  const canEditPermit = isStaffOrAdmin;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Your Profile</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          {isStudent && !isIntakeSubmitted 
-            ? "Complete your intake form to get started"
-            : "Keep your information up to date"
-          }
+          Keep your information up to date
         </p>
       </div>
-
-      {isStudent && !isIntakeSubmitted && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            Please complete all required fields and upload your permit to be approved for lessons.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Profile Picture */}
@@ -317,7 +316,7 @@ function ProfileContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm">Phone {isStudent && '*'}</Label>
+                <Label htmlFor="phone" className="text-sm">Phone</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -326,7 +325,6 @@ function ProfileContent() {
                   onChange={handleInputChange}
                   placeholder="(555) 123-4567"
                   className="theme-input min-h-[44px]"
-                  required={isStudent}
                 />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
               </div>
@@ -334,94 +332,102 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
-        {/* Student-only sections */}
-        {isStudent && (
-          <>
-            {/* Addresses */}
-            <Card className="portal-card">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-base sm:text-lg">Pickup & Drop-off Locations</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pickup_address" className="text-sm">Pickup Address *</Label>
-                  <Input
-                    id="pickup_address"
-                    name="pickup_address"
-                    value={formData.pickup_address}
-                    onChange={handleInputChange}
-                    placeholder="123 Main St, City, State ZIP"
-                    className="theme-input min-h-[44px]"
-                    required
-                  />
-                  {errors.pickup_address && <p className="text-xs text-destructive">{errors.pickup_address}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dropoff_address" className="text-sm">Drop-off Address *</Label>
-                  <Input
-                    id="dropoff_address"
-                    name="dropoff_address"
-                    value={formData.dropoff_address}
-                    onChange={handleInputChange}
-                    placeholder="123 Main St, City, State ZIP"
-                    className="theme-input min-h-[44px]"
-                    required
-                  />
-                  {errors.dropoff_address && <p className="text-xs text-destructive">{errors.dropoff_address}</p>}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Addresses - Students and Admin/Staff only */}
+        {(isStudent || isStaffOrAdmin) && (
+          <Card className="portal-card">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Pickup & Drop-off Locations</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup_address" className="text-sm">Pickup Address</Label>
+                <Input
+                  id="pickup_address"
+                  name="pickup_address"
+                  value={formData.pickup_address}
+                  onChange={handleInputChange}
+                  placeholder="123 Main St, City, State ZIP"
+                  className="theme-input min-h-[44px]"
+                />
+                {errors.pickup_address && <p className="text-xs text-destructive">{errors.pickup_address}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dropoff_address" className="text-sm">Drop-off Address</Label>
+                <Input
+                  id="dropoff_address"
+                  name="dropoff_address"
+                  value={formData.dropoff_address}
+                  onChange={handleInputChange}
+                  placeholder="123 Main St, City, State ZIP"
+                  className="theme-input min-h-[44px]"
+                />
+                {errors.dropoff_address && <p className="text-xs text-destructive">{errors.dropoff_address}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            {/* Permit Information */}
-            <Card className="portal-card">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-base sm:text-lg">Permit Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="permit_number" className="text-sm">Permit Number *</Label>
-                    <Input
-                      id="permit_number"
-                      name="permit_number"
-                      value={formData.permit_number}
-                      onChange={handleInputChange}
-                      className="theme-input min-h-[44px]"
-                      required
-                    />
-                    {errors.permit_number && <p className="text-xs text-destructive">{errors.permit_number}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="permit_issue_date" className="text-sm">Issue Date *</Label>
-                    <Input
-                      id="permit_issue_date"
-                      name="permit_issue_date"
-                      type="date"
-                      value={formData.permit_issue_date}
-                      onChange={handleInputChange}
-                      className="theme-input min-h-[44px]"
-                      required
-                    />
-                    {errors.permit_issue_date && <p className="text-xs text-destructive">{errors.permit_issue_date}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="permit_expiration_date" className="text-sm">Expiration Date *</Label>
-                    <Input
-                      id="permit_expiration_date"
-                      name="permit_expiration_date"
-                      type="date"
-                      value={formData.permit_expiration_date}
-                      onChange={handleInputChange}
-                      className="theme-input min-h-[44px]"
-                      required
-                    />
-                    {errors.permit_expiration_date && <p className="text-xs text-destructive">{errors.permit_expiration_date}</p>}
-                  </div>
+        {/* Permit Information - Visible to students (read-only) and admin/staff (editable) */}
+        {(isStudent || isStaffOrAdmin) && (
+          <Card className="portal-card">
+            <CardHeader className="pb-3 sm:pb-4">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base sm:text-lg">Permit/Driver's License Information</CardTitle>
+                {!canEditPermit && <Lock className="h-4 w-4 text-muted-foreground" />}
+              </div>
+              {!canEditPermit && (
+                <CardDescription className="text-xs sm:text-sm text-muted-foreground">
+                  Contact staff to update permit information
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="permit_number" className="text-sm">Permit Number</Label>
+                  <Input
+                    id="permit_number"
+                    name="permit_number"
+                    value={formData.permit_number}
+                    onChange={handleInputChange}
+                    className={`theme-input min-h-[44px] ${!canEditPermit ? 'bg-muted cursor-not-allowed' : ''}`}
+                    disabled={!canEditPermit}
+                  />
+                  {errors.permit_number && <p className="text-xs text-destructive">{errors.permit_number}</p>}
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="permit_issue_date" className="text-sm">Issue Date</Label>
+                  <Input
+                    id="permit_issue_date"
+                    name="permit_issue_date"
+                    type="date"
+                    value={formData.permit_issue_date}
+                    onChange={handleInputChange}
+                    className={`theme-input min-h-[44px] ${!canEditPermit ? 'bg-muted cursor-not-allowed' : ''}`}
+                    disabled={!canEditPermit}
+                  />
+                  {errors.permit_issue_date && <p className="text-xs text-destructive">{errors.permit_issue_date}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="permit_expiration_date" className="text-sm">Expiration Date</Label>
+                  <Input
+                    id="permit_expiration_date"
+                    name="permit_expiration_date"
+                    type="date"
+                    value={formData.permit_expiration_date}
+                    onChange={handleInputChange}
+                    className={`theme-input min-h-[44px] ${!canEditPermit ? 'bg-muted cursor-not-allowed' : ''}`}
+                    disabled={!canEditPermit}
+                  />
+                  {errors.permit_expiration_date && <p className="text-xs text-destructive">{errors.permit_expiration_date}</p>}
+                </div>
+              </div>
 
-                {/* Permit Upload */}
-                <div className="space-y-3">
-                  <Label className="text-sm">Permit Photo *</Label>
+              {/* Permit Photo - Admin/staff can upload, others just view */}
+              <div className="space-y-3">
+                <Label className="text-sm">Permit Photo</Label>
+                
+                {canEditPermit && (
                   <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
                     <input
                       ref={fileInputRef}
@@ -457,84 +463,85 @@ function ProfileContent() {
                       Take Photo
                     </Button>
                   </div>
-                  
-                  {permitPreview ? (
-                    <div className="mt-4">
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-2">Preview:</p>
+                )}
+                
+                {permitPreview ? (
+                  <div className="mt-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+                      {permitFile ? 'Preview:' : 'Current Permit:'}
+                    </p>
+                    {permitFile ? (
                       <img 
                         src={permitPreview} 
                         alt="Permit preview" 
                         className="max-w-full sm:max-w-xs rounded-lg border"
                       />
-                    </div>
-                  ) : profile?.permit_file_url ? (
-                    <div className="mt-4">
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-2">Current Permit:</p>
+                    ) : (
                       <PermitPreview 
-                        permitFileUrl={profile.permit_file_url} 
+                        permitFileUrl={permitPreview} 
                         className="max-w-full sm:max-w-xs"
                       />
-                    </div>
-                  ) : (
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Please upload a clear photo of your learner's permit
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    No permit photo on file
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            {/* Guardian Information */}
-            <Card className="portal-card">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-base sm:text-lg">Parent/Guardian/Emergency Contact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="guardian_name" className="text-sm">Name *</Label>
-                    <Input
-                      id="guardian_name"
-                      name="guardian_name"
-                      value={formData.guardian_name}
-                      onChange={handleInputChange}
-                      placeholder="Parent/Guardian Name"
-                      className="theme-input min-h-[44px]"
-                      required
-                    />
-                    {errors.guardian_name && <p className="text-xs text-destructive">{errors.guardian_name}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardian_phone" className="text-sm">Phone *</Label>
-                    <Input
-                      id="guardian_phone"
-                      name="guardian_phone"
-                      type="tel"
-                      value={formData.guardian_phone}
-                      onChange={handleInputChange}
-                      placeholder="(555) 123-4567"
-                      className="theme-input min-h-[44px]"
-                      required
-                    />
-                    {errors.guardian_phone && <p className="text-xs text-destructive">{errors.guardian_phone}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardian_email" className="text-sm">Email</Label>
-                    <Input
-                      id="guardian_email"
-                      name="guardian_email"
-                      type="email"
-                      value={formData.guardian_email}
-                      onChange={handleInputChange}
-                      placeholder="guardian@email.com"
-                      className="theme-input min-h-[44px]"
-                    />
-                    {errors.guardian_email && <p className="text-xs text-destructive">{errors.guardian_email}</p>}
-                  </div>
+        {/* Guardian Information - Students and Admin/Staff only */}
+        {(isStudent || isStaffOrAdmin) && (
+          <Card className="portal-card">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Parent/Guardian/Emergency Contact</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="guardian_name" className="text-sm">Name</Label>
+                  <Input
+                    id="guardian_name"
+                    name="guardian_name"
+                    value={formData.guardian_name}
+                    onChange={handleInputChange}
+                    placeholder="Parent/Guardian Name"
+                    className="theme-input min-h-[44px]"
+                  />
+                  {errors.guardian_name && <p className="text-xs text-destructive">{errors.guardian_name}</p>}
                 </div>
-              </CardContent>
-            </Card>
-          </>
+                <div className="space-y-2">
+                  <Label htmlFor="guardian_phone" className="text-sm">Phone</Label>
+                  <Input
+                    id="guardian_phone"
+                    name="guardian_phone"
+                    type="tel"
+                    value={formData.guardian_phone}
+                    onChange={handleInputChange}
+                    placeholder="(555) 123-4567"
+                    className="theme-input min-h-[44px]"
+                  />
+                  {errors.guardian_phone && <p className="text-xs text-destructive">{errors.guardian_phone}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guardian_email" className="text-sm">Email</Label>
+                  <Input
+                    id="guardian_email"
+                    name="guardian_email"
+                    type="email"
+                    value={formData.guardian_email}
+                    onChange={handleInputChange}
+                    placeholder="guardian@email.com"
+                    className="theme-input min-h-[44px]"
+                  />
+                  {errors.guardian_email && <p className="text-xs text-destructive">{errors.guardian_email}</p>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Submit Button */}
@@ -547,7 +554,7 @@ function ProfileContent() {
           ) : (
             <>
               <Save className="h-4 w-4" />
-              {isStudent && !isIntakeSubmitted ? "Submit Intake Form" : "Save Changes"}
+              Save Changes
             </>
           )}
         </Button>
