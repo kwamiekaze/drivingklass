@@ -257,7 +257,7 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
     setHighlightedIndex(0);
     const intervalId = setInterval(() => {
       setHighlightedIndex((prev) => ((prev ?? 0) + 1) % totalButtons);
-    }, 900);
+    }, 1800);
 
     return () => clearInterval(intervalId);
   }, [isMobile, hasUserSelected, totalButtons]);
