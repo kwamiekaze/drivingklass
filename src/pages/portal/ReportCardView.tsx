@@ -348,18 +348,17 @@ export default function ReportCardView() {
             </Card>
 
             {/* Audio Section */}
-            {(reportCard.audio_path || reportCard.lesson_audio_url) && (
-              <Card className="portal-card">
-                <CardContent className="p-4 sm:p-6">
-                  <ReportCardAudioPlayer
-                    reportCardId={reportCard.id}
-                    audioPath={reportCard.audio_path}
-                    legacyUrl={reportCard.lesson_audio_url}
-                    autoPlay={shouldAttemptAutoplay}
-                  />
-                </CardContent>
-              </Card>
-            )}
+            <Card className="portal-card">
+              <CardContent className="p-4 sm:p-6">
+                <ReportCardAudioPlayer
+                  reportCardId={reportCard.id}
+                  audioPath={reportCard.audio_path}
+                  legacyUrl={reportCard.lesson_audio_url}
+                  autoPlay={shouldAttemptAutoplay}
+                  showDebug={role === 'admin' || role === 'staff'}
+                />
+              </CardContent>
+            </Card>
 
             {/* Transcription */}
             {reportCard.transcription_summary && (
