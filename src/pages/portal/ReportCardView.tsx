@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
+import { useTheme } from "@/components/ThemeProvider";
+import { GalaxyStars } from "@/components/GalaxyStars";
+import { LightModeBackground } from "@/components/LightModeBackground";
 
 interface ReportCardDetails {
   id: string;
@@ -183,9 +186,35 @@ export default function ReportCardView() {
     );
   }
 
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
     <PortalLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      {/* Background matching homepage theme */}
+      <div className="fixed inset-0 -z-10" style={{ pointerEvents: 'none' }}>
+        {isDark ? (
+          <>
+            <div 
+              className="absolute inset-0 transition-colors duration-500"
+              style={{
+                background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
+              }}
+            />
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
+              }}
+            />
+            <GalaxyStars />
+          </>
+        ) : (
+          <LightModeBackground />
+        )}
+      </div>
+
+      <div className="max-w-3xl mx-auto space-y-6 relative">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleGoBack}>

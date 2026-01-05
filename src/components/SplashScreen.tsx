@@ -91,7 +91,26 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         }}
       />
 
-      {/* Skip hint removed - tap functionality still works */}
+      {/* "Tap to continue" text below the car */}
+      {videoLoaded && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'max(5rem, calc(env(safe-area-inset-bottom, 2rem) + 3rem))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '0.875rem',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'rgba(212, 165, 116, 0.8)',
+            textShadow: '0 0 20px rgba(212, 165, 116, 0.4)',
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        >
+          Tap to continue
+        </div>
+      )}
     </div>
   );
 }
