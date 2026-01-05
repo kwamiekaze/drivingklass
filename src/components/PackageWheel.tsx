@@ -429,13 +429,15 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
           <p 
             className="text-lg sm:text-xl font-bold mb-1"
             style={isLight ? {
-              color: '#111827',
+              color: 'rgba(20, 20, 20, 0.92)',
               fontWeight: 700,
+              textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
             } : {
               background: 'linear-gradient(135deg, hsl(43 85% 55%) 0%, hsl(48 90% 72%) 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 6px hsl(43 80% 52% / 0.35))',
             }}
           >
             {selectedPackage?.label.replace('\n', ' ')}
@@ -443,8 +445,9 @@ export function PackageWheel({ onPackageSelect }: PackageWheelProps) {
           <p 
             className="text-2xl sm:text-3xl font-bold mb-5"
             style={isLight ? {
-              color: '#111827',
+              color: 'rgba(20, 20, 20, 0.92)',
               fontWeight: 700,
+              textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
             } : {
               background: 'linear-gradient(135deg, hsl(38 75% 45%) 0%, hsl(43 85% 55%) 50%, hsl(48 90% 72%) 100%)',
               WebkitBackgroundClip: 'text',
