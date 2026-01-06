@@ -80,11 +80,6 @@ const Index = () => {
           )}
         </div>
 
-        {/* Theme Toggle - top left */}
-        <div className="fixed top-4 left-4 z-50">
-          <ThemeToggle />
-        </div>
-
         {/* Content wrapper */}
         <div className="relative" style={{ zIndex: 10 }}>
           {/* Hero Section with car and package wheel - pass splashComplete */}

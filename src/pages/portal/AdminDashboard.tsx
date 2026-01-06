@@ -5,7 +5,7 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3 } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
@@ -32,6 +32,7 @@ function AdminDashboardContent() {
     upcomingSessions: 0,
     completedToday: 0,
     recentReportCards: 0,
+    newMessages: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,12 @@ function AdminDashboardContent() {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', weekAgo.toISOString());
 
+    // New messages count
+    const { count: messageCount } = await supabase
+      .from('contact_submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'new');
+
     setStats({
       pendingApprovals: pendingCount || 0,
       totalStudents: studentCount || 0,
@@ -88,6 +95,7 @@ function AdminDashboardContent() {
       upcomingSessions: upcomingCount || 0,
       completedToday: completedCount || 0,
       recentReportCards: reportCount || 0,
+      newMessages: messageCount || 0,
     });
 
     // Fetch recent activity with same filter as count (approval_status = 'pending')
@@ -108,8 +116,9 @@ function AdminDashboardContent() {
     { href: '/admin/instructors', label: 'Instructors', icon: Users, count: stats.totalInstructors, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
     { href: '/admin/schedule', label: 'Schedule', icon: Calendar, count: stats.upcomingSessions, color: 'text-primary', bgColor: 'bg-primary/10' },
     { href: '/admin/report-cards', label: 'Reports', icon: FileText, count: stats.recentReportCards, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+    { href: '/admin/messages', label: 'Messages', icon: Headset, count: stats.newMessages, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
     { href: '/admin/assignments', label: 'Assignments', icon: Users, count: 0, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: 0, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: 0, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
   ];
 
   const { resolvedTheme } = useTheme();
