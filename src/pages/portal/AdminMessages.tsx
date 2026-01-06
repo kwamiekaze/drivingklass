@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle } from "lucide-react";
+import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/ThemeProvider";
@@ -154,24 +155,64 @@ function AdminMessagesContent() {
     }
   };
 
-  const viewAttachment = async (url: string) => {
-    // If it's a storage path, get signed URL
-    if (url.startsWith('contact-attachments/')) {
+  const [viewingAttachment, setViewingAttachment] = useState<{url: string; name: string; isImage: boolean} | null>(null);
+
+  const viewAttachment = async (attachmentPath: string, attachmentName: string) => {
+    // The attachment_url field stores the path within the id-uploads bucket
+    // Path format: contact-ids/{submissionId}/{timestamp}-{random}.{ext}
+    if (!attachmentPath) {
+      toast({
+        title: "No attachment found",
+        description: "This message doesn't have an attachment on record.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("[DEV] Fetching signed URL for:", { bucket: "id-uploads", path: attachmentPath });
+
+    try {
       const { data, error } = await supabase.storage
-        .from('contact-attachments')
-        .createSignedUrl(url.replace('contact-attachments/', ''), 3600);
-      
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
-      } else {
+        .from('id-uploads')
+        .createSignedUrl(attachmentPath, 600); // 10 minutes
+
+      if (error) {
+        console.error("[DEV] Signed URL error:", error);
         toast({
-          title: "Error",
-          description: "Could not load attachment",
+          title: "Attachment unavailable",
+          description: "Could not load attachment. Check storage path/policies.",
           variant: "destructive",
         });
+        return;
       }
-    } else {
-      window.open(url, '_blank');
+
+      if (!data?.signedUrl) {
+        toast({
+          title: "Attachment unavailable", 
+          description: "File not found in storage. Attachment may not have uploaded correctly.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Determine if it's an image
+      const lowerName = attachmentName?.toLowerCase() || attachmentPath.toLowerCase();
+      const isImage = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(lowerName);
+
+      if (isImage) {
+        // Open in modal for images
+        setViewingAttachment({ url: data.signedUrl, name: attachmentName || 'Attachment', isImage: true });
+      } else {
+        // Open in new tab for PDFs and other files
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (err) {
+      console.error("[DEV] Attachment view error:", err);
+      toast({
+        title: "Error loading attachment",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -385,17 +426,22 @@ function AdminMessagesContent() {
               )}
 
               {/* Attachment */}
-              {selectedMessage.attachment_url && (
+              {selectedMessage.attachment_url ? (
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Attachment</h4>
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-2"
-                    onClick={() => viewAttachment(selectedMessage.attachment_url!)}
+                    onClick={() => viewAttachment(selectedMessage.attachment_url!, selectedMessage.attachment_name || 'Document')}
                   >
                     <Eye className="h-4 w-4" />
                     View ID ({selectedMessage.attachment_name || 'Document'})
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Attachment</h4>
+                  <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">No attachment found on this message.</p>
                 </div>
               )}
 
@@ -427,6 +473,44 @@ function AdminMessagesContent() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Image Viewer Modal */}
+      <Dialog open={!!viewingAttachment} onOpenChange={() => setViewingAttachment(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-2">
+              <span className="truncate">{viewingAttachment?.name}</span>
+              {viewingAttachment && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => window.open(viewingAttachment.url, '_blank')}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {viewingAttachment?.isImage && (
+            <div className="flex items-center justify-center p-2">
+              <img
+                src={viewingAttachment.url}
+                alt={viewingAttachment.name}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                onError={() => {
+                  toast({
+                    title: "Image failed to load",
+                    description: "The image could not be displayed.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
