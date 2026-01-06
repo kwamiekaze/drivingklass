@@ -4,7 +4,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Clock, FileText, CheckCircle, ArrowRight, Car, XCircle } from "lucide-react";
+import { Loader2, Clock, FileText, CheckCircle, ArrowRight, Car, XCircle, Pencil } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 
@@ -145,6 +145,14 @@ export default function PendingApproval() {
                 <p className="text-sm text-muted-foreground text-center">
                   This page will automatically redirect once you're approved.
                 </p>
+
+                {/* Edit Intake Form Button */}
+                <Link to="/intake?edit=true">
+                  <Button variant="outline" className="w-full gap-2">
+                    <Pencil className="h-4 w-4" />
+                    Edit Intake Form
+                  </Button>
+                </Link>
               </>
             ) : (
               <>
