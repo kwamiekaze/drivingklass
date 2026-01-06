@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Camera, AlertCircle } from "lucide-react";
+import { Loader2, Save, Upload, Camera, AlertCircle, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import { Link } from "react-router-dom";
 
 const intakeFormSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(50),
@@ -28,6 +29,7 @@ const intakeFormSchema = z.object({
   guardian_email: z.string().email("Invalid guardian email").max(255).optional().or(z.literal('')),
 });
 
+// Wrapper for student-only access (new intake submissions)
 export default function IntakeForm() {
   return (
     <ProtectedRoute allowedRoles={['student']} requireApproval={false}>
@@ -38,41 +40,136 @@ export default function IntakeForm() {
   );
 }
 
-function IntakeFormContent() {
-  const { profile, user, isIntakeSubmitted, isApproved, refetchProfile } = usePortalAuth();
+// Admin/Staff intake editing wrapper
+export function AdminIntakeEdit() {
+  return (
+    <ProtectedRoute allowedRoles={['admin', 'staff']}>
+      <PortalLayout>
+        <IntakeFormContent isAdminEdit />
+      </PortalLayout>
+    </ProtectedRoute>
+  );
+}
+
+interface IntakeFormContentProps {
+  isAdminEdit?: boolean;
+}
+
+function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
+  const { profile, user, isIntakeSubmitted, isApproved, refetchProfile, role } = usePortalAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
+  // Check if we're in edit mode
+  const editUserId = searchParams.get('userId');
+  const isEditMode = isAdminEdit ? !!editUserId : isIntakeSubmitted;
+  const targetUserId = isAdminEdit ? editUserId : user?.id;
+  
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingProfile, setIsFetchingProfile] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
   const [permitPreview, setPermitPreview] = useState<string | null>(null);
+  const [existingPermitUrl, setExistingPermitUrl] = useState<string | null>(null);
+  const [targetProfile, setTargetProfile] = useState<any>(null);
 
   const [formData, setFormData] = useState({
-    first_name: (profile as any)?.first_name || '',
-    last_name: (profile as any)?.last_name || '',
-    phone: profile?.phone || '',
-    pickup_address: profile?.pickup_address || '',
-    dropoff_address: profile?.dropoff_address || '',
-    permit_number: profile?.permit_number || '',
-    permit_issue_date: profile?.permit_issue_date || '',
-    permit_expiration_date: profile?.permit_expiration_date || '',
-    guardian_name: profile?.guardian_name || '',
-    guardian_phone: profile?.guardian_phone || '',
-    guardian_email: profile?.guardian_email || '',
+    first_name: '',
+    last_name: '',
+    phone: '',
+    pickup_address: '',
+    dropoff_address: '',
+    permit_number: '',
+    permit_issue_date: '',
+    permit_expiration_date: '',
+    guardian_name: '',
+    guardian_phone: '',
+    guardian_email: '',
   });
 
-  // If already approved, redirect to profile
-  if (isApproved) {
+  // Fetch target user's profile for admin edit or prefill for user's own edit
+  useEffect(() => {
+    const fetchTargetProfile = async () => {
+      const idToFetch = isAdminEdit ? editUserId : user?.id;
+      if (!idToFetch) return;
+      
+      setIsFetchingProfile(true);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', idToFetch)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error",
+          description: "Could not load user profile",
+          variant: "destructive",
+        });
+        setIsFetchingProfile(false);
+        return;
+      }
+      
+      if (data) {
+        setTargetProfile(data);
+        setFormData({
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          phone: data.phone || '',
+          pickup_address: data.pickup_address || '',
+          dropoff_address: data.dropoff_address || '',
+          permit_number: data.permit_number || '',
+          permit_issue_date: data.permit_issue_date || '',
+          permit_expiration_date: data.permit_expiration_date || '',
+          guardian_name: data.guardian_name || '',
+          guardian_phone: data.guardian_phone || '',
+          guardian_email: data.guardian_email || '',
+        });
+        setExistingPermitUrl(data.permit_file_url);
+        setAvatarUrl(data.avatar_url);
+      }
+      
+      setIsFetchingProfile(false);
+    };
+
+    // For admin edit, always fetch the target profile
+    // For user edit mode, fetch their profile data
+    if (isAdminEdit || isEditMode) {
+      fetchTargetProfile();
+    } else if (profile && !isEditMode) {
+      // New submission - prefill from existing profile data
+      setFormData({
+        first_name: (profile as any)?.first_name || '',
+        last_name: (profile as any)?.last_name || '',
+        phone: profile?.phone || '',
+        pickup_address: profile?.pickup_address || '',
+        dropoff_address: profile?.dropoff_address || '',
+        permit_number: profile?.permit_number || '',
+        permit_issue_date: profile?.permit_issue_date || '',
+        permit_expiration_date: profile?.permit_expiration_date || '',
+        guardian_name: profile?.guardian_name || '',
+        guardian_phone: profile?.guardian_phone || '',
+        guardian_email: profile?.guardian_email || '',
+      });
+      setExistingPermitUrl(profile?.permit_file_url || null);
+    }
+  }, [isAdminEdit, editUserId, user?.id, profile, isEditMode]);
+
+  // For students: redirect if approved and not in edit mode
+  if (!isAdminEdit && isApproved && !isEditMode) {
     navigate('/profile', { replace: true });
     return null;
   }
 
-  // If intake already submitted, redirect to pending-approval
-  if (isIntakeSubmitted) {
+  // For students: redirect to pending-approval if already submitted and not in edit mode
+  // But allow access if they want to edit their submitted intake
+  if (!isAdminEdit && isIntakeSubmitted && !isEditMode && !searchParams.get('edit')) {
     navigate('/pending-approval', { replace: true });
     return null;
   }
@@ -111,7 +208,7 @@ function IntakeFormContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!targetUserId) return;
 
     const validation = intakeFormSchema.safeParse(formData);
     if (!validation.success) {
@@ -130,7 +227,8 @@ function IntakeFormContent() {
       return;
     }
 
-    if (!permitFile && !profile?.permit_file_url) {
+    // Only require permit for new submissions
+    if (!isEditMode && !permitFile && !existingPermitUrl) {
       toast({
         title: "Permit Required",
         description: "Please upload a photo of your learner's permit",
@@ -142,12 +240,48 @@ function IntakeFormContent() {
     setIsLoading(true);
 
     try {
-      let permitUrl = profile?.permit_file_url;
+      // Get current profile data for revision snapshot
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', targetUserId)
+        .single();
+
+      // Create revision snapshot BEFORE updating (preserve history)
+      if (isEditMode && currentProfile) {
+        const snapshotJson = {
+          first_name: currentProfile.first_name,
+          last_name: currentProfile.last_name,
+          phone: currentProfile.phone,
+          pickup_address: currentProfile.pickup_address,
+          dropoff_address: currentProfile.dropoff_address,
+          permit_number: currentProfile.permit_number,
+          permit_issue_date: currentProfile.permit_issue_date,
+          permit_expiration_date: currentProfile.permit_expiration_date,
+          guardian_name: currentProfile.guardian_name,
+          guardian_phone: currentProfile.guardian_phone,
+          guardian_email: currentProfile.guardian_email,
+          permit_file_url: currentProfile.permit_file_url,
+          captured_at: new Date().toISOString(),
+        };
+
+        await supabase
+          .from('intake_form_revisions')
+          .insert({
+            user_id: targetUserId,
+            edited_by: user?.id,
+            edited_by_role: role,
+            snapshot_json: snapshotJson,
+            note: isAdminEdit ? 'Edited by admin/staff' : 'Edited by user',
+          });
+      }
+
+      let permitUrl = existingPermitUrl;
 
       // Upload permit file if selected
       if (permitFile) {
         const fileExt = permitFile.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const fileName = `${targetUserId}/${Date.now()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('permits')
@@ -162,60 +296,123 @@ function IntakeFormContent() {
         permitUrl = urlData.publicUrl;
       }
 
-      // Update profile with all intake data
+      // Prepare update data
+      const updateData: Record<string, any> = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        full_name: `${formData.first_name} ${formData.last_name}`.trim(),
+        phone: formData.phone,
+        pickup_address: formData.pickup_address,
+        dropoff_address: formData.dropoff_address,
+        permit_number: formData.permit_number,
+        permit_issue_date: formData.permit_issue_date,
+        permit_expiration_date: formData.permit_expiration_date,
+        guardian_name: formData.guardian_name,
+        guardian_phone: formData.guardian_phone,
+        guardian_email: formData.guardian_email,
+        permit_file_url: permitUrl,
+        intake_updated_at: new Date().toISOString(),
+        intake_updated_by: user?.id,
+        intake_last_edit_role: role,
+      };
+
+      // For new submissions
+      if (!isEditMode) {
+        updateData.intake_submitted = true;
+        updateData.approval_status = 'pending';
+        updateData.intake_edit_count = 0;
+      } else {
+        // For edits, increment edit count and potentially flag for review
+        updateData.intake_edit_count = (currentProfile?.intake_edit_count || 0) + 1;
+        
+        // If user (not admin) edits an approved intake, flag for review
+        if (!isAdminEdit && currentProfile?.approval_status === 'approved') {
+          updateData.needs_review = true;
+        }
+      }
+
+      // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          full_name: `${formData.first_name} ${formData.last_name}`.trim(),
-          phone: formData.phone,
-          pickup_address: formData.pickup_address,
-          dropoff_address: formData.dropoff_address,
-          permit_number: formData.permit_number,
-          permit_issue_date: formData.permit_issue_date,
-          permit_expiration_date: formData.permit_expiration_date,
-          guardian_name: formData.guardian_name,
-          guardian_phone: formData.guardian_phone,
-          guardian_email: formData.guardian_email,
-          permit_file_url: permitUrl,
-          intake_submitted: true,
-          approval_status: 'pending',
-        })
-        .eq('id', user.id);
+        .update(updateData)
+        .eq('id', targetUserId);
 
       if (updateError) throw updateError;
 
-      // Create notification for admin/staff
-      const { data: staffUsers } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .in('role', ['admin', 'staff']);
+      // Send notifications
+      if (isEditMode) {
+        if (isAdminEdit) {
+          // Notify the user that admin/staff edited their intake
+          await supabase.from('notifications').insert({
+            user_id: targetUserId,
+            title: 'Intake Form Updated',
+            message: 'Your intake form was updated by staff.',
+            type: 'system',
+          });
+        } else {
+          // Notify admin/staff that user edited their intake
+          const { data: staffUsers } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .in('role', ['admin', 'staff']);
 
-      if (staffUsers && staffUsers.length > 0) {
-        const notifications = staffUsers.map(su => ({
-          user_id: su.user_id,
-          title: 'New Intake Submission',
-          message: `${formData.first_name} ${formData.last_name} has submitted their intake form and is awaiting approval.`,
-          type: 'intake_submitted',
-        }));
+          if (staffUsers && staffUsers.length > 0) {
+            const notifications = staffUsers.map(su => ({
+              user_id: su.user_id,
+              title: 'Intake Form Updated',
+              message: `${formData.first_name} ${formData.last_name} has updated their intake form.${currentProfile?.approval_status === 'approved' ? ' (Review recommended)' : ''}`,
+              type: 'intake_submitted',
+            }));
 
-        await supabase.from('notifications').insert(notifications);
+            await supabase.from('notifications').insert(notifications);
+          }
+        }
+      } else {
+        // New submission - notify admin/staff
+        const { data: staffUsers } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .in('role', ['admin', 'staff']);
+
+        if (staffUsers && staffUsers.length > 0) {
+          const notifications = staffUsers.map(su => ({
+            user_id: su.user_id,
+            title: 'New Intake Submission',
+            message: `${formData.first_name} ${formData.last_name} has submitted their intake form and is awaiting approval.`,
+            type: 'intake_submitted',
+          }));
+
+          await supabase.from('notifications').insert(notifications);
+        }
       }
 
       await refetchProfile();
       
       toast({
-        title: "Intake Form Submitted",
-        description: "Your intake form has been submitted. You'll be notified once approved.",
+        title: isEditMode ? "Intake Form Updated" : "Intake Form Submitted",
+        description: isEditMode 
+          ? "Your changes have been saved successfully." 
+          : "Your intake form has been submitted. You'll be notified once approved.",
       });
 
-      navigate('/pending-approval', { replace: true });
+      // Navigate appropriately
+      if (isAdminEdit) {
+        navigate('/admin/approvals');
+      } else if (isEditMode) {
+        // User edited their own intake - go back to appropriate page
+        if (isApproved) {
+          navigate('/student');
+        } else {
+          navigate('/pending-approval');
+        }
+      } else {
+        navigate('/pending-approval', { replace: true });
+      }
 
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to submit intake form",
+        description: error.message || "Failed to save intake form",
         variant: "destructive",
       });
     } finally {
@@ -223,21 +420,62 @@ function IntakeFormContent() {
     }
   };
 
+  if (isFetchingProfile) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const pageTitle = isAdminEdit 
+    ? `Edit Intake: ${targetProfile?.first_name || ''} ${targetProfile?.last_name || ''}`.trim() || 'Edit Intake Form'
+    : isEditMode 
+      ? 'Edit Your Intake Form'
+      : 'Student Intake Form';
+
+  const pageDescription = isAdminEdit
+    ? 'Update this user\'s intake information'
+    : isEditMode
+      ? 'Update your intake information'
+      : 'Complete your intake form to get started with driving lessons';
+
   return (
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+      {/* Back button for admin edit */}
+      {isAdminEdit && (
+        <Button variant="ghost" asChild className="gap-2 -ml-2">
+          <Link to="/admin/approvals">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Approvals
+          </Link>
+        </Button>
+      )}
+
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Student Intake Form</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">{pageTitle}</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Complete your intake form to get started with driving lessons
+          {pageDescription}
         </p>
       </div>
 
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          Please complete all required fields and upload your permit to be approved for lessons.
-        </AlertDescription>
-      </Alert>
+      {!isEditMode && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Please complete all required fields and upload your permit to be approved for lessons.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isEditMode && !isAdminEdit && isApproved && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Your changes will be flagged for staff review. Your account access will remain active.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Profile Picture */}
@@ -247,9 +485,9 @@ function IntakeFormContent() {
             <CardDescription className="text-xs sm:text-sm">Upload or take a photo for your profile</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            {user && (
+            {targetUserId && (
               <AvatarUpload
-                userId={user.id}
+                userId={targetUserId}
                 currentAvatarUrl={avatarUrl}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
@@ -297,7 +535,7 @@ function IntakeFormContent() {
                   id="email"
                   name="email"
                   type="email"
-                  value={user?.email || ''}
+                  value={targetProfile?.email || user?.email || ''}
                   className="theme-input min-h-[44px] bg-muted"
                   disabled
                 />
@@ -404,7 +642,7 @@ function IntakeFormContent() {
 
             {/* Permit Upload */}
             <div className="space-y-3">
-              <Label className="text-sm">Permit Photo *</Label>
+              <Label className="text-sm">Permit Photo {!isEditMode && '*'}</Label>
               <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
                 <input
                   ref={fileInputRef}
@@ -428,7 +666,7 @@ function IntakeFormContent() {
                   className="gap-2 min-h-[44px] flex-1 xs:flex-none"
                 >
                   <Upload className="h-4 w-4" />
-                  Choose File
+                  {isEditMode && existingPermitUrl ? 'Replace File' : 'Choose File'}
                 </Button>
                 <Button
                   type="button"
@@ -443,10 +681,19 @@ function IntakeFormContent() {
               
               {permitPreview ? (
                 <div className="mt-4">
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Preview:</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">New file preview:</p>
                   <img 
                     src={permitPreview} 
                     alt="Permit preview" 
+                    className="max-w-full sm:max-w-xs rounded-lg border"
+                  />
+                </div>
+              ) : existingPermitUrl ? (
+                <div className="mt-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Current permit on file:</p>
+                  <img 
+                    src={existingPermitUrl} 
+                    alt="Current permit" 
                     className="max-w-full sm:max-w-xs rounded-lg border"
                   />
                 </div>
@@ -515,12 +762,12 @@ function IntakeFormContent() {
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Submitting...
+              {isEditMode ? 'Saving...' : 'Submitting...'}
             </>
           ) : (
             <>
               <Save className="h-4 w-4" />
-              Submit Intake Form
+              {isEditMode ? 'Save Changes' : 'Submit Intake Form'}
             </>
           )}
         </Button>

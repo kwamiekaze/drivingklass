@@ -239,6 +239,44 @@ export type Database = {
           },
         ]
       }
+      intake_form_revisions: {
+        Row: {
+          created_at: string
+          edited_by: string | null
+          edited_by_role: string | null
+          id: string
+          note: string | null
+          snapshot_json: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          edited_by?: string | null
+          edited_by_role?: string | null
+          id?: string
+          note?: string | null
+          snapshot_json: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          edited_by?: string | null
+          edited_by_role?: string | null
+          id?: string
+          note?: string | null
+          snapshot_json?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_form_revisions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_notes: {
         Row: {
           created_at: string | null
@@ -549,9 +587,14 @@ export type Database = {
           guardian_name: string | null
           guardian_phone: string | null
           id: string
+          intake_edit_count: number | null
+          intake_last_edit_role: string | null
           intake_submitted: boolean | null
+          intake_updated_at: string | null
+          intake_updated_by: string | null
           last_name: string | null
           last_sign_in_at: string | null
+          needs_review: boolean | null
           permit_expiration_date: string | null
           permit_file_url: string | null
           permit_issue_date: string | null
@@ -579,9 +622,14 @@ export type Database = {
           guardian_name?: string | null
           guardian_phone?: string | null
           id: string
+          intake_edit_count?: number | null
+          intake_last_edit_role?: string | null
           intake_submitted?: boolean | null
+          intake_updated_at?: string | null
+          intake_updated_by?: string | null
           last_name?: string | null
           last_sign_in_at?: string | null
+          needs_review?: boolean | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
@@ -609,9 +657,14 @@ export type Database = {
           guardian_name?: string | null
           guardian_phone?: string | null
           id?: string
+          intake_edit_count?: number | null
+          intake_last_edit_role?: string | null
           intake_submitted?: boolean | null
+          intake_updated_at?: string | null
+          intake_updated_by?: string | null
           last_name?: string | null
           last_sign_in_at?: string | null
+          needs_review?: boolean | null
           permit_expiration_date?: string | null
           permit_file_url?: string | null
           permit_issue_date?: string | null
@@ -1040,9 +1093,14 @@ export type Database = {
           guardian_name: string | null
           guardian_phone: string | null
           id: string
+          intake_edit_count: number | null
+          intake_last_edit_role: string | null
           intake_submitted: boolean | null
+          intake_updated_at: string | null
+          intake_updated_by: string | null
           last_name: string | null
           last_sign_in_at: string | null
+          needs_review: boolean | null
           permit_expiration_date: string | null
           permit_file_url: string | null
           permit_issue_date: string | null

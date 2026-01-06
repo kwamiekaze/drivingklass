@@ -25,7 +25,7 @@ import StudentDashboard from "./pages/portal/StudentDashboard";
 import StudentProfile from "./pages/portal/StudentProfile";
 import Profile from "./pages/portal/Profile";
 import ProfileRedirect from "./pages/portal/ProfileRedirect";
-import IntakeForm from "./pages/portal/IntakeForm";
+import IntakeForm, { AdminIntakeEdit } from "./pages/portal/IntakeForm";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import ReportCardForm from "./pages/portal/ReportCardForm";
@@ -68,6 +68,9 @@ const App = () => (
                   {/* Intake Form (separate from profile) */}
                   <Route path="/intake" element={<IntakeForm />} />
                   <Route path="/intake-form" element={<IntakeForm />} />
+                  
+                  {/* Admin Intake Edit */}
+                  <Route path="/admin/intake-edit" element={<AdminIntakeEdit />} />
                   
                   {/* Canonical Profile Route (all roles) */}
                   <Route path="/profile" element={<Profile />} />

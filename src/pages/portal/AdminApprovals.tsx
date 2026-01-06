@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, User, FileText, Loader2, Eye, Download } from "lucide-react";
+import { CheckCircle, XCircle, User, FileText, Loader2, Eye, Download, Pencil, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Profile, UserRole, ApprovalStatus } from "@/types/portal";
 import { RejectUserModal } from "@/components/portal/RejectUserModal";
 import { IntakePreviewModal } from "@/components/portal/IntakePreviewModal";
@@ -392,7 +393,7 @@ function AdminApprovalsContent() {
 }
 
 interface UserApprovalCardProps {
-  profile: Profile & { role?: string };
+  profile: Profile & { role?: string; needs_review?: boolean };
   onApprove: () => void;
   onReject: () => void;
   onRoleChange: (id: string, role: UserRole) => void;
@@ -429,16 +430,29 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
             )}
           </div>
         </div>
-        {/* Eye icon for preview */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPreviewIntake}
-          className="flex-shrink-0 h-9 w-9"
-          title="View Intake Submission"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        {/* Action icons */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPreviewIntake}
+            className="flex-shrink-0 h-9 w-9"
+            title="View Intake Submission"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="flex-shrink-0 h-9 w-9"
+            title="Edit Intake Form"
+          >
+            <Link to={`/admin/intake-edit?userId=${profile.id}`}>
+              <Pencil className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Role Dropdown */}
@@ -489,7 +503,7 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
 }
 
 interface ApprovedUserCardProps {
-  profile: Profile & { role?: string };
+  profile: Profile & { role?: string; needs_review?: boolean };
   onRoleChange: (id: string, role: UserRole) => void;
   onPreviewIntake: () => void;
 }
@@ -509,16 +523,35 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUs
             {profile.email}
           </p>
         </div>
-        {/* Eye icon for preview */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPreviewIntake}
-          className="flex-shrink-0 h-9 w-9"
-          title="View & Download Intake"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        {/* Action icons */}
+        <div className="flex items-center gap-1">
+          {(profile as any).needs_review && (
+            <Badge variant="destructive" className="gap-1 text-xs mr-1">
+              <AlertTriangle className="h-3 w-3" />
+              Review
+            </Badge>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPreviewIntake}
+            className="flex-shrink-0 h-9 w-9"
+            title="View & Download Intake"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="flex-shrink-0 h-9 w-9"
+            title="Edit Intake Form"
+          >
+            <Link to={`/admin/intake-edit?userId=${profile.id}`}>
+              <Pencil className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 w-full sm:w-auto">
