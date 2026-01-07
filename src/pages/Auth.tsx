@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { GoldParticles } from "@/components/GoldParticles";
+import { GalaxyStars } from "@/components/GalaxyStars";
+import { LightModeBackground } from "@/components/LightModeBackground";
+import { useTheme } from "@/components/ThemeProvider";
 import { z } from "zod";
 
 const authSchema = z.object({
@@ -16,6 +19,8 @@ const authSchema = z.object({
 });
 
 export default function Auth() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const { user, isLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -92,10 +97,39 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Fixed background layer - theme aware (matches homepage) */}
+      <div className="fixed inset-0" style={{ zIndex: 0 }}>
+        {isDark ? (
+          <>
+            {/* Dark mode - rich black gradient */}
+            <div 
+              className="absolute inset-0 transition-colors duration-500"
+              style={{
+                background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
+              }}
+            />
+            {/* Subtle gold atmospheric glow */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
+              }}
+            />
+            {/* Galaxy stars */}
+            <GalaxyStars />
+          </>
+        ) : (
+          <>
+            {/* Light mode - warm sunlit driving school background */}
+            <LightModeBackground />
+          </>
+        )}
+      </div>
+      
       <GoldParticles />
       
-      <Card className="w-full max-w-md mx-4 luxury-card z-10">
+      <Card className="w-full max-w-md mx-4 luxury-card z-10 backdrop-blur-sm bg-background/95 dark:bg-background/90 border-primary/20 shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-display text-gold-shimmer">
             DRIVINGKLASS
