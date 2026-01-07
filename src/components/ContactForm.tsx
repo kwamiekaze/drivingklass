@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useRef, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Send, CheckCircle, Upload, X, Camera } from "lucide-react";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "./ThemeProvider";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useFormDraft, FileRestoreNotice } from "@/hooks/useFormDraft";
 import {
   Form,
   FormControl,
@@ -50,6 +51,8 @@ export function ContactForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FilePreview | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileRestoreNeeded, setFileRestoreNeeded] = useState(false);
+  const [previousFileName, setPreviousFileName] = useState<string | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -65,6 +68,26 @@ export function ContactForm() {
       city: "",
       email: "",
       message: "",
+    },
+  });
+
+  // Watch form values for draft saving
+  const watchedValues = useWatch({ control: form.control });
+  
+  // Form draft hook
+  const { clearDraft } = useFormDraft({
+    formName: 'contact',
+    values: watchedValues as FormData,
+    setValue: (values) => {
+      form.reset(values);
+    },
+    routePath: '/',
+    fileInfo: {
+      hasFile: !!selectedFile,
+      fileName: selectedFile?.file.name,
+    },
+    onFileRestoreNeeded: () => {
+      setFileRestoreNeeded(true);
     },
   });
 
@@ -173,6 +196,7 @@ export function ContactForm() {
 
       setIsSubmitted(true);
       form.reset();
+      clearDraft(); // Clear draft on successful submit
       toast({
         title: "Message sent!",
         description: "We'll get back to you shortly.",
@@ -425,6 +449,9 @@ export function ContactForm() {
             <p className="text-xs" style={{ color: isLight ? '#555' : 'hsl(42 20% 50%)' }}>
               Please upload or take a photo of your ID for verification. (JPG, PNG, PDF up to 20MB)
             </p>
+            {fileRestoreNeeded && !selectedFile && (
+              <FileRestoreNotice fileName={previousFileName} />
+            )}
             
             {/* File preview */}
             {selectedFile && (

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Upload, Camera, AlertCircle, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { Link } from "react-router-dom";
+import { useFormDraft, FileRestoreNotice } from "@/hooks/useFormDraft";
 
 const intakeFormSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(50),
@@ -76,6 +77,7 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
   const [permitPreview, setPermitPreview] = useState<string | null>(null);
   const [existingPermitUrl, setExistingPermitUrl] = useState<string | null>(null);
   const [targetProfile, setTargetProfile] = useState<any>(null);
+  const [fileRestoreNeeded, setFileRestoreNeeded] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -89,6 +91,23 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
     guardian_name: '',
     guardian_phone: '',
     guardian_email: '',
+  });
+
+  // Form draft hook - only enable for new intake (not admin edit or edit mode with server data)
+  const draftEnabled = !isAdminEdit && !isFetchingProfile;
+  const { clearDraft } = useFormDraft({
+    formName: 'intake',
+    values: formData,
+    setValue: (values) => setFormData(values),
+    userId: user?.id,
+    routePath: '/intake',
+    serverTimestamp: targetProfile?.intake_updated_at,
+    fileInfo: {
+      hasFile: !!permitFile,
+      fileName: permitFile?.name,
+    },
+    onFileRestoreNeeded: () => setFileRestoreNeeded(true),
+    enabled: draftEnabled,
   });
 
   // Fetch target user's profile for admin edit or prefill for user's own edit
@@ -387,6 +406,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
       }
 
       await refetchProfile();
+      
+      // Clear draft on successful submission
+      clearDraft();
       
       toast({
         title: isEditMode ? "Intake Form Updated" : "Intake Form Submitted",

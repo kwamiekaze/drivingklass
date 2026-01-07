@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Loader2, Calendar, User } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
+import { useFormDraft } from "@/hooks/useFormDraft";
 
 export default function ReportCardForm() {
   return (
@@ -64,6 +65,18 @@ function ReportCardFormContent() {
     merging: 5,
     interstate: 5,
     overall: 5,
+  });
+
+  // Form draft hook - keyed by session id for new reports, or report id for edits
+  const draftRouteKey = isEditing ? `/instructor/report-cards/edit/${id}` : `/instructor/report-cards/new?session_id=${sessionId}`;
+  const { clearDraft } = useFormDraft({
+    formName: 'report-card',
+    values: formData,
+    setValue: (values) => setFormData(prev => ({ ...prev, ...values })),
+    userId: user?.id,
+    routePath: draftRouteKey,
+    serverTimestamp: existingCard?.created_at,
+    enabled: !loading,
   });
 
   useEffect(() => {
@@ -158,6 +171,9 @@ function ReportCardFormContent() {
           .insert(reportDataBase);
         if (error) throw error;
       }
+
+      // Clear draft on successful save
+      clearDraft();
 
       toast({
         title: isEditing ? "Report Updated" : "Report Created",

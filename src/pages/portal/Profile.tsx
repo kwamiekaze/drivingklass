@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Upload, Camera, Lock } from "lucide-react";
 import { z } from "zod";
+import { useFormDraft, FileRestoreNotice } from "@/hooks/useFormDraft";
 
 // Schema for profile editing (non-admin users)
 const profileSchema = z.object({
@@ -53,6 +54,7 @@ function ProfileContent() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
   const [permitPreview, setPermitPreview] = useState<string | null>(null);
+  const [fileRestoreNeeded, setFileRestoreNeeded] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -67,6 +69,21 @@ function ProfileContent() {
     guardian_name: '',
     guardian_phone: '',
     guardian_email: '',
+  });
+
+  // Form draft hook
+  const { clearDraft } = useFormDraft({
+    formName: 'profile',
+    values: formData,
+    setValue: (values) => setFormData(prev => ({ ...prev, ...values })),
+    userId: user?.id,
+    routePath: '/profile',
+    serverTimestamp: profile?.updated_at,
+    fileInfo: {
+      hasFile: !!permitFile,
+      fileName: permitFile?.name,
+    },
+    onFileRestoreNeeded: () => setFileRestoreNeeded(true),
   });
 
   // Initialize form data from profile
@@ -221,6 +238,7 @@ function ProfileContent() {
       if (updateError) throw updateError;
 
       await refetchProfile();
+      clearDraft(); // Clear draft on successful save
       
       toast({
         title: "Profile Updated",
