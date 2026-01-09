@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, User, FileText, Loader2, Eye, Download, Pencil, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, User, FileText, Loader2, Eye, Download, Pencil, AlertTriangle, FileImage, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Profile, UserRole, ApprovalStatus } from "@/types/portal";
 import { RejectUserModal } from "@/components/portal/RejectUserModal";
 import { IntakePreviewModal } from "@/components/portal/IntakePreviewModal";
 import { BatchDownloadModal } from "@/components/portal/BatchDownloadModal";
+import { PermitViewerModal, PermitStatusBadge } from "@/components/portal/PermitViewerModal";
 import { sendApprovalNotification, sendRejectionNotification } from "@/lib/notifications";
 import { format } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -30,7 +32,7 @@ export default function AdminApprovals() {
 
 function AdminApprovalsContent() {
   const { toast } = useToast();
-  const [profiles, setProfiles] = useState<(Profile & { role?: string })[]>([]);
+  const [profiles, setProfiles] = useState<(Profile & { role?: string; permitStatus?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -39,6 +41,9 @@ function AdminApprovalsContent() {
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
   const [showDownloadInPreview, setShowDownloadInPreview] = useState(false);
   const [batchDownloadOpen, setBatchDownloadOpen] = useState(false);
+  const [permitViewerOpen, setPermitViewerOpen] = useState(false);
+  const [permitViewerUserId, setPermitViewerUserId] = useState<string | null>(null);
+  const [permitViewerUserName, setPermitViewerUserName] = useState<string>("");
 
   useEffect(() => {
     fetchProfiles();
@@ -51,6 +56,25 @@ function AdminApprovalsContent() {
       .order('created_at', { ascending: false });
 
     if (data) {
+      // Fetch all permits for status
+      const userIds = data.map(p => p.id);
+      const { data: permitsData } = await supabase
+        .from('permits')
+        .select('user_id, verified_status')
+        .in('user_id', userIds);
+
+      // Create a map of user_id to best permit status
+      const permitStatusMap = new Map<string, string>();
+      permitsData?.forEach(permit => {
+        const existing = permitStatusMap.get(permit.user_id);
+        // Priority: approved > pending > rejected
+        if (!existing || 
+            (permit.verified_status === 'approved') ||
+            (permit.verified_status === 'pending' && existing === 'rejected')) {
+          permitStatusMap.set(permit.user_id, permit.verified_status);
+        }
+      });
+
       const profilesWithRoles = await Promise.all(
         data.map(async (profile) => {
           const { data: roleData } = await supabase
@@ -61,15 +85,21 @@ function AdminApprovalsContent() {
             .maybeSingle();
           return { 
             ...profile, 
-            // Don't default to 'student' - show actual role or 'No role'
             role: roleData?.role || undefined,
             approval_status: (profile as any).approval_status || (profile.approved ? 'approved' : 'pending'),
-          } as Profile & { role?: string };
+            permitStatus: permitStatusMap.get(profile.id) || null,
+          } as Profile & { role?: string; permitStatus?: string };
         })
       );
       setProfiles(profilesWithRoles);
     }
     setLoading(false);
+  };
+
+  const openPermitViewer = (profile: Profile) => {
+    setPermitViewerUserId(profile.id);
+    setPermitViewerUserName(getDisplayName(profile, 'User'));
+    setPermitViewerOpen(true);
   };
 
   const handlePreviewIntake = (profile: Profile, showDownload: boolean = false) => {
@@ -302,6 +332,7 @@ function AdminApprovalsContent() {
                       onReject={() => openRejectModal(profile)}
                       onRoleChange={handleRoleChange}
                       onPreviewIntake={() => handlePreviewIntake(profile, false)}
+                      onViewPermits={() => openPermitViewer(profile)}
                       isLoading={actionLoading === profile.id}
                     />
                   ))}
@@ -388,20 +419,32 @@ function AdminApprovalsContent() {
         open={batchDownloadOpen}
         onOpenChange={setBatchDownloadOpen}
       />
+
+      {/* Permit Viewer Modal */}
+      {permitViewerUserId && (
+        <PermitViewerModal
+          open={permitViewerOpen}
+          onOpenChange={setPermitViewerOpen}
+          userId={permitViewerUserId}
+          userName={permitViewerUserName}
+          onStatusChange={fetchProfiles}
+        />
+      )}
     </div>
   );
 }
 
 interface UserApprovalCardProps {
-  profile: Profile & { role?: string; needs_review?: boolean };
+  profile: Profile & { role?: string; needs_review?: boolean; permitStatus?: string };
   onApprove: () => void;
   onReject: () => void;
   onRoleChange: (id: string, role: UserRole) => void;
   onPreviewIntake: () => void;
+  onViewPermits: () => void;
   isLoading: boolean;
 }
 
-function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPreviewIntake, isLoading }: UserApprovalCardProps) {
+function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPreviewIntake, onViewPermits, isLoading }: UserApprovalCardProps) {
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-xl bg-background/50">
       {/* User Info Row */}
@@ -423,15 +466,27 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
                 Intake Done
               </Badge>
             )}
-            {profile.permit_file_url && (
-              <Badge variant="outline" className="text-xs">
-                Permit Uploaded
-              </Badge>
-            )}
+            <PermitStatusBadge 
+              hasPermit={!!profile.permit_file_url} 
+              verifiedStatus={profile.permitStatus} 
+            />
           </div>
         </div>
         {/* Action icons */}
         <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onViewPermits}
+                className="flex-shrink-0 h-9 w-9"
+              >
+                <FileImage className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View Permits</TooltipContent>
+          </Tooltip>
           <Button
             variant="ghost"
             size="icon"

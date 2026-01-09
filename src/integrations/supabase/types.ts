@@ -571,6 +571,54 @@ export type Database = {
           },
         ]
       }
+      permits: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          file_url: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+          upload_source: string
+          uploaded_at: string
+          user_id: string
+          verified_status: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_url: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          upload_source?: string
+          uploaded_at?: string
+          user_id: string
+          verified_status?: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_url?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          upload_source?: string
+          uploaded_at?: string
+          user_id?: string
+          verified_status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           approval_status: string
