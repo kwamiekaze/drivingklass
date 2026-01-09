@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -98,6 +100,12 @@ function AdminLeadsContent() {
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>('all');
   const [missingInfoFilters, setMissingInfoFilters] = useState<MissingInfoFilter[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Email export state
+  const [emailExportOpen, setEmailExportOpen] = useState(false);
+  const [emailExportScope, setEmailExportScope] = useState<'filtered' | 'all'>('filtered');
+  const [includeLastName, setIncludeLastName] = useState(false);
+  const [emailExportContent, setEmailExportContent] = useState('');
   
   // Paste parser state
   const [rawText, setRawText] = useState('');
@@ -376,6 +384,69 @@ function AdminLeadsContent() {
     }
   };
 
+  const generateEmailExport = () => {
+    const sourceLeads = emailExportScope === 'filtered' ? filteredLeads : leads;
+    
+    // Filter leads with valid emails, dedupe by email
+    const seenEmails = new Set<string>();
+    const emailEntries: { name: string; email: string }[] = [];
+    
+    for (const lead of sourceLeads) {
+      const email = lead.email?.trim().toLowerCase();
+      if (!email || seenEmails.has(email)) continue;
+      seenEmails.add(email);
+      
+      let name = 'Unknown';
+      if (lead.full_name?.trim()) {
+        const parts = lead.full_name.trim().split(/\s+/);
+        if (includeLastName) {
+          name = parts.join(' ');
+        } else {
+          name = parts[0] || 'Unknown';
+        }
+      }
+      
+      emailEntries.push({ name, email });
+    }
+    
+    return emailEntries.map(e => `${e.name} : ${e.email}`).join('\n');
+  };
+
+  const handleDownloadEmails = () => {
+    const content = generateEmailExport();
+    if (!content) {
+      toast({ title: 'No emails', description: 'No leads with valid emails found', variant: 'destructive' });
+      return;
+    }
+    
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    const filename = `drivingklass-leads-emails-${dateStr}.txt`;
+    
+    try {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({ title: 'Downloaded', description: `${content.split('\n').length} emails exported` });
+      setEmailExportOpen(false);
+    } catch {
+      // Fallback for iOS Safari - show content for manual copy
+      setEmailExportContent(content);
+    }
+  };
+
+  const handleCopyEmails = () => {
+    const content = emailExportContent || generateEmailExport();
+    navigator.clipboard.writeText(content);
+    toast({ title: 'Copied', description: 'Email list copied to clipboard' });
+  };
+
   const clearFilters = () => {
     setStatusFilter('all');
     setSearchQuery('');
@@ -516,6 +587,16 @@ function AdminLeadsContent() {
                   >
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">Export CSV</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEmailExportOpen(true)}
+                    disabled={filteredLeads.length === 0}
+                    className="gap-1.5"
+                  >
+                    <Mail className="h-4 w-4" />
+                    <span className="hidden sm:inline">Emails (.txt)</span>
                   </Button>
                 </div>
               </div>
@@ -956,6 +1037,89 @@ Birthday: 01/15/2008
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Email Export Dialog */}
+      <Dialog open={emailExportOpen} onOpenChange={(open) => {
+        setEmailExportOpen(open);
+        if (!open) setEmailExportContent('');
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Export Emails
+            </DialogTitle>
+            <DialogDescription>
+              Download lead emails as a text file
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Export Scope</Label>
+              <Select 
+                value={emailExportScope} 
+                onValueChange={(v) => setEmailExportScope(v as 'filtered' | 'all')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="filtered">
+                    Filtered Results ({filteredLeads.length} leads)
+                  </SelectItem>
+                  <SelectItem value="all">
+                    All Leads ({leads.length} leads)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="includeLastName" 
+                checked={includeLastName}
+                onCheckedChange={(checked) => setIncludeLastName(checked === true)}
+              />
+              <Label htmlFor="includeLastName" className="text-sm cursor-pointer">
+                Include last name (FirstName LastName : email)
+              </Label>
+            </div>
+
+            {emailExportContent && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">
+                  If download didn't start, copy manually:
+                </Label>
+                <Textarea 
+                  value={emailExportContent} 
+                  readOnly 
+                  className="h-32 font-mono text-xs"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopyEmails}
+                  className="gap-1.5 w-full"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy to Clipboard
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEmailExportOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleDownloadEmails} className="gap-1.5">
+              <Download className="h-4 w-4" />
+              Download .txt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Lead Details Sheet */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
