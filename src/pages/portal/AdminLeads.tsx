@@ -101,11 +101,10 @@ function AdminLeadsContent() {
   const [missingInfoFilters, setMissingInfoFilters] = useState<MissingInfoFilter[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Email export state
-  const [emailExportOpen, setEmailExportOpen] = useState(false);
-  const [emailExportScope, setEmailExportScope] = useState<'filtered' | 'all'>('filtered');
-  const [includeLastName, setIncludeLastName] = useState(false);
-  const [emailExportContent, setEmailExportContent] = useState('');
+  // Export state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<'filtered' | 'all'>('filtered');
+  const [exportFallbackContent, setExportFallbackContent] = useState('');
   
   // Paste parser state
   const [rawText, setRawText] = useState('');
@@ -384,44 +383,64 @@ function AdminLeadsContent() {
     }
   };
 
-  const generateEmailExport = () => {
-    const sourceLeads = emailExportScope === 'filtered' ? filteredLeads : leads;
-    
-    // Filter leads with valid emails, dedupe by email
-    const seenEmails = new Set<string>();
-    const emailEntries: { name: string; email: string }[] = [];
-    
-    for (const lead of sourceLeads) {
-      const email = lead.email?.trim().toLowerCase();
-      if (!email || seenEmails.has(email)) continue;
-      seenEmails.add(email);
-      
-      let name = 'Unknown';
-      if (lead.full_name?.trim()) {
-        const parts = lead.full_name.trim().split(/\s+/);
-        if (includeLastName) {
-          name = parts.join(' ');
-        } else {
-          name = parts[0] || 'Unknown';
-        }
-      }
-      
-      emailEntries.push({ name, email });
+  // Phone formatting helper
+  const formatPhone = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
     }
-    
-    return emailEntries.map(e => `${e.name} : ${e.email}`).join('\n');
+    if (digits.length === 11 && digits.startsWith('1')) {
+      return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+    }
+    return digits || phone;
   };
 
-  const handleDownloadEmails = () => {
-    const content = generateEmailExport();
+  // Get name for export
+  const getExportName = (lead: Lead, useFullName: boolean): string => {
+    const fullName = lead.full_name?.trim();
+    if (!fullName) return 'Unknown';
+    if (useFullName) return fullName;
+    return fullName.split(/\s+/)[0] || 'Unknown';
+  };
+
+  // Generic export generator
+  const generateExport = (type: 'email' | 'phone', useFullName: boolean): string => {
+    const sourceLeads = exportScope === 'filtered' ? filteredLeads : leads;
+    const seen = new Set<string>();
+    const entries: string[] = [];
+
+    for (const lead of sourceLeads) {
+      if (type === 'email') {
+        const email = lead.email?.trim().toLowerCase();
+        if (!email || seen.has(email)) continue;
+        seen.add(email);
+        entries.push(`${getExportName(lead, useFullName)} : ${email}`);
+      } else {
+        const digits = lead.phone?.replace(/\D/g, '');
+        if (!digits || seen.has(digits)) continue;
+        seen.add(digits);
+        entries.push(`${getExportName(lead, useFullName)} : ${formatPhone(lead.phone!)}`);
+      }
+    }
+
+    return entries.join('\n');
+  };
+
+  const handleDownloadExport = (type: 'email' | 'phone', useFullName: boolean) => {
+    const content = generateExport(type, useFullName);
     if (!content) {
-      toast({ title: 'No emails', description: 'No leads with valid emails found', variant: 'destructive' });
+      toast({ 
+        title: `No ${type}s`, 
+        description: `No leads with valid ${type}s found`, 
+        variant: 'destructive' 
+      });
       return;
     }
-    
+
     const dateStr = format(new Date(), 'yyyy-MM-dd');
-    const filename = `drivingklass-leads-emails-${dateStr}.txt`;
-    
+    const suffix = useFullName ? 'fullname-' : '';
+    const filename = `drivingklass-leads-${suffix}${type}s-${dateStr}.txt`;
+
     try {
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -432,19 +451,17 @@ function AdminLeadsContent() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
-      toast({ title: 'Downloaded', description: `${content.split('\n').length} emails exported` });
-      setEmailExportOpen(false);
+
+      toast({ title: 'Downloaded', description: `${content.split('\n').length} ${type}s exported` });
     } catch {
       // Fallback for iOS Safari - show content for manual copy
-      setEmailExportContent(content);
+      setExportFallbackContent(content);
     }
   };
 
-  const handleCopyEmails = () => {
-    const content = emailExportContent || generateEmailExport();
-    navigator.clipboard.writeText(content);
-    toast({ title: 'Copied', description: 'Email list copied to clipboard' });
+  const handleCopyExportContent = () => {
+    navigator.clipboard.writeText(exportFallbackContent);
+    toast({ title: 'Copied', description: 'Content copied to clipboard' });
   };
 
   const clearFilters = () => {
@@ -586,17 +603,17 @@ function AdminLeadsContent() {
                     className="gap-1.5"
                   >
                     <Download className="h-4 w-4" />
-                    <span className="hidden sm:inline">Export CSV</span>
+                    <span className="hidden sm:inline">CSV</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setEmailExportOpen(true)}
-                    disabled={filteredLeads.length === 0}
+                    onClick={() => setExportDialogOpen(true)}
                     className="gap-1.5"
                   >
-                    <Mail className="h-4 w-4" />
-                    <span className="hidden sm:inline">Emails (.txt)</span>
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Exports</span>
+                    <span className="sm:hidden">.txt</span>
                   </Button>
                 </div>
               </div>
@@ -1038,19 +1055,19 @@ Birthday: 01/15/2008
         </TabsContent>
       </Tabs>
 
-      {/* Email Export Dialog */}
-      <Dialog open={emailExportOpen} onOpenChange={(open) => {
-        setEmailExportOpen(open);
-        if (!open) setEmailExportContent('');
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={(open) => {
+        setExportDialogOpen(open);
+        if (!open) setExportFallbackContent('');
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Export Emails
+              <Download className="h-5 w-5" />
+              Export Leads
             </DialogTitle>
             <DialogDescription>
-              Download lead emails as a text file
+              Download lead emails or phones as .txt files
             </DialogDescription>
           </DialogHeader>
           
@@ -1058,8 +1075,8 @@ Birthday: 01/15/2008
             <div className="space-y-2">
               <Label className="text-sm font-medium">Export Scope</Label>
               <Select 
-                value={emailExportScope} 
-                onValueChange={(v) => setEmailExportScope(v as 'filtered' | 'all')}
+                value={exportScope} 
+                onValueChange={(v) => setExportScope(v as 'filtered' | 'all')}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1074,32 +1091,64 @@ Birthday: 01/15/2008
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="includeLastName" 
-                checked={includeLastName}
-                onCheckedChange={(checked) => setIncludeLastName(checked === true)}
-              />
-              <Label htmlFor="includeLastName" className="text-sm cursor-pointer">
-                Include last name (FirstName LastName : email)
-              </Label>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-auto py-2 flex-col"
+                onClick={() => handleDownloadExport('email', false)}
+              >
+                <Mail className="h-4 w-4" />
+                <span className="text-xs">Emails (.txt)</span>
+                <span className="text-[10px] text-muted-foreground">FirstName : email</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-auto py-2 flex-col"
+                onClick={() => handleDownloadExport('phone', false)}
+              >
+                <Phone className="h-4 w-4" />
+                <span className="text-xs">Phones (.txt)</span>
+                <span className="text-[10px] text-muted-foreground">FirstName : phone</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-auto py-2 flex-col"
+                onClick={() => handleDownloadExport('email', true)}
+              >
+                <Mail className="h-4 w-4" />
+                <span className="text-xs">Full Name : Email</span>
+                <span className="text-[10px] text-muted-foreground">FullName : email</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-auto py-2 flex-col"
+                onClick={() => handleDownloadExport('phone', true)}
+              >
+                <Phone className="h-4 w-4" />
+                <span className="text-xs">Full Name : Phone</span>
+                <span className="text-[10px] text-muted-foreground">FullName : phone</span>
+              </Button>
             </div>
 
-            {emailExportContent && (
+            {exportFallbackContent && (
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">
                   If download didn't start, copy manually:
                 </Label>
                 <Textarea 
-                  value={emailExportContent} 
+                  value={exportFallbackContent} 
                   readOnly 
                   className="h-32 font-mono text-xs"
                 />
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleCopyEmails}
+                  onClick={handleCopyExportContent}
                   className="gap-1.5 w-full"
                 >
                   <Copy className="h-4 w-4" />
@@ -1109,13 +1158,9 @@ Birthday: 01/15/2008
             )}
           </div>
           
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setEmailExportOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleDownloadEmails} className="gap-1.5">
-              <Download className="h-4 w-4" />
-              Download .txt
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
