@@ -41,7 +41,7 @@ import AdminQA from "./pages/portal/AdminQA";
 import AdminMessages from "./pages/portal/AdminMessages";
 import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
-
+import AdminPermitQueue from "./pages/portal/AdminPermitQueue";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -110,6 +110,7 @@ const App = () => (
                   <Route path="/admin/messages" element={<AdminMessages />} />
                   <Route path="/admin/students" element={<AdminStudents />} />
                   <Route path="/admin/instructors" element={<AdminInstructors />} />
+                  <Route path="/admin/permits" element={<AdminPermitQueue />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   
                   {/* Legacy Admin */}
