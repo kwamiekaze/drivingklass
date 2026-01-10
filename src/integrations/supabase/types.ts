@@ -571,6 +571,65 @@ export type Database = {
           },
         ]
       }
+      permit_documents: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: string
+          mime_type: string | null
+          original_filename: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          size_bytes: number | null
+          source: string
+          status: string
+          storage_path: string
+          uploaded_by: string | null
+          user_id: string
+        }
+        Insert: {
+          bucket?: string
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          size_bytes?: number | null
+          source?: string
+          status?: string
+          storage_path: string
+          uploaded_by?: string | null
+          user_id: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          size_bytes?: number | null
+          source?: string
+          status?: string
+          storage_path?: string
+          uploaded_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permits: {
         Row: {
           admin_note: string | null
