@@ -1,39 +1,45 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Loader2, 
-  Download, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
+import {
+  CheckCircle,
+  Download,
+  ExternalLink,
   FileImage,
   FileText,
-  Calendar,
-  Upload,
-  ExternalLink
+  Loader2,
+  RefreshCw,
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  createSignedPermitUrl,
+  inferMimeTypeFromFilename,
+  isImageMime,
+  isPdfMime,
+} from "@/lib/permitDocuments";
 
-interface Permit {
+interface PermitDocument {
   id: string;
   user_id: string;
-  file_url: string;
-  file_name: string | null;
-  file_path: string | null;
-  upload_source: string;
-  uploaded_at: string;
-  verified_status: string;
+  bucket: string;
+  storage_path: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  status: "pending" | "approved" | "rejected" | string;
+  source: string;
+  uploaded_by: string | null;
+  created_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
-  admin_note: string | null;
+  review_note: string | null;
 }
 
 interface PermitViewerModalProps {
@@ -44,145 +50,177 @@ interface PermitViewerModalProps {
   onStatusChange?: () => void;
 }
 
-export function PermitViewerModal({ 
-  open, 
-  onOpenChange, 
+export function PermitViewerModal({
+  open,
+  onOpenChange,
   userId,
   userName = "User",
-  onStatusChange
+  onStatusChange,
 }: PermitViewerModalProps) {
   const { toast } = useToast();
-  const [permits, setPermits] = useState<Permit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [docs, setDocs] = useState<PermitDocument[]>([]);
+  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [urlById, setUrlById] = useState<Record<string, string>>({});
+  const [errById, setErrById] = useState<Record<string, string>>({});
+
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDocId, setPreviewDocId] = useState<string | null>(null);
+
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState("");
-  const [showRejectInput, setShowRejectInput] = useState<string | null>(null);
+
+  const previewDoc = useMemo(
+    () => docs.find((d) => d.id === previewDocId) || null,
+    [docs, previewDocId]
+  );
 
   useEffect(() => {
-    if (open && userId) {
-      fetchPermits();
-    }
+    if (!open || !userId) return;
+    void fetchDocs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userId]);
 
-  const fetchPermits = async () => {
+  const fetchDocs = async () => {
     setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('permits')
-        .select('*')
-        .eq('user_id', userId)
-        .order('uploaded_at', { ascending: false });
+    setErrById({});
+    setUrlById({});
 
-      if (error) throw error;
-      setPermits(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load permits",
-        variant: "destructive",
-      });
-    } finally {
+    const { data, error } = await supabase
+      .from("permit_documents")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       setLoading(false);
+      return;
+    }
+
+    const rows = (data || []) as PermitDocument[];
+    setDocs(rows);
+
+    // Pre-sign (quick UX)
+    await Promise.all(
+      rows.map(async (doc) => {
+        const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.storage_path, expiresInSeconds: 600 });
+        if (res.ok) {
+          setUrlById((m) => ({ ...m, [doc.id]: res.signedUrl }));
+          if (res.bucketUsed !== doc.bucket) {
+            // best-effort: persist the working bucket so future loads work
+            await supabase.from("permit_documents").update({ bucket: res.bucketUsed }).eq("id", doc.id);
+          }
+        } else {
+          setErrById((m) => ({ ...m, [doc.id]: res.errorMessage }));
+        }
+      })
+    );
+
+    setLoading(false);
+  };
+
+  const sourceLabel = (source: string) => {
+    switch (source) {
+      case "intake_form":
+        return "Intake Form";
+      case "message_upload":
+        return "Message Upload";
+      case "admin":
+        return "Admin";
+      default:
+        return source || "Other";
     }
   };
 
-  const handleVerify = async (permitId: string, status: 'approved' | 'rejected', note?: string) => {
-    setActionLoading(permitId);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { error } = await supabase
-        .from('permits')
-        .update({
-          verified_status: status,
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-          admin_note: note || null,
-        })
-        .eq('id', permitId);
+  const statusBadge = (status: string) => {
+    if (status === "approved") return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Approved</Badge>;
+    if (status === "rejected") return <Badge className="bg-red-500/20 text-red-600 border-red-500/30">Rejected</Badge>;
+    return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">Pending Review</Badge>;
+  };
 
-      if (error) throw error;
-
-      toast({
-        title: status === 'approved' ? "Permit Approved" : "Permit Rejected",
-        description: `The permit has been ${status}.`,
-      });
-
-      await fetchPermits();
-      onStatusChange?.();
-      setShowRejectInput(null);
-      setRejectNote("");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(null);
+  const ensureSigned = async (doc: PermitDocument) => {
+    if (urlById[doc.id]) return urlById[doc.id];
+    const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.storage_path, expiresInSeconds: 600 });
+    if (!res.ok) {
+      setErrById((m) => ({ ...m, [doc.id]: res.errorMessage }));
+      throw new Error(res.errorMessage);
     }
+    setUrlById((m) => ({ ...m, [doc.id]: res.signedUrl }));
+    return res.signedUrl;
   };
 
-  const handlePreview = (url: string) => {
-    setPreviewUrl(url);
-    setPreviewOpen(true);
-  };
-
-  const handleDownload = async (url: string, fileName: string | null) => {
+  const handleDownload = async (doc: PermitDocument) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = fileName || 'permit-file';
+      const signedUrl = await ensureSigned(doc);
+      const res = await fetch(signedUrl);
+      const blob = await res.blob();
+      const dlUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = dlUrl;
+      a.download = doc.original_filename || "permit";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      // Fallback: open in new tab
-      window.open(url, '_blank');
+      window.URL.revokeObjectURL(dlUrl);
+    } catch {
+      // fallback: open new tab if download blocked (iOS)
+      const signedUrl = urlById[doc.id];
+      if (signedUrl) window.open(signedUrl, "_blank");
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Verified</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-500/20 text-red-600 border-red-500/30">Rejected</Badge>;
-      default:
-        return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">Pending Review</Badge>;
+  const handleUpdateStatus = async (docId: string, status: "approved" | "rejected", note?: string) => {
+    setActionLoading(docId);
+    const { data: auth } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("permit_documents")
+      .update({
+        status,
+        reviewed_by: auth.user?.id ?? null,
+        reviewed_at: new Date().toISOString(),
+        review_note: note || null,
+      })
+      .eq("id", docId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setActionLoading(null);
+      return;
     }
+
+    toast({ title: status === "approved" ? "Permit Approved" : "Permit Rejected" });
+    await fetchDocs();
+    onStatusChange?.();
+    setRejectingId(null);
+    setRejectNote("");
+    setActionLoading(null);
   };
 
-  const getSourceLabel = (source: string) => {
-    switch (source) {
-      case 'intake': return 'Intake Form';
-      case 'chat': return 'Chat/Message';
-      case 'admin': return 'Admin Upload';
-      case 'profile': return 'Profile Update';
-      default: return 'Other';
-    }
-  };
-
-  const isImageFile = (url: string) => {
-    const ext = url.toLowerCase().split('.').pop() || '';
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  const fileMeta = (doc: PermitDocument) => {
+    const mime = doc.mime_type || inferMimeTypeFromFilename(doc.original_filename);
+    return {
+      mime,
+      isImage: isImageMime(mime),
+      isPdf: isPdfMime(mime),
+    };
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0">
           <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
-            <DialogTitle className="text-lg sm:text-xl">Permit Documents</DialogTitle>
-            <DialogDescription>
-              Review uploaded permits for {userName}
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <DialogTitle className="text-lg sm:text-xl">Permit Documents</DialogTitle>
+                <DialogDescription>Review uploaded permits for {userName}</DialogDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={fetchDocs} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </DialogHeader>
 
           <ScrollArea className="max-h-[calc(90vh-120px)] px-4 pb-4 sm:px-6 sm:pb-6">
@@ -190,224 +228,201 @@ export function PermitViewerModal({
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : permits.length === 0 ? (
+            ) : docs.length === 0 ? (
               <div className="py-12 text-center">
                 <FileImage className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground font-medium">No Permits Uploaded</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This user has not uploaded any permit documents yet.
-                </p>
+                <p className="text-muted-foreground font-medium">No Permit Documents</p>
               </div>
             ) : (
               <div className="space-y-4 mt-4">
-                {permits.map((permit) => (
-                  <div 
-                    key={permit.id} 
-                    className="border rounded-lg p-4 bg-card/50 space-y-3"
-                  >
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {isImageFile(permit.file_url) ? (
-                          <div className="relative h-16 w-16 rounded-lg overflow-hidden border bg-muted flex-shrink-0">
-                            <img 
-                              src={permit.file_url} 
-                              alt="Permit thumbnail"
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                                const icon = document.createElement('div');
-                                icon.innerHTML = '<svg class="h-6 w-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                              }}
-                            />
+                {docs.map((doc) => {
+                  const { isImage, isPdf } = fileMeta(doc);
+                  const signedUrl = urlById[doc.id];
+                  const signErr = errById[doc.id];
+
+                  return (
+                    <div key={doc.id} className="border rounded-lg p-4 bg-card/50 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-14 w-14 rounded-lg border bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {isImage && signedUrl ? (
+                              <img src={signedUrl} alt={doc.original_filename || "Permit thumbnail"} className="h-full w-full object-cover" />
+                            ) : isPdf ? (
+                              <FileText className="h-6 w-6 text-muted-foreground" />
+                            ) : (
+                              <FileImage className="h-6 w-6 text-muted-foreground" />
+                            )}
                           </div>
-                        ) : (
-                          <div className="h-16 w-16 rounded-lg border bg-muted flex items-center justify-center flex-shrink-0">
-                            <FileText className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {permit.file_name || 'Permit Document'}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            {getStatusBadge(permit.verified_status)}
-                            <Badge variant="outline" className="text-xs">
-                              {getSourceLabel(permit.upload_source)}
-                            </Badge>
+
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{doc.original_filename || "Permit Document"}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              {statusBadge(doc.status)}
+                              <Badge variant="outline" className="text-xs">{sourceLabel(doc.source)}</Badge>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Meta Info */}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Uploaded: {format(new Date(permit.uploaded_at), 'MMM d, yyyy h:mm a')}
-                      </span>
-                      {permit.reviewed_at && (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Reviewed: {format(new Date(permit.reviewed_at), 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Admin Note */}
-                    {permit.admin_note && (
-                      <div className="text-sm bg-muted/50 rounded p-2">
-                        <span className="text-muted-foreground">Admin Note: </span>
-                        {permit.admin_note}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>Uploaded: {format(new Date(doc.created_at), "MMM d, yyyy h:mm a")}</span>
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePreview(permit.file_url)}
-                            className="gap-1.5"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Preview
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>View permit in full</TooltipContent>
-                      </Tooltip>
+                      {signErr && (
+                        <div className="text-sm border border-destructive/30 bg-destructive/5 rounded p-2 text-destructive">
+                          {signErr.includes("Bucket") ? "Permit file is not accessible (bucket/path mismatch)." : "Permit file could not be loaded."}
+                          <div className="mt-2">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={() => fetchDocs()}>
+                              <RefreshCw className="h-4 w-4" /> Retry
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(permit.file_url, permit.file_name)}
-                            className="gap-1.5"
-                          >
-                            <Download className="h-4 w-4" />
-                            Download
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Download permit file</TooltipContent>
-                      </Tooltip>
+                      {doc.review_note && (
+                        <div className="text-sm bg-muted/50 rounded p-2">
+                          <span className="text-muted-foreground">Note: </span>
+                          {doc.review_note}
+                        </div>
+                      )}
 
-                      {permit.verified_status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleVerify(permit.id, 'approved')}
-                            disabled={actionLoading === permit.id}
-                            className="gap-1.5 bg-green-600 hover:bg-green-700"
-                          >
-                            {actionLoading === permit.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4" />
-                            )}
-                            Approve
-                          </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              disabled={!signedUrl && !!signErr}
+                              onClick={async () => {
+                                const url = await ensureSigned(doc);
+                                setPreviewDocId(doc.id);
+                                setPreviewOpen(true);
+                                setUrlById((m) => ({ ...m, [doc.id]: url }));
+                              }}
+                            >
+                              Preview
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Preview inline</TooltipContent>
+                        </Tooltip>
 
-                          {showRejectInput === permit.id ? (
-                            <div className="flex-1 min-w-[200px] space-y-2">
-                              <Textarea
-                                placeholder="Optional: reason for rejection..."
-                                value={rejectNote}
-                                onChange={(e) => setRejectNote(e.target.value)}
-                                className="min-h-[60px] text-sm"
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleVerify(permit.id, 'rejected', rejectNote)}
-                                  disabled={actionLoading === permit.id}
-                                >
-                                  Confirm Reject
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setShowRejectInput(null);
-                                    setRejectNote("");
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={!signedUrl && !!signErr}
+                          onClick={async () => {
+                            const url = await ensureSigned(doc);
+                            window.open(url, "_blank");
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={!signedUrl && !!signErr}
+                          onClick={() => handleDownload(doc)}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </Button>
+
+                        {doc.status === "pending" ? (
+                          <>
+                            <Button
+                              size="sm"
+                              className="gap-1.5"
+                              disabled={actionLoading === doc.id}
+                              onClick={() => handleUpdateStatus(doc.id, "approved")}
+                            >
+                              {actionLoading === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                              Approve
+                            </Button>
+
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => setShowRejectInput(permit.id)}
                               className="gap-1.5"
+                              disabled={actionLoading === doc.id}
+                              onClick={() => setRejectingId(doc.id)}
                             >
                               <XCircle className="h-4 w-4" />
                               Reject
                             </Button>
-                          )}
-                        </>
-                      )}
+                          </>
+                        ) : null}
+                      </div>
 
-                      {permit.verified_status !== 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleVerify(permit.id, 'approved')}
-                          disabled={actionLoading === permit.id}
-                          className="gap-1.5"
-                        >
-                          Reset to Pending
-                        </Button>
+                      {rejectingId === doc.id && (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            placeholder="Optional reason…"
+                            value={rejectNote}
+                            onChange={(e) => setRejectNote(e.target.value)}
+                            className="min-h-[70px]"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={actionLoading === doc.id}
+                              onClick={() => handleUpdateStatus(doc.id, "rejected", rejectNote)}
+                            >
+                              Confirm Reject
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setRejectingId(null);
+                                setRejectNote("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Full Preview Dialog */}
+      {/* Preview */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[95vh] p-0">
           <DialogHeader className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <DialogTitle>Permit Preview</DialogTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => previewUrl && window.open(previewUrl, '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4 mr-1" />
-                  Open in New Tab
-                </Button>
-              </div>
-            </div>
+            <DialogTitle>Permit Preview</DialogTitle>
           </DialogHeader>
           <div className="p-4 overflow-auto max-h-[calc(95vh-80px)]">
-            {previewUrl && (
-              isImageFile(previewUrl) ? (
-                <img 
-                  src={previewUrl} 
-                  alt="Permit preview" 
-                  className="max-w-full mx-auto rounded-lg"
-                />
-              ) : (
-                <iframe
-                  src={previewUrl}
-                  className="w-full h-[70vh] rounded-lg border"
-                  title="Permit preview"
-                />
-              )
-            )}
+            {previewDoc ? (
+              (() => {
+                const signedUrl = urlById[previewDoc.id];
+                const mime = previewDoc.mime_type || inferMimeTypeFromFilename(previewDoc.original_filename);
+                if (!signedUrl) return <p className="text-sm text-muted-foreground">Loading preview…</p>;
+                if (isImageMime(mime)) {
+                  return <img src={signedUrl} alt={previewDoc.original_filename || "Permit"} className="max-w-full mx-auto rounded-lg" />;
+                }
+                if (isPdfMime(mime)) {
+                  return <iframe src={signedUrl} className="w-full h-[70vh] rounded-lg border" title="Permit PDF" />;
+                }
+                return (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
+                    <Button variant="outline" onClick={() => window.open(signedUrl, "_blank")}>Open</Button>
+                  </div>
+                );
+              })()
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
@@ -416,11 +431,11 @@ export function PermitViewerModal({
 }
 
 // Status badge component for use in cards
-export function PermitStatusBadge({ 
-  hasPermit, 
-  verifiedStatus 
-}: { 
-  hasPermit: boolean; 
+export function PermitStatusBadge({
+  hasPermit,
+  verifiedStatus,
+}: {
+  hasPermit: boolean;
   verifiedStatus?: string | null;
 }) {
   if (!hasPermit) {
@@ -429,50 +444,51 @@ export function PermitStatusBadge({
         <TooltipTrigger asChild>
           <Badge className="bg-red-500/20 text-red-600 border-red-500/30 gap-1">
             <XCircle className="h-3 w-3" />
-            No Permit
+            Permit Missing
           </Badge>
         </TooltipTrigger>
-        <TooltipContent>Student has not uploaded a permit document</TooltipContent>
+        <TooltipContent>No permit uploaded</TooltipContent>
       </Tooltip>
     );
   }
 
-  switch (verifiedStatus) {
-    case 'approved':
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Permit Verified
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>Permit has been verified by admin</TooltipContent>
-        </Tooltip>
-      );
-    case 'rejected':
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge className="bg-red-500/20 text-red-600 border-red-500/30 gap-1">
-              <XCircle className="h-3 w-3" />
-              Permit Rejected
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>Permit was rejected - new upload required</TooltipContent>
-        </Tooltip>
-      );
-    default:
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 gap-1">
-              <Upload className="h-3 w-3" />
-              Pending Review
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>Permit uploaded, awaiting admin verification</TooltipContent>
-        </Tooltip>
-      );
+  if (verifiedStatus === "approved") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Permit Uploaded
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>Permit verified</TooltipContent>
+      </Tooltip>
+    );
   }
+
+  if (verifiedStatus === "rejected") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge className="bg-red-500/20 text-red-600 border-red-500/30 gap-1">
+            <XCircle className="h-3 w-3" />
+            Rejected
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>Permit rejected</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 gap-1">
+          <FileText className="h-3 w-3" />
+          Pending Review
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>Permit uploaded, awaiting review</TooltipContent>
+    </Tooltip>
+  );
 }
