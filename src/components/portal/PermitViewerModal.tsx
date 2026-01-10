@@ -111,7 +111,7 @@ export function PermitViewerModal({
             // best-effort: persist the working bucket so future loads work
             await supabase.from("permit_documents").update({ bucket: res.bucketUsed }).eq("id", doc.id);
           }
-        } else {
+        } else if (res.ok === false) {
           setErrById((m) => ({ ...m, [doc.id]: res.errorMessage }));
         }
       })
@@ -142,7 +142,7 @@ export function PermitViewerModal({
   const ensureSigned = async (doc: PermitDocument) => {
     if (urlById[doc.id]) return urlById[doc.id];
     const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.storage_path, expiresInSeconds: 600 });
-    if (!res.ok) {
+    if (res.ok === false) {
       setErrById((m) => ({ ...m, [doc.id]: res.errorMessage }));
       throw new Error(res.errorMessage);
     }

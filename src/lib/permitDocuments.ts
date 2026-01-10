@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const PERMITS_BUCKET = "permits" as const;
 
-const legacyBuckets = ["permit_uploads", "documents", "uploads", "intake", "user_uploads"] as const;
+const legacyBuckets = ["permits", "permit_uploads", "documents", "uploads", "intake", "user_uploads"] as const;
 
 export type SignedUrlResult =
   | { ok: true; signedUrl: string; bucketUsed: string }
