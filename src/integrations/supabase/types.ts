@@ -575,58 +575,61 @@ export type Database = {
         Row: {
           bucket: string
           created_at: string
+          file_name: string | null
+          file_path: string
           id: string
           mime_type: string | null
-          original_filename: string | null
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           size_bytes: number | null
           source: string
           status: string
-          storage_path: string
+          student_id: string
           updated_at: string
+          uploaded_at: string
           uploaded_by: string | null
-          user_id: string
         }
         Insert: {
           bucket?: string
           created_at?: string
+          file_name?: string | null
+          file_path: string
           id?: string
           mime_type?: string | null
-          original_filename?: string | null
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           size_bytes?: number | null
           source?: string
           status?: string
-          storage_path: string
+          student_id: string
           updated_at?: string
+          uploaded_at?: string
           uploaded_by?: string | null
-          user_id: string
         }
         Update: {
           bucket?: string
           created_at?: string
+          file_name?: string | null
+          file_path?: string
           id?: string
           mime_type?: string | null
-          original_filename?: string | null
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           size_bytes?: number | null
           source?: string
           status?: string
-          storage_path?: string
+          student_id?: string
           updated_at?: string
+          uploaded_at?: string
           uploaded_by?: string | null
-          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "permit_documents_user_id_fkey"
-            columns: ["user_id"]
+            columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
