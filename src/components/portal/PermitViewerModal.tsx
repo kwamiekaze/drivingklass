@@ -27,16 +27,18 @@ import {
 
 interface PermitDocument {
   id: string;
-  user_id: string;
+  student_id: string;
   bucket: string;
-  storage_path: string;
-  original_filename: string | null;
+  file_path: string;
+  file_name: string | null;
   mime_type: string | null;
   size_bytes: number | null;
-  status: "pending" | "approved" | "rejected" | string;
+  status: string;
   source: string;
   uploaded_by: string | null;
   created_at: string;
+  uploaded_at: string;
+  updated_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
   review_note: string | null;
@@ -88,9 +90,9 @@ export function PermitViewerModal({
 
     const { data, error } = await supabase
       .from("permit_documents")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .select("id, student_id, bucket, file_path, file_name, mime_type, size_bytes, status, source, uploaded_by, created_at, uploaded_at, updated_at, reviewed_by, reviewed_at, review_note")
+      .eq("student_id", userId)
+      .order("uploaded_at", { ascending: false });
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -98,13 +100,13 @@ export function PermitViewerModal({
       return;
     }
 
-    const rows = (data || []) as PermitDocument[];
+    const rows = (data || []) as unknown as PermitDocument[];
     setDocs(rows);
 
     // Pre-sign (quick UX)
     await Promise.all(
       rows.map(async (doc) => {
-        const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.storage_path, expiresInSeconds: 600 });
+        const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.file_path, expiresInSeconds: 600 });
         if (res.ok) {
           setUrlById((m) => ({ ...m, [doc.id]: res.signedUrl }));
           if (res.bucketUsed !== doc.bucket) {
@@ -141,7 +143,7 @@ export function PermitViewerModal({
 
   const ensureSigned = async (doc: PermitDocument) => {
     if (urlById[doc.id]) return urlById[doc.id];
-    const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.storage_path, expiresInSeconds: 600 });
+    const res = await createSignedPermitUrl({ bucket: doc.bucket, storagePath: doc.file_path, expiresInSeconds: 600 });
     if (res.ok === false) {
       setErrById((m) => ({ ...m, [doc.id]: res.errorMessage }));
       throw new Error(res.errorMessage);
@@ -158,7 +160,7 @@ export function PermitViewerModal({
       const dlUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = dlUrl;
-      a.download = doc.original_filename || "permit";
+      a.download = doc.file_name || "permit";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -198,7 +200,7 @@ export function PermitViewerModal({
   };
 
   const fileMeta = (doc: PermitDocument) => {
-    const mime = doc.mime_type || inferMimeTypeFromFilename(doc.original_filename);
+    const mime = doc.mime_type || inferMimeTypeFromFilename(doc.file_name);
     return {
       mime,
       isImage: isImageMime(mime),
@@ -246,7 +248,7 @@ export function PermitViewerModal({
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="h-14 w-14 rounded-lg border bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {isImage && signedUrl ? (
-                              <img src={signedUrl} alt={doc.original_filename || "Permit thumbnail"} className="h-full w-full object-cover" />
+                              <img src={signedUrl} alt={doc.file_name || "Permit thumbnail"} className="h-full w-full object-cover" />
                             ) : isPdf ? (
                               <FileText className="h-6 w-6 text-muted-foreground" />
                             ) : (
@@ -255,7 +257,7 @@ export function PermitViewerModal({
                           </div>
 
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">{doc.original_filename || "Permit Document"}</p>
+                            <p className="font-medium text-sm truncate">{doc.file_name || "Permit Document"}</p>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
                               {statusBadge(doc.status)}
                               <Badge variant="outline" className="text-xs">{sourceLabel(doc.source)}</Badge>
@@ -265,7 +267,7 @@ export function PermitViewerModal({
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>Uploaded: {format(new Date(doc.created_at), "MMM d, yyyy h:mm a")}</span>
+                        <span>Uploaded: {format(new Date(doc.uploaded_at || doc.created_at), "MMM d, yyyy h:mm a")}</span>
                       </div>
 
                       {signErr && (
@@ -332,7 +334,7 @@ export function PermitViewerModal({
                           Download
                         </Button>
 
-                        {doc.status === "pending" ? (
+                        {(doc.status === "pending" || doc.status === "pending_review") ? (
                           <>
                             <Button
                               size="sm"
@@ -407,10 +409,10 @@ export function PermitViewerModal({
             {previewDoc ? (
               (() => {
                 const signedUrl = urlById[previewDoc.id];
-                const mime = previewDoc.mime_type || inferMimeTypeFromFilename(previewDoc.original_filename);
+                const mime = previewDoc.mime_type || inferMimeTypeFromFilename(previewDoc.file_name);
                 if (!signedUrl) return <p className="text-sm text-muted-foreground">Loading preview…</p>;
                 if (isImageMime(mime)) {
-                  return <img src={signedUrl} alt={previewDoc.original_filename || "Permit"} className="max-w-full mx-auto rounded-lg" />;
+                  return <img src={signedUrl} alt={previewDoc.file_name || "Permit"} className="max-w-full mx-auto rounded-lg" />;
                 }
                 if (isPdfMime(mime)) {
                   return <iframe src={signedUrl} className="w-full h-[70vh] rounded-lg border" title="Permit PDF" />;
