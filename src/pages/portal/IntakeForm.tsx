@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { AvatarUpload } from "@/components/portal/AvatarUpload";
+import { SubmissionDebugPanel, useSubmissionDebug, DebugLogEntry } from "@/components/portal/SubmissionDebugPanel";
+import { createSignedPermitUrl } from "@/lib/permitDocuments";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +80,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
   const [existingPermitUrl, setExistingPermitUrl] = useState<string | null>(null);
   const [targetProfile, setTargetProfile] = useState<any>(null);
   const [fileRestoreNeeded, setFileRestoreNeeded] = useState(false);
+  
+  // Debug panel state
+  const { logs: debugLogs, addLog, updateLastLog, clearLogs } = useSubmissionDebug();
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -227,7 +232,33 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetUserId) return;
+    clearLogs();
+    
+    // CRITICAL: Block submit if not authenticated
+    if (!user?.id) {
+      addLog({
+        table: 'auth',
+        operation: 'select',
+        status: 'error',
+        error: { message: 'You must be signed in to submit the intake form' },
+      });
+      toast({
+        title: "Not Authenticated",
+        description: "You must be signed in to submit the intake form",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!targetUserId) {
+      addLog({
+        table: 'profiles',
+        operation: 'update',
+        status: 'error',
+        error: { message: 'Target user ID is missing' },
+      });
+      return;
+    }
 
     const validation = intakeFormSchema.safeParse(formData);
     if (!validation.success) {
@@ -296,23 +327,91 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
       }
 
       let permitUrl = existingPermitUrl;
+      let uploadedFilePath: string | null = null;
 
       // Upload permit file if selected
       if (permitFile) {
         const fileExt = permitFile.name.split('.').pop();
         const fileName = `${targetUserId}/${Date.now()}.${fileExt}`;
         
+        addLog({
+          table: 'storage.permits',
+          operation: 'upload',
+          status: 'pending',
+          payload: { bucket: 'permits', file_path: fileName, file_name: permitFile.name },
+        });
+        
         const { error: uploadError } = await supabase.storage
           .from('permits')
           .upload(fileName, permitFile);
 
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('permits')
-          .getPublicUrl(fileName);
+        if (uploadError) {
+          updateLastLog({
+            status: 'error',
+            error: { 
+              message: uploadError.message, 
+              code: (uploadError as any).statusCode?.toString(),
+            },
+          });
+          throw uploadError;
+        }
         
-        permitUrl = urlData.publicUrl;
+        updateLastLog({ status: 'success' });
+        uploadedFilePath = fileName;
+
+        // Generate signed URL for display (not public URL since bucket is private)
+        const signedResult = await createSignedPermitUrl({
+          bucket: 'permits',
+          storagePath: fileName,
+          expiresInSeconds: 600,
+        });
+        
+        if (signedResult.ok) {
+          permitUrl = signedResult.signedUrl;
+        }
+        
+        // Upsert permit_documents table - CRITICAL for admin visibility
+        const permitDocPayload = {
+          student_id: targetUserId, // ALWAYS use targetUserId (auth.uid() for students)
+          uploaded_by: user?.id,
+          bucket: 'permits',
+          file_path: fileName,
+          file_name: permitFile.name,
+          mime_type: permitFile.type || 'image/jpeg',
+          size_bytes: permitFile.size,
+          source: 'intake_form',
+          status: 'pending_review',
+        };
+        
+        addLog({
+          table: 'permit_documents',
+          operation: 'upsert',
+          status: 'pending',
+          payload: permitDocPayload,
+        });
+        
+        const { error: permitDocError } = await supabase
+          .from('permit_documents')
+          .upsert(permitDocPayload, {
+            onConflict: 'student_id,source',
+            ignoreDuplicates: false,
+          });
+          
+        if (permitDocError) {
+          updateLastLog({
+            status: 'error',
+            error: {
+              message: permitDocError.message,
+              code: permitDocError.code,
+              details: permitDocError.details,
+              hint: permitDocError.hint,
+            },
+          });
+          // Don't throw - permit is already uploaded, just log the error
+          console.error('Failed to upsert permit_documents:', permitDocError);
+        } else {
+          updateLastLog({ status: 'success' });
+        }
       }
 
       // Prepare update data
@@ -351,12 +450,32 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
       }
 
       // Update profile
+      addLog({
+        table: 'profiles',
+        operation: 'update',
+        status: 'pending',
+        payload: { id: targetUserId, ...updateData },
+      });
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
         .eq('id', targetUserId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        updateLastLog({
+          status: 'error',
+          error: {
+            message: updateError.message,
+            code: updateError.code,
+            details: updateError.details,
+            hint: updateError.hint,
+          },
+        });
+        throw updateError;
+      }
+      
+      updateLastLog({ status: 'success' });
 
       // Send notifications
       if (isEditMode) {
@@ -794,6 +913,13 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
           )}
         </Button>
       </form>
+      
+      {/* Submission Debug Panel - shows for admins or when errors occur */}
+      <SubmissionDebugPanel
+        logs={debugLogs}
+        authUid={user?.id}
+        isAdmin={isAdminEdit || role === 'admin' || role === 'staff'}
+      />
     </div>
   );
 }
