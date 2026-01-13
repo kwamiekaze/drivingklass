@@ -79,6 +79,8 @@ export interface SessionDetails {
   report_card_id: string | null;
   completed: boolean;
   completed_at: string | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
 }
 
 export interface ReportCard {
