@@ -1239,6 +1239,7 @@ export type Database = {
           cancellation_reason: string
           completed: boolean
           completed_at: string
+          dropoff_address: string
           duration_minutes: number
           ends_at: string
           instructor_email: string
@@ -1246,6 +1247,7 @@ export type Database = {
           instructor_name: string
           note_for_instructor: string
           note_for_student: string
+          pickup_address: string
           report_card_id: string
           session_id: string
           starts_at: string
@@ -1308,6 +1310,7 @@ export type Database = {
           cancellation_reason: string
           completed: boolean
           completed_at: string
+          dropoff_address: string
           duration_minutes: number
           ends_at: string
           instructor_email: string
@@ -1315,6 +1318,7 @@ export type Database = {
           instructor_name: string
           note_for_instructor: string
           note_for_student: string
+          pickup_address: string
           report_card_id: string
           session_id: string
           starts_at: string

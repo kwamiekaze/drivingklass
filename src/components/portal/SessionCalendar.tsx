@@ -14,6 +14,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDa
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
+import { SessionAddressSection } from "./SessionAddressSection";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -491,7 +492,13 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     </div>
                   </div>
 
-                  {/* Show notes based on role */}
+                  {/* Addresses section - visible to instructors and admins */}
+                  {(userRole === 'instructor' || isStaffOrAdmin) && (
+                    <SessionAddressSection 
+                      pickupAddress={sessionDetails.pickup_address}
+                      dropoffAddress={sessionDetails.dropoff_address}
+                    />
+                  )}
                   {canSeeNoteForStudent(selectedSession) && sessionDetails.note_for_student && (
                     <div className="p-3 bg-blue-500/10 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-2">
