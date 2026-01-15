@@ -120,17 +120,21 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.rpc('complete_session', {
-        _session_id: selectedSession.id,
-        _via: 'manual'
+      // Use edge function to complete session and deduct hours
+      const { data, error } = await supabase.functions.invoke('complete-session-deduct-hours', {
+        body: { session_id: selectedSession.id }
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Session Completed",
-        description: "The session has been marked as completed.",
-      });
+      if (data?.success) {
+        toast({
+          title: "Session Completed",
+          description: data.message || "The session has been marked as completed.",
+        });
+      } else {
+        throw new Error(data?.error || "Failed to complete session");
+      }
 
       setCompleteDialogOpen(false);
       setSelectedSession(null);
@@ -492,13 +496,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     </div>
                   </div>
 
-                  {/* Addresses section - visible to instructors and admins */}
-                  {(userRole === 'instructor' || isStaffOrAdmin) && (
-                    <SessionAddressSection 
-                      pickupAddress={sessionDetails.pickup_address}
-                      dropoffAddress={sessionDetails.dropoff_address}
-                    />
-                  )}
+                  {/* Addresses section - visible to all roles */}
+                  <SessionAddressSection 
+                    pickupAddress={sessionDetails.pickup_address}
+                    dropoffAddress={sessionDetails.dropoff_address}
+                  />
                   {canSeeNoteForStudent(selectedSession) && sessionDetails.note_for_student && (
                     <div className="p-3 bg-blue-500/10 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-2">

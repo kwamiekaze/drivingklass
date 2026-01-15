@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, User, Mail, Phone, RefreshCw, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Search, User, Mail, Phone, RefreshCw, AlertTriangle, Clock, Save, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
@@ -24,6 +27,7 @@ interface UserProfile {
   created_at: string;
   last_sign_in_at: string | null;
   permit_number?: string | null;
+  hours_remaining?: number;
 }
 
 interface AdminUsersListProps {
@@ -39,11 +43,18 @@ export function AdminUsersList({
   enableSearch = true,
   enableFilters = true 
 }: AdminUsersListProps) {
+  const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(defaultStatus);
+  
+  // Hours editor modal state
+  const [hoursModalOpen, setHoursModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [hoursInput, setHoursInput] = useState("");
+  const [savingHours, setSavingHours] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -73,7 +84,7 @@ export function AdminUsersList({
       // Then fetch profiles for those users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, full_name, email, phone, avatar_url, approval_status, created_at, last_sign_in_at, permit_number')
+        .select('id, first_name, last_name, full_name, email, phone, avatar_url, approval_status, created_at, last_sign_in_at, permit_number, hours_remaining')
         .in('id', userIds)
         .order('created_at', { ascending: false });
 
@@ -86,6 +97,31 @@ export function AdminUsersList({
     } finally {
       setLoading(false);
     }
+  };
+
+  const openHoursModal = (user: UserProfile) => {
+    setSelectedUser(user);
+    setHoursInput((user.hours_remaining ?? 0).toString());
+    setHoursModalOpen(true);
+  };
+
+  const handleSaveHours = async () => {
+    if (!selectedUser) return;
+    const numericHours = parseFloat(hoursInput);
+    if (isNaN(numericHours) || numericHours < 0) {
+      toast({ title: "Invalid", description: "Enter a valid number", variant: "destructive" });
+      return;
+    }
+    setSavingHours(true);
+    const { error } = await supabase.from('profiles').update({ hours_remaining: numericHours }).eq('id', selectedUser.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Hours Updated", description: `Set to ${numericHours.toFixed(1)} hours` });
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, hours_remaining: numericHours } : u));
+      setHoursModalOpen(false);
+    }
+    setSavingHours(false);
   };
 
   // Debounced search - filter client-side for responsiveness
@@ -258,6 +294,17 @@ export function AdminUsersList({
                   
                   {/* Status and Actions */}
                   <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-0">
+                    {roleFilter === 'student' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs gap-1"
+                        onClick={() => openHoursModal(user)}
+                      >
+                        <Clock className="h-3 w-3" />
+                        {(user.hours_remaining ?? 0).toFixed(1)}h
+                      </Button>
+                    )}
                     {getStatusBadge(user.approval_status)}
                     <Link to={roleFilter === 'student' ? `/admin/approvals` : `/admin/approvals`}>
                       <Button variant="outline" size="sm" className="text-xs">
@@ -271,6 +318,26 @@ export function AdminUsersList({
           )}
         </CardContent>
       </Card>
+
+      {/* Hours Editor Modal */}
+      <Dialog open={hoursModalOpen} onOpenChange={setHoursModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Hours</DialogTitle>
+            <DialogDescription>Set lesson hours for {getDisplayName(selectedUser as any, 'student')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Hours Remaining</Label>
+              <Input type="number" step="0.5" min="0" value={hoursInput} onChange={e => setHoursInput(e.target.value)} />
+            </div>
+            <Button onClick={handleSaveHours} disabled={savingHours} className="w-full gap-2">
+              {savingHours ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Hours
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.setup-admin]
 verify_jwt = false
+
+[functions.complete-session-deduct-hours]
+verify_jwt = false
