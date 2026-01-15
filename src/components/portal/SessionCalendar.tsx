@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionAddressSection } from "./SessionAddressSection";
+import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -38,6 +39,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
 
   // Fetch session details via RPC when a session is selected
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
@@ -484,15 +487,47 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     </div>
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                      <p className="font-medium text-sm sm:text-base">
-                        {sessionDetails.student_id ? sessionDetails.student_name : 'Not assigned'}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        {isStaffOrAdmin && sessionDetails.student_id ? (
+                          <>
+                            <ClickableUserName
+                              userId={sessionDetails.student_id}
+                              name={sessionDetails.student_name || 'Not assigned'}
+                              className="font-medium text-sm sm:text-base"
+                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
+                            />
+                            <OpenProfileButton
+                              userId={sessionDetails.student_id}
+                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
+                              className="h-6 w-6"
+                            />
+                          </>
+                        ) : (
+                          <p className="font-medium text-sm sm:text-base">{sessionDetails.student_name || 'Not assigned'}</p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                      <p className="font-medium text-sm sm:text-base">
-                        {sessionDetails.instructor_id ? sessionDetails.instructor_name : 'Not assigned'}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        {isStaffOrAdmin && sessionDetails.instructor_id ? (
+                          <>
+                            <ClickableUserName
+                              userId={sessionDetails.instructor_id}
+                              name={sessionDetails.instructor_name || 'Not assigned'}
+                              className="font-medium text-sm sm:text-base"
+                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
+                            />
+                            <OpenProfileButton
+                              userId={sessionDetails.instructor_id}
+                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
+                              className="h-6 w-6"
+                            />
+                          </>
+                        ) : (
+                          <p className="font-medium text-sm sm:text-base">{sessionDetails.instructor_name || 'Not assigned'}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -695,6 +730,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Admin User Profile Modal */}
+      <AdminUserProfileModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        userId={profileModalUserId}
+        onProfileUpdated={onSessionUpdate}
+      />
     </div>
   );
 }

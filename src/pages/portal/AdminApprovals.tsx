@@ -16,6 +16,7 @@ import { RejectUserModal } from "@/components/portal/RejectUserModal";
 import { IntakePreviewModal } from "@/components/portal/IntakePreviewModal";
 import { BatchDownloadModal } from "@/components/portal/BatchDownloadModal";
 import { PermitViewerModal, PermitStatusBadge } from "@/components/portal/PermitViewerModal";
+import { AdminUserProfileModal, OpenProfileButton, ClickableUserName } from "@/components/portal/AdminUserProfileModal";
 import { sendApprovalNotification, sendRejectionNotification } from "@/lib/notifications";
 import { format } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -44,6 +45,8 @@ function AdminApprovalsContent() {
   const [permitViewerOpen, setPermitViewerOpen] = useState(false);
   const [permitViewerUserId, setPermitViewerUserId] = useState<string | null>(null);
   const [permitViewerUserName, setPermitViewerUserName] = useState<string>("");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfiles();
@@ -100,6 +103,11 @@ function AdminApprovalsContent() {
     setPermitViewerUserId(profile.id);
     setPermitViewerUserName(getDisplayName(profile, 'User'));
     setPermitViewerOpen(true);
+  };
+
+  const openProfileModal = (userId: string) => {
+    setProfileModalUserId(userId);
+    setProfileModalOpen(true);
   };
 
   const handlePreviewIntake = (profile: Profile, showDownload: boolean = false) => {
@@ -333,6 +341,7 @@ function AdminApprovalsContent() {
                       onRoleChange={handleRoleChange}
                       onPreviewIntake={() => handlePreviewIntake(profile, false)}
                       onViewPermits={() => openPermitViewer(profile)}
+                      onOpenProfile={() => openProfileModal(profile.id)}
                       isLoading={actionLoading === profile.id}
                     />
                   ))}
@@ -362,6 +371,7 @@ function AdminApprovalsContent() {
                       onRoleChange={handleRoleChange}
                       onPreviewIntake={() => handlePreviewIntake(profile, true)}
                       onViewPermits={() => openPermitViewer(profile)}
+                      onOpenProfile={() => openProfileModal(profile.id)}
                     />
                   ))}
                 </div>
@@ -388,6 +398,7 @@ function AdminApprovalsContent() {
                       key={profile.id}
                       profile={profile}
                       onReApprove={() => handleApprove(profile)}
+                      onOpenProfile={() => openProfileModal(profile.id)}
                       isLoading={actionLoading === profile.id}
                     />
                   ))}
@@ -431,6 +442,14 @@ function AdminApprovalsContent() {
           onStatusChange={fetchProfiles}
         />
       )}
+
+      {/* Admin User Profile Modal */}
+      <AdminUserProfileModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        userId={profileModalUserId}
+        onProfileUpdated={fetchProfiles}
+      />
     </div>
   );
 }
@@ -442,10 +461,11 @@ interface UserApprovalCardProps {
   onRoleChange: (id: string, role: UserRole) => void;
   onPreviewIntake: () => void;
   onViewPermits: () => void;
+  onOpenProfile: () => void;
   isLoading: boolean;
 }
 
-function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPreviewIntake, onViewPermits, isLoading }: UserApprovalCardProps) {
+function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPreviewIntake, onViewPermits, onOpenProfile, isLoading }: UserApprovalCardProps) {
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-xl bg-background/50">
       {/* User Info Row */}
@@ -454,9 +474,12 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
           <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm sm:text-base truncate">
-            {getDisplayName(profile, 'Unknown User')}
-          </p>
+          <ClickableUserName
+            userId={profile.id}
+            name={getDisplayName(profile, 'Unknown User')}
+            className="font-semibold text-sm sm:text-base truncate block"
+            onOpenProfile={onOpenProfile}
+          />
           <p className="text-xs sm:text-sm text-muted-foreground break-words">
             {profile.email}
           </p>
@@ -475,6 +498,11 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
         </div>
         {/* Action icons */}
         <div className="flex items-center gap-1">
+          <OpenProfileButton
+            userId={profile.id}
+            onOpenProfile={onOpenProfile}
+            className="flex-shrink-0 h-9 w-9"
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -563,9 +591,10 @@ interface ApprovedUserCardProps {
   onRoleChange: (id: string, role: UserRole) => void;
   onPreviewIntake: () => void;
   onViewPermits: () => void;
+  onOpenProfile: () => void;
 }
 
-function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake, onViewPermits }: ApprovedUserCardProps) {
+function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake, onViewPermits, onOpenProfile }: ApprovedUserCardProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border rounded-xl bg-background/50">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -573,15 +602,23 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake, onViewPermit
           <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm sm:text-base truncate">
-            {getDisplayName(profile, 'Unknown')}
-          </p>
+          <ClickableUserName
+            userId={profile.id}
+            name={getDisplayName(profile, 'Unknown')}
+            className="font-medium text-sm sm:text-base truncate block"
+            onOpenProfile={onOpenProfile}
+          />
           <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {profile.email}
           </p>
         </div>
         {/* Action icons */}
         <div className="flex items-center gap-1">
+          <OpenProfileButton
+            userId={profile.id}
+            onOpenProfile={onOpenProfile}
+            className="flex-shrink-0 h-9 w-9"
+          />
           {(profile as any).needs_review && (
             <Badge variant="destructive" className="gap-1 text-xs mr-1">
               <AlertTriangle className="h-3 w-3" />
@@ -650,10 +687,11 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake, onViewPermit
 interface RejectedUserCardProps {
   profile: Profile;
   onReApprove: () => void;
+  onOpenProfile: () => void;
   isLoading: boolean;
 }
 
-function RejectedUserCard({ profile, onReApprove, isLoading }: RejectedUserCardProps) {
+function RejectedUserCard({ profile, onReApprove, onOpenProfile, isLoading }: RejectedUserCardProps) {
   return (
     <div className="flex flex-col gap-3 p-3 sm:p-4 border rounded-xl bg-background/50">
       <div className="flex items-start gap-3">
@@ -661,9 +699,19 @@ function RejectedUserCard({ profile, onReApprove, isLoading }: RejectedUserCardP
           <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm sm:text-base truncate">
-            {getDisplayName(profile, 'Unknown')}
-          </p>
+          <div className="flex items-center gap-2">
+            <ClickableUserName
+              userId={profile.id}
+              name={getDisplayName(profile, 'Unknown')}
+              className="font-medium text-sm sm:text-base truncate"
+              onOpenProfile={onOpenProfile}
+            />
+            <OpenProfileButton
+              userId={profile.id}
+              onOpenProfile={onOpenProfile}
+              className="h-7 w-7"
+            />
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {profile.email}
           </p>

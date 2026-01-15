@@ -36,7 +36,7 @@ export function HoursRemainingCard({ hoursRemaining, className }: HoursRemaining
           <span className="text-lg text-muted-foreground">hours</span>
         </div>
         <CardDescription className="mt-2 text-sm">
-          Automatically updates after each completed lesson
+          Automatically updates after each completed session
         </CardDescription>
       </CardContent>
     </Card>

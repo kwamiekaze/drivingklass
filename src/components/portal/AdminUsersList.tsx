@@ -14,6 +14,7 @@ import { Search, User, Mail, Phone, RefreshCw, AlertTriangle, Clock, Save, Loade
 import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
+import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
 
 interface UserProfile {
   id: string;
@@ -55,6 +56,10 @@ export function AdminUsersList({
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [hoursInput, setHoursInput] = useState("");
   const [savingHours, setSavingHours] = useState(false);
+  
+  // Profile modal state
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -103,6 +108,11 @@ export function AdminUsersList({
     setSelectedUser(user);
     setHoursInput((user.hours_remaining ?? 0).toString());
     setHoursModalOpen(true);
+  };
+
+  const openProfileModal = (userId: string) => {
+    setProfileModalUserId(userId);
+    setProfileModalOpen(true);
   };
 
   const handleSaveHours = async () => {
@@ -265,9 +275,19 @@ export function AdminUsersList({
                   
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm sm:text-base truncate">
-                      {getDisplayName(user as any, 'Unknown')}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <ClickableUserName
+                        userId={user.id}
+                        name={getDisplayName(user as any, 'Unknown')}
+                        className="font-medium text-sm sm:text-base truncate"
+                        onOpenProfile={openProfileModal}
+                      />
+                      <OpenProfileButton
+                        userId={user.id}
+                        onOpenProfile={openProfileModal}
+                        className="h-7 w-7"
+                      />
+                    </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                       {user.email && (
                         <span className="flex items-center gap-1 truncate">
@@ -324,7 +344,7 @@ export function AdminUsersList({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit Hours</DialogTitle>
-            <DialogDescription>Set lesson hours for {getDisplayName(selectedUser as any, 'student')}</DialogDescription>
+            <DialogDescription>Set session hours for {getDisplayName(selectedUser as any, 'student')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -338,6 +358,14 @@ export function AdminUsersList({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Admin User Profile Modal */}
+      <AdminUserProfileModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        userId={profileModalUserId}
+        onProfileUpdated={fetchUsers}
+      />
     </div>
   );
 }
