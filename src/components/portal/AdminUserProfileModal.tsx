@@ -1,0 +1,414 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle } from "lucide-react";
+import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
+import { Profile } from "@/types/portal";
+import { PermitViewerModal } from "./PermitViewerModal";
+
+interface AdminUserProfileModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string | null;
+  onProfileUpdated?: () => void;
+}
+
+interface FullProfile extends Profile {
+  hours_remaining?: number;
+  role?: string;
+}
+
+export function AdminUserProfileModal({ 
+  open, 
+  onOpenChange, 
+  userId,
+  onProfileUpdated 
+}: AdminUserProfileModalProps) {
+  const { toast } = useToast();
+  const [profile, setProfile] = useState<FullProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [permitViewerOpen, setPermitViewerOpen] = useState(false);
+  
+  // Editable fields
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [hoursRemaining, setHoursRemaining] = useState("");
+
+  useEffect(() => {
+    if (open && userId) {
+      fetchProfile(userId);
+    }
+  }, [open, userId]);
+
+  const fetchProfile = async (id: string) => {
+    setLoading(true);
+    try {
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Fetch role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', id)
+        .limit(1)
+        .maybeSingle();
+
+      const fullProfile: FullProfile = {
+        ...profileData,
+        approval_status: profileData.approval_status as any,
+        role: roleData?.role || undefined,
+      };
+
+      setProfile(fullProfile);
+      setFullName(fullProfile.full_name || `${fullProfile.first_name || ''} ${fullProfile.last_name || ''}`.trim());
+      setPhone(fullProfile.phone || "");
+      setHoursRemaining((fullProfile.hours_remaining ?? 0).toString());
+    } catch (err: any) {
+      console.error('Error fetching profile:', err);
+      toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!profile) return;
+    
+    setSaving(true);
+    try {
+      const numericHours = parseFloat(hoursRemaining);
+      if (isNaN(numericHours) || numericHours < 0) {
+        toast({ title: "Invalid Hours", description: "Please enter a valid number", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      // Parse full name into first/last
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || null;
+      const lastName = nameParts.slice(1).join(' ') || null;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName.trim() || null,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone.trim() || null,
+          hours_remaining: numericHours,
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      toast({ title: "Profile Updated", description: "Changes saved successfully" });
+      onProfileUpdated?.();
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      toast({ title: "Error", description: err.message || "Failed to save changes", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Approved</Badge>;
+      case 'pending':
+        return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">Pending</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Rejected</Badge>;
+      default:
+        return <Badge variant="secondary">{status || 'Unknown'}</Badge>;
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[min(92vw,560px)] max-w-[560px] max-h-[85vh] overflow-y-auto mx-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              User Profile
+            </DialogTitle>
+            <DialogDescription>
+              View and edit user information
+            </DialogDescription>
+          </DialogHeader>
+
+          {loading ? (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-56" />
+                </div>
+              </div>
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : profile ? (
+            <div className="space-y-5 py-2">
+              {/* Profile Header */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                    {getProfileInitials(profile)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-lg truncate">
+                    {getDisplayName(profile, 'Unknown User')}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {profile.email}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {getStatusBadge(profile.approval_status)}
+                    {profile.role && (
+                      <Badge variant="outline" className="capitalize">
+                        {profile.role}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Editable Fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Full Name</Label>
+                  <Input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter full name"
+                    className="min-h-[44px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                    Email
+                  </Label>
+                  <Input
+                    value={profile.email || ""}
+                    disabled
+                    className="min-h-[44px] bg-muted/50"
+                  />
+                  <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                    Phone
+                  </Label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="min-h-[44px]"
+                  />
+                </div>
+
+                {/* Hours Remaining - prominent gold styling */}
+                <div className="space-y-2 p-4 rounded-xl border-2 border-primary/30 bg-primary/5">
+                  <Label className="text-sm flex items-center gap-1.5 font-medium">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Hours Remaining
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 shrink-0"
+                      onClick={() => {
+                        const val = parseFloat(hoursRemaining) || 0;
+                        setHoursRemaining(Math.max(0, val - 0.5).toString());
+                      }}
+                    >
+                      -
+                    </Button>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={hoursRemaining}
+                      onChange={(e) => setHoursRemaining(e.target.value)}
+                      className="min-h-[44px] text-center text-lg font-bold"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 shrink-0"
+                      onClick={() => {
+                        const val = parseFloat(hoursRemaining) || 0;
+                        setHoursRemaining((val + 0.5).toString());
+                      }}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Addresses Section (read-only, from intake) */}
+              <div className="space-y-3 p-4 rounded-xl bg-muted/30">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  Addresses (from intake)
+                </p>
+                <div className="grid gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Pickup:</span>{' '}
+                    <span>{profile.pickup_address || 'Not provided'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Drop-off:</span>{' '}
+                    <span>{profile.dropoff_address || 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Permit Section */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <FileImage className="h-4 w-4 text-muted-foreground" />
+                    Permit Documents
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {profile.permit_number ? `Permit #${profile.permit_number}` : 'No permit number on file'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPermitViewerOpen(true)}
+                  className="gap-1.5"
+                >
+                  <FileImage className="h-4 w-4" />
+                  View Permits
+                </Button>
+              </div>
+
+              {/* Save Button */}
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full min-h-[48px] gap-2"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 gap-2">
+              <AlertTriangle className="h-10 w-10 text-muted-foreground" />
+              <p className="text-muted-foreground">Profile not found</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Permit Viewer Modal */}
+      {profile && (
+        <PermitViewerModal
+          open={permitViewerOpen}
+          onOpenChange={setPermitViewerOpen}
+          userId={profile.id}
+          userName={getDisplayName(profile, 'User')}
+        />
+      )}
+    </>
+  );
+}
+
+// Small button component for opening profile from anywhere
+interface OpenProfileButtonProps {
+  userId: string;
+  userName?: string;
+  variant?: 'icon' | 'text' | 'both';
+  className?: string;
+  onOpenProfile: (userId: string) => void;
+}
+
+export function OpenProfileButton({ 
+  userId, 
+  userName,
+  variant = 'icon',
+  className,
+  onOpenProfile 
+}: OpenProfileButtonProps) {
+  return (
+    <Button
+      variant="ghost"
+      size={variant === 'icon' ? 'icon' : 'sm'}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenProfile(userId);
+      }}
+      className={className}
+      title="Open Profile"
+    >
+      <User className="h-4 w-4" />
+      {variant !== 'icon' && <span className="ml-1.5">{variant === 'both' ? 'Profile' : (userName || 'View Profile')}</span>}
+    </Button>
+  );
+}
+
+// Clickable name that opens profile
+interface ClickableUserNameProps {
+  userId: string;
+  name: string;
+  className?: string;
+  onOpenProfile: (userId: string) => void;
+}
+
+export function ClickableUserName({ 
+  userId, 
+  name, 
+  className,
+  onOpenProfile 
+}: ClickableUserNameProps) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenProfile(userId);
+      }}
+      className={`hover:underline hover:text-primary cursor-pointer text-left ${className || ''}`}
+      title="Open Profile"
+    >
+      {name}
+    </button>
+  );
+}
