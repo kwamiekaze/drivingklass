@@ -699,6 +699,7 @@ export type Database = {
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
+          hours_remaining: number
           id: string
           intake_edit_count: number | null
           intake_last_edit_role: string | null
@@ -734,6 +735,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
+          hours_remaining?: number
           id: string
           intake_edit_count?: number | null
           intake_last_edit_role?: string | null
@@ -769,6 +771,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
+          hours_remaining?: number
           id?: string
           intake_edit_count?: number | null
           intake_last_edit_role?: string | null
@@ -974,6 +977,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at: string | null
           id: string
           instructor_id: string
           note_for_instructor: string | null
@@ -995,6 +999,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at?: string | null
           id?: string
           instructor_id: string
           note_for_instructor?: string | null
@@ -1016,6 +1021,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes?: number
           ends_at?: string
+          hours_deducted_at?: string | null
           id?: string
           instructor_id?: string
           note_for_instructor?: string | null
@@ -1108,6 +1114,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at: string | null
           id: string
           instructor_id: string
           note_for_instructor: string | null
@@ -1138,6 +1145,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at: string | null
           id: string
           instructor_id: string
           note_for_instructor: string | null
@@ -1173,6 +1181,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at: string | null
           id: string
           instructor_id: string
           note_for_instructor: string | null
@@ -1205,6 +1214,7 @@ export type Database = {
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
+          hours_remaining: number
           id: string
           intake_edit_count: number | null
           intake_last_edit_role: string | null
@@ -1361,6 +1371,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           ends_at: string
+          hours_deducted_at: string | null
           id: string
           instructor_id: string
           note_for_instructor: string | null

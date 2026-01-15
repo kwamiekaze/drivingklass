@@ -13,6 +13,7 @@ import { Session, ReportCard, Profile } from "@/types/portal";
 import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
+import { HoursRemainingCard } from "@/components/portal/HoursRemainingCard";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
@@ -188,6 +189,14 @@ function StudentDashboardContent() {
           </Card>
         )}
       </div>
+
+      {/* Hours Remaining Card */}
+      {!loading && profile && (
+        <HoursRemainingCard 
+          hoursRemaining={(profile as any).hours_remaining ?? 0} 
+          className="max-w-md"
+        />
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

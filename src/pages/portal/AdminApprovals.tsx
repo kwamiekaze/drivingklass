@@ -361,6 +361,7 @@ function AdminApprovalsContent() {
                       profile={profile}
                       onRoleChange={handleRoleChange}
                       onPreviewIntake={() => handlePreviewIntake(profile, true)}
+                      onViewPermits={() => openPermitViewer(profile)}
                     />
                   ))}
                 </div>
@@ -558,12 +559,13 @@ function UserApprovalCard({ profile, onApprove, onReject, onRoleChange, onPrevie
 }
 
 interface ApprovedUserCardProps {
-  profile: Profile & { role?: string; needs_review?: boolean };
+  profile: Profile & { role?: string; needs_review?: boolean; permitStatus?: string };
   onRoleChange: (id: string, role: UserRole) => void;
   onPreviewIntake: () => void;
+  onViewPermits: () => void;
 }
 
-function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUserCardProps) {
+function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake, onViewPermits }: ApprovedUserCardProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border rounded-xl bg-background/50">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -586,6 +588,19 @@ function ApprovedUserCard({ profile, onRoleChange, onPreviewIntake }: ApprovedUs
               Review
             </Badge>
           )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onViewPermits}
+                className="flex-shrink-0 h-9 w-9"
+              >
+                <FileImage className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View Permits</TooltipContent>
+          </Tooltip>
           <Button
             variant="ghost"
             size="icon"
