@@ -499,12 +499,15 @@ function AdminScheduleContent() {
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditDialog(session); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {isAfter(parseISO(session.starts_at), new Date()) && (
-                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={(e) => { e.stopPropagation(); openCancelDialog(session); }}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={(e) => { e.stopPropagation(); openCancelDialog(session); }}>
+                              <X className="h-4 w-4" />
+                            </Button>
                           </>
+                        )}
+                        {session.status === 'completed' && (
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={(e) => { e.stopPropagation(); openCancelDialog(session); }}>
+                            <X className="h-4 w-4" />
+                          </Button>
                         )}
                         {session.report_card_id && (
                           <Link to={`/instructor/report-cards/edit/${session.report_card_id}`} onClick={(e) => e.stopPropagation()}>
@@ -549,7 +552,7 @@ function AdminScheduleContent() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{format(parseISO(session.starts_at), 'h:mm a')}</span>
-                    {session.status === 'scheduled' && isAfter(parseISO(session.starts_at), new Date()) && (
+                    {(session.status === 'scheduled' || session.status === 'completed') && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -715,18 +718,21 @@ function AdminScheduleContent() {
                       <Edit className="h-4 w-4" />
                       Edit
                     </Button>
-                    <Button
-                      variant="destructive"
-                      className="flex-1 min-h-[44px] gap-2"
-                      onClick={() => {
-                        setDetailSession(null);
-                        openCancelDialog(detailSession);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </Button>
                   </div>
+                )}
+                {/* Cancel button - available for scheduled and completed sessions (admins can cancel past sessions) */}
+                {(detailSession.status === 'scheduled' || detailSession.status === 'completed') && (
+                  <Button
+                    variant="destructive"
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={() => {
+                      setDetailSession(null);
+                      openCancelDialog(detailSession);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                    Cancel Session
+                  </Button>
                 )}
               </div>
             </div>
