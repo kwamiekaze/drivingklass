@@ -73,6 +73,8 @@ export interface SessionDetails {
   instructor_name: string;
   student_email: string | null;
   instructor_email: string | null;
+  student_phone: string | null;
+  guardian_phone: string | null;
   note_for_student: string | null;
   note_for_instructor: string | null;
   cancellation_reason: string | null;
