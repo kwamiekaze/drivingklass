@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2, Phone } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -536,6 +536,54 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     pickupAddress={sessionDetails.pickup_address}
                     dropoffAddress={sessionDetails.dropoff_address}
                   />
+
+                  {/* Contact Info - visible to instructors and admins */}
+                  {(sessionDetails.student_phone || sessionDetails.guardian_phone) && (
+                    <div className="p-3 bg-primary/10 rounded-lg space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        Contact Info
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        {sessionDetails.student_phone && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Student Phone</p>
+                            <a 
+                              href={`tel:${sessionDetails.student_phone}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {sessionDetails.student_phone}
+                            </a>
+                            <span className="text-muted-foreground mx-1">|</span>
+                            <a 
+                              href={`sms:${sessionDetails.student_phone}`}
+                              className="text-xs text-muted-foreground hover:text-primary"
+                            >
+                              Text
+                            </a>
+                          </div>
+                        )}
+                        {sessionDetails.guardian_phone && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Guardian/Emergency</p>
+                            <a 
+                              href={`tel:${sessionDetails.guardian_phone}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {sessionDetails.guardian_phone}
+                            </a>
+                            <span className="text-muted-foreground mx-1">|</span>
+                            <a 
+                              href={`sms:${sessionDetails.guardian_phone}`}
+                              className="text-xs text-muted-foreground hover:text-primary"
+                            >
+                              Text
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {canSeeNoteForStudent(selectedSession) && sessionDetails.note_for_student && (
                     <div className="p-3 bg-blue-500/10 rounded-lg">
                       <p className="text-sm font-medium flex items-center gap-2">
