@@ -975,6 +975,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dropoff_address: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at: string | null
@@ -982,6 +983,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          pickup_address: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -997,6 +999,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           created_by?: string | null
+          dropoff_address?: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at?: string | null
@@ -1004,6 +1007,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor?: string | null
           note_for_student?: string | null
+          pickup_address?: string | null
           report_card_id?: string | null
           starts_at: string
           status?: string
@@ -1019,6 +1023,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           created_by?: string | null
+          dropoff_address?: string | null
           duration_minutes?: number
           ends_at?: string
           hours_deducted_at?: string | null
@@ -1026,6 +1031,7 @@ export type Database = {
           instructor_id?: string
           note_for_instructor?: string | null
           note_for_student?: string | null
+          pickup_address?: string | null
           report_card_id?: string | null
           starts_at?: string
           status?: string
@@ -1112,6 +1118,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dropoff_address: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at: string | null
@@ -1119,6 +1126,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          pickup_address: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -1143,6 +1151,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dropoff_address: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at: string | null
@@ -1150,6 +1159,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          pickup_address: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -1179,6 +1189,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dropoff_address: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at: string | null
@@ -1186,6 +1197,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          pickup_address: string | null
           report_card_id: string | null
           starts_at: string
           status: string
@@ -1371,6 +1383,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dropoff_address: string | null
           duration_minutes: number
           ends_at: string
           hours_deducted_at: string | null
@@ -1378,6 +1391,7 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          pickup_address: string | null
           report_card_id: string | null
           starts_at: string
           status: string
