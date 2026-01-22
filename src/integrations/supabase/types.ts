@@ -1218,6 +1218,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      compute_remaining_hours: {
+        Args: { p_student_id: string }
+        Returns: number
+      }
       create_session_admin: {
         Args: {
           _duration_minutes: number
@@ -1411,6 +1415,10 @@ export type Database = {
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      recalc_student_remaining_hours: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
       recalculate_all_student_hours: {
         Args: never
         Returns: {
