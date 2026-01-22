@@ -964,6 +964,48 @@ export type Database = {
         }
         Relationships: []
       }
+      session_hour_deductions: {
+        Row: {
+          deducted_at: string
+          deducted_hours: number
+          id: string
+          reason: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          deducted_at?: string
+          deducted_hours: number
+          id?: string
+          reason?: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          deducted_at?: string
+          deducted_hours?: number
+          id?: string
+          reason?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_session"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           cancellation_reason: string | null
@@ -1098,6 +1140,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_session_hour_deduction: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
       can_read_report_card: {
         Args: { p_report_card_id: string }
         Returns: boolean
@@ -1365,6 +1411,15 @@ export type Database = {
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      recalculate_all_student_hours: {
+        Args: never
+        Returns: {
+          new_hours: number
+          old_hours: number
+          sessions_processed: number
+          student_id: string
+        }[]
+      }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
       try_uuid: { Args: { p_text: string }; Returns: string }
       update_session_notes: {
