@@ -716,6 +716,7 @@ export type Database = {
           phone: string | null
           pickup_address: string | null
           public_id: string | null
+          purchased_hours: number
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string | null
@@ -752,6 +753,7 @@ export type Database = {
           phone?: string | null
           pickup_address?: string | null
           public_id?: string | null
+          purchased_hours?: number
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
@@ -788,6 +790,7 @@ export type Database = {
           phone?: string | null
           pickup_address?: string | null
           public_id?: string | null
+          purchased_hours?: number
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
@@ -1218,6 +1221,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      compute_completed_hours: {
+        Args: { p_student_id: string }
+        Returns: number
+      }
       compute_remaining_hours: {
         Args: { p_student_id: string }
         Returns: number
@@ -1293,6 +1300,7 @@ export type Database = {
           phone: string | null
           pickup_address: string | null
           public_id: string | null
+          purchased_hours: number
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string | null

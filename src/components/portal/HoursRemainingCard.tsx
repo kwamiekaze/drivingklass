@@ -4,11 +4,13 @@ import { cn } from "@/lib/utils";
 
 interface HoursRemainingCardProps {
   hoursRemaining: number;
+  purchasedHours?: number;
   className?: string;
 }
 
-export function HoursRemainingCard({ hoursRemaining, className }: HoursRemainingCardProps) {
-  const formattedHours = hoursRemaining.toFixed(1);
+export function HoursRemainingCard({ hoursRemaining, purchasedHours, className }: HoursRemainingCardProps) {
+  const formattedHours = Number(hoursRemaining || 0).toFixed(1);
+  const formattedPurchased = purchasedHours !== undefined ? Number(purchasedHours || 0).toFixed(1) : null;
   
   return (
     <Card className={cn(
@@ -35,6 +37,11 @@ export function HoursRemainingCard({ hoursRemaining, className }: HoursRemaining
           </span>
           <span className="text-lg text-muted-foreground">hours</span>
         </div>
+        {formattedPurchased && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            of {formattedPurchased}h purchased
+          </p>
+        )}
         <CardDescription className="mt-2 text-sm">
           Automatically updates after each completed session
         </CardDescription>
