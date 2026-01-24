@@ -42,6 +42,7 @@ import AdminMessages from "./pages/portal/AdminMessages";
 import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
 import AdminPermitQueue from "./pages/portal/AdminPermitQueue";
+import DrivingGamePage from "./pages/DrivingGame";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -115,6 +116,10 @@ const App = () => (
                   
                   {/* Legacy Admin */}
                   <Route path="/old-admin" element={<Admin />} />
+                  
+                  {/* Driving Game */}
+                  <Route path="/game" element={<DrivingGamePage />} />
+                  <Route path="/driving-game" element={<DrivingGamePage />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
