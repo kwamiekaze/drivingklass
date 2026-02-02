@@ -35,7 +35,6 @@ import {
   MessageSquare,
   Send,
   Eye,
-  
   Download,
   Copy,
   MessageCircle,
@@ -45,7 +44,9 @@ import {
   AlertTriangle,
   Activity,
   Filter,
-  Cake
+  Cake,
+  Image as ImageIcon,
+  Paperclip
 } from 'lucide-react';
 import { Lead, LeadNote, LeadActivity, LeadPipelineStatus, ParsedLeadData } from '@/types/leads';
 import { parseLeadData, getMissingFields } from '@/lib/leadParser';
@@ -60,6 +61,7 @@ import {
   getFollowUpStatus
 } from '@/lib/leadUtils';
 import { format } from 'date-fns';
+import { LeadScreenshotUploader } from '@/components/portal/LeadScreenshotUploader';
 
 // Helper component for inline field warnings
 function FieldHint({ value, fieldLabel }: { value: string | number | null; fieldLabel: string }) {
@@ -113,6 +115,20 @@ function AdminLeadsContent() {
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Screenshot upload state
+  const [addMode, setAddMode] = useState<'paste' | 'screenshot'>('paste');
+  const [screenshotData, setScreenshotData] = useState<{
+    student_name: string;
+    student_email: string;
+    student_phone: string;
+    guardian_name: string;
+    guardian_email: string;
+    guardian_phone: string;
+    raw_ocr_text: string;
+    attachment_file: File;
+  } | null>(null);
+  const [savingScreenshot, setSavingScreenshot] = useState(false);
+
   // Lead details state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadNotes, setLeadNotes] = useState<LeadNote[]>([]);
@@ -121,6 +137,7 @@ function AdminLeadsContent() {
   const [savingNote, setSavingNote] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLeads();
@@ -171,10 +188,101 @@ function AdminLeadsContent() {
   const handleOpenDetails = async (lead: Lead) => {
     setSelectedLead(lead);
     setDetailsOpen(true);
+    setAttachmentUrl(null);
+    
+    // Fetch attachment URL if exists
+    if (lead.attachment_path && lead.attachment_bucket) {
+      const { data } = await supabase.storage
+        .from(lead.attachment_bucket)
+        .createSignedUrl(lead.attachment_path, 3600);
+      if (data?.signedUrl) {
+        setAttachmentUrl(data.signedUrl);
+      }
+    }
+    
     await Promise.all([
       fetchLeadNotes(lead.id),
       fetchLeadActivity(lead.id).then(setLeadActivities)
     ]);
+  };
+
+  const handleSaveScreenshotLead = async () => {
+    if (!screenshotData) return;
+    
+    setSavingScreenshot(true);
+    
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      // First create the lead to get an ID
+      const { data: newLead, error: leadError } = await (supabase.from('leads') as any)
+        .insert({
+          created_by: userData?.user?.id || null,
+          full_name: screenshotData.student_name || null,
+          email: screenshotData.student_email || null,
+          phone: screenshotData.student_phone || null,
+          guardian_name: screenshotData.guardian_name || null,
+          guardian_phone: screenshotData.guardian_phone || null,
+          guardian_email: screenshotData.guardian_email || null,
+          raw_text: screenshotData.raw_ocr_text || null,
+          status: 'new',
+          lead_status: 'New',
+          source_type: 'screenshot',
+        })
+        .select()
+        .single();
+      
+      if (leadError) throw leadError;
+      
+      // Upload the attachment
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${screenshotData.attachment_file.name}`;
+      const filePath = `leads/${newLead.id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('lead-attachments')
+        .upload(filePath, screenshotData.attachment_file);
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        // Lead created but upload failed - still continue
+        toast({ 
+          title: 'Lead Created', 
+          description: 'Lead saved but attachment upload failed. You can try re-uploading later.',
+        });
+      } else {
+        // Update lead with attachment path
+        await (supabase.from('leads') as any)
+          .update({
+            attachment_path: filePath,
+            attachment_bucket: 'lead-attachments',
+          })
+          .eq('id', newLead.id);
+      }
+      
+      await logLeadActivity(newLead.id, 'lead_created', { 
+        full_name: screenshotData.student_name,
+        source: 'screenshot'
+      });
+      
+      toast({ title: 'Lead Created', description: 'Lead from screenshot saved successfully' });
+      
+      // Reset state
+      setScreenshotData(null);
+      setAddMode('paste');
+      setActiveTab('list');
+      fetchLeads();
+      
+    } catch (error: any) {
+      console.error('Error saving screenshot lead:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to save lead', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setSavingScreenshot(false);
+    }
   };
 
   const handleAddNote = async () => {
@@ -770,21 +878,134 @@ function AdminLeadsContent() {
 
         {/* Add Lead Tab */}
         <TabsContent value="add" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Raw Paste Area */}
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={addMode === 'paste' ? 'default' : 'outline'}
+              onClick={() => setAddMode('paste')}
+              className="gap-2"
+            >
+              <ClipboardPaste className="h-4 w-4" />
+              Paste Text
+            </Button>
+            <Button
+              variant={addMode === 'screenshot' ? 'default' : 'outline'}
+              onClick={() => setAddMode('screenshot')}
+              className="gap-2"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Upload Screenshot
+            </Button>
+          </div>
+
+          {/* Screenshot Upload Mode */}
+          {addMode === 'screenshot' && !screenshotData && (
             <Card className="portal-card">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <ClipboardPaste className="h-5 w-5" />
-                  Paste Raw Data
+                  <ImageIcon className="h-5 w-5" />
+                  OCR Screenshot Import
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Paste student information and it will be automatically parsed
+                  Upload a screenshot of student info. OCR will extract the data automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LeadScreenshotUploader
+                  onLeadExtracted={setScreenshotData}
+                  onCancel={() => setAddMode('paste')}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Screenshot Data Preview & Save */}
+          {addMode === 'screenshot' && screenshotData && (
+            <Card className="portal-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Ready to Save
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Review the extracted data before saving
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Textarea
-                  placeholder={`Paste raw data here...
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Student</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-muted-foreground">Name:</span> {screenshotData.student_name || '—'}</p>
+                      <p><span className="text-muted-foreground">Email:</span> {screenshotData.student_email || '—'}</p>
+                      <p><span className="text-muted-foreground">Phone:</span> {screenshotData.student_phone || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Guardian</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-muted-foreground">Name:</span> {screenshotData.guardian_name || '—'}</p>
+                      <p><span className="text-muted-foreground">Email:</span> {screenshotData.guardian_email || '—'}</p>
+                      <p><span className="text-muted-foreground">Phone:</span> {screenshotData.guardian_phone || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Attachment: {screenshotData.attachment_file.name}
+                  </span>
+                </div>
+                
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setScreenshotData(null)}
+                    disabled={savingScreenshot}
+                  >
+                    Back to Edit
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveScreenshotLead}
+                    disabled={savingScreenshot}
+                  >
+                    {savingScreenshot ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Save Lead
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Paste Mode */}
+          {addMode === 'paste' && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Raw Paste Area */}
+              <Card className="portal-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ClipboardPaste className="h-5 w-5" />
+                    Paste Raw Data
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Paste student information and it will be automatically parsed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder={`Paste raw data here...
 
 Supported formats:
 Name: John Doe
@@ -792,192 +1013,195 @@ Email: john@example.com
 Phone: (555) 123-4567
 Birthday: 01/15/2008
 ...`}
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  className="min-h-[280px] font-mono text-sm"
-                />
-                <Button 
-                  onClick={handleParse} 
-                  className="w-full min-h-[44px] gap-2"
-                  disabled={!rawText.trim()}
-                >
-                  <FileText className="h-4 w-4" />
-                  Extract Data
-                </Button>
-              </CardContent>
-            </Card>
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    className="min-h-[280px] font-mono text-sm"
+                  />
+                  <Button 
+                    onClick={handleParse} 
+                    className="w-full min-h-[44px] gap-2"
+                    disabled={!rawText.trim()}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Extract Data
+                  </Button>
+                </CardContent>
+              </Card>
 
-            {/* Parsed Preview */}
-            <Card className="portal-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Eye className="h-5 w-5" />
-                  Preview & Edit
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Review and correct extracted information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!editableData ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <ClipboardPaste className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Paste data and click "Parse" to preview</p>
-                  </div>
-                ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
-                      {/* Missing fields warning */}
-                      {missingFields.length > 0 && (
-                        <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium text-destructive">Missing required fields:</p>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {missingFields.join(', ')}
-                            </p>
+              {/* Parsed Preview */}
+              <Card className="portal-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Eye className="h-5 w-5" />
+                    Preview & Edit
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Review and correct extracted information
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!editableData ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ClipboardPaste className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Paste data and click "Extract Data" to preview</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[500px] pr-4">
+                      <div className="space-y-4">
+                        {/* Missing fields warning */}
+                        {missingFields.length > 0 && (
+                          <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-destructive">Missing required fields:</p>
+                              <p className="text-sm text-muted-foreground capitalize">
+                                {missingFields.join(', ')}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Editable Fields */}
-                      <div className="grid gap-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="full_name" className="text-sm flex items-center gap-1">
-                              Name <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              id="full_name"
-                              value={editableData.full_name}
-                              onChange={(e) => handleFieldChange('full_name', e.target.value)}
-                              className="min-h-[44px]"
-                            />
+                        {/* Editable Fields */}
+                        <div className="grid gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="full_name" className="text-sm flex items-center gap-1">
+                                Name <span className="text-destructive">*</span>
+                              </Label>
+                              <Input
+                                id="full_name"
+                                value={editableData.full_name}
+                                onChange={(e) => handleFieldChange('full_name', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email" className="text-sm">Email</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={editableData.email}
+                                onChange={(e) => handleFieldChange('email', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email" className="text-sm">Email</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={editableData.email}
-                              onChange={(e) => handleFieldChange('email', e.target.value)}
-                              className="min-h-[44px]"
-                            />
-                          </div>
-                        </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="phone" className="text-sm flex items-center gap-1">
-                              Phone <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              id="phone"
-                              value={editableData.phone}
-                              onChange={(e) => handleFieldChange('phone', e.target.value)}
-                              className="min-h-[44px]"
-                            />
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="phone" className="text-sm flex items-center gap-1">
+                                Phone <span className="text-destructive">*</span>
+                              </Label>
+                              <Input
+                                id="phone"
+                                value={editableData.phone}
+                                onChange={(e) => handleFieldChange('phone', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="permit_number" className="text-sm">Permit #</Label>
+                              <Input
+                                id="permit_number"
+                                value={editableData.permit_number}
+                                onChange={(e) => handleFieldChange('permit_number', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="permit_number" className="text-sm">Permit #</Label>
-                            <Input
-                              id="permit_number"
-                              value={editableData.permit_number}
-                              onChange={(e) => handleFieldChange('permit_number', e.target.value)}
-                              className="min-h-[44px]"
-                            />
-                          </div>
-                        </div>
 
-                        {/* DOB & Age */}
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-1">
-                            <Label htmlFor="dob" className="text-sm flex items-center gap-1">
-                              <Cake className="h-3 w-3" /> Date of Birth
-                            </Label>
-                            <Input
-                              id="dob"
-                              type="date"
-                              value={editableData.dob}
-                              onChange={(e) => {
-                                handleFieldChange('dob', e.target.value);
-                                // Recalculate age
-                                if (e.target.value) {
-                                  const birthDate = new Date(e.target.value);
-                                  const today = new Date();
-                                  let age = today.getFullYear() - birthDate.getFullYear();
-                                  const monthDiff = today.getMonth() - birthDate.getMonth();
-                                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                                    age--;
+                          {/* DOB & Age */}
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="dob" className="text-sm flex items-center gap-1">
+                                <Cake className="h-3 w-3" /> Date of Birth
+                              </Label>
+                              <Input
+                                id="dob"
+                                type="date"
+                                value={editableData.dob}
+                                onChange={(e) => {
+                                  handleFieldChange('dob', e.target.value);
+                                  // Recalculate age
+                                  if (e.target.value) {
+                                    const birthDate = new Date(e.target.value);
+                                    const today = new Date();
+                                    let age = today.getFullYear() - birthDate.getFullYear();
+                                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                                      age--;
+                                    }
+                                    handleFieldChange('age', age >= 0 ? age : null);
                                   }
-                                  handleFieldChange('age', age >= 0 ? age : null);
-                                }
-                              }}
-                              className="min-h-[44px]"
-                            />
-                            <FieldHint value={editableData.dob} fieldLabel="DOB" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="age" className="text-sm">Age</Label>
-                            <Input
-                              id="age"
-                              type="number"
-                              value={editableData.age ?? ''}
-                              onChange={(e) => handleFieldChange('age', e.target.value ? parseInt(e.target.value) : null)}
-                              className="min-h-[44px]"
-                              readOnly
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="permit_issue_date" className="text-sm">Permit Issue Date</Label>
-                            <Input
-                              id="permit_issue_date"
-                              type="date"
-                              value={editableData.permit_issue_date}
-                              onChange={(e) => handleFieldChange('permit_issue_date', e.target.value)}
-                              className="min-h-[44px]"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="permit_expiration_date" className="text-sm">Permit Exp. Date</Label>
-                            <Input
-                              id="permit_expiration_date"
-                              type="date"
-                              value={editableData.permit_expiration_date}
-                              onChange={(e) => handleFieldChange('permit_expiration_date', e.target.value)}
-                              className="min-h-[44px]"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="border-t pt-4">
-                          <p className="text-sm font-medium mb-3">Parent/Guardian/Emergency Contact</p>
-                          <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="space-y-1">
-                              <Label htmlFor="guardian_name" className="text-sm">Name</Label>
-                              <Input
-                                id="guardian_name"
-                                value={editableData.guardian_name}
-                                onChange={(e) => handleFieldChange('guardian_name', e.target.value)}
+                                }}
                                 className="min-h-[44px]"
                               />
-                              <FieldHint value={editableData.guardian_name} fieldLabel="Parent Name" />
+                              <FieldHint value={editableData.dob} fieldLabel="Date of Birth" />
                             </div>
                             <div className="space-y-1">
-                              <Label htmlFor="guardian_phone" className="text-sm">Phone</Label>
+                              <Label htmlFor="age" className="text-sm">Age</Label>
                               <Input
-                                id="guardian_phone"
-                                value={editableData.guardian_phone}
-                                onChange={(e) => handleFieldChange('guardian_phone', e.target.value)}
+                                id="age"
+                                type="number"
+                                value={editableData.age ?? ''}
+                                onChange={(e) => handleFieldChange('age', e.target.value ? parseInt(e.target.value) : null)}
+                                className="min-h-[44px]"
+                                readOnly
+                              />
+                            </div>
+                          </div>
+
+                          {/* Permit Dates */}
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="permit_issue_date" className="text-sm">Permit Issue Date</Label>
+                              <Input
+                                id="permit_issue_date"
+                                type="date"
+                                value={editableData.permit_issue_date}
+                                onChange={(e) => handleFieldChange('permit_issue_date', e.target.value)}
                                 className="min-h-[44px]"
                               />
-                              <FieldHint value={editableData.guardian_phone} fieldLabel="Parent Phone" />
                             </div>
                             <div className="space-y-1">
-                              <Label htmlFor="guardian_email" className="text-sm">Email</Label>
+                              <Label htmlFor="permit_expiration_date" className="text-sm">Permit Expiration</Label>
+                              <Input
+                                id="permit_expiration_date"
+                                type="date"
+                                value={editableData.permit_expiration_date}
+                                onChange={(e) => handleFieldChange('permit_expiration_date', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Guardian Section */}
+                          <div className="space-y-4 pt-4 border-t">
+                            <h4 className="font-medium text-sm">Parent/Guardian Information</h4>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-1">
+                                <Label htmlFor="guardian_name" className="text-sm">Guardian Name</Label>
+                                <Input
+                                  id="guardian_name"
+                                  value={editableData.guardian_name}
+                                  onChange={(e) => handleFieldChange('guardian_name', e.target.value)}
+                                  className="min-h-[44px]"
+                                />
+                                <FieldHint value={editableData.guardian_name} fieldLabel="Guardian Name" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label htmlFor="guardian_phone" className="text-sm">Guardian Phone</Label>
+                                <Input
+                                  id="guardian_phone"
+                                  value={editableData.guardian_phone}
+                                  onChange={(e) => handleFieldChange('guardian_phone', e.target.value)}
+                                  className="min-h-[44px]"
+                                />
+                                <FieldHint value={editableData.guardian_phone} fieldLabel="Guardian Phone" />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="guardian_email" className="text-sm">Guardian Email</Label>
                               <Input
                                 id="guardian_email"
                                 type="email"
@@ -985,73 +1209,75 @@ Birthday: 01/15/2008
                                 onChange={(e) => handleFieldChange('guardian_email', e.target.value)}
                                 className="min-h-[44px]"
                               />
-                              <FieldHint value={editableData.guardian_email} fieldLabel="Parent Email" />
+                              <FieldHint value={editableData.guardian_email} fieldLabel="Guardian Email" />
+                            </div>
+                          </div>
+
+                          {/* Address Section */}
+                          <div className="space-y-4 pt-4 border-t">
+                            <h4 className="font-medium text-sm">Address Information</h4>
+                            <div className="space-y-1">
+                              <Label htmlFor="home_address" className="text-sm">Home Address</Label>
+                              <Input
+                                id="home_address"
+                                value={editableData.home_address}
+                                onChange={(e) => handleFieldChange('home_address', e.target.value)}
+                                className="min-h-[44px]"
+                              />
+                              <FieldHint value={editableData.home_address} fieldLabel="Home Address" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="pickup_locations" className="text-sm">Pick-up Locations</Label>
+                              <Textarea
+                                id="pickup_locations"
+                                value={editableData.pickup_locations}
+                                onChange={(e) => handleFieldChange('pickup_locations', e.target.value)}
+                                placeholder="School, Library, etc."
+                                className="min-h-[80px]"
+                              />
+                              <FieldHint value={editableData.pickup_locations} fieldLabel="Pickup Locations" />
                             </div>
                           </div>
                         </div>
 
-                        <div className="border-t pt-4 space-y-4">
-                          <div className="space-y-1">
-                            <Label htmlFor="home_address" className="text-sm">Home Address</Label>
-                            <Input
-                              id="home_address"
-                              value={editableData.home_address}
-                              onChange={(e) => handleFieldChange('home_address', e.target.value)}
-                              className="min-h-[44px]"
-                            />
-                            <FieldHint value={editableData.home_address} fieldLabel="Home Address" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="pickup_locations" className="text-sm">Pick-up Locations</Label>
-                            <Textarea
-                              id="pickup_locations"
-                              value={editableData.pickup_locations}
-                              onChange={(e) => handleFieldChange('pickup_locations', e.target.value)}
-                              placeholder="School, Library, etc."
-                              className="min-h-[80px]"
-                            />
-                            <FieldHint value={editableData.pickup_locations} fieldLabel="Pickup Locations" />
-                          </div>
+                        {/* Save Button */}
+                        <div className="flex gap-2 pt-4 border-t">
+                          <Button
+                            variant="outline"
+                            className="flex-1 min-h-[44px]"
+                            onClick={() => {
+                              setParsedData(null);
+                              setEditableData(null);
+                              setMissingFields([]);
+                            }}
+                          >
+                            Clear
+                          </Button>
+                          <Button
+                            className="flex-1 min-h-[44px]"
+                            onClick={handleSaveLead}
+                            disabled={saving || missingFields.length > 0}
+                          >
+                            {saving ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Save Lead
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
-
-                      {/* Save Button */}
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          className="flex-1 min-h-[44px]"
-                          onClick={() => {
-                            setParsedData(null);
-                            setEditableData(null);
-                            setMissingFields([]);
-                          }}
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          className="flex-1 min-h-[44px]"
-                          onClick={handleSaveLead}
-                          disabled={saving || missingFields.length > 0}
-                        >
-                          {saving ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Save Lead
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -1303,7 +1529,44 @@ Birthday: 01/15/2008
                   </div>
                 </div>
 
-                {/* Permit Info */}
+                {/* Attachment Section */}
+                {(selectedLead.attachment_path || selectedLead.source_type === 'screenshot') && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Attachment
+                    </h4>
+                    {attachmentUrl ? (
+                      <div className="space-y-2">
+                        <img 
+                          src={attachmentUrl} 
+                          alt="Lead screenshot" 
+                          className="w-full rounded-lg border max-h-[300px] object-contain bg-muted"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2"
+                          asChild
+                        >
+                          <a href={attachmentUrl} download target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4" />
+                            Download Attachment
+                          </a>
+                        </Button>
+                      </div>
+                    ) : selectedLead.attachment_path ? (
+                      <p className="text-sm text-muted-foreground">Loading attachment...</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No attachment available</p>
+                    )}
+                    {selectedLead.source_type && (
+                      <Badge variant="secondary" className="text-xs">
+                        Source: {selectedLead.source_type}
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 {(selectedLead.permit_number || selectedLead.permit_issue_date || selectedLead.permit_expiration_date) && (
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm">Permit Information</h4>
@@ -1572,6 +1835,18 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange, onCopy }: LeadCardPr
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {lead.attachment_path && (
+          <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+            <Paperclip className="h-3 w-3" />
+            Attachment
+          </Badge>
+        )}
+        {lead.source_type === 'screenshot' && !lead.attachment_path && (
+          <Badge variant="outline" className="text-xs gap-1">
+            <ImageIcon className="h-3 w-3" />
+            OCR
+          </Badge>
+        )}
         {lead.permit_number && (
           <Badge variant="secondary" className="text-xs gap-1">
             <FileText className="h-3 w-3" />

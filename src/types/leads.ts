@@ -2,6 +2,7 @@
 
 export type LeadStatus = 'new' | 'contacted' | 'converted' | 'closed';
 export type LeadPipelineStatus = 'New' | 'Contacted' | 'Scheduled' | 'Converted' | 'Cold';
+export type LeadSourceType = 'manual' | 'screenshot' | 'paste';
 
 export interface Lead {
   id: string;
@@ -28,6 +29,10 @@ export interface Lead {
   next_follow_up_at: string | null;
   updated_at: string | null;
   converted_student_id: string | null;
+  // Screenshot-based lead fields
+  source_type: LeadSourceType | null;
+  attachment_path: string | null;
+  attachment_bucket: string | null;
 }
 
 export interface LeadNote {
