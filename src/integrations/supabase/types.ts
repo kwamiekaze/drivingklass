@@ -389,6 +389,8 @@ export type Database = {
       leads: {
         Row: {
           age: number | null
+          attachment_bucket: string | null
+          attachment_path: string | null
           converted_student_id: string | null
           created_at: string | null
           created_by: string | null
@@ -409,11 +411,14 @@ export type Database = {
           phone: string | null
           pickup_locations: string | null
           raw_text: string | null
+          source_type: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
           age?: number | null
+          attachment_bucket?: string | null
+          attachment_path?: string | null
           converted_student_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -434,11 +439,14 @@ export type Database = {
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          source_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           age?: number | null
+          attachment_bucket?: string | null
+          attachment_path?: string | null
           converted_student_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -459,6 +467,7 @@ export type Database = {
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          source_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
