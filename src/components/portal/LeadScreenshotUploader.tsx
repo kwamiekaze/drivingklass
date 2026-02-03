@@ -426,11 +426,22 @@ export function LeadScreenshotUploader({ onLeadExtracted, onCancel }: LeadScreen
                 </div>
                 
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Parsing Blocks</h4>
+                  <h4 className="text-sm font-medium mb-2">Parsing Details</h4>
                   <div className="text-xs space-y-1 font-mono">
-                    <p>Student block: lines {parsedData.debug.studentBlockStart} - {parsedData.debug.studentBlockEnd}</p>
-                    <p>Guardian block: lines {parsedData.debug.guardianBlockStart} - {parsedData.debug.guardianBlockEnd}</p>
+                    <p>Student name line: {parsedData.debug.studentNameLineIdx >= 0 ? parsedData.debug.studentNameLineIdx : 'not found'}</p>
+                    <p>Student email line: {parsedData.debug.studentEmailLineIdx >= 0 ? parsedData.debug.studentEmailLineIdx : 'not found'}</p>
+                    <p>Student phone line: {parsedData.debug.studentPhoneLineIdx >= 0 ? parsedData.debug.studentPhoneLineIdx : 'not found'}</p>
+                    <p>Guardian name line: {parsedData.debug.guardianNameLineIdx >= 0 ? parsedData.debug.guardianNameLineIdx : 'not found'}</p>
+                    <p>Guardian email line: {parsedData.debug.guardianEmailLineIdx >= 0 ? parsedData.debug.guardianEmailLineIdx : 'not found'}</p>
+                    <p>Guardian phone line: {parsedData.debug.guardianPhoneLineIdx >= 0 ? parsedData.debug.guardianPhoneLineIdx : 'not found'}</p>
                   </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Normalized Lines (badge words removed)</h4>
+                  <pre className="text-xs bg-background p-2 rounded-lg overflow-auto max-h-[120px] whitespace-pre-wrap">
+                    {parsedData.debug.normalizedLines.map((line, i) => `${i}: ${line}`).join('\n') || '(none)'}
+                  </pre>
                 </div>
               </CardContent>
             </Card>
