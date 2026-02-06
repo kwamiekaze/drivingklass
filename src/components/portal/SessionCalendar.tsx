@@ -72,16 +72,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     }
   }, []);
 
-  // Fetch road test results for completed testing sessions
+  // Fetch road test results for ALL testing sessions (not just completed)
   const fetchRoadTestResults = useCallback(async (sessionIds: string[]) => {
     if (sessionIds.length === 0) return;
     const { data } = await supabase
-      .from('road_test_results' as any)
+      .from('road_test_results')
       .select('session_id, result, notes')
       .in('session_id', sessionIds);
     if (data) {
       const map: Record<string, { result: string; notes: string | null }> = {};
-      (data as any[]).forEach((r: any) => {
+      data.forEach((r) => {
         map[r.session_id] = { result: r.result, notes: r.notes };
       });
       setRoadTestResults(map);
@@ -98,10 +98,10 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     }
   }, [selectedSession?.id, fetchSessionDetails]);
 
-  // Fetch road test results for testing sessions
+  // Fetch road test results for ALL testing sessions (covers scheduled that were converted)
   useEffect(() => {
     const testingSessions = sessions
-      .filter(s => s.session_type === 'testing' && s.status === 'completed')
+      .filter(s => s.session_type === 'testing')
       .map(s => s.id);
     fetchRoadTestResults(testingSessions);
   }, [sessions, fetchRoadTestResults]);
@@ -253,6 +253,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   };
 
   const canGrade = (session: Session) => {
+    // Testing sessions use road test modal, not report card grading
+    if (session.session_type === 'testing') return false;
     // Cannot grade if already has report card
     if (session.report_card_id) return false;
     if (session.status === 'cancelled') return false;
