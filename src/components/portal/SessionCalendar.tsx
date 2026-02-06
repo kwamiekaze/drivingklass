@@ -507,15 +507,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       <Badge className={cn(
                         "gap-1 border-0",
                         roadTestResults[selectedSession.id].result === 'passed'
-                          ? "bg-green-500/20 text-green-700 dark:text-green-300"
-                          : "bg-red-500/20 text-red-700 dark:text-red-300"
+                          ? "bg-green-500/20 text-green-700 dark:text-green-300 shadow-[0_0_8px_hsl(120,60%,40%/0.3)]"
+                          : "bg-orange-500/20 text-orange-700 dark:text-orange-300 shadow-[0_0_8px_hsl(30,80%,50%/0.3)]"
                       )}>
                         {roadTestResults[selectedSession.id].result === 'passed' ? (
                           <CheckCircle className="h-3 w-3" />
                         ) : (
                           <XCircle className="h-3 w-3" />
                         )}
-                        {roadTestResults[selectedSession.id].result === 'passed' ? 'Passed' : 'Failed'}
+                        {roadTestResults[selectedSession.id].result === 'passed' ? 'Passed 🚀' : 'Must Retry'}
                       </Badge>
                     )}
                   </div>
@@ -667,7 +667,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                   )}
 
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {/* Driving sessions: Grade button. Testing sessions: Submit Road Test Result */}
+                    {/* Driving sessions: Grade button */}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
                         <Button className="w-full min-h-[44px] gap-2">
@@ -677,6 +677,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       </Link>
                     )}
 
+                    {/* Testing sessions: Grade Road Test button */}
                     {selectedSession.session_type === 'testing' && 
                      selectedSession.status === 'scheduled' && 
                      !roadTestResults[selectedSession.id] &&
@@ -686,11 +687,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                         onClick={() => setRoadTestModalOpen(true)}
                       >
                         <ClipboardCheck className="h-4 w-4" />
-                        Submit Road Test Result
+                        Grade Road Test
                       </Button>
                     )}
 
-                    {canComplete(selectedSession) && (
+                    {canComplete(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Button
                         variant="outline"
                         onClick={() => setCompleteDialogOpen(true)}
