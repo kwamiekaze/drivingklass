@@ -1072,6 +1072,8 @@ export type Database = {
       }
       sessions: {
         Row: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1097,6 +1099,8 @@ export type Database = {
           student_id: string
         }
         Insert: {
+          cancel_penalty_applied?: boolean
+          cancel_penalty_hours?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1122,6 +1126,8 @@ export type Database = {
           student_id: string
         }
         Update: {
+          cancel_penalty_applied?: boolean
+          cancel_penalty_hours?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1222,6 +1228,8 @@ export type Database = {
       cancel_session: {
         Args: { _reason: string; _session_id: string }
         Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1256,6 +1264,8 @@ export type Database = {
       complete_session: {
         Args: { _session_id: string; _via?: string }
         Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1303,6 +1313,8 @@ export type Database = {
           _student_id: string
         }
         Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1512,6 +1524,8 @@ export type Database = {
           _session_id: string
         }
         Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null

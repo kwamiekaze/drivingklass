@@ -55,6 +55,9 @@ export interface Session {
   report_card_id: string | null;
   note_for_student: string | null;
   note_for_instructor: string | null;
+  duration_minutes: number;
+  cancel_penalty_applied: boolean;
+  cancel_penalty_hours: number;
   // Joined fields
   student?: Profile;
   instructor?: Profile;
