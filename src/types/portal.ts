@@ -34,6 +34,8 @@ export interface Profile {
   permit_file_url: string | null;
 }
 
+export type SessionType = 'driving' | 'testing';
+
 export interface Session {
   id: string;
   created_at: string;
@@ -42,6 +44,7 @@ export interface Session {
   starts_at: string;
   ends_at: string;
   status: 'scheduled' | 'cancelled' | 'completed';
+  session_type: SessionType;
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancelled_by_role: 'student' | 'instructor' | 'staff' | 'admin' | null;
@@ -58,6 +61,16 @@ export interface Session {
   // Pre-computed names from RPC
   student_name?: string;
   instructor_name?: string;
+}
+
+export interface RoadTestResult {
+  id: string;
+  session_id: string;
+  student_id: string;
+  instructor_id: string;
+  result: 'passed' | 'failed';
+  notes: string | null;
+  created_at: string;
 }
 
 // Session details from RPC (guaranteed names)

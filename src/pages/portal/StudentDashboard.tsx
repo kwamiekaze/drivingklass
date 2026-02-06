@@ -193,7 +193,8 @@ function StudentDashboardContent() {
       {/* Hours Remaining Card */}
       {!loading && profile && (
         <HoursRemainingCard 
-          hoursRemaining={(profile as any).hours_remaining ?? 0} 
+          hoursRemaining={(profile as any).hours_remaining ?? 0}
+          purchasedHours={(profile as any).purchased_hours ?? undefined}
           className="max-w-md"
         />
       )}

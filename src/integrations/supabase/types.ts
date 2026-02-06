@@ -943,6 +943,58 @@ export type Database = {
           },
         ]
       }
+      road_test_results: {
+        Row: {
+          created_at: string
+          id: string
+          instructor_id: string
+          notes: string | null
+          result: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instructor_id: string
+          notes?: string | null
+          result: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instructor_id?: string
+          notes?: string | null
+          result?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_test_results_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "road_test_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "road_test_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string
@@ -1039,6 +1091,7 @@ export type Database = {
           note_for_student: string | null
           pickup_address: string | null
           report_card_id: string | null
+          session_type: string
           starts_at: string
           status: string
           student_id: string
@@ -1063,6 +1116,7 @@ export type Database = {
           note_for_student?: string | null
           pickup_address?: string | null
           report_card_id?: string | null
+          session_type?: string
           starts_at: string
           status?: string
           student_id: string
@@ -1087,6 +1141,7 @@ export type Database = {
           note_for_student?: string | null
           pickup_address?: string | null
           report_card_id?: string | null
+          session_type?: string
           starts_at?: string
           status?: string
           student_id?: string
@@ -1186,6 +1241,7 @@ export type Database = {
           note_for_student: string | null
           pickup_address: string | null
           report_card_id: string | null
+          session_type: string
           starts_at: string
           status: string
           student_id: string
@@ -1219,6 +1275,7 @@ export type Database = {
           note_for_student: string | null
           pickup_address: string | null
           report_card_id: string | null
+          session_type: string
           starts_at: string
           status: string
           student_id: string
@@ -1265,6 +1322,7 @@ export type Database = {
           note_for_student: string | null
           pickup_address: string | null
           report_card_id: string | null
+          session_type: string
           starts_at: string
           status: string
           student_id: string
@@ -1473,6 +1531,7 @@ export type Database = {
           note_for_student: string | null
           pickup_address: string | null
           report_card_id: string | null
+          session_type: string
           starts_at: string
           status: string
           student_id: string

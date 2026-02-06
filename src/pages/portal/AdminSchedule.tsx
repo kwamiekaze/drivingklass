@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus, Edit, X, Clock, User, AlertTriangle, ChevronLeft, ChevronRight, FileText, CheckCircle, Eye, MessageSquare } from "lucide-react";
+import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format, parseISO, addHours, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isAfter } from "date-fns";
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
@@ -49,7 +50,8 @@ function AdminScheduleContent() {
     instructor_id: "",
     date: "",
     start_time: "",
-    duration_minutes: "120", // Store as minutes internally
+    duration_minutes: "120",
+    session_type: "driving",
   });
   const [startTimeAdjusted, setStartTimeAdjusted] = useState(false);
 
@@ -145,7 +147,7 @@ function AdminScheduleContent() {
     console.log('Session creation payload:', debugPayload);
 
     // Use RPC for validated, atomic session creation
-    const { error } = await supabase.rpc('create_session_admin', {
+    const { data: newSession, error } = await supabase.rpc('create_session_admin', {
       _student_id: formData.student_id,
       _instructor_id: formData.instructor_id,
       _starts_at: startsAt.toISOString(),
@@ -156,6 +158,11 @@ function AdminScheduleContent() {
       console.error('Session creation error:', { ...debugPayload, error });
       toast.error(`Failed to create session: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
       return;
+    }
+
+    // Update session_type if not default
+    if (formData.session_type !== 'driving' && newSession?.id) {
+      await supabase.from('sessions').update({ session_type: formData.session_type }).eq('id', newSession.id);
     }
 
     toast.success("Session created successfully");
@@ -184,6 +191,7 @@ function AdminScheduleContent() {
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
         duration_minutes: parseInt(formData.duration_minutes),
+        session_type: formData.session_type,
       })
       .eq('id', editingSession.id);
 
@@ -274,6 +282,7 @@ function AdminScheduleContent() {
       date: "",
       start_time: "",
       duration_minutes: "120",
+      session_type: "driving",
     });
     setStartTimeAdjusted(false);
   };
@@ -290,6 +299,7 @@ function AdminScheduleContent() {
       date: format(startsAt, 'yyyy-MM-dd'),
       start_time: format(startsAt, 'HH:mm'),
       duration_minutes: durationMins.toString(),
+      session_type: (session as any).session_type || "driving",
     });
     setStartTimeAdjusted(false);
     setDialogOpen(true);
@@ -431,6 +441,18 @@ function AdminScheduleContent() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Session Type</Label>
+                <Select value={formData.session_type} onValueChange={v => setFormData(f => ({ ...f, session_type: v }))}>
+                  <SelectTrigger className="min-h-[44px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border z-50">
+                    <SelectItem value="driving">Driving Session</SelectItem>
+                    <SelectItem value="testing">Road Test</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 className="w-full min-h-[44px]"
                 onClick={editingSession ? handleUpdateSession : handleCreateSession}
@@ -484,6 +506,9 @@ function AdminScheduleContent() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm">{format(parseISO(session.starts_at), 'h:mm a')}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <SessionTypeBadge sessionType={(session as any).session_type} size="sm" />
+                        </div>
                         <p className="text-xs truncate">{getStudentName(session)}</p>
                         <p className="text-xs text-muted-foreground truncate">{getInstructorName(session)}</p>
                         {session.status === 'cancelled' && (
@@ -589,6 +614,7 @@ function AdminScheduleContent() {
                   {detailSession.status === 'scheduled' && <Clock className="h-3 w-3 mr-1" />}
                   {detailSession.status?.charAt(0).toUpperCase() + detailSession.status?.slice(1)}
                 </Badge>
+                <SessionTypeBadge sessionType={(detailSession as any).session_type} />
                 {detailSession.completed && detailSession.report_card_id && (
                   <Badge variant="outline" className="gap-1">
                     <FileText className="h-3 w-3" />

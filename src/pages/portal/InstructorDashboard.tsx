@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, FileText, Users, CheckCircle, Clock, Plus } from "lucide-react";
+import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { Session, ReportCard, Profile, InstructorStudent } from "@/types/portal";
 import { format, parseISO, isAfter } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
@@ -214,7 +215,10 @@ function InstructorDashboardContent() {
               {sessionsNeedingReportCard.slice(0, 5).map(session => (
                 <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
                   <div className="min-w-0">
-                    <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
+                      <SessionTypeBadge sessionType={session.session_type} />
+                    </div>
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
                     </p>

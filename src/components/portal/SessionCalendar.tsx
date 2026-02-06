@@ -9,13 +9,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2, Phone } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2, Phone, ClipboardCheck } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionAddressSection } from "./SessionAddressSection";
 import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
+import { SessionTypeBadge } from "./SessionTypeBadge";
+import { RoadTestResultModal } from "./RoadTestResultModal";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -41,6 +43,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
+  const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
+  const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
 
   // Fetch session details via RPC when a session is selected
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
@@ -68,6 +72,22 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     }
   }, []);
 
+  // Fetch road test results for completed testing sessions
+  const fetchRoadTestResults = useCallback(async (sessionIds: string[]) => {
+    if (sessionIds.length === 0) return;
+    const { data } = await supabase
+      .from('road_test_results' as any)
+      .select('session_id, result, notes')
+      .in('session_id', sessionIds);
+    if (data) {
+      const map: Record<string, { result: string; notes: string | null }> = {};
+      (data as any[]).forEach((r: any) => {
+        map[r.session_id] = { result: r.result, notes: r.notes };
+      });
+      setRoadTestResults(map);
+    }
+  }, []);
+
   // When selectedSession changes, fetch details
   useEffect(() => {
     if (selectedSession?.id) {
@@ -77,6 +97,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
       setDetailsError(null);
     }
   }, [selectedSession?.id, fetchSessionDetails]);
+
+  // Fetch road test results for testing sessions
+  useEffect(() => {
+    const testingSessions = sessions
+      .filter(s => s.session_type === 'testing' && s.status === 'completed')
+      .map(s => s.id);
+    fetchRoadTestResults(testingSessions);
+  }, [sessions, fetchRoadTestResults]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -333,6 +361,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-13 sm:ml-0">
+                      <SessionTypeBadge sessionType={session.session_type} />
                       <User className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm truncate">
                         {userRole === 'student' 
@@ -427,6 +456,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                   <span className="text-muted-foreground">{format(parseISO(session.starts_at), 'h:mm a')}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <SessionTypeBadge sessionType={session.session_type} />
                   {getStatusBadge(session)}
                 </div>
               </div>
@@ -466,10 +496,26 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     {getStatusBadge(selectedSession)}
+                    <SessionTypeBadge sessionType={selectedSession.session_type} />
                     {sessionDetails.report_card_id && (
                       <Badge variant="outline" className="gap-1">
                         <FileText className="h-3 w-3" />
                         Report Submitted
+                      </Badge>
+                    )}
+                    {roadTestResults[selectedSession.id] && (
+                      <Badge className={cn(
+                        "gap-1 border-0",
+                        roadTestResults[selectedSession.id].result === 'passed'
+                          ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                          : "bg-red-500/20 text-red-700 dark:text-red-300"
+                      )}>
+                        {roadTestResults[selectedSession.id].result === 'passed' ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : (
+                          <XCircle className="h-3 w-3" />
+                        )}
+                        {roadTestResults[selectedSession.id].result === 'passed' ? 'Passed' : 'Failed'}
                       </Badge>
                     )}
                   </div>
@@ -621,13 +667,27 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                   )}
 
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {canGrade(selectedSession) && (
+                    {/* Driving sessions: Grade button. Testing sessions: Submit Road Test Result */}
+                    {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
                         <Button className="w-full min-h-[44px] gap-2">
                           <FileText className="h-4 w-4" />
                           Grade Session
                         </Button>
                       </Link>
+                    )}
+
+                    {selectedSession.session_type === 'testing' && 
+                     selectedSession.status === 'scheduled' && 
+                     !roadTestResults[selectedSession.id] &&
+                     canComplete(selectedSession) && (
+                      <Button
+                        className="flex-1 min-h-[44px] gap-2"
+                        onClick={() => setRoadTestModalOpen(true)}
+                      >
+                        <ClipboardCheck className="h-4 w-4" />
+                        Submit Road Test Result
+                      </Button>
                     )}
 
                     {canComplete(selectedSession) && (
@@ -786,6 +846,22 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
         userId={profileModalUserId}
         onProfileUpdated={onSessionUpdate}
       />
+
+      {/* Road Test Result Modal */}
+      {selectedSession && selectedSession.session_type === 'testing' && (
+        <RoadTestResultModal
+          open={roadTestModalOpen}
+          onOpenChange={setRoadTestModalOpen}
+          sessionId={selectedSession.id}
+          studentId={selectedSession.student_id}
+          instructorId={selectedSession.instructor_id}
+          onSubmitted={() => {
+            setSelectedSession(null);
+            setRoadTestModalOpen(false);
+            onSessionUpdate?.();
+          }}
+        />
+      )}
     </div>
   );
 }
