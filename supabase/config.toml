@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.complete-session-deduct-hours]
 verify_jwt = false
+
+[functions.cancel-session-with-penalty]
+verify_jwt = false

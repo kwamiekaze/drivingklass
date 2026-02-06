@@ -18,6 +18,7 @@ import { SessionAddressSection } from "./SessionAddressSection";
 import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
 import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
+import { CancelConfirmationModal } from "./CancelConfirmationModal";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -36,7 +37,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancellationReason, setCancellationReason] = useState(""); // kept for state reset
   const [noteForStudent, setNoteForStudent] = useState("");
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -114,25 +115,27 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     return sessions.filter(s => isSameDay(parseISO(s.starts_at), day));
   };
 
-  const handleCancelSession = async () => {
-    if (!selectedSession || !cancellationReason.trim() || !user) return;
+  const handleCancelSession = async (reason: string) => {
+    if (!selectedSession || !reason.trim() || !user) return;
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.rpc('cancel_session', {
-        _session_id: selectedSession.id,
-        _reason: cancellationReason.trim()
+      const { data, error } = await supabase.functions.invoke('cancel-session-with-penalty', {
+        body: { session_id: selectedSession.id, reason: reason.trim() }
       });
 
       if (error) throw error;
 
+      const penaltyMsg = data?.penalty_applied
+        ? " A 30 minute reduction was applied to the student's hours."
+        : "";
+
       toast({
         title: "Session Cancelled",
-        description: "The session has been cancelled successfully.",
+        description: `The session has been cancelled successfully.${penaltyMsg}`,
       });
 
       setCancelDialogOpen(false);
-      setCancellationReason("");
       setSelectedSession(null);
       onSessionUpdate?.();
     } catch (error: any) {
@@ -143,6 +146,39 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRequestReschedule = async () => {
+    if (!selectedSession || !user) return;
+    // Create a notification to admins requesting reschedule
+    try {
+      // Get admin users to notify
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'staff']);
+
+      if (adminRoles) {
+        const notifications = adminRoles.map((r) => ({
+          user_id: r.user_id,
+          type: 'system' as const,
+          title: 'Reschedule Request',
+          message: `Student has requested to reschedule their session on ${format(parseISO(selectedSession.starts_at), 'MMM d, yyyy h:mm a')}.`,
+          session_id: selectedSession.id,
+          severity: 'info' as const,
+          dedupe_key: `reschedule_${selectedSession.id}_${user.id}`,
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+      }
+
+      toast({
+        title: "Reschedule Requested",
+        description: "Your reschedule request has been sent to the admin team.",
+      });
+    } catch (err) {
+      console.error('Reschedule request error:', err);
     }
   };
 
@@ -657,14 +693,33 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                   )}
 
                   {sessionDetails.status === 'cancelled' && sessionDetails.cancellation_reason && (
-                    <div className="p-3 bg-gray-500/10 rounded-lg">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        Cancelled
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Reason: {sessionDetails.cancellation_reason}
-                      </p>
+                    <div className="space-y-2">
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          Cancelled
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Reason: {sessionDetails.cancellation_reason}
+                        </p>
+                        {selectedSession.cancelled_by_role && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Cancelled by: {selectedSession.cancelled_by_role.charAt(0).toUpperCase() + selectedSession.cancelled_by_role.slice(1)}
+                          </p>
+                        )}
+                      </div>
+                      {/* Show penalty info if applicable */}
+                      {selectedSession.cancel_penalty_hours > 0 && (
+                        <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                          ⚠️ A 30 minute reduction was applied due to late cancellation (&lt;24 hours).
+                        </div>
+                      )}
+                      {/* Policy notice for students */}
+                      {userRole === 'student' && (
+                        <div className="p-2 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                          Please note that cancellations made less than 24 hours before scheduled will incur a 30 minute reduction in your remaining hours.
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -732,42 +787,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Confirmation Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Cancel Session</DialogTitle>
-            <DialogDescription className="text-sm">
-              Please provide a reason for cancelling this session.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Cancellation Reason *</Label>
-              <Textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                placeholder="Please explain why you need to cancel..."
-                rows={3}
-                className="text-sm"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} className="min-h-[44px]">
-              Go Back
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelSession}
-              disabled={!cancellationReason.trim() || isLoading}
-              className="min-h-[44px]"
-            >
-              {isLoading ? "Cancelling..." : "Confirm Cancel"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Cancel Confirmation Modal */}
+      {selectedSession && (
+        <CancelConfirmationModal
+          open={cancelDialogOpen}
+          onOpenChange={setCancelDialogOpen}
+          sessionStartsAt={selectedSession.starts_at}
+          userRole={userRole}
+          onConfirmCancel={handleCancelSession}
+          onRequestReschedule={handleRequestReschedule}
+          isLoading={isLoading}
+        />
+      )}
 
       {/* Complete Confirmation Dialog */}
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
