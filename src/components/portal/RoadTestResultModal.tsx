@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface RoadTestResultModalProps {
@@ -31,13 +31,12 @@ export function RoadTestResultModal({
 
   const handleSubmit = async () => {
     if (!result) {
-      toast.error("Please select a result (Passed or Failed)");
+      toast.error("Please select a result");
       return;
     }
 
     setSubmitting(true);
     try {
-      // 1. Insert road test result
       const { error: resultError } = await supabase
         .from("road_test_results" as any)
         .insert({
@@ -50,23 +49,17 @@ export function RoadTestResultModal({
 
       if (resultError) throw resultError;
 
-      // 2. Complete the session and deduct hours
       const { data, error: completeError } = await supabase.functions.invoke(
         "complete-session-deduct-hours",
         { body: { session_id: sessionId } }
       );
 
       if (completeError) throw completeError;
+      if (!data?.success) throw new Error(data?.error || "Failed to complete session");
 
-      if (!data?.success) {
-        throw new Error(data?.error || "Failed to complete session");
-      }
+      const label = result === "passed" ? "Passed 🚀" : "Must Retry";
+      toast.success(`Road test saved: ${label}`);
 
-      toast.success(
-        `Road test result submitted: ${result === "passed" ? "PASSED ✅" : "FAILED ❌"}. ${data.message || ""}`
-      );
-
-      // Reset form
       setResult("");
       setNotes("");
       onOpenChange(false);
@@ -83,51 +76,24 @@ export function RoadTestResultModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(92vw,480px)] max-w-[480px] mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg">Submit Road Test Result</DialogTitle>
+          <DialogTitle className="text-lg">Road Test Result</DialogTitle>
           <DialogDescription className="text-sm">
-            Record the road test outcome. This will also mark the session as completed and deduct hours.
+            Record the road test outcome. This will mark the session as completed and deduct hours.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-sm font-medium">Result *</Label>
-            <RadioGroup
-              value={result}
-              onValueChange={(v) => setResult(v as "passed" | "failed")}
-              className="grid grid-cols-2 gap-3"
-            >
-              <Label
-                htmlFor="result-passed"
-                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  result === "passed"
-                    ? "border-green-500 bg-green-500/10"
-                    : "border-muted hover:border-green-500/50"
-                }`}
-              >
-                <RadioGroupItem value="passed" id="result-passed" className="sr-only" />
-                <CheckCircle className={`h-6 w-6 ${result === "passed" ? "text-green-500" : "text-muted-foreground"}`} />
-                <div>
-                  <p className="font-semibold">Passed</p>
-                  <p className="text-xs text-muted-foreground">Test passed</p>
-                </div>
-              </Label>
-              <Label
-                htmlFor="result-failed"
-                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  result === "failed"
-                    ? "border-red-500 bg-red-500/10"
-                    : "border-muted hover:border-red-500/50"
-                }`}
-              >
-                <RadioGroupItem value="failed" id="result-failed" className="sr-only" />
-                <XCircle className={`h-6 w-6 ${result === "failed" ? "text-red-500" : "text-muted-foreground"}`} />
-                <div>
-                  <p className="font-semibold">Failed</p>
-                  <p className="text-xs text-muted-foreground">Test failed</p>
-                </div>
-              </Label>
-            </RadioGroup>
+            <Select value={result} onValueChange={(v) => setResult(v as "passed" | "failed")}>
+              <SelectTrigger className="min-h-[44px]">
+                <SelectValue placeholder="Select result..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="passed">Passed 🚀</SelectItem>
+                <SelectItem value="failed">Must Retry</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
