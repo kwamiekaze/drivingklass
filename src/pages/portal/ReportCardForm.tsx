@@ -15,6 +15,8 @@ import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useFormDraft } from "@/hooks/useFormDraft";
+import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
+import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 
 export default function ReportCardForm() {
   return (
@@ -205,6 +207,33 @@ function ReportCardFormContent() {
       <div className="text-center py-12">
         <p className="text-muted-foreground">Session not found</p>
         <Button variant="link" onClick={() => navigate(-1)}>Go back</Button>
+      </div>
+    );
+  }
+
+  // GUARD: If session is a testing session, show Road Test UI instead of driving report card
+  if (session.session_type === 'testing' && !isEditing) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold theme-heading">Road Test Result</h1>
+            <p className="text-muted-foreground">
+              {getDisplayName(session.student, 'Student')} - {format(parseISO(session.starts_at), 'MMMM d, yyyy h:mm a')}
+            </p>
+          </div>
+        </div>
+        <RoadTestResultModal
+          open={true}
+          onOpenChange={(open) => { if (!open) navigate(-1); }}
+          sessionId={session.id}
+          studentId={session.student_id}
+          instructorId={session.instructor_id}
+          onSubmitted={() => navigate(-1)}
+        />
       </div>
     );
   }

@@ -223,10 +223,11 @@ function InstructorDashboardContent() {
                       {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
+                  {/* Route to correct grading UI based on session_type */}
                   <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="w-full sm:w-auto">
                     <Button size="sm" className="gap-2 w-full sm:w-auto min-h-[40px]">
                       <Plus className="h-4 w-4" />
-                      Create Report
+                      {session.session_type === 'testing' ? 'Grade Road Test' : 'Create Report'}
                     </Button>
                   </Link>
                 </div>

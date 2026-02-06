@@ -38,14 +38,14 @@ export function RoadTestResultModal({
     setSubmitting(true);
     try {
       const { error: resultError } = await supabase
-        .from("road_test_results" as any)
+        .from("road_test_results")
         .insert({
           session_id: sessionId,
           student_id: studentId,
           instructor_id: instructorId,
           result,
           notes: notes || null,
-        } as any);
+        });
 
       if (resultError) throw resultError;
 
