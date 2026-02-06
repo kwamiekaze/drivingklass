@@ -75,6 +75,17 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setRole(null);
         }
+
+        // Handle OAuth callback: if user just signed in and landed on "/" or root, redirect to login for routing
+        if (event === 'SIGNED_IN' && session?.user) {
+          const path = window.location.pathname;
+          if (path === '/' || path === '') {
+            // Small delay to let profile/role load first
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 500);
+          }
+        }
       }
     );
 
