@@ -19,6 +19,8 @@ import NotFound from "./pages/NotFound";
 // Portal pages
 import Login from "./pages/portal/Login";
 import Signup from "./pages/portal/Signup";
+import ForgotPassword from "./pages/portal/ForgotPassword";
+import ResetPassword from "./pages/portal/ResetPassword";
 import PendingApproval from "./pages/portal/PendingApproval";
 import RejectedStatus from "./pages/portal/RejectedStatus";
 import StudentDashboard from "./pages/portal/StudentDashboard";
@@ -64,6 +66,8 @@ const App = () => (
                   {/* Portal Auth Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/pending-approval" element={<PendingApproval />} />
                   <Route path="/rejected" element={<RejectedStatus />} />
                   
