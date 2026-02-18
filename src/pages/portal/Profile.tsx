@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Upload, Camera, Lock } from "lucide-react";
 import { z } from "zod";
 import { useFormDraft, FileRestoreNotice } from "@/hooks/useFormDraft";
+import { saveWithRetry } from "@/lib/saveWithRetry";
 
 // Schema for profile editing (non-admin users)
 const profileSchema = z.object({
@@ -181,64 +182,66 @@ function ProfileContent() {
     setIsLoading(true);
 
     try {
-      let permitUrl = profile?.permit_file_url;
+      await saveWithRetry(async () => {
+        let permitUrl = profile?.permit_file_url;
 
-      // Upload permit file if selected and user can edit permit
-      if (permitFile && userCanEditPermit) {
-        const fileExt = permitFile.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('permits')
-          .upload(fileName, permitFile);
+        // Upload permit file if selected and user can edit permit
+        if (permitFile && userCanEditPermit) {
+          const fileExt = permitFile.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('permits')
+            .upload(fileName, permitFile);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from('permits')
-          .getPublicUrl(fileName);
-        
-        permitUrl = urlData.publicUrl;
-      }
+          const { data: urlData } = supabase.storage
+            .from('permits')
+            .getPublicUrl(fileName);
+          
+          permitUrl = urlData.publicUrl;
+        }
 
-      // Build update payload based on role
-      const updatePayload: Record<string, any> = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        full_name: `${formData.first_name} ${formData.last_name}`.trim(),
-        phone: formData.phone,
-      };
+        // Build update payload based on role
+        const updatePayload: Record<string, any> = {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          full_name: `${formData.first_name} ${formData.last_name}`.trim(),
+          phone: formData.phone,
+        };
 
-      // Include address and guardian fields for students
-      if (role === 'student' || isStaffOrAdmin) {
-        Object.assign(updatePayload, {
-          pickup_address: formData.pickup_address,
-          dropoff_address: formData.dropoff_address,
-          guardian_name: formData.guardian_name,
-          guardian_phone: formData.guardian_phone,
-          guardian_email: formData.guardian_email,
-        });
-      }
+        // Include address and guardian fields for students
+        if (role === 'student' || isStaffOrAdmin) {
+          Object.assign(updatePayload, {
+            pickup_address: formData.pickup_address,
+            dropoff_address: formData.dropoff_address,
+            guardian_name: formData.guardian_name,
+            guardian_phone: formData.guardian_phone,
+            guardian_email: formData.guardian_email,
+          });
+        }
 
-      // Users can update permit fields if they haven't submitted intake, or admin/staff
-      if (userCanEditPermit) {
-        Object.assign(updatePayload, {
-          permit_number: formData.permit_number,
-          permit_issue_date: formData.permit_issue_date || null,
-          permit_expiration_date: formData.permit_expiration_date || null,
-          permit_file_url: permitUrl,
-        });
-      }
+        // Users can update permit fields if they haven't submitted intake, or admin/staff
+        if (userCanEditPermit) {
+          Object.assign(updatePayload, {
+            permit_number: formData.permit_number,
+            permit_issue_date: formData.permit_issue_date || null,
+            permit_expiration_date: formData.permit_expiration_date || null,
+            permit_file_url: permitUrl,
+          });
+        }
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updatePayload)
-        .eq('id', user.id);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(updatePayload)
+          .eq('id', user.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }, { retries: 2, timeoutMs: 15000, context: "profile update" });
 
       await refetchProfile();
-      clearDraft(); // Clear draft on successful save
+      clearDraft();
       
       toast({
         title: "Profile Updated",
@@ -246,11 +249,8 @@ function ProfileContent() {
       });
 
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update profile",
-        variant: "destructive",
-      });
+      // saveWithRetry already shows a toast, only log here
+      console.error("Profile save failed:", error.message);
     } finally {
       setIsLoading(false);
     }
