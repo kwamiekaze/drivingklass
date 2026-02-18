@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { saveWithRetry } from "@/lib/saveWithRetry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,12 +34,14 @@ export function HoursEditor({ studentId, currentHours, onUpdate }: HoursEditorPr
     setIsLoading(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ hours_remaining: numericHours })
-        .eq('id', studentId);
+      await saveWithRetry(async () => {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ hours_remaining: numericHours })
+          .eq('id', studentId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }, { retries: 2, timeoutMs: 15000, context: "hours update" });
 
       toast({
         title: "Hours Updated",
@@ -47,11 +50,7 @@ export function HoursEditor({ studentId, currentHours, onUpdate }: HoursEditorPr
       
       onUpdate?.(numericHours);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update hours",
-        variant: "destructive",
-      });
+      console.error("Hours update failed:", error.message);
     } finally {
       setIsLoading(false);
     }
