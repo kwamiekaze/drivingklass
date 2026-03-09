@@ -508,7 +508,7 @@ function AdminScheduleContent() {
                 {daySessions.map(session => (
                   <div
                     key={session.id}
-                    className={`p-3 rounded-lg cursor-pointer hover:opacity-80 ${statusColors[session.status || 'scheduled']}`}
+                    className={`p-3 rounded-lg cursor-pointer hover:opacity-80 ${getSessionColor(session)}`}
                     onClick={() => setDetailSession(session)}
                   >
                     <div className="flex items-start justify-between gap-2">
