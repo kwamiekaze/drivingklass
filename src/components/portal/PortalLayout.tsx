@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2 } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -241,9 +241,10 @@ function getNavItems(role: string | null) {
     case 'admin':
       items.push(
         { href: '/admin', label: 'Dashboard', icon: Home },
-        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
+        { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
-        { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
+        { href: '/admin/map', label: 'Map', icon: MapIcon },
+        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
@@ -253,9 +254,9 @@ function getNavItems(role: string | null) {
     case 'staff':
       items.push(
         { href: '/admin', label: 'Dashboard', icon: Home },
-        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
+        { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
-        { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
+        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
@@ -265,6 +266,7 @@ function getNavItems(role: string | null) {
       items.push(
         { href: '/instructor', label: 'Dashboard', icon: Home },
         { href: '/instructor/students', label: 'Students', icon: Users },
+        { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;

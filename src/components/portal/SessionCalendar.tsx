@@ -266,9 +266,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   };
 
   const getCalendarColor = (session: Session) => {
-    if (session.status === 'cancelled') return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
+    // Priority: 1) cancelled=red, 2) completed=green, 3) testing+scheduled=gold, 4) driving+scheduled=grey
+    if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
     if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
-    return "bg-primary/20 text-primary";
+    if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
+    return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
   };
 
   const canCancel = (session: Session) => {
