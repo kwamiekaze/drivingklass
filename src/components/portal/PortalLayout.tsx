@@ -241,9 +241,10 @@ function getNavItems(role: string | null) {
     case 'admin':
       items.push(
         { href: '/admin', label: 'Dashboard', icon: Home },
-        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
+        { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
-        { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
+        { href: '/admin/map', label: 'Map', icon: MapIcon },
+        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
@@ -253,9 +254,9 @@ function getNavItems(role: string | null) {
     case 'staff':
       items.push(
         { href: '/admin', label: 'Dashboard', icon: Home },
-        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
+        { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
-        { href: '/admin/assignments', label: 'Assignments', icon: UserPlus },
+        { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
@@ -265,6 +266,7 @@ function getNavItems(role: string | null) {
       items.push(
         { href: '/instructor', label: 'Dashboard', icon: Home },
         { href: '/instructor/students', label: 'Students', icon: Users },
+        { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;

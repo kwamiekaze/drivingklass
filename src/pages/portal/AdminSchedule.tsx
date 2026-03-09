@@ -321,10 +321,18 @@ function AdminScheduleContent() {
   const getStudentName = (session: Session) => getDisplayName(session.student, 'Unknown');
   const getInstructorName = (session: Session) => getDisplayName(session.instructor, 'Unknown');
 
+  const getSessionColor = (session: any): string => {
+    if (session.status === 'cancelled') return 'bg-red-500/20 text-red-700 dark:text-red-300';
+    if (session.status === 'completed' || session.report_card_id) return 'bg-green-500/20 text-green-700 dark:text-green-300';
+    if (session.session_type === 'testing') return 'bg-amber-500/20 text-amber-700 dark:text-amber-300';
+    return 'bg-gray-500/20 text-gray-700 dark:text-gray-300';
+  };
+
+  // Keep legacy object for backward compat
   const statusColors: Record<string, string> = {
-    scheduled: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
+    scheduled: 'bg-gray-500/20 text-gray-700 dark:text-gray-300',
     completed: 'bg-green-500/20 text-green-700 dark:text-green-300',
-    cancelled: 'bg-gray-500/20 text-gray-700 dark:text-gray-300',
+    cancelled: 'bg-red-500/20 text-red-700 dark:text-red-300',
   };
 
   return (

@@ -118,6 +118,10 @@ const App = () => (
                   <Route path="/admin/students" element={<AdminStudents />} />
                   <Route path="/admin/instructors" element={<AdminInstructors />} />
                   <Route path="/admin/permits" element={<AdminPermitQueue />} />
+                  <Route path="/admin/map" element={<AdminMap />} />
+                  
+                  {/* Instructor Map */}
+                  <Route path="/instructor/map" element={<InstructorMap />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   
                   {/* Legacy Admin */}
