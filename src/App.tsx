@@ -44,6 +44,8 @@ import AdminMessages from "./pages/portal/AdminMessages";
 import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
 import AdminPermitQueue from "./pages/portal/AdminPermitQueue";
+import AdminMap from "./pages/portal/AdminMap";
+import InstructorMap from "./pages/portal/InstructorMap";
 import DrivingGamePage from "./pages/DrivingGame";
 const queryClient = new QueryClient();
 
