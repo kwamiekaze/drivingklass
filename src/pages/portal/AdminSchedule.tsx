@@ -580,7 +580,7 @@ function AdminScheduleContent() {
               {getSessionsForDay(day).map(session => (
                 <div
                   key={session.id}
-                  className={`p-2 rounded text-xs ${statusColors[session.status || 'scheduled']} cursor-pointer hover:opacity-80`}
+                  className={`p-2 rounded text-xs ${getSessionColor(session)} cursor-pointer hover:opacity-80`}
                   onClick={() => setDetailSession(session)}
                 >
                   <div className="flex items-center justify-between">
