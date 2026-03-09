@@ -702,6 +702,8 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           dropoff_address: string | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
           email: string | null
           first_name: string | null
           full_name: string | null
@@ -715,6 +717,7 @@ export type Database = {
           intake_submitted: boolean | null
           intake_updated_at: string | null
           intake_updated_by: string | null
+          last_geocoded_at: string | null
           last_name: string | null
           last_sign_in_at: string | null
           needs_review: boolean | null
@@ -724,6 +727,8 @@ export type Database = {
           permit_number: string | null
           phone: string | null
           pickup_address: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
           public_id: string | null
           purchased_hours: number
           rejected_at: string | null
@@ -739,6 +744,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
           email?: string | null
           first_name?: string | null
           full_name?: string | null
@@ -752,6 +759,7 @@ export type Database = {
           intake_submitted?: boolean | null
           intake_updated_at?: string | null
           intake_updated_by?: string | null
+          last_geocoded_at?: string | null
           last_name?: string | null
           last_sign_in_at?: string | null
           needs_review?: boolean | null
@@ -761,6 +769,8 @@ export type Database = {
           permit_number?: string | null
           phone?: string | null
           pickup_address?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
           public_id?: string | null
           purchased_hours?: number
           rejected_at?: string | null
@@ -776,6 +786,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
           email?: string | null
           first_name?: string | null
           full_name?: string | null
@@ -789,6 +801,7 @@ export type Database = {
           intake_submitted?: boolean | null
           intake_updated_at?: string | null
           intake_updated_by?: string | null
+          last_geocoded_at?: string | null
           last_name?: string | null
           last_sign_in_at?: string | null
           needs_review?: boolean | null
@@ -798,6 +811,8 @@ export type Database = {
           permit_number?: string | null
           phone?: string | null
           pickup_address?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
           public_id?: string | null
           purchased_hours?: number
           rejected_at?: string | null
@@ -1356,6 +1371,8 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           dropoff_address: string | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
           email: string | null
           first_name: string | null
           full_name: string | null
@@ -1369,6 +1386,7 @@ export type Database = {
           intake_submitted: boolean | null
           intake_updated_at: string | null
           intake_updated_by: string | null
+          last_geocoded_at: string | null
           last_name: string | null
           last_sign_in_at: string | null
           needs_review: boolean | null
@@ -1378,6 +1396,8 @@ export type Database = {
           permit_number: string | null
           phone: string | null
           pickup_address: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
           public_id: string | null
           purchased_hours: number
           rejected_at: string | null
