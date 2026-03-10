@@ -44,7 +44,6 @@ export default function InstructorMap() {
     if (!user) return;
     setLoading(true);
     try {
-      // Get student IDs from sessions assigned to this instructor
       const { data: sessions } = await supabase
         .from("sessions")
         .select("student_id")
@@ -67,7 +66,7 @@ export default function InstructorMap() {
 
   useEffect(() => { fetchStudents(); }, [fetchStudents]);
 
-  const mapped = students.filter(s => s.pickup_lat || s.dropoff_lat).length;
+  const mapped = students.filter(s => s.pickup_lat != null || s.dropoff_lat != null).length;
 
   return (
     <ProtectedRoute allowedRoles={["instructor"]}>
@@ -90,9 +89,19 @@ export default function InstructorMap() {
           </div>
 
           {loading ? (
-            <Card className="portal-card"><CardContent className="p-6 flex items-center justify-center min-h-[500px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+            <Card className="portal-card">
+              <CardContent className="p-6 flex items-center justify-center" style={{ minHeight: 500 }}>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </CardContent>
+            </Card>
           ) : (
-            <Suspense fallback={<Card className="portal-card"><CardContent className="p-6 flex items-center justify-center min-h-[500px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>}>
+            <Suspense fallback={
+              <Card className="portal-card">
+                <CardContent className="p-6 flex items-center justify-center" style={{ minHeight: 500 }}>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </CardContent>
+              </Card>
+            }>
               <StudentMapView students={students} onOpenProfile={() => {}} />
             </Suspense>
           )}
