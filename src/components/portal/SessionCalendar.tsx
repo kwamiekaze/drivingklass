@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Session, SessionDetails } from "@/types/portal";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, ChevronLeft, ChevronRight, List, Grid, FileText, MessageSquare, Loader2, Phone, ClipboardCheck } from "lucide-react";
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, addMonths, subMonths } from "date-fns";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, FileText, MessageSquare, Loader2, Phone, ClipboardCheck } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -19,17 +19,19 @@ import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./A
 import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
+import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
 
 interface SessionCalendarProps {
   sessions: Session[];
   userRole: 'student' | 'instructor' | 'staff' | 'admin';
   onSessionUpdate?: () => void;
+  defaultView?: CalendarViewMode;
+  onSlotClick?: (date: Date) => void;
 }
 
-export function SessionCalendar({ sessions, userRole, onSessionUpdate }: SessionCalendarProps) {
+export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultView, onSlotClick }: SessionCalendarProps) {
   const { user, role, isStaffOrAdmin } = usePortalAuth();
   const { toast } = useToast();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -37,215 +39,153 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState(""); // kept for state reset
   const [noteForStudent, setNoteForStudent] = useState("");
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
   const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
 
-  // Fetch session details via RPC when a session is selected
+  // Fetch session details via RPC
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
     setDetailsLoading(true);
     setDetailsError(null);
     setSessionDetails(null);
-    
     try {
-      const { data, error } = await supabase.rpc('get_session_details', {
-        p_session_id: sessionId
-      });
-      
+      const { data, error } = await supabase.rpc('get_session_details', { p_session_id: sessionId });
       if (error) throw error;
-      
       if (data && data.length > 0) {
         setSessionDetails(data[0] as SessionDetails);
       } else {
         setDetailsError('Unable to load session details');
       }
     } catch (err: any) {
-      console.error('Error fetching session details:', err);
       setDetailsError(err.message || 'Failed to load session details');
     } finally {
       setDetailsLoading(false);
     }
   }, []);
 
-  // Fetch road test results for ALL testing sessions (not just completed)
+  // Fetch road test results
   const fetchRoadTestResults = useCallback(async (sessionIds: string[]) => {
     if (sessionIds.length === 0) return;
-    const { data } = await supabase
-      .from('road_test_results')
-      .select('session_id, result, notes')
-      .in('session_id', sessionIds);
+    const { data } = await supabase.from('road_test_results').select('session_id, result, notes').in('session_id', sessionIds);
     if (data) {
       const map: Record<string, { result: string; notes: string | null }> = {};
-      data.forEach((r) => {
-        map[r.session_id] = { result: r.result, notes: r.notes };
-      });
+      data.forEach((r) => { map[r.session_id] = { result: r.result, notes: r.notes }; });
       setRoadTestResults(map);
     }
   }, []);
 
-  // When selectedSession changes, fetch details
   useEffect(() => {
-    if (selectedSession?.id) {
-      fetchSessionDetails(selectedSession.id);
-    } else {
-      setSessionDetails(null);
-      setDetailsError(null);
-    }
+    if (selectedSession?.id) fetchSessionDetails(selectedSession.id);
+    else { setSessionDetails(null); setDetailsError(null); }
   }, [selectedSession?.id, fetchSessionDetails]);
 
-  // Fetch road test results for ALL testing sessions (covers scheduled that were converted)
   useEffect(() => {
-    const testingSessions = sessions
-      .filter(s => s.session_type === 'testing')
-      .map(s => s.id);
+    const testingSessions = sessions.filter(s => s.session_type === 'testing').map(s => s.id);
     fetchRoadTestResults(testingSessions);
   }, [sessions, fetchRoadTestResults]);
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Convert sessions to CalendarEvents
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    return sessions.map(s => {
+      const color = getCalendarColor(s);
+      const dotColor = getDotColor(s);
+      const studentName = userRole === 'student'
+        ? getDisplayName(s.instructor, 'Instructor')
+        : getDisplayName(s.student, 'Student');
+      const otherName = userRole === 'student'
+        ? getDisplayName(s.student, 'Student')
+        : getDisplayName(s.instructor, 'Instructor');
 
-  const getSessionsForDay = (day: Date) => {
-    return sessions.filter(s => isSameDay(parseISO(s.starts_at), day));
+      return {
+        id: s.id,
+        title: studentName,
+        subtitle: s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving',
+        start: s.starts_at,
+        end: s.ends_at,
+        color,
+        dotColor,
+        meta: { session: s },
+      };
+    });
+  }, [sessions, userRole]);
+
+  const handleEventClick = (event: CalendarEvent) => {
+    const session = (event.meta?.session as Session) || sessions.find(s => s.id === event.id);
+    if (session) setSelectedSession(session);
   };
 
+  // ── Action Handlers (kept from original) ──
   const handleCancelSession = async (reason: string) => {
     if (!selectedSession || !reason.trim() || !user) return;
-
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('cancel-session-with-penalty', {
         body: { session_id: selectedSession.id, reason: reason.trim() }
       });
-
       if (error) throw error;
-
-      const penaltyMsg = data?.penalty_applied
-        ? " A 30 minute reduction was applied to the student's hours."
-        : "";
-
-      toast({
-        title: "Session Cancelled",
-        description: `The session has been cancelled successfully.${penaltyMsg}`,
-      });
-
+      const penaltyMsg = data?.penalty_applied ? " A 30 minute reduction was applied to the student's hours." : "";
+      toast({ title: "Session Cancelled", description: `The session has been cancelled successfully.${penaltyMsg}` });
       setCancelDialogOpen(false);
       setSelectedSession(null);
       onSessionUpdate?.();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to cancel session",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      toast({ title: "Error", description: error.message || "Failed to cancel session", variant: "destructive" });
+    } finally { setIsLoading(false); }
   };
 
   const handleRequestReschedule = async () => {
     if (!selectedSession || !user) return;
-    // Create a notification to admins requesting reschedule
     try {
-      // Get admin users to notify
-      const { data: adminRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .in('role', ['admin', 'staff']);
-
+      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').in('role', ['admin', 'staff']);
       if (adminRoles) {
         const notifications = adminRoles.map((r) => ({
-          user_id: r.user_id,
-          type: 'system' as const,
-          title: 'Reschedule Request',
+          user_id: r.user_id, type: 'system' as const, title: 'Reschedule Request',
           message: `Student has requested to reschedule their session on ${format(parseISO(selectedSession.starts_at), 'MMM d, yyyy h:mm a')}.`,
-          session_id: selectedSession.id,
-          severity: 'info' as const,
-          dedupe_key: `reschedule_${selectedSession.id}_${user.id}`,
+          session_id: selectedSession.id, severity: 'info' as const, dedupe_key: `reschedule_${selectedSession.id}_${user.id}`,
         }));
-
         await supabase.from('notifications').insert(notifications);
       }
-
-      toast({
-        title: "Reschedule Requested",
-        description: "Your reschedule request has been sent to the admin team.",
-      });
-    } catch (err) {
-      console.error('Reschedule request error:', err);
-    }
+      toast({ title: "Reschedule Requested", description: "Your reschedule request has been sent to the admin team." });
+    } catch (err) { console.error('Reschedule request error:', err); }
   };
 
   const handleCompleteSession = async () => {
     if (!selectedSession || !user) return;
-
     setIsLoading(true);
     try {
-      // Use edge function to complete session and deduct hours
       const { data, error } = await supabase.functions.invoke('complete-session-deduct-hours', {
         body: { session_id: selectedSession.id }
       });
-
       if (error) throw error;
-
       if (data?.success) {
-        toast({
-          title: "Session Completed",
-          description: data.message || "The session has been marked as completed.",
-        });
-      } else {
-        throw new Error(data?.error || "Failed to complete session");
-      }
-
+        toast({ title: "Session Completed", description: data.message || "The session has been marked as completed." });
+      } else { throw new Error(data?.error || "Failed to complete session"); }
       setCompleteDialogOpen(false);
       setSelectedSession(null);
       onSessionUpdate?.();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to complete session",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      toast({ title: "Error", description: error.message || "Failed to complete session", variant: "destructive" });
+    } finally { setIsLoading(false); }
   };
 
   const handleSaveNotes = async () => {
     if (!selectedSession || !user) return;
-
     setIsLoading(true);
     try {
       const { error } = await supabase.rpc('update_session_notes', {
-        _session_id: selectedSession.id,
-        _note_for_student: noteForStudent || null,
-        _note_for_instructor: noteForInstructor || null
+        _session_id: selectedSession.id, _note_for_student: noteForStudent || null, _note_for_instructor: noteForInstructor || null
       });
-
       if (error) throw error;
-
-      toast({
-        title: "Notes Saved",
-        description: "Session notes have been updated.",
-      });
-
+      toast({ title: "Notes Saved", description: "Session notes have been updated." });
       setNotesDialogOpen(false);
       onSessionUpdate?.();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save notes",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      toast({ title: "Error", description: error.message || "Failed to save notes", variant: "destructive" });
+    } finally { setIsLoading(false); }
   };
 
   const openNotesDialog = (session: Session) => {
@@ -254,25 +194,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     setNotesDialogOpen(true);
   };
 
-  const getStatusBadge = (session: Session) => {
-    switch (session.status) {
-      case 'completed':
-        return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
-      case 'cancelled':
-        return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
-    }
-  };
-
-  const getCalendarColor = (session: Session) => {
-    // Priority: 1) cancelled=red, 2) completed=green, 3) testing+scheduled=gold, 4) driving+scheduled=grey
-    if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
-    if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
-    if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
-    return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
-  };
-
+  // ── Permission helpers ──
   const canCancel = (session: Session) => {
     if (session.status !== 'scheduled') return false;
     if (userRole === 'student' && session.student_id === user?.id) return true;
@@ -280,20 +202,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     if (isStaffOrAdmin) return true;
     return false;
   };
-
   const canComplete = (session: Session) => {
     if (session.status !== 'scheduled') return false;
-    // Students cannot complete sessions
     if (userRole === 'student') return false;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     if (isStaffOrAdmin) return true;
     return false;
   };
-
   const canGrade = (session: Session) => {
-    // Testing sessions use road test modal, not report card grading
     if (session.session_type === 'testing') return false;
-    // Cannot grade if already has report card
     if (session.report_card_id) return false;
     if (session.status === 'cancelled') return false;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
@@ -301,211 +218,27 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
     return false;
   };
 
-  // Check if user can see specific notes
-  const canSeeNoteForStudent = (session: Session) => {
-    if (isStaffOrAdmin) return true;
-    if (userRole === 'student' && session.student_id === user?.id) return true;
-    return false;
+  const getStatusBadge = (session: Session) => {
+    switch (session.status) {
+      case 'completed': return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
+      case 'cancelled': return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+      default: return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
+    }
   };
 
-  const canSeeNoteForInstructor = (session: Session) => {
-    if (isStaffOrAdmin) return true;
-    if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
-    return false;
-  };
-
-  const upcomingSessions = sessions
-    .filter(s => s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date()))
-    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-
-  const allSessionsSorted = [...sessions].sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+  // Resolve default view
+  const resolvedDefaultView = defaultView || (userRole === 'student' ? 'agenda' : 'week');
 
   return (
     <div className="space-y-4">
-      {/* View Toggle + Navigation */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant={viewMode === 'agenda' ? 'secondary' : 'ghost'} 
-            size="sm"
-            onClick={() => setViewMode('agenda')}
-            className="gap-1.5 min-h-[40px]"
-          >
-            <List className="h-4 w-4" />
-            <span className="hidden xs:inline">Agenda</span>
-          </Button>
-          <Button 
-            variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} 
-            size="sm"
-            onClick={() => setViewMode('calendar')}
-            className="gap-1.5 min-h-[40px] hidden md:flex"
-          >
-            <Grid className="h-4 w-4" />
-            <span>Calendar</span>
-          </Button>
-        </div>
-        
-        {viewMode === 'calendar' && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm sm:text-base font-medium min-w-[140px] text-center">
-              {format(currentMonth, 'MMMM yyyy')}
-            </span>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      <FullCalendarView
+        events={calendarEvents}
+        defaultView={resolvedDefaultView}
+        onEventClick={handleEventClick}
+        onSlotClick={onSlotClick}
+      />
 
-      {/* Agenda View (Mobile-first) */}
-      {viewMode === 'agenda' && (
-        <Card className="portal-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Calendar className="h-5 w-5 text-primary" />
-              Upcoming Sessions ({upcomingSessions.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 sm:space-y-3">
-              {upcomingSessions.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
-                  No upcoming sessions scheduled
-                </p>
-              ) : (
-                upcomingSessions.slice(0, 10).map(session => (
-                  <div
-                    key={session.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 sm:p-4 border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setSelectedSession(session)}
-                  >
-                    <div className="flex items-start sm:items-center gap-3">
-                      <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
-                        <span className="text-xs font-medium text-primary">
-                          {format(parseISO(session.starts_at), 'MMM')}
-                        </span>
-                        <span className="text-base sm:text-lg font-bold text-primary">
-                          {format(parseISO(session.starts_at), 'd')}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm sm:text-base">
-                          {format(parseISO(session.starts_at), 'EEEE')}
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          {format(parseISO(session.starts_at), 'h:mm a')} - {format(parseISO(session.ends_at), 'h:mm a')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-13 sm:ml-0">
-                      <SessionTypeBadge sessionType={session.session_type} />
-                      <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-xs sm:text-sm truncate">
-                        {userRole === 'student' 
-                          ? getDisplayName(session.instructor, 'Instructor')
-                          : getDisplayName(session.student, 'Student')}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Calendar Grid View (Desktop) */}
-      {viewMode === 'calendar' && (
-        <Card className="portal-card hidden md:block">
-          <CardContent className="p-3 sm:p-4">
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground p-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {/* Empty cells for days before month start */}
-              {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-                <div key={`empty-${i}`} className="p-1 h-16 sm:h-20" />
-              ))}
-              
-              {daysInMonth.map(day => {
-                const daySessions = getSessionsForDay(day);
-                const isToday = isSameDay(day, new Date());
-                
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      "p-1 sm:p-2 h-16 sm:h-20 border rounded-lg overflow-hidden",
-                      isToday && "border-primary bg-primary/5",
-                      isBefore(day, new Date()) && !isToday && "opacity-50"
-                    )}
-                  >
-                    <div className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">
-                      {format(day, 'd')}
-                    </div>
-                    <div className="space-y-0.5">
-                      {daySessions.slice(0, 2).map(session => (
-                        <button
-                          key={session.id}
-                          onClick={() => setSelectedSession(session)}
-                          className={cn(
-                            "w-full text-[10px] sm:text-xs p-0.5 sm:p-1 rounded truncate text-left",
-                            getCalendarColor(session)
-                          )}
-                        >
-                          {format(parseISO(session.starts_at), 'h:mma')}
-                        </button>
-                      ))}
-                      {daySessions.length > 2 && (
-                        <div className="text-[10px] text-muted-foreground">
-                          +{daySessions.length - 2}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Sessions List */}
-      <Card className="portal-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base sm:text-lg">All Sessions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {allSessionsSorted.slice(0, 10).map(session => (
-              <div
-                key={session.id}
-                className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                onClick={() => setSelectedSession(session)}
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{format(parseISO(session.starts_at), 'MMM d')}</span>
-                  <span className="text-muted-foreground">{format(parseISO(session.starts_at), 'h:mm a')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <SessionTypeBadge sessionType={session.session_type} />
-                  {getStatusBadge(session)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Session Details Dialog */}
+      {/* ── Session Details Dialog ── */}
       <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
@@ -513,53 +246,36 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">
-              {/* Loading state for details */}
               {detailsLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               )}
-              
-              {/* Error state */}
               {detailsError && !detailsLoading && (
                 <div className="flex flex-col items-center justify-center py-6 gap-2">
                   <AlertTriangle className="h-8 w-8 text-destructive" />
                   <p className="text-sm text-muted-foreground">{detailsError}</p>
-                  <Button size="sm" variant="outline" onClick={() => fetchSessionDetails(selectedSession.id)}>
-                    Retry
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => fetchSessionDetails(selectedSession.id)}>Retry</Button>
                 </div>
               )}
-              
-              {/* Session details content - only show when loaded */}
               {sessionDetails && !detailsLoading && !detailsError && (
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     {getStatusBadge(selectedSession)}
                     <SessionTypeBadge sessionType={selectedSession.session_type} />
                     {sessionDetails.report_card_id && (
-                      <Badge variant="outline" className="gap-1">
-                        <FileText className="h-3 w-3" />
-                        Report Submitted
-                      </Badge>
+                      <Badge variant="outline" className="gap-1"><FileText className="h-3 w-3" />Report Submitted</Badge>
                     )}
                     {roadTestResults[selectedSession.id] && (
-                      <Badge className={cn(
-                        "gap-1 border-0",
+                      <Badge className={cn("gap-1 border-0",
                         roadTestResults[selectedSession.id].result === 'passed'
-                          ? "bg-green-500/20 text-green-700 dark:text-green-300 shadow-[0_0_8px_hsl(120,60%,40%/0.3)]"
-                          : "bg-orange-500/20 text-orange-700 dark:text-orange-300 shadow-[0_0_8px_hsl(30,80%,50%/0.3)]"
+                          ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                          : "bg-orange-500/20 text-orange-700 dark:text-orange-300"
                       )}>
-                        {roadTestResults[selectedSession.id].result === 'passed' ? (
-                          <CheckCircle className="h-3 w-3" />
-                        ) : (
-                          <XCircle className="h-3 w-3" />
-                        )}
-                        {roadTestResults[selectedSession.id].result === 'passed' ? 'Passed 🚀' : 'Must Retry'}
+                        {roadTestResults[selectedSession.id].result === 'passed' ? <><CheckCircle className="h-3 w-3" />Passed 🚀</> : <><XCircle className="h-3 w-3" />Must Retry</>}
                       </Badge>
                     )}
                   </div>
-                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
@@ -576,17 +292,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       <div className="flex items-center gap-1">
                         {isStaffOrAdmin && sessionDetails.student_id ? (
                           <>
-                            <ClickableUserName
-                              userId={sessionDetails.student_id}
-                              name={sessionDetails.student_name || 'Not assigned'}
-                              className="font-medium text-sm sm:text-base"
-                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
-                            />
-                            <OpenProfileButton
-                              userId={sessionDetails.student_id}
-                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
-                              className="h-6 w-6"
-                            />
+                            <ClickableUserName userId={sessionDetails.student_id} name={sessionDetails.student_name || 'Not assigned'} className="font-medium text-sm sm:text-base" onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} />
+                            <OpenProfileButton userId={sessionDetails.student_id} onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} className="h-6 w-6" />
                           </>
                         ) : (
                           <p className="font-medium text-sm sm:text-base">{sessionDetails.student_name || 'Not assigned'}</p>
@@ -598,17 +305,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                       <div className="flex items-center gap-1">
                         {isStaffOrAdmin && sessionDetails.instructor_id ? (
                           <>
-                            <ClickableUserName
-                              userId={sessionDetails.instructor_id}
-                              name={sessionDetails.instructor_name || 'Not assigned'}
-                              className="font-medium text-sm sm:text-base"
-                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
-                            />
-                            <OpenProfileButton
-                              userId={sessionDetails.instructor_id}
-                              onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }}
-                              className="h-6 w-6"
-                            />
+                            <ClickableUserName userId={sessionDetails.instructor_id} name={sessionDetails.instructor_name || 'Not assigned'} className="font-medium text-sm sm:text-base" onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} />
+                            <OpenProfileButton userId={sessionDetails.instructor_id} onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} className="h-6 w-6" />
                           </>
                         ) : (
                           <p className="font-medium text-sm sm:text-base">{sessionDetails.instructor_name || 'Not assigned'}</p>
@@ -617,171 +315,93 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
                     </div>
                   </div>
 
-                  {/* Addresses section - visible to all roles */}
-                  <SessionAddressSection 
-                    pickupAddress={sessionDetails.pickup_address}
-                    dropoffAddress={sessionDetails.dropoff_address}
-                  />
+                  <SessionAddressSection pickupAddress={sessionDetails.pickup_address} dropoffAddress={sessionDetails.dropoff_address} />
 
-                  {/* Contact Info - visible to instructors and admins */}
                   {(sessionDetails.student_phone || sessionDetails.guardian_phone) && (
                     <div className="p-3 bg-primary/10 rounded-lg space-y-2">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-primary" />
-                        Contact Info
-                      </p>
+                      <p className="text-sm font-medium flex items-center gap-2"><Phone className="h-4 w-4 text-primary" />Contact Info</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         {sessionDetails.student_phone && (
                           <div>
                             <p className="text-xs text-muted-foreground">Student Phone</p>
-                            <a 
-                              href={`tel:${sessionDetails.student_phone}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {sessionDetails.student_phone}
-                            </a>
-                            <span className="text-muted-foreground mx-1">|</span>
-                            <a 
-                              href={`sms:${sessionDetails.student_phone}`}
-                              className="text-xs text-muted-foreground hover:text-primary"
-                            >
-                              Text
-                            </a>
+                            <a href={`tel:${sessionDetails.student_phone}`} className="font-medium text-primary hover:underline">{sessionDetails.student_phone}</a>
                           </div>
                         )}
                         {sessionDetails.guardian_phone && (
                           <div>
                             <p className="text-xs text-muted-foreground">Guardian/Emergency</p>
-                            <a 
-                              href={`tel:${sessionDetails.guardian_phone}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {sessionDetails.guardian_phone}
-                            </a>
-                            <span className="text-muted-foreground mx-1">|</span>
-                            <a 
-                              href={`sms:${sessionDetails.guardian_phone}`}
-                              className="text-xs text-muted-foreground hover:text-primary"
-                            >
-                              Text
-                            </a>
+                            <a href={`tel:${sessionDetails.guardian_phone}`} className="font-medium text-primary hover:underline">{sessionDetails.guardian_phone}</a>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-                  {canSeeNoteForStudent(selectedSession) && sessionDetails.note_for_student && (
+
+                  {sessionDetails.note_for_student && (userRole === 'student' || isStaffOrAdmin) && (
                     <div className="p-3 bg-blue-500/10 rounded-lg">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Note from Staff
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {sessionDetails.note_for_student}
-                      </p>
+                      <p className="text-sm font-medium flex items-center gap-2"><MessageSquare className="h-4 w-4" />Note from Staff</p>
+                      <p className="text-sm text-muted-foreground mt-1">{sessionDetails.note_for_student}</p>
                     </div>
                   )}
-
-                  {canSeeNoteForInstructor(selectedSession) && sessionDetails.note_for_instructor && (
+                  {sessionDetails.note_for_instructor && (userRole === 'instructor' || isStaffOrAdmin) && (
                     <div className="p-3 bg-orange-500/10 rounded-lg">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Staff Note (Instructor)
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {sessionDetails.note_for_instructor}
-                      </p>
+                      <p className="text-sm font-medium flex items-center gap-2"><MessageSquare className="h-4 w-4" />Staff Note (Instructor)</p>
+                      <p className="text-sm text-muted-foreground mt-1">{sessionDetails.note_for_instructor}</p>
                     </div>
                   )}
 
                   {sessionDetails.status === 'cancelled' && sessionDetails.cancellation_reason && (
                     <div className="space-y-2">
                       <div className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm font-medium flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          Cancelled
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Reason: {sessionDetails.cancellation_reason}
-                        </p>
+                        <p className="text-sm font-medium flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Cancelled</p>
+                        <p className="text-sm text-muted-foreground mt-1">Reason: {sessionDetails.cancellation_reason}</p>
                         {selectedSession.cancelled_by_role && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Cancelled by: {selectedSession.cancelled_by_role.charAt(0).toUpperCase() + selectedSession.cancelled_by_role.slice(1)}
-                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Cancelled by: {selectedSession.cancelled_by_role}</p>
                         )}
                       </div>
-                      {/* Show penalty info if applicable */}
                       {selectedSession.cancel_penalty_hours > 0 && (
                         <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
-                          ⚠️ A 30 minute reduction was applied due to late cancellation (&lt;24 hours).
-                        </div>
-                      )}
-                      {/* Policy notice for students */}
-                      {userRole === 'student' && (
-                        <div className="p-2 bg-muted/30 rounded-lg text-xs text-muted-foreground">
-                          Please note that cancellations made less than 24 hours before scheduled will incur a 30 minute reduction in your remaining hours.
+                          ⚠️ A 30 minute reduction was applied due to late cancellation.
                         </div>
                       )}
                     </div>
                   )}
 
+                  {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {/* Driving sessions: Grade button */}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
-                        <Button className="w-full min-h-[44px] gap-2">
-                          <FileText className="h-4 w-4" />
-                          Grade Session
-                        </Button>
+                        <Button className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />Grade Session</Button>
                       </Link>
                     )}
-
-                    {/* Testing sessions: Grade Road Test button */}
-                    {selectedSession.session_type === 'testing' && 
-                     selectedSession.status === 'scheduled' && 
-                     !roadTestResults[selectedSession.id] &&
-                     canComplete(selectedSession) && (
-                      <Button
-                        className="flex-1 min-h-[44px] gap-2"
-                        onClick={() => setRoadTestModalOpen(true)}
-                      >
-                        <ClipboardCheck className="h-4 w-4" />
-                        Grade Road Test
+                    {selectedSession.session_type === 'testing' && selectedSession.status === 'scheduled' && !roadTestResults[selectedSession.id] && canComplete(selectedSession) && (
+                      <Button className="flex-1 min-h-[44px] gap-2" onClick={() => setRoadTestModalOpen(true)}>
+                        <ClipboardCheck className="h-4 w-4" />Grade Road Test
                       </Button>
                     )}
-
                     {canComplete(selectedSession) && selectedSession.session_type !== 'testing' && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setCompleteDialogOpen(true)}
-                        className="flex-1 min-h-[44px] gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Mark Completed
+                      <Button variant="outline" onClick={() => setCompleteDialogOpen(true)} className="flex-1 min-h-[44px] gap-2">
+                        <CheckCircle className="h-4 w-4" />Mark Completed
                       </Button>
                     )}
-
                     {isStaffOrAdmin && (
-                      <Button
-                        variant="outline"
-                        onClick={() => openNotesDialog(selectedSession)}
-                        className="flex-1 min-h-[44px] gap-2"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Edit Notes
+                      <Button variant="outline" onClick={() => openNotesDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
+                        <MessageSquare className="h-4 w-4" />Edit Notes
                       </Button>
                     )}
-
                     {canCancel(selectedSession) && (
-                      <Button
-                        variant="destructive"
-                        onClick={() => setCancelDialogOpen(true)}
-                        className="flex-1 min-h-[44px]"
-                      >
+                      <Button variant="destructive" onClick={() => setCancelDialogOpen(true)} className="flex-1 min-h-[44px]">
                         Cancel Session
                       </Button>
                     )}
                   </div>
+
+                  {/* View Report Card link */}
+                  {sessionDetails.report_card_id && (
+                    <Link to={`/report-cards/${sessionDetails.report_card_id}`}>
+                      <Button variant="outline" className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />View Report Card</Button>
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -789,7 +409,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel Modal */}
       {selectedSession && (
         <CancelConfirmationModal
           open={cancelDialogOpen}
@@ -802,86 +422,48 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
         />
       )}
 
-      {/* Complete Confirmation Dialog */}
+      {/* Complete Confirmation */}
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">Mark Session Complete</DialogTitle>
-            <DialogDescription className="text-sm">
-              Are you sure you want to mark this session as completed?
-            </DialogDescription>
+            <DialogTitle>Mark Session Complete</DialogTitle>
+            <DialogDescription>Are you sure you want to mark this session as completed?</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)} className="min-h-[44px]">
-              Go Back
-            </Button>
-            <Button
-              onClick={handleCompleteSession}
-              disabled={isLoading}
-              className="min-h-[44px] gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              {isLoading ? "Completing..." : "Confirm Complete"}
+            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)} className="min-h-[44px]">Go Back</Button>
+            <Button onClick={handleCompleteSession} disabled={isLoading} className="min-h-[44px] gap-2">
+              <CheckCircle className="h-4 w-4" />{isLoading ? "Completing..." : "Confirm Complete"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Notes Dialog (Staff/Admin only) */}
+      {/* Notes Dialog */}
       <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
-        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">Session Notes</DialogTitle>
-            <DialogDescription className="text-sm">
-              Add notes visible to the student or instructor.
-            </DialogDescription>
+            <DialogTitle>Session Notes</DialogTitle>
+            <DialogDescription>Add notes visible to the student or instructor.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-sm">Note for Student</Label>
-              <Textarea
-                value={noteForStudent}
-                onChange={(e) => setNoteForStudent(e.target.value)}
-                placeholder="This note will be visible to the student..."
-                rows={3}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground">Visible to: Student, Admin, Staff</p>
+              <Textarea value={noteForStudent} onChange={(e) => setNoteForStudent(e.target.value)} placeholder="Visible to: Student, Admin, Staff" rows={3} className="text-sm" />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Note for Instructor</Label>
-              <Textarea
-                value={noteForInstructor}
-                onChange={(e) => setNoteForInstructor(e.target.value)}
-                placeholder="This note will be visible to the instructor..."
-                rows={3}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground">Visible to: Instructor, Admin, Staff</p>
+              <Textarea value={noteForInstructor} onChange={(e) => setNoteForInstructor(e.target.value)} placeholder="Visible to: Instructor, Admin, Staff" rows={3} className="text-sm" />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setNotesDialogOpen(false)} className="min-h-[44px]">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveNotes}
-              disabled={isLoading}
-              className="min-h-[44px]"
-            >
-              {isLoading ? "Saving..." : "Save Notes"}
-            </Button>
+            <Button variant="outline" onClick={() => setNotesDialogOpen(false)} className="min-h-[44px]">Cancel</Button>
+            <Button onClick={handleSaveNotes} disabled={isLoading} className="min-h-[44px]">{isLoading ? "Saving..." : "Save Notes"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Admin User Profile Modal */}
-      <AdminUserProfileModal
-        open={profileModalOpen}
-        onOpenChange={setProfileModalOpen}
-        userId={profileModalUserId}
-        onProfileUpdated={onSessionUpdate}
-      />
+      {/* Profile Modal */}
+      <AdminUserProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} userId={profileModalUserId} onProfileUpdated={onSessionUpdate} />
 
       {/* Road Test Result Modal */}
       {selectedSession && selectedSession.session_type === 'testing' && (
@@ -891,13 +473,24 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate }: Session
           sessionId={selectedSession.id}
           studentId={selectedSession.student_id}
           instructorId={selectedSession.instructor_id}
-          onSubmitted={() => {
-            setSelectedSession(null);
-            setRoadTestModalOpen(false);
-            onSessionUpdate?.();
-          }}
+          onSubmitted={() => { setSelectedSession(null); setRoadTestModalOpen(false); onSessionUpdate?.(); }}
         />
       )}
     </div>
   );
+}
+
+// ── Color helpers ──
+function getCalendarColor(session: Session): string {
+  if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
+  if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
+  if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
+  return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
+}
+
+function getDotColor(session: Session): string {
+  if (session.status === 'cancelled') return "bg-red-500";
+  if (session.status === 'completed' || session.report_card_id) return "bg-green-500";
+  if (session.session_type === 'testing') return "bg-amber-500";
+  return "bg-gray-400";
 }
