@@ -619,3 +619,26 @@ body {
   animation: glow-pulse 3s ease-in-out infinite;
   border-radius: inherit;
 }
+
+/* Leaflet map fixes */
+.student-map-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-map-container {
+  z-index: 1;
+}
+
+.leaflet-map-container .leaflet-tile-pane {
+  opacity: 1 !important;
+}
+
+.leaflet-map-container .leaflet-control-container .leaflet-control {
+  z-index: 800;
+}
+
+/* Ensure tiles are visible in dark theme */
+[data-theme="dark"] .leaflet-map-container .leaflet-tile-pane {
+  filter: none;
+}
