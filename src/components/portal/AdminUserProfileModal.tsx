@@ -25,12 +25,7 @@ interface FullProfile extends Profile {
   hours_remaining?: number;
   purchased_hours?: number;
   role?: string;
-  guardian_name?: string | null;
-  guardian_phone?: string | null;
-  guardian_email?: string | null;
-  permit_issue_date?: string | null;
-  permit_expiration_date?: string | null;
-  intake_submitted?: boolean | null;
+  last_sign_in_at?: string | null;
   intake_updated_at?: string | null;
 }
 
