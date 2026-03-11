@@ -118,6 +118,33 @@ export function AdminUserProfileModal({
     }
   };
 
+  const fetchStudentSessions = async (id: string) => {
+    const { data } = await supabase
+      .from('sessions')
+      .select('id, starts_at, ends_at, status, session_type, duration_minutes, pickup_address, dropoff_address, report_card_id, instructor:profiles!sessions_instructor_id_fkey(full_name, first_name, last_name, email)')
+      .eq('student_id', id)
+      .order('starts_at', { ascending: false });
+    if (data) setStudentSessions(data as unknown as StudentSession[]);
+  };
+
+  const fetchAssignedInstructors = async (id: string) => {
+    const { data } = await supabase
+      .from('instructor_students')
+      .select('instructor:profiles!instructor_students_instructor_id_fkey(id, full_name, first_name, last_name, email)')
+      .eq('student_id', id);
+    if (data) {
+      const instructors = data.map((d: any) => d.instructor).filter(Boolean) as AssignedInstructor[];
+      setAssignedInstructors(instructors);
+    }
+  };
+
+  const filteredSessions = studentSessions.filter(s => {
+    if (sessionFilter === 'upcoming') return s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date());
+    if (sessionFilter === 'completed') return s.status === 'completed';
+    if (sessionFilter === 'cancelled') return s.status === 'cancelled';
+    return true;
+  });
+
   const handleSave = async () => {
     if (!profile) return;
     
