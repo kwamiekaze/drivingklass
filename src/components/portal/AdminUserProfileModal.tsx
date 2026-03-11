@@ -31,6 +31,27 @@ interface FullProfile extends Profile {
   intake_updated_at?: string | null;
 }
 
+interface StudentSession {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  session_type: string;
+  duration_minutes: number;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  report_card_id: string | null;
+  instructor: { full_name: string | null; first_name: string | null; last_name: string | null; email: string | null } | null;
+}
+
+interface AssignedInstructor {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
 export function AdminUserProfileModal({ 
   open, 
   onOpenChange, 
