@@ -473,6 +473,50 @@ export type Database = {
         }
         Relationships: []
       }
+      map_pins: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          custom_address: string | null
+          id: string
+          latitude: number
+          longitude: number
+          pin_type: string
+          student_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          custom_address?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          pin_type?: string
+          student_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          custom_address?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          pin_type?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_pins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_uploads: {
         Row: {
           created_at: string
