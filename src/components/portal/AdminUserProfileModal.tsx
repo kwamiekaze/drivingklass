@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
+import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
 import { PermitViewerModal } from "./PermitViewerModal";
 import { SessionTypeBadge } from "./SessionTypeBadge";
