@@ -328,6 +328,90 @@ export function AdminUserProfileModal({
                 </Button>
               </div>
 
+              {/* Meta info */}
+              <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl bg-muted/30">
+                <div>
+                  <span className="text-muted-foreground text-xs">Signed Up</span>
+                  <p className="font-medium">{profile.created_at ? format(parseISO(profile.created_at), 'MMM d, yyyy') : '—'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Approved</span>
+                  <p className="font-medium">{profile.approved_at ? format(parseISO(profile.approved_at), 'MMM d, yyyy') : '—'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Last Sign-in</span>
+                  <p className="font-medium">{profile.last_sign_in_at ? format(parseISO(profile.last_sign_in_at), 'MMM d, yyyy') : 'Never'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Purchased Hours</span>
+                  <p className="font-medium">{(profile.purchased_hours ?? 0).toFixed(1)}h</p>
+                </div>
+              </div>
+
+              {/* Intake Information Section */}
+              <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                  Intake Information
+                </p>
+                {profile.intake_submitted ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Full Name</span>
+                      <p>{profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Email</span>
+                      <p>{profile.email || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Phone</span>
+                      <p>{profile.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Pickup Address</span>
+                      <p>{profile.pickup_address || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Drop-off Address</span>
+                      <p>{profile.dropoff_address || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Permit Number</span>
+                      <p>{profile.permit_number || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Permit Issue Date</span>
+                      <p>{profile.permit_issue_date ? format(parseISO(profile.permit_issue_date), 'MMM d, yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Permit Expiration</span>
+                      <p>{profile.permit_expiration_date ? format(parseISO(profile.permit_expiration_date), 'MMM d, yyyy') : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Guardian Name</span>
+                      <p>{profile.guardian_name || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Guardian Phone</span>
+                      <p>{profile.guardian_phone ? <a href={`tel:${profile.guardian_phone}`} className="text-primary hover:underline">{profile.guardian_phone}</a> : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Guardian Email</span>
+                      <p>{profile.guardian_email ? <a href={`mailto:${profile.guardian_email}`} className="text-primary hover:underline">{profile.guardian_email}</a> : 'Not provided'}</p>
+                    </div>
+                    {profile.intake_updated_at && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Intake Last Updated</span>
+                        <p>{format(parseISO(profile.intake_updated_at), 'MMM d, yyyy h:mm a')}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No intake information found.</p>
+                )}
+              </div>
+
               {/* Save Button */}
               <Button
                 onClick={handleSave}
