@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { Profile } from "@/types/portal";
 import { PermitViewerModal } from "./PermitViewerModal";
-import { format, parseISO } from "date-fns";
+import { SessionTypeBadge } from "./SessionTypeBadge";
+import { format, parseISO, isAfter } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface AdminUserProfileModalProps {
   open: boolean;

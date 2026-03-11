@@ -213,24 +213,7 @@ function InstructorDashboardContent() {
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
               {sessionsNeedingReportCard.slice(0, 5).map(session => (
-                <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
-                      <SessionTypeBadge sessionType={session.session_type} />
-                    </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
-                    </p>
-                  </div>
-                  {/* Route to correct grading UI based on session_type */}
-                  <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="w-full sm:w-auto">
-                    <Button size="sm" className="gap-2 w-full sm:w-auto min-h-[40px]">
-                      <Plus className="h-4 w-4" />
-                      {session.session_type === 'testing' ? 'Grade Road Test' : 'Create Report'}
-                    </Button>
-                  </Link>
-                </div>
+                <NeedingReportCard key={session.id} session={session} onUpdate={fetchData} />
               ))}
             </div>
           </CardContent>
