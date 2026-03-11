@@ -630,9 +630,7 @@ export default function AdminStudents() {
                             <Clock className="h-3 w-3" />{(user.hours_remaining ?? 0).toFixed(1)}h
                           </Button>
                           {getStatusBadge(user.approval_status)}
-                          <Link to="/admin/approvals">
-                            <Button variant="outline" size="sm" className="text-xs">View</Button>
-                          </Link>
+                          <Button variant="outline" size="sm" className="text-xs" onClick={() => openProfileModal(user.id)}>View</Button>
                         </div>
                       </div>
                     ))}
