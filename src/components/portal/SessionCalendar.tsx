@@ -385,7 +385,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       )}
                       {userRole === 'student' && selectedSession.cancellation_fee_waived && (
                         <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-700 dark:text-green-300">
-                          Cancellation waived by DrivingKlass
+                          Cancellation waived by {selectedSession.cancelled_by_role === 'instructor' ? 'instructor' : 'admin'}
                         </div>
                       )}
                       {/* Staff sees penalty info */}
