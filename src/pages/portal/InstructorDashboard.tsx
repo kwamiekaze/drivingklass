@@ -176,7 +176,7 @@ function InstructorDashboardContent() {
                 <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{students.length}</p>
+                <p className="text-xl sm:text-2xl font-bold">{uniqueStudentCount}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Students</p>
               </div>
             </div>
