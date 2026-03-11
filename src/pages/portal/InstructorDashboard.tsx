@@ -87,6 +87,12 @@ function InstructorDashboardContent() {
       } else if (studentsData) {
         setStudents(studentsData as InstructorStudent[]);
       }
+
+      // Compute unique student count from all sessions (not just assignments)
+      if (sessionsData) {
+        const uniqueIds = new Set(sessionsData.filter((s: any) => s.status !== 'cancelled').map((s: any) => s.student_id));
+        setUniqueStudentCount(uniqueIds.size);
+      }
     } catch (error) {
       console.error('Error fetching instructor data:', error);
     } finally {
