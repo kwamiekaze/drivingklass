@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { Profile } from "@/types/portal";
 import { PermitViewerModal } from "./PermitViewerModal";
+import { format, parseISO } from "date-fns";
 
 interface AdminUserProfileModalProps {
   open: boolean;
@@ -22,7 +23,18 @@ interface AdminUserProfileModalProps {
 
 interface FullProfile extends Profile {
   hours_remaining?: number;
+  purchased_hours?: number;
   role?: string;
+  created_at?: string;
+  approved_at?: string | null;
+  last_sign_in_at?: string | null;
+  guardian_name?: string | null;
+  guardian_phone?: string | null;
+  guardian_email?: string | null;
+  permit_issue_date?: string | null;
+  permit_expiration_date?: string | null;
+  intake_submitted?: boolean | null;
+  intake_updated_at?: string | null;
 }
 
 export function AdminUserProfileModal({ 
