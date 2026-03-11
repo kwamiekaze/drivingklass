@@ -119,16 +119,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   };
 
   // ── Action Handlers (kept from original) ──
-  const handleCancelSession = async (reason: string) => {
+  const handleCancelSession = async (reason: string, waiveFee?: boolean) => {
     if (!selectedSession || !reason.trim() || !user) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('cancel-session-with-penalty', {
-        body: { session_id: selectedSession.id, reason: reason.trim() }
+        body: { session_id: selectedSession.id, reason: reason.trim(), waive_fee: waiveFee || false }
       });
       if (error) throw error;
-      const penaltyMsg = data?.penalty_applied ? " A 30 minute reduction was applied to the student's hours." : "";
-      toast({ title: "Session Cancelled", description: `The session has been cancelled successfully.${penaltyMsg}` });
+      let desc = "The session has been cancelled successfully.";
+      if (data?.fee_waived) desc += " Late cancellation fee was waived.";
+      else if (data?.penalty_applied) desc += " A 30 minute reduction was applied to the student's hours.";
+      toast({ title: "Session Cancelled", description: desc });
       setCancelDialogOpen(false);
       setSelectedSession(null);
       onSessionUpdate?.();
