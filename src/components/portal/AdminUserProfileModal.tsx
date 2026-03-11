@@ -63,6 +63,9 @@ export function AdminUserProfileModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [permitViewerOpen, setPermitViewerOpen] = useState(false);
+  const [studentSessions, setStudentSessions] = useState<StudentSession[]>([]);
+  const [assignedInstructors, setAssignedInstructors] = useState<AssignedInstructor[]>([]);
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   
   // Editable fields
   const [fullName, setFullName] = useState("");
@@ -72,6 +75,8 @@ export function AdminUserProfileModal({
   useEffect(() => {
     if (open && userId) {
       fetchProfile(userId);
+      fetchStudentSessions(userId);
+      fetchAssignedInstructors(userId);
     }
   }, [open, userId]);
 
