@@ -85,8 +85,8 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const hoursUntil = (sessionStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    // Penalty applies if < 24 hours AND not waived
-    const isLate = hoursUntil < 24 && hoursUntil >= 0;
+    // Penalty applies if < 24 hours before start (including past sessions) AND not waived
+    const isLate = hoursUntil < 24;
     const penaltyApplies = isLate && !shouldWaiveFee;
     const penaltyHours = penaltyApplies ? 0.5 : 0;
 
@@ -147,7 +147,9 @@ Deno.serve(async (req: Request) => {
     if (isLate && penaltyApplies) {
       studentMessage = "Cancellation fee incurred due to late cancellation, cancellations made within 24 hours of a session are subject to a 30 minute reduction in remaining hours cancellation fee.";
     } else if (isLate && shouldWaiveFee) {
-      studentMessage = "Cancellation waived by DrivingKlass";
+      // Show role-based waiver message (admin/instructor), but never personal name
+      const waivingRole = cancelledByRole === "instructor" ? "instructor" : "admin";
+      studentMessage = `Cancellation waived by ${waivingRole}`;
     } else {
       studentMessage = "No cancellation fee applied.";
     }

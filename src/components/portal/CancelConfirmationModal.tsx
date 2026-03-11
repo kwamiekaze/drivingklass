@@ -39,7 +39,8 @@ export function CancelConfirmationModal({
   const [rescheduleSubmitted, setRescheduleSubmitted] = useState(false);
 
   const hoursUntilSession = differenceInHours(parseISO(sessionStartsAt), new Date());
-  const isWithin24Hours = hoursUntilSession < 24 && hoursUntilSession >= 0;
+  // Treat passed sessions (negative hours) as late too — they're past the start time
+  const isLateOrPassed = hoursUntilSession < 24;
   const isStaff = userRole === 'admin' || userRole === 'staff' || userRole === 'instructor';
 
   const handleClose = (val: boolean) => {
@@ -167,27 +168,32 @@ export function CancelConfirmationModal({
             <p className="text-muted-foreground mt-1">
               Please note that cancellations made less than 24 hours before scheduled will incur a 30 minute reduction in your remaining hours.
             </p>
-            {isWithin24Hours && (
+            {isLateOrPassed && (
               <p className="text-destructive font-medium mt-2">
                 ⚠️ This cancellation is within 24 hours of the scheduled session and normally incurs a 30-minute reduction in remaining hours.
               </p>
             )}
           </div>
 
-          {/* Waive fee checkbox — staff only, only when within 24 hours */}
-          {isStaff && isWithin24Hours && (
-            <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <Checkbox
-                id="waive-fee"
-                checked={waiveFee}
-                onCheckedChange={(checked) => setWaiveFee(checked === true)}
-              />
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <Label htmlFor="waive-fee" className="text-sm font-medium cursor-pointer">
-                  Waive cancellation fee
-                </Label>
+          {/* Waive fee checkbox — staff only, only when late/passed */}
+          {isStaff && isLateOrPassed && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <Checkbox
+                  id="waive-fee"
+                  checked={waiveFee}
+                  onCheckedChange={(checked) => setWaiveFee(checked === true)}
+                />
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <Label htmlFor="waive-fee" className="text-sm font-medium cursor-pointer">
+                    Waive cancellation fee
+                  </Label>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground pl-1">
+                If selected, no 30 minute late cancellation deduction will be applied.
+              </p>
             </div>
           )}
 
