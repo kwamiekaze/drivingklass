@@ -30,6 +30,7 @@ import ProfileRedirect from "./pages/portal/ProfileRedirect";
 import IntakeForm, { AdminIntakeEdit } from "./pages/portal/IntakeForm";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
+import InstructorStudents from "./pages/portal/InstructorStudents";
 import ReportCardForm from "./pages/portal/ReportCardForm";
 import ReportCardView from "./pages/portal/ReportCardView";
 import ReportCardOpen from "./pages/portal/ReportCardOpen";
