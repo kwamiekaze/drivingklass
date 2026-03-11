@@ -3,15 +3,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CalendarClock, XCircle } from "lucide-react";
-import { parseISO, differenceInHours } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { AlertTriangle, CalendarClock, XCircle, ShieldCheck } from "lucide-react";
+import { parseISO, differenceInHours, format } from "date-fns";
 
 interface CancelConfirmationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionStartsAt: string;
+  sessionEndsAt?: string;
+  studentName?: string;
+  instructorName?: string;
   userRole: 'student' | 'instructor' | 'staff' | 'admin';
-  onConfirmCancel: (reason: string) => void;
+  onConfirmCancel: (reason: string, waiveFee?: boolean) => void;
   onRequestReschedule?: () => void;
   isLoading?: boolean;
 }
@@ -20,22 +24,28 @@ export function CancelConfirmationModal({
   open,
   onOpenChange,
   sessionStartsAt,
+  sessionEndsAt,
+  studentName,
+  instructorName,
   userRole,
   onConfirmCancel,
   onRequestReschedule,
   isLoading = false,
 }: CancelConfirmationModalProps) {
   const [reason, setReason] = useState("");
+  const [waiveFee, setWaiveFee] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rescheduleSubmitted, setRescheduleSubmitted] = useState(false);
 
   const hoursUntilSession = differenceInHours(parseISO(sessionStartsAt), new Date());
   const isWithin24Hours = hoursUntilSession < 24 && hoursUntilSession >= 0;
+  const isStaff = userRole === 'admin' || userRole === 'staff' || userRole === 'instructor';
 
   const handleClose = (val: boolean) => {
     if (!val) {
       setReason("");
+      setWaiveFee(false);
       setShowRescheduleForm(false);
       setRescheduleReason("");
       setRescheduleSubmitted(false);
@@ -125,7 +135,30 @@ export function CancelConfirmationModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Policy notice - always shown */}
+          {/* Session details for staff */}
+          {isStaff && (studentName || instructorName) && (
+            <div className="p-3 bg-muted/50 rounded-lg space-y-1 text-sm">
+              {studentName && (
+                <p><span className="text-muted-foreground">Student:</span> <span className="font-medium">{studentName}</span></p>
+              )}
+              {instructorName && (
+                <p><span className="text-muted-foreground">Instructor:</span> <span className="font-medium">{instructorName}</span></p>
+              )}
+              <p>
+                <span className="text-muted-foreground">Date:</span>{" "}
+                <span className="font-medium">{format(parseISO(sessionStartsAt), 'EEEE, MMMM d, yyyy')}</span>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Time:</span>{" "}
+                <span className="font-medium">
+                  {format(parseISO(sessionStartsAt), 'h:mm a')}
+                  {sessionEndsAt && ` – ${format(parseISO(sessionEndsAt), 'h:mm a')}`}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Policy notice */}
           <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm">
             <p className="font-medium text-amber-700 dark:text-amber-300 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -136,14 +169,31 @@ export function CancelConfirmationModal({
             </p>
             {isWithin24Hours && (
               <p className="text-destructive font-medium mt-2">
-                ⚠️ This session is within 24 hours — a 30 minute reduction will be applied.
+                ⚠️ This cancellation is within 24 hours of the scheduled session and normally incurs a 30-minute reduction in remaining hours.
               </p>
             )}
           </div>
 
-          {userRole !== 'student' && (
+          {/* Waive fee toggle — staff only, only when within 24 hours */}
+          {isStaff && isWithin24Hours && (
+            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <Label htmlFor="waive-fee" className="text-sm font-medium cursor-pointer">
+                  Waive 30-minute late cancellation fee
+                </Label>
+              </div>
+              <Switch
+                id="waive-fee"
+                checked={waiveFee}
+                onCheckedChange={setWaiveFee}
+              />
+            </div>
+          )}
+
+          {isStaff && !userRole.includes('student') && (
             <p className="text-sm text-muted-foreground">
-              The student will receive a notification about this cancellation and the 24-hour policy.
+              The student will see this cancellation as "Cancelled by DrivingKlass" — your identity will not be shown.
             </p>
           )}
 
@@ -169,11 +219,11 @@ export function CancelConfirmationModal({
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button
               variant="destructive"
-              onClick={() => onConfirmCancel(reason)}
+              onClick={() => onConfirmCancel(reason, waiveFee)}
               disabled={!reason.trim() || isLoading}
               className="flex-1 min-h-[44px]"
             >
-              {isLoading ? "Cancelling..." : "Cancel Session"}
+              {isLoading ? "Cancelling..." : "Confirm Cancellation"}
             </Button>
             <Button
               variant="outline"

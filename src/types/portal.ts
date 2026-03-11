@@ -58,6 +58,7 @@ export interface Session {
   duration_minutes: number;
   cancel_penalty_applied: boolean;
   cancel_penalty_hours: number;
+  cancellation_fee_waived: boolean;
   // Joined fields
   student?: Profile;
   instructor?: Profile;

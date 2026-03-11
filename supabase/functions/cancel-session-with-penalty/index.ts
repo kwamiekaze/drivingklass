@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { session_id, reason } = await req.json();
+    const { session_id, reason, waive_fee } = await req.json();
     if (!session_id) {
       return new Response(
         JSON.stringify({ error: "session_id is required" }),
@@ -53,6 +53,10 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const userRole = roleData?.role || "student";
+    const isStaffOrAdmin = ["admin", "staff", "instructor"].includes(userRole);
+
+    // Students cannot waive fees
+    const shouldWaiveFee = waive_fee === true && isStaffOrAdmin;
 
     // Fetch session
     const { data: session, error: sessionError } = await serviceClient
@@ -81,13 +85,14 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const hoursUntil = (sessionStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    // Penalty applies if < 24 hours AND session is in the future
-    const penaltyApplies = hoursUntil < 24 && hoursUntil >= 0;
+    // Penalty applies if < 24 hours AND not waived
+    const isLate = hoursUntil < 24 && hoursUntil >= 0;
+    const penaltyApplies = isLate && !shouldWaiveFee;
     const penaltyHours = penaltyApplies ? 0.5 : 0;
 
     // Determine cancelled_by_role
     let cancelledByRole = userRole;
-    if (cancelledByRole === "staff") cancelledByRole = "admin"; // normalize
+    if (cancelledByRole === "staff") cancelledByRole = "admin";
 
     // 1. Update session
     const { error: updateError } = await serviceClient
@@ -99,7 +104,8 @@ Deno.serve(async (req: Request) => {
         cancelled_by_role: cancelledByRole,
         cancellation_reason: reason || "No reason provided",
         cancel_penalty_hours: penaltyHours,
-        cancel_penalty_applied: penaltyApplies, // will set true after deduction
+        cancel_penalty_applied: penaltyApplies,
+        cancellation_fee_waived: shouldWaiveFee,
       })
       .eq("id", session_id);
 
@@ -136,20 +142,26 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 3. Create notification for student
-    const penaltyLine = penaltyApplies
-      ? "A 30 minute reduction was applied to your remaining hours."
-      : "No hour reduction was applied.";
+    // 3. Build student-facing notification message (privacy-safe)
+    let studentMessage: string;
+    if (isLate && penaltyApplies) {
+      studentMessage = "Cancellation fee incurred due to late cancellation, cancellations made within 24 hours of a session are subject to a 30 minute reduction in remaining hours cancellation fee.";
+    } else if (isLate && shouldWaiveFee) {
+      studentMessage = "Cancellation waived by DrivingKlass";
+    } else {
+      studentMessage = "No cancellation fee applied.";
+    }
 
-    const roleLabel = cancelledByRole === "student" ? "Student" : cancelledByRole === "instructor" ? "Instructor" : "Admin";
+    // Never expose who cancelled — always "DrivingKlass" for non-student cancellers
+    const notifTitle = cancelledByRole === "student" ? "Session Canceled" : "Session Canceled by DrivingKlass";
 
     const { error: notifError } = await serviceClient
       .from("notifications")
       .insert({
         user_id: session.student_id,
         type: "session_cancelled",
-        title: "Session Canceled",
-        message: `Please note that cancellations made less than 24 hours before scheduled will incur a 30 minute reduction in your remaining hours.\n\n${penaltyLine}\n\nCanceled by: ${roleLabel}`,
+        title: notifTitle,
+        message: studentMessage,
         session_id: session_id,
         severity: penaltyApplies ? "warning" : "info",
         dedupe_key: `cancel_${session_id}`,
@@ -157,7 +169,6 @@ Deno.serve(async (req: Request) => {
 
     if (notifError) {
       console.error("Notification insert error:", notifError);
-      // Non-fatal, continue
     }
 
     return new Response(
@@ -165,9 +176,12 @@ Deno.serve(async (req: Request) => {
         success: true,
         message: penaltyDeducted
           ? "Session cancelled. 30 minute penalty applied."
-          : "Session cancelled successfully.",
+          : shouldWaiveFee
+            ? "Session cancelled. Late cancellation fee waived."
+            : "Session cancelled successfully.",
         penalty_applied: penaltyDeducted,
         penalty_hours: penaltyHours,
+        fee_waived: shouldWaiveFee,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

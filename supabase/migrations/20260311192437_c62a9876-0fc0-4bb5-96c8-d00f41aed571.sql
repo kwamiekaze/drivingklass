@@ -1,0 +1,1 @@
+ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS cancellation_fee_waived boolean NOT NULL DEFAULT false;
