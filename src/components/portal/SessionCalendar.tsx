@@ -352,16 +352,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </div>
                   )}
 
-                  {sessionDetails.status === 'cancelled' && sessionDetails.cancellation_reason && (
+                  {sessionDetails.status === 'cancelled' && (
                     <div className="space-y-2">
                       <div className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm font-medium flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Cancelled</p>
-                        <p className="text-sm text-muted-foreground mt-1">Reason: {sessionDetails.cancellation_reason}</p>
-                        {selectedSession.cancelled_by_role && (
+                        <p className="text-sm font-medium flex items-center gap-2"><AlertTriangle className="h-4 w-4" />
+                          {userRole === 'student' && selectedSession.cancelled_by_role !== 'student'
+                            ? 'Cancelled by DrivingKlass'
+                            : 'Cancelled'}
+                        </p>
+                        {/* Staff/admin/instructor see internal details */}
+                        {isStaffOrAdmin && sessionDetails.cancellation_reason && (
+                          <p className="text-sm text-muted-foreground mt-1">Reason: {sessionDetails.cancellation_reason}</p>
+                        )}
+                        {isStaffOrAdmin && selectedSession.cancelled_by_role && (
                           <p className="text-xs text-muted-foreground mt-1">Cancelled by: {selectedSession.cancelled_by_role}</p>
                         )}
+                        {isStaffOrAdmin && selectedSession.cancellation_fee_waived && (
+                          <p className="text-xs text-green-600 dark:text-green-400 mt-1">✅ Late cancellation fee was waived</p>
+                        )}
+                        {/* Student sees reason only if they cancelled */}
+                        {userRole === 'student' && selectedSession.cancelled_by_role === 'student' && sessionDetails.cancellation_reason && (
+                          <p className="text-sm text-muted-foreground mt-1">Reason: {sessionDetails.cancellation_reason}</p>
+                        )}
                       </div>
-                      {selectedSession.cancel_penalty_hours > 0 && (
+                      {/* Student-facing fee messages */}
+                      {userRole === 'student' && selectedSession.cancel_penalty_hours > 0 && !selectedSession.cancellation_fee_waived && (
+                        <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                          Cancellation fee incurred due to late cancellation, cancellations made within 24 hours of a session are subject to a 30 minute reduction in remaining hours cancellation fee.
+                        </div>
+                      )}
+                      {userRole === 'student' && selectedSession.cancellation_fee_waived && (
+                        <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-700 dark:text-green-300">
+                          Cancellation waived by DrivingKlass
+                        </div>
+                      )}
+                      {/* Staff sees penalty info */}
+                      {isStaffOrAdmin && selectedSession.cancel_penalty_hours > 0 && !selectedSession.cancellation_fee_waived && (
                         <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
                           ⚠️ A 30 minute reduction was applied due to late cancellation.
                         </div>
