@@ -148,7 +148,7 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
   const [hasUserSelected, setHasUserSelected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [headlightsOn, setHeadlightsOn] = useState(false);
-  const flickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const flickerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const isLight = resolvedTheme === "light";

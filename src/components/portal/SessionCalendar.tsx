@@ -198,10 +198,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
 
   // ── Permission helpers ──
   const canCancel = (session: Session) => {
-    if (session.status !== 'scheduled') return false;
-    if (userRole === 'student' && session.student_id === user?.id) return true;
+    if (session.status === 'cancelled') return false;
+    // Instructors and staff/admin can cancel completed/passed sessions too
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     if (isStaffOrAdmin) return true;
+    // Students can only cancel scheduled sessions
+    if (userRole === 'student' && session.student_id === user?.id && session.status === 'scheduled') return true;
     return false;
   };
   const canComplete = (session: Session) => {

@@ -18,7 +18,7 @@ export default function ReportCardOpen() {
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {

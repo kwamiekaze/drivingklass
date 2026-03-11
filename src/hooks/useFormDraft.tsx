@@ -61,7 +61,7 @@ export function useFormDraft<T extends Record<string, any>>({
   enabled = true,
 }: UseFormDraftOptions<T>) {
   const draftKey = getDraftKey(formName, userId, routePath);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
