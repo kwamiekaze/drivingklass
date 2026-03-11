@@ -7,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, CheckCircle, Clock, Plus } from "lucide-react";
+import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
+import { CancelConfirmationModal } from "@/components/portal/CancelConfirmationModal";
 import { Session, ReportCard, Profile, InstructorStudent } from "@/types/portal";
-import { format, parseISO, isAfter } from "date-fns";
+import { format, parseISO, isAfter, differenceInHours } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InstructorDashboard() {
   return (
