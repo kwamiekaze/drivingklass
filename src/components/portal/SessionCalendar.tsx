@@ -443,6 +443,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
           open={cancelDialogOpen}
           onOpenChange={setCancelDialogOpen}
           sessionStartsAt={selectedSession.starts_at}
+          sessionEndsAt={selectedSession.ends_at}
+          studentName={sessionDetails?.student_name || getDisplayName(selectedSession.student, 'Student')}
+          instructorName={sessionDetails?.instructor_name || getDisplayName(selectedSession.instructor, 'Instructor')}
           userRole={userRole}
           onConfirmCancel={handleCancelSession}
           onRequestReschedule={handleRequestReschedule}
