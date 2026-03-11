@@ -98,7 +98,7 @@ const App = () => (
                   
                   {/* Instructor Portal */}
                   <Route path="/instructor" element={<InstructorDashboard />} />
-                  <Route path="/instructor/students" element={<InstructorDashboard />} />
+                  <Route path="/instructor/students" element={<InstructorStudents />} />
                   <Route path="/instructor/students/:id" element={<InstructorStudentView />} />
                   <Route path="/instructor/report-cards/new" element={<ReportCardForm />} />
                   <Route path="/instructor/report-cards/edit/:id" element={<ReportCardForm />} />
