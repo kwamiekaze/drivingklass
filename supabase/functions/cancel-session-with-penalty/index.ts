@@ -85,8 +85,8 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const hoursUntil = (sessionStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    // Penalty applies if < 24 hours AND not waived
-    const isLate = hoursUntil < 24 && hoursUntil >= 0;
+    // Penalty applies if < 24 hours before start (including past sessions) AND not waived
+    const isLate = hoursUntil < 24;
     const penaltyApplies = isLate && !shouldWaiveFee;
     const penaltyHours = penaltyApplies ? 0.5 : 0;
 
