@@ -1089,6 +1089,7 @@ export type Database = {
         Row: {
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1116,6 +1117,7 @@ export type Database = {
         Insert: {
           cancel_penalty_applied?: boolean
           cancel_penalty_hours?: number
+          cancellation_fee_waived?: boolean
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1143,6 +1145,7 @@ export type Database = {
         Update: {
           cancel_penalty_applied?: boolean
           cancel_penalty_hours?: number
+          cancellation_fee_waived?: boolean
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -1245,6 +1248,7 @@ export type Database = {
         Returns: {
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1281,6 +1285,7 @@ export type Database = {
         Returns: {
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1330,6 +1335,7 @@ export type Database = {
         Returns: {
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -1546,6 +1552,7 @@ export type Database = {
         Returns: {
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
