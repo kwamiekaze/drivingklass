@@ -251,6 +251,18 @@ export function AdminUserProfileModal({
                       </Badge>
                     )}
                   </div>
+                  {/* Assigned Instructor Label */}
+                  {assignedInstructors.length > 0 ? (
+                    <div className="mt-1.5">
+                      {assignedInstructors.map((inst) => (
+                        <p key={inst.id} className="text-xs text-primary font-medium">
+                          Assigned Instructor: {inst.full_name || `${inst.first_name || ''} ${inst.last_name || ''}`.trim() || inst.email || 'Unknown'}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1.5">No instructor assigned</p>
+                  )}
                 </div>
               </div>
 
