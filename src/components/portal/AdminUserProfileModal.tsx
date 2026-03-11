@@ -407,7 +407,74 @@ export function AdminUserProfileModal({
                 </div>
               </div>
 
-              {/* Intake Information Section */}
+              {/* Scheduled Sessions Section */}
+              {profile.role === 'student' && (
+                <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Scheduled Sessions ({studentSessions.length})
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(['all', 'upcoming', 'completed', 'cancelled'] as const).map(f => (
+                      <Button
+                        key={f}
+                        size="sm"
+                        variant={sessionFilter === f ? 'default' : 'outline'}
+                        className="h-7 text-xs capitalize"
+                        onClick={() => setSessionFilter(f)}
+                      >
+                        {f}
+                      </Button>
+                    ))}
+                  </div>
+                  {filteredSessions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No sessions found.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {filteredSessions.slice(0, 20).map(s => {
+                        const instructorName = s.instructor
+                          ? (s.instructor.full_name || `${s.instructor.first_name || ''} ${s.instructor.last_name || ''}`.trim() || s.instructor.email || 'Instructor')
+                          : 'Unknown';
+                        return (
+                          <div key={s.id} className="p-2.5 rounded-lg border bg-background/50 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SessionTypeBadge sessionType={s.session_type} size="sm" />
+                                <span className="text-xs font-medium truncate">
+                                  {format(parseISO(s.starts_at), 'EEE, MMM d, yyyy')}
+                                </span>
+                              </div>
+                              <Badge
+                                className={cn(
+                                  "text-[10px] shrink-0 border-0",
+                                  s.status === 'completed' ? "bg-green-500/20 text-green-700 dark:text-green-300" :
+                                  s.status === 'cancelled' ? "bg-red-500/20 text-red-700 dark:text-red-300" :
+                                  "bg-muted text-muted-foreground"
+                                )}
+                              >
+                                {s.status === 'completed' ? <><CheckCircle className="h-2.5 w-2.5 mr-0.5" />Done</> :
+                                 s.status === 'cancelled' ? <><XCircle className="h-2.5 w-2.5 mr-0.5" />Cancelled</> :
+                                 <><Clock className="h-2.5 w-2.5 mr-0.5" />Scheduled</>}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(parseISO(s.starts_at), 'h:mm a')} – {format(parseISO(s.ends_at), 'h:mm a')} · {instructorName}
+                            </div>
+                            {s.report_card_id && (
+                              <Link to={`/report-cards/${s.report_card_id}`} className="text-xs text-primary hover:underline">
+                                View Report Card
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
                 <p className="text-sm font-semibold flex items-center gap-1.5">
                   <ClipboardList className="h-4 w-4 text-primary" />
