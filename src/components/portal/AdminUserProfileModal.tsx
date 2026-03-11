@@ -8,11 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
+import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
 import { PermitViewerModal } from "./PermitViewerModal";
-import { format, parseISO } from "date-fns";
+import { SessionTypeBadge } from "./SessionTypeBadge";
+import { format, parseISO, isAfter } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface AdminUserProfileModalProps {
   open: boolean;
@@ -29,6 +32,27 @@ interface FullProfile extends Profile {
   intake_updated_at?: string | null;
 }
 
+interface StudentSession {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  session_type: string;
+  duration_minutes: number;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  report_card_id: string | null;
+  instructor: { full_name: string | null; first_name: string | null; last_name: string | null; email: string | null } | null;
+}
+
+interface AssignedInstructor {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
 export function AdminUserProfileModal({ 
   open, 
   onOpenChange, 
@@ -40,6 +64,9 @@ export function AdminUserProfileModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [permitViewerOpen, setPermitViewerOpen] = useState(false);
+  const [studentSessions, setStudentSessions] = useState<StudentSession[]>([]);
+  const [assignedInstructors, setAssignedInstructors] = useState<AssignedInstructor[]>([]);
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   
   // Editable fields
   const [fullName, setFullName] = useState("");
@@ -49,6 +76,8 @@ export function AdminUserProfileModal({
   useEffect(() => {
     if (open && userId) {
       fetchProfile(userId);
+      fetchStudentSessions(userId);
+      fetchAssignedInstructors(userId);
     }
   }, [open, userId]);
 
@@ -89,6 +118,33 @@ export function AdminUserProfileModal({
       setLoading(false);
     }
   };
+
+  const fetchStudentSessions = async (id: string) => {
+    const { data } = await supabase
+      .from('sessions')
+      .select('id, starts_at, ends_at, status, session_type, duration_minutes, pickup_address, dropoff_address, report_card_id, instructor:profiles!sessions_instructor_id_fkey(full_name, first_name, last_name, email)')
+      .eq('student_id', id)
+      .order('starts_at', { ascending: false });
+    if (data) setStudentSessions(data as unknown as StudentSession[]);
+  };
+
+  const fetchAssignedInstructors = async (id: string) => {
+    const { data } = await supabase
+      .from('instructor_students')
+      .select('instructor:profiles!instructor_students_instructor_id_fkey(id, full_name, first_name, last_name, email)')
+      .eq('student_id', id);
+    if (data) {
+      const instructors = data.map((d: any) => d.instructor).filter(Boolean) as AssignedInstructor[];
+      setAssignedInstructors(instructors);
+    }
+  };
+
+  const filteredSessions = studentSessions.filter(s => {
+    if (sessionFilter === 'upcoming') return s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date());
+    if (sessionFilter === 'completed') return s.status === 'completed';
+    if (sessionFilter === 'cancelled') return s.status === 'cancelled';
+    return true;
+  });
 
   const handleSave = async () => {
     if (!profile) return;
@@ -196,6 +252,18 @@ export function AdminUserProfileModal({
                       </Badge>
                     )}
                   </div>
+                  {/* Assigned Instructor Label */}
+                  {assignedInstructors.length > 0 ? (
+                    <div className="mt-1.5">
+                      {assignedInstructors.map((inst) => (
+                        <p key={inst.id} className="text-xs text-primary font-medium">
+                          Assigned Instructor: {inst.full_name || `${inst.first_name || ''} ${inst.last_name || ''}`.trim() || inst.email || 'Unknown'}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1.5">No instructor assigned</p>
+                  )}
                 </div>
               </div>
 
@@ -340,7 +408,74 @@ export function AdminUserProfileModal({
                 </div>
               </div>
 
-              {/* Intake Information Section */}
+              {/* Scheduled Sessions Section */}
+              {profile.role === 'student' && (
+                <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Scheduled Sessions ({studentSessions.length})
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(['all', 'upcoming', 'completed', 'cancelled'] as const).map(f => (
+                      <Button
+                        key={f}
+                        size="sm"
+                        variant={sessionFilter === f ? 'default' : 'outline'}
+                        className="h-7 text-xs capitalize"
+                        onClick={() => setSessionFilter(f)}
+                      >
+                        {f}
+                      </Button>
+                    ))}
+                  </div>
+                  {filteredSessions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No sessions found.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {filteredSessions.slice(0, 20).map(s => {
+                        const instructorName = s.instructor
+                          ? (s.instructor.full_name || `${s.instructor.first_name || ''} ${s.instructor.last_name || ''}`.trim() || s.instructor.email || 'Instructor')
+                          : 'Unknown';
+                        return (
+                          <div key={s.id} className="p-2.5 rounded-lg border bg-background/50 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SessionTypeBadge sessionType={s.session_type} size="sm" />
+                                <span className="text-xs font-medium truncate">
+                                  {format(parseISO(s.starts_at), 'EEE, MMM d, yyyy')}
+                                </span>
+                              </div>
+                              <Badge
+                                className={cn(
+                                  "text-[10px] shrink-0 border-0",
+                                  s.status === 'completed' ? "bg-green-500/20 text-green-700 dark:text-green-300" :
+                                  s.status === 'cancelled' ? "bg-red-500/20 text-red-700 dark:text-red-300" :
+                                  "bg-muted text-muted-foreground"
+                                )}
+                              >
+                                {s.status === 'completed' ? <><CheckCircle className="h-2.5 w-2.5 mr-0.5" />Done</> :
+                                 s.status === 'cancelled' ? <><XCircle className="h-2.5 w-2.5 mr-0.5" />Cancelled</> :
+                                 <><Clock className="h-2.5 w-2.5 mr-0.5" />Scheduled</>}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(parseISO(s.starts_at), 'h:mm a')} – {format(parseISO(s.ends_at), 'h:mm a')} · {instructorName}
+                            </div>
+                            {s.report_card_id && (
+                              <Link to={`/report-cards/${s.report_card_id}`} className="text-xs text-primary hover:underline">
+                                View Report Card
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
                 <p className="text-sm font-semibold flex items-center gap-1.5">
                   <ClipboardList className="h-4 w-4 text-primary" />

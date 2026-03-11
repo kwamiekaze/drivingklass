@@ -7,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, CheckCircle, Clock, Plus } from "lucide-react";
+import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
+import { CancelConfirmationModal } from "@/components/portal/CancelConfirmationModal";
 import { Session, ReportCard, Profile, InstructorStudent } from "@/types/portal";
-import { format, parseISO, isAfter } from "date-fns";
+import { format, parseISO, isAfter, differenceInHours } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InstructorDashboard() {
   return (
@@ -213,24 +215,7 @@ function InstructorDashboardContent() {
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
               {sessionsNeedingReportCard.slice(0, 5).map(session => (
-                <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
-                      <SessionTypeBadge sessionType={session.session_type} />
-                    </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
-                    </p>
-                  </div>
-                  {/* Route to correct grading UI based on session_type */}
-                  <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="w-full sm:w-auto">
-                    <Button size="sm" className="gap-2 w-full sm:w-auto min-h-[40px]">
-                      <Plus className="h-4 w-4" />
-                      {session.session_type === 'testing' ? 'Grade Road Test' : 'Create Report'}
-                    </Button>
-                  </Link>
-                </div>
+                <NeedingReportCard key={session.id} session={session} onUpdate={fetchData} />
               ))}
             </div>
           </CardContent>
@@ -318,5 +303,73 @@ function InstructorDashboardContent() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function NeedingReportCard({ session, onUpdate }: { session: Session; onUpdate: () => void }) {
+  const { toast } = useToast();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCancel = async (reason: string, waiveFee?: boolean) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cancel-session-with-penalty', {
+        body: { session_id: session.id, reason: reason.trim(), waive_fee: waiveFee || false }
+      });
+      if (error) throw error;
+      let desc = "The session has been cancelled successfully.";
+      if (data?.fee_waived) desc += " Late cancellation fee was waived.";
+      else if (data?.penalty_applied) desc += " A 30 minute reduction was applied.";
+      toast({ title: "Session Cancelled", description: desc });
+      setCancelOpen(false);
+      onUpdate();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to cancel session", variant: "destructive" });
+    } finally { setIsLoading(false); }
+  };
+
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
+            <SessionTypeBadge sessionType={session.session_type} />
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
+          </p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="flex-1 sm:flex-initial">
+            <Button size="sm" className="gap-2 w-full min-h-[40px]">
+              <Plus className="h-4 w-4" />
+              {session.session_type === 'testing' ? 'Grade Road Test' : 'Create Report'}
+            </Button>
+          </Link>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+            onClick={() => setCancelOpen(true)}
+          >
+            <XCircle className="h-4 w-4" />
+            Cancel
+          </Button>
+        </div>
+      </div>
+      <CancelConfirmationModal
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        sessionStartsAt={session.starts_at}
+        sessionEndsAt={session.ends_at}
+        studentName={getDisplayName(session.student, 'Student')}
+        instructorName={getDisplayName(session.instructor, 'Instructor')}
+        userRole="instructor"
+        onConfirmCancel={handleCancel}
+        isLoading={isLoading}
+      />
+    </>
   );
 }
