@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, CalendarClock, XCircle, ShieldCheck } from "lucide-react";
 import { parseISO, differenceInHours, format } from "date-fns";
 
@@ -174,20 +174,20 @@ export function CancelConfirmationModal({
             )}
           </div>
 
-          {/* Waive fee toggle — staff only, only when within 24 hours */}
+          {/* Waive fee checkbox — staff only, only when within 24 hours */}
           {isStaff && isWithin24Hours && (
-            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <Checkbox
+                id="waive-fee"
+                checked={waiveFee}
+                onCheckedChange={(checked) => setWaiveFee(checked === true)}
+              />
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <Label htmlFor="waive-fee" className="text-sm font-medium cursor-pointer">
-                  Waive 30-minute late cancellation fee
+                  Waive cancellation fee
                 </Label>
               </div>
-              <Switch
-                id="waive-fee"
-                checked={waiveFee}
-                onCheckedChange={setWaiveFee}
-              />
             </div>
           )}
 

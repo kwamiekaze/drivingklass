@@ -37,6 +37,7 @@ function InstructorDashboardContent() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [students, setStudents] = useState<InstructorStudent[]>([]);
+  const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +86,12 @@ function InstructorDashboardContent() {
         console.error('Error fetching students:', studentsError);
       } else if (studentsData) {
         setStudents(studentsData as InstructorStudent[]);
+      }
+
+      // Compute unique student count from all sessions (not just assignments)
+      if (sessionsData) {
+        const uniqueIds = new Set(sessionsData.filter((s: any) => s.status !== 'cancelled').map((s: any) => s.student_id));
+        setUniqueStudentCount(uniqueIds.size);
       }
     } catch (error) {
       console.error('Error fetching instructor data:', error);
@@ -169,7 +176,7 @@ function InstructorDashboardContent() {
                 <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{students.length}</p>
+                <p className="text-xl sm:text-2xl font-bold">{uniqueStudentCount}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Students</p>
               </div>
             </div>
@@ -260,44 +267,21 @@ function InstructorDashboardContent() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Users className="h-5 w-5" />
-                Assigned Students ({students.length})
+                My Students ({uniqueStudentCount})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {students.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
-                  No students assigned yet
+              <div className="text-center py-6">
+                <Link to="/instructor/students">
+                  <Button className="gap-2">
+                    <Users className="h-4 w-4" />
+                    View All Students
+                  </Button>
+                </Link>
+                <p className="text-sm text-muted-foreground mt-2">
+                  View, search, and filter all students you've worked with
                 </p>
-              ) : (
-                <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
-                  {students.map(assignment => (
-                    <Link 
-                      key={assignment.id} 
-                      to={`/instructor/students/${assignment.student_id}`}
-                    >
-                      <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                        <CardContent className="p-3 sm:p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                              <span className="text-base sm:text-lg font-bold text-primary">
-                                {getProfileInitials(assignment.student)}
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm sm:text-base truncate">
-                                {getDisplayName(assignment.student, 'Student')}
-                              </p>
-                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                                {assignment.student?.public_id || assignment.student?.email}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

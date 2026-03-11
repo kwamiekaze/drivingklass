@@ -44,9 +44,9 @@ interface StudentMapViewProps {
 
 type PinMode = "pickup" | "dropoff" | "both";
 
-// Default center: Atlanta metro area
-const DEFAULT_CENTER: L.LatLngExpression = [33.749, -84.388];
-const DEFAULT_ZOOM = 10;
+// Default center: Georgia statewide (Atlanta-leaning)
+const DEFAULT_CENTER: L.LatLngExpression = [32.9, -83.4];
+const DEFAULT_ZOOM = 7;
 
 function createStudentIcon(student: StudentProfile, type: "pickup" | "dropoff"): L.DivIcon {
   const initials = getProfileInitials(student as any);
