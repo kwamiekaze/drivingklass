@@ -39,7 +39,8 @@ export function CancelConfirmationModal({
   const [rescheduleSubmitted, setRescheduleSubmitted] = useState(false);
 
   const hoursUntilSession = differenceInHours(parseISO(sessionStartsAt), new Date());
-  const isWithin24Hours = hoursUntilSession < 24 && hoursUntilSession >= 0;
+  // Treat passed sessions (negative hours) as late too — they're past the start time
+  const isLateOrPassed = hoursUntilSession < 24;
   const isStaff = userRole === 'admin' || userRole === 'staff' || userRole === 'instructor';
 
   const handleClose = (val: boolean) => {
