@@ -37,6 +37,7 @@ function InstructorDashboardContent() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [students, setStudents] = useState<InstructorStudent[]>([]);
+  const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
