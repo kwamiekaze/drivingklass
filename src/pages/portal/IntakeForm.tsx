@@ -192,6 +192,7 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
       setAvailabilityDays((profile as any)?.availability_days || []);
       setAvailabilityWindows((profile as any)?.availability_windows || []);
       setAvailabilityNotes((profile as any)?.availability_notes || '');
+    }
   }, [isAdminEdit, editUserId, user?.id, profile, isEditMode]);
 
   // For students: redirect if approved and not in edit mode
