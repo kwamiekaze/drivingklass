@@ -294,6 +294,12 @@ function InstructorDashboardContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ProposalBuilder
+        open={proposalOpen}
+        onOpenChange={setProposalOpen}
+        onProposalSent={fetchData}
+      />
     </div>
   );
 }
