@@ -275,6 +275,7 @@ function getNavItems(role: string | null) {
     default:
       items.push(
         { href: '/student', label: 'Dashboard', icon: Home },
+        { href: '/student/proposals', label: 'Proposals', icon: Send },
         { href: '/profile', label: 'Profile', icon: User },
       );
       break;
