@@ -16,6 +16,15 @@ import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 
+function formatTime24to12(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  const h = parseInt(hStr);
+  const m = mStr?.padStart(2, '0') || '00';
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${display}:${m} ${ampm}`;
+}
+
 export default function AdminProposals() {
   return (
     <ProtectedRoute allowedRoles={['admin', 'staff']}>
