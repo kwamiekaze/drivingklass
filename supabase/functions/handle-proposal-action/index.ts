@@ -8,36 +8,66 @@ const corsHeaders = {
 // Business timezone for DrivingKlass
 const BUSINESS_TZ = 'America/New_York';
 
+function parseDateParts(dateStr: string): { year: number; month: number; day: number } {
+  const match = /^\d{4}-\d{2}-\d{2}$/.exec(dateStr);
+  if (!match) throw new Error(`Invalid proposed_date format: ${dateStr}`);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return { year, month, day };
+}
+
+function parseTimeParts(timeStr: string): { hour: number; minute: number } {
+  const parts = timeStr.split(':');
+  if (parts.length < 2) throw new Error(`Invalid time format: ${timeStr}`);
+  const hour = Number(parts[0]);
+  const minute = Number(parts[1]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    throw new Error(`Invalid time value: ${timeStr}`);
+  }
+  return { hour, minute };
+}
+
+function zonedParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  const pick = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    year: pick('year'),
+    month: pick('month'),
+    day: pick('day'),
+    hour: pick('hour'),
+    minute: pick('minute'),
+  };
+}
+
 /**
- * Convert a local date + time in America/New_York to a proper ISO 8601 string
- * with the correct UTC offset, WITHOUT using Date parsing on ambiguous strings.
+ * Deterministically converts a local America/New_York date+time to a UTC ISO instant.
+ * This avoids ambiguous Date parsing and keeps proposal->session mapping exact.
  */
 function toEasternISO(dateStr: string, timeStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  // Ensure time has seconds
-  const timeParts = timeStr.split(':');
-  const h = parseInt(timeParts[0]);
-  const mn = parseInt(timeParts[1]);
+  const { year, month, day } = parseDateParts(dateStr);
+  const { hour, minute } = parseTimeParts(timeStr);
 
-  // Determine if this date falls in EDT or EST using Intl
-  // Create a test date at noon UTC on that day
-  const testDate = new Date(Date.UTC(y, m - 1, d, 17, 0)); // 17 UTC = noon-ish Eastern
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUSINESS_TZ,
-    hour: 'numeric',
-    hourCycle: 'h23',
-    timeZoneName: 'shortOffset',
-  });
-  const parts = formatter.formatToParts(testDate);
-  const tzPart = parts.find(p => p.type === 'timeZoneName');
-  // tzPart.value is like "GMT-5" or "GMT-4"
-  const offsetMatch = tzPart?.value?.match(/GMT([+-]?\d+)/);
-  const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -5;
-  const absOffset = Math.abs(offsetHours);
-  const sign = offsetHours <= 0 ? '-' : '+';
-  const offsetStr = `${sign}${String(absOffset).padStart(2, '0')}:00`;
+  // Start with a UTC guess and converge so that formatted NY local components match target.
+  let candidate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const targetKey = Date.UTC(year, month - 1, day, hour, minute, 0) / 60000;
 
-  return `${dateStr}T${String(h).padStart(2, '0')}:${String(mn).padStart(2, '0')}:00${offsetStr}`;
+  for (let i = 0; i < 3; i++) {
+    const local = zonedParts(candidate, BUSINESS_TZ);
+    const localKey = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, 0) / 60000;
+    const diffMinutes = targetKey - localKey;
+    if (diffMinutes === 0) break;
+    candidate = new Date(candidate.getTime() + diffMinutes * 60_000);
+  }
+
+  return candidate.toISOString();
 }
 
 Deno.serve(async (req) => {
@@ -160,6 +190,7 @@ async function handleAccept(supabase: any, userId: string, userRole: string, pro
     .eq('proposal_id', proposalId)
     .eq('item_status', 'proposed')
     .order('proposed_date', { ascending: true })
+    .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No proposal items found')
 
@@ -289,6 +320,8 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
     .select('*')
     .eq('proposal_id', proposalId)
     .eq('item_status', targetItemStatus)
+    .order('proposed_date', { ascending: true })
+    .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No items to finalize')
 
