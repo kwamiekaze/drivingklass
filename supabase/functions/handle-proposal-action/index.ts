@@ -320,6 +320,8 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
     .select('*')
     .eq('proposal_id', proposalId)
     .eq('item_status', targetItemStatus)
+    .order('proposed_date', { ascending: true })
+    .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No items to finalize')
 
