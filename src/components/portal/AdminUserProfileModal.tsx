@@ -113,6 +113,8 @@ export function AdminUserProfileModal({
       setFullName(fullProfile.full_name || `${fullProfile.first_name || ''} ${fullProfile.last_name || ''}`.trim());
       setPhone(fullProfile.phone || "");
       setHoursRemaining((fullProfile.hours_remaining ?? 0).toString());
+      setPickupAddress(fullProfile.pickup_address || "");
+      setDropoffAddress(fullProfile.dropoff_address || "");
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
