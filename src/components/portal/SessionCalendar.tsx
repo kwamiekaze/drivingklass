@@ -545,6 +545,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       </Button>
                     )}
                     {isStaffOrAdmin && (
+                      <Button variant="outline" onClick={() => openEditDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
+                        <Pencil className="h-4 w-4" />Edit Session
+                      </Button>
+                    )}
+                    {isStaffOrAdmin && (
                       <Button variant="outline" onClick={() => openNotesDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
                         <MessageSquare className="h-4 w-4" />Edit Notes
                       </Button>
