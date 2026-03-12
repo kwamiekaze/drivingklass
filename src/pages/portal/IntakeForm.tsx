@@ -161,6 +161,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
         });
         setExistingPermitUrl(data.permit_file_url);
         setAvatarUrl(data.avatar_url);
+        setAvailabilityDays((data as any).availability_days || []);
+        setAvailabilityWindows((data as any).availability_windows || []);
+        setAvailabilityNotes((data as any).availability_notes || '');
       }
       
       setIsFetchingProfile(false);
