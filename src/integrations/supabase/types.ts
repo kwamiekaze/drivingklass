@@ -886,6 +886,7 @@ export type Database = {
           instructor_id: string
           internal_message: string | null
           interstate: number | null
+          is_public: boolean
           lane_maintenance: number | null
           left_turns: number | null
           lesson_audio_url: string | null
@@ -893,6 +894,10 @@ export type Database = {
           message_to_student: string | null
           overall: number | null
           parallel_parking: number | null
+          public_access_code: string | null
+          public_enabled_at: string | null
+          public_enabled_by: string | null
+          public_share_slug: string | null
           reverse_parking: number | null
           right_turns: number | null
           road_sign_awareness: number | null
@@ -923,6 +928,7 @@ export type Database = {
           instructor_id: string
           internal_message?: string | null
           interstate?: number | null
+          is_public?: boolean
           lane_maintenance?: number | null
           left_turns?: number | null
           lesson_audio_url?: string | null
@@ -930,6 +936,10 @@ export type Database = {
           message_to_student?: string | null
           overall?: number | null
           parallel_parking?: number | null
+          public_access_code?: string | null
+          public_enabled_at?: string | null
+          public_enabled_by?: string | null
+          public_share_slug?: string | null
           reverse_parking?: number | null
           right_turns?: number | null
           road_sign_awareness?: number | null
@@ -960,6 +970,7 @@ export type Database = {
           instructor_id?: string
           internal_message?: string | null
           interstate?: number | null
+          is_public?: boolean
           lane_maintenance?: number | null
           left_turns?: number | null
           lesson_audio_url?: string | null
@@ -967,6 +978,10 @@ export type Database = {
           message_to_student?: string | null
           overall?: number | null
           parallel_parking?: number | null
+          public_access_code?: string | null
+          public_enabled_at?: string | null
+          public_enabled_by?: string | null
+          public_share_slug?: string | null
           reverse_parking?: number | null
           right_turns?: number | null
           road_sign_awareness?: number | null
