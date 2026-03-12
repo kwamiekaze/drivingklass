@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle } from "lucide-react";
+import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle, Send } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { CancelConfirmationModal } from "@/components/portal/CancelConfirmationModal";
+import { ProposalBuilder } from "@/components/portal/ProposalBuilder";
 import { Session, ReportCard, Profile, InstructorStudent } from "@/types/portal";
 import { format, parseISO, isAfter, differenceInHours } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
@@ -39,6 +40,7 @@ function InstructorDashboardContent() {
   const [students, setStudents] = useState<InstructorStudent[]>([]);
   const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [proposalOpen, setProposalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -147,11 +149,17 @@ function InstructorDashboardContent() {
       </div>
 
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-          Klassroom Dashboard
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
+            Klassroom Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
+        </div>
+        <Button className="gap-2 min-h-[40px] w-full sm:w-auto" onClick={() => setProposalOpen(true)}>
+          <Send className="h-4 w-4" />
+          Propose Schedule
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -286,6 +294,12 @@ function InstructorDashboardContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ProposalBuilder
+        open={proposalOpen}
+        onOpenChange={setProposalOpen}
+        onProposalSent={fetchData}
+      />
     </div>
   );
 }

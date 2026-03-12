@@ -1,0 +1,379 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('No authorization header')
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) throw new Error('Not authenticated')
+
+    const body = await req.json()
+    const { action, proposal_id, reason } = body
+
+    // Get user role
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+    const userRole = roleData?.role || 'student'
+
+    if (action === 'accept') {
+      return await handleAccept(supabase, user.id, userRole, proposal_id)
+    } else if (action === 'decline') {
+      return await handleDecline(supabase, user.id, userRole, proposal_id, reason)
+    } else if (action === 'finalize') {
+      return await handleFinalize(supabase, user.id, userRole, proposal_id)
+    } else {
+      throw new Error('Invalid action')
+    }
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})
+
+async function handleAccept(supabase: any, userId: string, userRole: string, proposalId: string) {
+  // Get proposal
+  const { data: proposal, error: pErr } = await supabase
+    .from('schedule_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .single()
+  if (pErr || !proposal) throw new Error('Proposal not found')
+  if (proposal.student_id !== userId) throw new Error('Not authorized')
+  if (proposal.proposal_status !== 'sent') throw new Error('Proposal is no longer available')
+
+  // Get items
+  const { data: items } = await supabase
+    .from('schedule_proposal_items')
+    .select('*')
+    .eq('proposal_id', proposalId)
+    .eq('item_status', 'proposed')
+    .order('proposed_date', { ascending: true })
+
+  if (!items || items.length === 0) throw new Error('No proposal items found')
+
+  if (proposal.acceptance_mode === 'auto_schedule_on_accept') {
+    // Auto-schedule: create real sessions immediately
+    const results = { scheduled: 0, conflicts: 0, conflictItems: [] as string[] }
+
+    for (const item of items) {
+      const startsAt = new Date(`${item.proposed_date}T${item.start_time}`)
+      const endsAt = new Date(`${item.proposed_date}T${item.end_time}`)
+
+      // Check conflicts
+      const { data: conflicts } = await supabase
+        .from('sessions')
+        .select('id')
+        .neq('status', 'cancelled')
+        .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
+        .lt('starts_at', endsAt.toISOString())
+        .gt('ends_at', startsAt.toISOString())
+
+      if (conflicts && conflicts.length > 0) {
+        await supabase
+          .from('schedule_proposal_items')
+          .update({ item_status: 'conflict', conflict_reason: 'Time slot conflict with existing session' })
+          .eq('id', item.id)
+        results.conflicts++
+        results.conflictItems.push(item.id)
+        continue
+      }
+
+      // Create real session
+      const durationMinutes = item.duration_minutes || Math.round((endsAt.getTime() - startsAt.getTime()) / 60000)
+      const { data: session, error: sErr } = await supabase
+        .from('sessions')
+        .insert({
+          student_id: proposal.student_id,
+          instructor_id: proposal.instructor_id,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          duration_minutes: durationMinutes,
+          status: 'scheduled',
+          session_type: item.session_type || 'driving',
+          pickup_address: item.pickup_address,
+          dropoff_address: item.dropoff_address,
+          created_by: userId,
+        })
+        .select()
+        .single()
+
+      if (sErr) {
+        await supabase
+          .from('schedule_proposal_items')
+          .update({ item_status: 'conflict', conflict_reason: sErr.message })
+          .eq('id', item.id)
+        results.conflicts++
+        continue
+      }
+
+      await supabase
+        .from('schedule_proposal_items')
+        .update({ item_status: 'auto_scheduled', created_session_id: session.id })
+        .eq('id', item.id)
+      results.scheduled++
+    }
+
+    const newStatus = results.conflicts > 0 && results.scheduled > 0
+      ? 'partially_scheduled'
+      : results.scheduled > 0 ? 'auto_scheduled' : 'conflict'
+
+    await supabase
+      .from('schedule_proposals')
+      .update({ proposal_status: newStatus, accepted_at: new Date().toISOString() })
+      .eq('id', proposalId)
+
+    // Get names for notifications
+    const { data: studentProfile } = await supabase.from('profiles').select('full_name, email').eq('id', proposal.student_id).single()
+    const studentName = studentProfile?.full_name || studentProfile?.email || 'Student'
+
+    // Notify admins
+    const { data: adminRoles } = await supabase.from('user_roles').select('user_id').in('role', ['admin', 'staff'])
+    if (adminRoles) {
+      for (const ar of adminRoles) {
+        await supabase.from('notifications').insert({
+          user_id: ar.user_id,
+          title: 'Schedule Auto-Scheduled',
+          message: `${studentName} accepted a proposed schedule and ${results.scheduled} session(s) were automatically scheduled.`,
+          type: 'schedule',
+          severity: 'info',
+          link: '/admin/proposals',
+        })
+      }
+    }
+
+    // Notify instructor
+    await supabase.from('notifications').insert({
+      user_id: proposal.instructor_id,
+      title: 'Proposal Accepted',
+      message: `${studentName} accepted your proposed schedule. ${results.scheduled} session(s) were scheduled.`,
+      type: 'schedule',
+      severity: 'info',
+      link: '/instructor',
+    })
+
+    return new Response(JSON.stringify({
+      success: true,
+      mode: 'auto_scheduled',
+      scheduled: results.scheduled,
+      conflicts: results.conflicts,
+      message: 'Your schedule has been updated.',
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  } else {
+    // Pending admin finalize mode
+    await supabase
+      .from('schedule_proposal_items')
+      .update({ item_status: 'pending_admin_finalize' })
+      .eq('proposal_id', proposalId)
+      .eq('item_status', 'proposed')
+
+    await supabase
+      .from('schedule_proposals')
+      .update({ proposal_status: 'pending_admin_finalize', accepted_at: new Date().toISOString() })
+      .eq('id', proposalId)
+
+    // Get names
+    const { data: studentProfile } = await supabase.from('profiles').select('full_name, email').eq('id', proposal.student_id).single()
+    const studentName = studentProfile?.full_name || studentProfile?.email || 'Student'
+
+    // Notify admins
+    const { data: adminRoles } = await supabase.from('user_roles').select('user_id').in('role', ['admin', 'staff'])
+    if (adminRoles) {
+      for (const ar of adminRoles) {
+        await supabase.from('notifications').insert({
+          user_id: ar.user_id,
+          title: 'Schedule Accepted — Pending Finalization',
+          message: `${studentName} accepted a proposed schedule. ${items.length} date(s) are pending admin finalization.`,
+          type: 'schedule',
+          severity: 'warning',
+          link: '/admin/proposals',
+        })
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      mode: 'pending_admin_finalize',
+      itemCount: items.length,
+      message: 'Your proposed schedule has been accepted and your dates are now pending. Please make your payment to finalize your schedule. If you already made payment, please call/text us so your schedule can be scheduled immediately.',
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+}
+
+async function handleDecline(supabase: any, userId: string, userRole: string, proposalId: string, reason?: string) {
+  const { data: proposal } = await supabase
+    .from('schedule_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .single()
+  if (!proposal) throw new Error('Proposal not found')
+  if (proposal.student_id !== userId) throw new Error('Not authorized')
+
+  await supabase
+    .from('schedule_proposals')
+    .update({ proposal_status: 'declined', declined_at: new Date().toISOString() })
+    .eq('id', proposalId)
+
+  await supabase
+    .from('schedule_proposal_items')
+    .update({ item_status: 'declined' })
+    .eq('proposal_id', proposalId)
+
+  // Notify instructor
+  const { data: studentProfile } = await supabase.from('profiles').select('full_name, email').eq('id', proposal.student_id).single()
+  const studentName = studentProfile?.full_name || studentProfile?.email || 'Student'
+  
+  await supabase.from('notifications').insert({
+    user_id: proposal.instructor_id,
+    title: 'Proposal Declined',
+    message: `${studentName} has declined the proposed schedule.${reason ? ' Reason: ' + reason : ''}`,
+    type: 'schedule',
+    severity: 'warning',
+    link: '/instructor',
+  })
+
+  return new Response(JSON.stringify({ success: true, message: 'Proposal declined.' }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function handleFinalize(supabase: any, userId: string, userRole: string, proposalId: string) {
+  if (!['admin', 'staff'].includes(userRole)) throw new Error('Only admins can finalize proposals')
+
+  const { data: proposal } = await supabase
+    .from('schedule_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .single()
+  if (!proposal) throw new Error('Proposal not found')
+
+  const { data: items } = await supabase
+    .from('schedule_proposal_items')
+    .select('*')
+    .eq('proposal_id', proposalId)
+    .eq('item_status', 'pending_admin_finalize')
+
+  if (!items || items.length === 0) throw new Error('No items to finalize')
+
+  let scheduled = 0
+  let conflicts = 0
+
+  for (const item of items) {
+    const startsAt = new Date(`${item.proposed_date}T${item.start_time}`)
+    const endsAt = new Date(`${item.proposed_date}T${item.end_time}`)
+
+    // Check conflicts
+    const { data: conflictSessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .neq('status', 'cancelled')
+      .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
+      .lt('starts_at', endsAt.toISOString())
+      .gt('ends_at', startsAt.toISOString())
+
+    if (conflictSessions && conflictSessions.length > 0) {
+      await supabase
+        .from('schedule_proposal_items')
+        .update({ item_status: 'conflict', conflict_reason: 'Time slot conflict' })
+        .eq('id', item.id)
+      conflicts++
+      continue
+    }
+
+    const durationMinutes = item.duration_minutes || Math.round((endsAt.getTime() - startsAt.getTime()) / 60000)
+    const { data: session, error: sErr } = await supabase
+      .from('sessions')
+      .insert({
+        student_id: proposal.student_id,
+        instructor_id: proposal.instructor_id,
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        duration_minutes: durationMinutes,
+        status: 'scheduled',
+        session_type: item.session_type || 'driving',
+        pickup_address: item.pickup_address,
+        dropoff_address: item.dropoff_address,
+        created_by: userId,
+      })
+      .select()
+      .single()
+
+    if (sErr) {
+      await supabase
+        .from('schedule_proposal_items')
+        .update({ item_status: 'conflict', conflict_reason: sErr.message })
+        .eq('id', item.id)
+      conflicts++
+      continue
+    }
+
+    await supabase
+      .from('schedule_proposal_items')
+      .update({ item_status: 'finalized', created_session_id: session.id })
+      .eq('id', item.id)
+    scheduled++
+  }
+
+  const newStatus = conflicts > 0 && scheduled > 0
+    ? 'partially_finalized'
+    : scheduled > 0 ? 'finalized' : 'conflict'
+
+  await supabase
+    .from('schedule_proposals')
+    .update({ proposal_status: newStatus, finalized_at: new Date().toISOString() })
+    .eq('id', proposalId)
+
+  // Notify student
+  await supabase.from('notifications').insert({
+    user_id: proposal.student_id,
+    title: 'Schedule Updated',
+    message: `Your schedule has been updated. ${scheduled} session(s) have been finalized.`,
+    type: 'schedule',
+    severity: 'info',
+    link: '/student',
+  })
+
+  // Notify instructor
+  const { data: studentProfile } = await supabase.from('profiles').select('full_name').eq('id', proposal.student_id).single()
+  await supabase.from('notifications').insert({
+    user_id: proposal.instructor_id,
+    title: 'Schedule Finalized',
+    message: `${scheduled} session(s) for ${studentProfile?.full_name || 'student'} have been finalized.`,
+    type: 'schedule',
+    severity: 'info',
+    link: '/instructor',
+  })
+
+  return new Response(JSON.stringify({
+    success: true,
+    scheduled,
+    conflicts,
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}

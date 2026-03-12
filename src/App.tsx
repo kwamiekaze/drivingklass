@@ -46,7 +46,9 @@ import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
 import AdminPermitQueue from "./pages/portal/AdminPermitQueue";
 import AdminMap from "./pages/portal/AdminMap";
+import AdminProposals from "./pages/portal/AdminProposals";
 import InstructorMap from "./pages/portal/InstructorMap";
+import StudentProposals from "./pages/portal/StudentProposals";
 import DrivingGamePage from "./pages/DrivingGame";
 const queryClient = new QueryClient();
 
@@ -95,6 +97,7 @@ const App = () => (
                   
                   {/* Student Portal */}
                   <Route path="/student" element={<StudentDashboard />} />
+                  <Route path="/student/proposals" element={<StudentProposals />} />
                   
                   {/* Instructor Portal */}
                   <Route path="/instructor" element={<InstructorDashboard />} />
@@ -120,6 +123,7 @@ const App = () => (
                   <Route path="/admin/instructors" element={<AdminInstructors />} />
                   <Route path="/admin/permits" element={<AdminPermitQueue />} />
                   <Route path="/admin/map" element={<AdminMap />} />
+                  <Route path="/admin/proposals" element={<AdminProposals />} />
                   
                   {/* Instructor Map */}
                   <Route path="/instructor/map" element={<InstructorMap />} />

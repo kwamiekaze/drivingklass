@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -243,6 +243,7 @@ function getNavItems(role: string | null) {
         { href: '/admin', label: 'Dashboard', icon: Home },
         { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
+        { href: '/admin/proposals', label: 'Proposals', icon: Send },
         { href: '/admin/map', label: 'Map', icon: MapIcon },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
@@ -274,6 +275,7 @@ function getNavItems(role: string | null) {
     default:
       items.push(
         { href: '/student', label: 'Dashboard', icon: Home },
+        { href: '/student/proposals', label: 'Proposals', icon: Send },
         { href: '/profile', label: 'Profile', icon: User },
       );
       break;

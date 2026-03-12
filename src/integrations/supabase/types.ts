@@ -1054,6 +1054,145 @@ export type Database = {
           },
         ]
       }
+      schedule_proposal_items: {
+        Row: {
+          conflict_reason: string | null
+          created_at: string
+          created_session_id: string | null
+          dropoff_address: string | null
+          duration_minutes: number
+          end_time: string
+          id: string
+          item_status: string
+          pickup_address: string | null
+          proposal_id: string
+          proposed_date: string
+          session_type: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          conflict_reason?: string | null
+          created_at?: string
+          created_session_id?: string | null
+          dropoff_address?: string | null
+          duration_minutes?: number
+          end_time: string
+          id?: string
+          item_status?: string
+          pickup_address?: string | null
+          proposal_id: string
+          proposed_date: string
+          session_type?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          conflict_reason?: string | null
+          created_at?: string
+          created_session_id?: string | null
+          dropoff_address?: string | null
+          duration_minutes?: number
+          end_time?: string
+          id?: string
+          item_status?: string
+          pickup_address?: string | null
+          proposal_id?: string
+          proposed_date?: string
+          session_type?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_proposal_items_created_session_id_fkey"
+            columns: ["created_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_proposals: {
+        Row: {
+          acceptance_mode: string
+          accepted_at: string | null
+          created_at: string
+          created_by: string
+          created_by_role: string
+          declined_at: string | null
+          expires_at: string | null
+          finalized_at: string | null
+          id: string
+          instructor_id: string
+          note_to_student: string | null
+          proposal_status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          acceptance_mode?: string
+          accepted_at?: string | null
+          created_at?: string
+          created_by: string
+          created_by_role?: string
+          declined_at?: string | null
+          expires_at?: string | null
+          finalized_at?: string | null
+          id?: string
+          instructor_id: string
+          note_to_student?: string | null
+          proposal_status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          acceptance_mode?: string
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_role?: string
+          declined_at?: string | null
+          expires_at?: string | null
+          finalized_at?: string | null
+          id?: string
+          instructor_id?: string
+          note_to_student?: string | null
+          proposal_status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_proposals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_proposals_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_proposals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string
