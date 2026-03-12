@@ -860,7 +860,59 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
           </CardContent>
         </Card>
 
-        {/* Guardian Information */}
+        {/* Usual Availability */}
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Usual Availability</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Let us know when you're usually available for lessons</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Preferred Days</Label>
+              <div className="flex flex-wrap gap-2">
+                {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={availabilityDays.includes(day) ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-h-[36px] text-xs"
+                    onClick={() => setAvailabilityDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Preferred Time Windows</Label>
+              <div className="flex flex-wrap gap-2">
+                {['Morning','Afternoon','Evening'].map(w => (
+                  <Button
+                    key={w}
+                    type="button"
+                    variant={availabilityWindows.includes(w) ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-h-[36px] text-xs"
+                    onClick={() => setAvailabilityWindows(prev => prev.includes(w) ? prev.filter(x => x !== w) : [...prev, w])}
+                  >
+                    {w}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Additional availability details</Label>
+              <Textarea
+                value={availabilityNotes}
+                onChange={e => setAvailabilityNotes(e.target.value)}
+                placeholder="Example: Available after 4 PM on weekdays, unavailable Sundays, prefer Saturdays before noon."
+                className="min-h-[60px] text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="portal-card">
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="text-base sm:text-lg">Parent/Guardian/Emergency Contact</CardTitle>
