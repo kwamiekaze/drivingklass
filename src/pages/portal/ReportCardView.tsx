@@ -563,6 +563,114 @@ export default function ReportCardView() {
               </Card>
             )}
 
+            {/* Public Sharing Section (admin/instructor/staff only) */}
+            {canManagePublic && (
+              <Card className="portal-card border-primary/20">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Share2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Public Access</span>
+                  </div>
+
+                  {isPublic ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <Link2 className="h-4 w-4 text-green-500 shrink-0" />
+                        <span className="text-sm text-green-500 font-medium">Public access is enabled</span>
+                      </div>
+
+                      <Button
+                        onClick={handleCopyPublicLink}
+                        variant="outline"
+                        className="w-full gap-2 min-h-[44px]"
+                      >
+                        {publicCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {publicCopied ? "Copied!" : "Copy Public Link"}
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground">
+                        This public link is for viewers without a DrivingKlass account. They must enter the access code you set.
+                      </p>
+
+                      {/* Update access code */}
+                      <div className="border-t pt-4 space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground">Update Access Code</p>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="New access code"
+                            value={accessCodeInput}
+                            onChange={(e) => setAccessCodeInput(e.target.value)}
+                            autoComplete="off"
+                          />
+                          <Input
+                            placeholder="Confirm new access code"
+                            value={confirmCodeInput}
+                            onChange={(e) => setConfirmCodeInput(e.target.value)}
+                            autoComplete="off"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleUpdateCode}
+                            variant="outline"
+                            size="sm"
+                            disabled={sharingLoading || !accessCodeInput.trim()}
+                            className="flex-1"
+                          >
+                            {sharingLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update Code"}
+                          </Button>
+                          <Button
+                            onClick={handleDisablePublic}
+                            variant="destructive"
+                            size="sm"
+                            disabled={sharingLoading}
+                            className="flex-1"
+                          >
+                            Disable Public Access
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">This report card is private</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Access Code</Label>
+                        <Input
+                          placeholder="Set access code (min 4 characters)"
+                          value={accessCodeInput}
+                          onChange={(e) => setAccessCodeInput(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Confirm Access Code</Label>
+                        <Input
+                          placeholder="Confirm access code"
+                          value={confirmCodeInput}
+                          onChange={(e) => setConfirmCodeInput(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleEnablePublic}
+                        className="w-full cta-button min-h-[44px] gap-2"
+                        disabled={sharingLoading || !accessCodeInput.trim()}
+                      >
+                        {sharingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                        Make this report card public
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Edit Button for instructor/admin */}
             {(role === 'instructor' || role === 'admin' || role === 'staff') && (
               <Button 
