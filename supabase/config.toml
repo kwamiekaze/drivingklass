@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.cancel-session-with-penalty]
 verify_jwt = false
+
+[functions.verify-report-access]
+verify_jwt = false
+
+[functions.handle-proposal-action]
+verify_jwt = false
