@@ -111,11 +111,22 @@ export default function ReportCardView() {
         setUnauthorized(true);
       } else {
         setReportCard(data[0] as ReportCardDetails);
+        // Load public sharing state
+        if (canManagePublic) {
+          const { data: rcRow } = await supabase
+            .from('report_cards')
+            .select('is_public, public_share_slug')
+            .eq('id', id)
+            .single();
+          if (rcRow) {
+            setIsPublic(rcRow.is_public || false);
+            setPublicSlug(rcRow.public_share_slug || null);
+          }
+        }
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error('Error fetching report card:', err);
-      // Check if it's a permission error vs a general fetch error
       if (err?.code === 'PGRST116' || err?.message?.includes('permission')) {
         setUnauthorized(true);
       } else {
@@ -123,6 +134,123 @@ export default function ReportCardView() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleEnablePublic = async () => {
+    if (!id || !user) return;
+    if (!accessCodeInput.trim()) {
+      toast({ title: "Access code required", description: "Please enter an access code.", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput !== confirmCodeInput) {
+      toast({ title: "Codes don't match", description: "Access code and confirmation must match.", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput.length < 4) {
+      toast({ title: "Code too short", description: "Access code must be at least 4 characters.", variant: "destructive" });
+      return;
+    }
+
+    setSharingLoading(true);
+    const slug = publicSlug || generateSlug();
+    
+    const { error } = await supabase
+      .from('report_cards')
+      .update({
+        is_public: true,
+        public_access_code: accessCodeInput.trim(),
+        public_share_slug: slug,
+        public_enabled_at: new Date().toISOString(),
+        public_enabled_by: user.id,
+      })
+      .eq('id', id);
+
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to enable public access.", variant: "destructive" });
+    } else {
+      setIsPublic(true);
+      setPublicSlug(slug);
+      setAccessCodeInput("");
+      setConfirmCodeInput("");
+      toast({ title: "Public Access Enabled", description: "Report card is now publicly accessible with the access code." });
+    }
+  };
+
+  const handleDisablePublic = async () => {
+    if (!id) return;
+    setSharingLoading(true);
+    
+    const { error } = await supabase
+      .from('report_cards')
+      .update({
+        is_public: false,
+        public_access_code: null,
+        public_share_slug: null,
+        public_enabled_at: null,
+        public_enabled_by: null,
+      })
+      .eq('id', id);
+
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to disable public access.", variant: "destructive" });
+    } else {
+      setIsPublic(false);
+      setPublicSlug(null);
+      toast({ title: "Public Access Disabled", description: "The public link will no longer work." });
+    }
+  };
+
+  const handleUpdateCode = async () => {
+    if (!id || !user) return;
+    if (!accessCodeInput.trim()) {
+      toast({ title: "Access code required", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput !== confirmCodeInput) {
+      toast({ title: "Codes don't match", variant: "destructive" });
+      return;
+    }
+
+    setSharingLoading(true);
+    const { error } = await supabase
+      .from('report_cards')
+      .update({ public_access_code: accessCodeInput.trim() })
+      .eq('id', id);
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update access code.", variant: "destructive" });
+    } else {
+      setAccessCodeInput("");
+      setConfirmCodeInput("");
+      toast({ title: "Access Code Updated" });
+    }
+  };
+
+  const handleCopyPublicLink = async () => {
+    if (!publicSlug) return;
+    const url = `${window.location.origin}/report/public/${publicSlug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setPublicCopied(true);
+      toast({ title: "Public Link Copied", description: "Share this link along with the access code." });
+      setTimeout(() => setPublicCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy Failed", variant: "destructive" });
     }
   };
 
