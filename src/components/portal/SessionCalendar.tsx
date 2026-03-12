@@ -41,6 +41,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [noteForStudent, setNoteForStudent] = useState("");
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +49,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
   const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
+
+  // Edit session form state
+  const [editDate, setEditDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
