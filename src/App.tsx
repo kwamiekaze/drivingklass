@@ -110,6 +110,7 @@ const App = () => (
                   {/* Report Card Routes */}
                   <Route path="/report-cards/open/:id" element={<ReportCardOpen />} />
                   <Route path="/report-cards/:id" element={<ReportCardView />} />
+                  <Route path="/report/public/:slug" element={<PublicReportCard />} />
                   
                   {/* Admin Portal */}
                   <Route path="/admin" element={<AdminDashboard />} />
