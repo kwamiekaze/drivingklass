@@ -175,6 +175,8 @@ export function AdminUserProfileModal({
           last_name: lastName,
           phone: phone.trim() || null,
           hours_remaining: numericHours,
+          pickup_address: pickupAddress.trim() || null,
+          dropoff_address: dropoffAddress.trim() || null,
         })
         .eq('id', profile.id);
 
