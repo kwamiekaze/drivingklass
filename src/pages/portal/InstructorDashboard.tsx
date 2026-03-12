@@ -40,6 +40,7 @@ function InstructorDashboardContent() {
   const [students, setStudents] = useState<InstructorStudent[]>([]);
   const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [proposalOpen, setProposalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
