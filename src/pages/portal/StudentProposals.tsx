@@ -15,6 +15,16 @@ import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
 
+/** Convert "HH:MM" or "HH:MM:SS" (24h) to "h:MM AM/PM" display */
+function formatTime24to12(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  const h = parseInt(hStr);
+  const m = mStr?.padStart(2, '0') || '00';
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${display}:${m} ${ampm}`;
+}
+
 export default function StudentProposals() {
   return (
     <ProtectedRoute allowedRoles={['student']}>
@@ -304,7 +314,7 @@ function StudentProposalsContent() {
                           {format(parseISO(item.proposed_date), 'EEE, MMM d, yyyy')}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}
+                          {formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}
                         </p>
                       </div>
                       <SessionTypeBadge sessionType={item.session_type} />
