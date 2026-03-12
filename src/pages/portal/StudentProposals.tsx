@@ -3,13 +3,13 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, Check, X, Clock, AlertTriangle, Send } from "lucide-react";
+import { Calendar, Check, X, Clock, Edit3, Send } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -34,6 +34,11 @@ function StudentProposalsContent() {
   const [declineReason, setDeclineReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+
+  // Edit request state
+  const [editRequestOpen, setEditRequestOpen] = useState(false);
+  const [editRequestNote, setEditRequestNote] = useState('');
+  const [editRequestLoading, setEditRequestLoading] = useState(false);
 
   useEffect(() => { if (user) fetchProposals(); }, [user]);
 
@@ -86,12 +91,90 @@ function StudentProposalsContent() {
     }
   };
 
+  const handleEditRequest = async () => {
+    if (!editRequestNote.trim()) {
+      toast.error('Please describe your requested changes');
+      return;
+    }
+    setEditRequestLoading(true);
+    try {
+      // Insert edit request
+      const { error: insertErr } = await supabase
+        .from('proposal_edit_requests')
+        .insert({
+          proposal_id: selectedProposal.id,
+          student_id: user!.id,
+          note_text: editRequestNote.trim(),
+          status: 'open',
+        });
+      if (insertErr) throw insertErr;
+
+      // Update proposal status
+      const { error: updateErr } = await supabase
+        .from('schedule_proposals')
+        .update({
+          proposal_status: 'edit_requested',
+          latest_edit_request_note: editRequestNote.trim(),
+          latest_edit_request_at: new Date().toISOString(),
+        })
+        .eq('id', selectedProposal.id);
+      if (updateErr) throw updateErr;
+
+      // Notify admins
+      const { data: staffUsers } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'staff']);
+
+      const studentName = user?.user_metadata?.full_name || user?.email || 'Student';
+
+      if (staffUsers?.length) {
+        await supabase.from('notifications').insert(
+          staffUsers.map(su => ({
+            user_id: su.user_id,
+            title: 'Schedule Edit Requested',
+            message: `${studentName} requested edits to a schedule proposal.`,
+            type: 'schedule',
+            severity: 'info',
+            link: '/admin/proposals',
+          }))
+        );
+      }
+
+      // Notify instructor
+      if (selectedProposal.instructor_id) {
+        await supabase.from('notifications').insert({
+          user_id: selectedProposal.instructor_id,
+          title: 'Schedule Edit Requested',
+          message: `${studentName} requested schedule changes.`,
+          type: 'schedule',
+          severity: 'info',
+          link: '/instructor',
+        });
+      }
+
+      toast.success('Your schedule edit request has been sent to staff.');
+      setEditRequestOpen(false);
+      setEditRequestNote('');
+      setSelectedProposal(null);
+      fetchProposals();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit edit request');
+    } finally {
+      setEditRequestLoading(false);
+    }
+  };
+
+  const canRespondToProposal = (status: string) =>
+    ['sent', 'revised_and_resent'].includes(status);
+
   const statusColor = (status: string) => {
     switch (status) {
-      case 'sent': return 'bg-primary/10 text-primary';
+      case 'sent': case 'revised_and_resent': return 'bg-primary/10 text-primary';
       case 'pending_admin_finalize': return 'bg-orange-500/10 text-orange-500';
-      case 'auto_scheduled': case 'finalized': return 'bg-green-500/10 text-green-500';
+      case 'auto_scheduled': case 'finalized': case 'revised_and_finalized': return 'bg-green-500/10 text-green-500';
       case 'declined': return 'bg-destructive/10 text-destructive';
+      case 'edit_requested': case 'under_revision': return 'bg-yellow-500/10 text-yellow-500';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -99,10 +182,13 @@ function StudentProposalsContent() {
   const statusLabel = (status: string) => {
     switch (status) {
       case 'sent': return 'Awaiting Your Review';
+      case 'revised_and_resent': return 'Revised — Review Again';
       case 'pending_admin_finalize': return 'Accepted — Pending';
       case 'auto_scheduled': return 'Scheduled';
-      case 'finalized': return 'Finalized';
+      case 'finalized': case 'revised_and_finalized': return 'Finalized';
       case 'declined': return 'Declined';
+      case 'edit_requested': return 'Edit Requested';
+      case 'under_revision': return 'Under Revision';
       case 'partially_scheduled': return 'Partially Scheduled';
       default: return status;
     }
@@ -179,12 +265,22 @@ function StudentProposalsContent() {
               )}
 
               {/* Mode info */}
-              {selectedProposal.proposal_status === 'sent' && (
+              {canRespondToProposal(selectedProposal.proposal_status) && (
                 <Card className="border-border/50 bg-muted/30">
                   <CardContent className="p-3 text-xs text-muted-foreground">
                     {selectedProposal.acceptance_mode === 'auto_schedule_on_accept'
                       ? 'After you accept, these dates will be added directly to your schedule.'
                       : 'After you accept, these dates will be marked as pending until an admin finalizes your schedule.'}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Edit requested status */}
+              {selectedProposal.proposal_status === 'edit_requested' && (
+                <Card className="border-yellow-500/30 bg-yellow-500/5">
+                  <CardContent className="p-3 text-sm">
+                    <p className="text-xs text-yellow-500 font-medium mb-1">Edit Request Submitted</p>
+                    <p className="text-muted-foreground text-xs">Staff is reviewing your requested changes. You'll be notified when a revised proposal is ready.</p>
                   </CardContent>
                 </Card>
               )}
@@ -223,8 +319,8 @@ function StudentProposalsContent() {
                 </div>
               </div>
 
-              {/* Actions - only show for 'sent' proposals */}
-              {selectedProposal.proposal_status === 'sent' && !resultMessage && (
+              {/* Actions - show for 'sent' or 'revised_and_resent' proposals */}
+              {canRespondToProposal(selectedProposal.proposal_status) && !resultMessage && (
                 <div className="space-y-3 pt-2">
                   <Button
                     className="w-full min-h-[44px] gap-2"
@@ -233,6 +329,16 @@ function StudentProposalsContent() {
                   >
                     <Check className="h-4 w-4" />
                     Accept Proposed Schedule
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full min-h-[44px] gap-2 border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                    onClick={() => setEditRequestOpen(true)}
+                    disabled={actionLoading}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Request Edit
                   </Button>
 
                   <div className="space-y-1.5">
@@ -256,6 +362,56 @@ function StudentProposalsContent() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Request Modal */}
+      <Dialog open={editRequestOpen} onOpenChange={setEditRequestOpen}>
+        <DialogContent className="w-[min(95vw,500px)] p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-primary" />
+              Request Schedule Edits
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Let us know what dates, times, or other schedule changes you would like. Staff will review your requested edits and send you an updated schedule proposal.
+            </p>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Requested edits *</Label>
+              <Textarea
+                value={editRequestNote}
+                onChange={e => setEditRequestNote(e.target.value)}
+                placeholder="Please move the Tuesday sessions to Thursday after 4 PM and avoid Saturdays."
+                className="min-h-[120px] text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Mention any date/time changes, unavailable days, preferred time windows, or road test timing requests.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 min-h-[44px]"
+                onClick={() => setEditRequestOpen(false)}
+                disabled={editRequestLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 min-h-[44px] gap-2"
+                onClick={handleEditRequest}
+                disabled={editRequestLoading || !editRequestNote.trim()}
+              >
+                <Send className="h-4 w-4" />
+                {editRequestLoading ? 'Submitting...' : 'Submit Edit Request'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

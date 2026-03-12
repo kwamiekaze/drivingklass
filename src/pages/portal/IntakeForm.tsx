@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Upload, Camera, AlertCircle, ArrowLeft } from "lucide-react";
 import { z } from "zod";
@@ -98,6 +99,10 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
     guardian_email: '',
   });
 
+  const [availabilityDays, setAvailabilityDays] = useState<string[]>([]);
+  const [availabilityWindows, setAvailabilityWindows] = useState<string[]>([]);
+  const [availabilityNotes, setAvailabilityNotes] = useState('');
+
   // Form draft hook - only enable for new intake (not admin edit or edit mode with server data)
   const draftEnabled = !isAdminEdit && !isFetchingProfile;
   const { clearDraft } = useFormDraft({
@@ -157,6 +162,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
         });
         setExistingPermitUrl(data.permit_file_url);
         setAvatarUrl(data.avatar_url);
+        setAvailabilityDays((data as any).availability_days || []);
+        setAvailabilityWindows((data as any).availability_windows || []);
+        setAvailabilityNotes((data as any).availability_notes || '');
       }
       
       setIsFetchingProfile(false);
@@ -182,6 +190,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
         guardian_email: profile?.guardian_email || '',
       });
       setExistingPermitUrl(profile?.permit_file_url || null);
+      setAvailabilityDays((profile as any)?.availability_days || []);
+      setAvailabilityWindows((profile as any)?.availability_windows || []);
+      setAvailabilityNotes((profile as any)?.availability_notes || '');
     }
   }, [isAdminEdit, editUserId, user?.id, profile, isEditMode]);
 
@@ -429,6 +440,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
         guardian_phone: formData.guardian_phone,
         guardian_email: formData.guardian_email,
         permit_file_url: permitUrl,
+        availability_days: availabilityDays,
+        availability_windows: availabilityWindows,
+        availability_notes: availabilityNotes || null,
         intake_updated_at: new Date().toISOString(),
         intake_updated_by: user?.id,
         intake_last_edit_role: role,
@@ -847,7 +861,59 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
           </CardContent>
         </Card>
 
-        {/* Guardian Information */}
+        {/* Usual Availability */}
+        <Card className="portal-card">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Usual Availability</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Let us know when you're usually available for lessons</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Preferred Days</Label>
+              <div className="flex flex-wrap gap-2">
+                {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={availabilityDays.includes(day) ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-h-[36px] text-xs"
+                    onClick={() => setAvailabilityDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Preferred Time Windows</Label>
+              <div className="flex flex-wrap gap-2">
+                {['Morning','Afternoon','Evening'].map(w => (
+                  <Button
+                    key={w}
+                    type="button"
+                    variant={availabilityWindows.includes(w) ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-h-[36px] text-xs"
+                    onClick={() => setAvailabilityWindows(prev => prev.includes(w) ? prev.filter(x => x !== w) : [...prev, w])}
+                  >
+                    {w}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Additional availability details</Label>
+              <Textarea
+                value={availabilityNotes}
+                onChange={e => setAvailabilityNotes(e.target.value)}
+                placeholder="Example: Available after 4 PM on weekdays, unavailable Sundays, prefer Saturdays before noon."
+                className="min-h-[60px] text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="portal-card">
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="text-base sm:text-lg">Parent/Guardian/Emergency Contact</CardTitle>
