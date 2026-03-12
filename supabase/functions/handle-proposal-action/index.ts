@@ -5,6 +5,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+// Business timezone for DrivingKlass
+const BUSINESS_TZ = 'America/New_York';
+
+/**
+ * Convert a local date + time in America/New_York to a proper ISO 8601 string
+ * with the correct UTC offset, WITHOUT using Date parsing on ambiguous strings.
+ */
+function toEasternISO(dateStr: string, timeStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  // Ensure time has seconds
+  const timeParts = timeStr.split(':');
+  const h = parseInt(timeParts[0]);
+  const mn = parseInt(timeParts[1]);
+
+  // Determine if this date falls in EDT or EST using Intl
+  // Create a test date at noon UTC on that day
+  const testDate = new Date(Date.UTC(y, m - 1, d, 17, 0)); // 17 UTC = noon-ish Eastern
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TZ,
+    hour: 'numeric',
+    hourCycle: 'h23',
+    timeZoneName: 'shortOffset',
+  });
+  const parts = formatter.formatToParts(testDate);
+  const tzPart = parts.find(p => p.type === 'timeZoneName');
+  // tzPart.value is like "GMT-5" or "GMT-4"
+  const offsetMatch = tzPart?.value?.match(/GMT([+-]?\d+)/);
+  const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -5;
+  const absOffset = Math.abs(offsetHours);
+  const sign = offsetHours <= 0 ? '-' : '+';
+  const offsetStr = `${sign}${String(absOffset).padStart(2, '0')}:00`;
+
+  return `${dateStr}T${String(h).padStart(2, '0')}:${String(mn).padStart(2, '0')}:00${offsetStr}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -45,12 +80,69 @@ Deno.serve(async (req) => {
       throw new Error('Invalid action')
     }
   } catch (error: any) {
+    console.error('[handle-proposal-action] Error:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
+
+/**
+ * Create a real session from a proposal item, using exact timezone-aware timestamps.
+ * Returns the created session or null if conflict/error.
+ */
+async function createSessionFromItem(
+  supabase: any,
+  item: any,
+  proposal: any,
+  createdBy: string,
+): Promise<{ session: any | null; conflict: boolean; error?: string }> {
+  const startsAtISO = toEasternISO(item.proposed_date, item.start_time);
+  const endsAtISO = toEasternISO(item.proposed_date, item.end_time);
+
+  console.log(`[schedule] Item ${item.id}: proposed_date=${item.proposed_date} start=${item.start_time} end=${item.end_time} -> starts_at=${startsAtISO} ends_at=${endsAtISO}`);
+
+  // Check conflicts using the exact timestamps
+  const { data: conflicts } = await supabase
+    .from('sessions')
+    .select('id')
+    .neq('status', 'cancelled')
+    .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
+    .lt('starts_at', endsAtISO)
+    .gt('ends_at', startsAtISO)
+
+  if (conflicts && conflicts.length > 0) {
+    return { session: null, conflict: true, error: 'Time slot conflict with existing session' };
+  }
+
+  const durationMinutes = item.duration_minutes || 120;
+
+  const { data: session, error: sErr } = await supabase
+    .from('sessions')
+    .insert({
+      student_id: proposal.student_id,
+      instructor_id: proposal.instructor_id,
+      starts_at: startsAtISO,
+      ends_at: endsAtISO,
+      duration_minutes: durationMinutes,
+      status: 'scheduled',
+      session_type: item.session_type || 'driving',
+      pickup_address: item.pickup_address,
+      dropoff_address: item.dropoff_address,
+      created_by: createdBy,
+    })
+    .select()
+    .single()
+
+  if (sErr) {
+    console.error(`[schedule] Failed to create session for item ${item.id}:`, sErr.message);
+    return { session: null, conflict: false, error: sErr.message };
+  }
+
+  console.log(`[schedule] Created session ${session.id} for item ${item.id}: starts_at=${session.starts_at} ends_at=${session.ends_at}`);
+  return { session, conflict: false };
+}
 
 async function handleAccept(supabase: any, userId: string, userRole: string, proposalId: string) {
   const { data: proposal, error: pErr } = await supabase
@@ -75,46 +167,11 @@ async function handleAccept(supabase: any, userId: string, userRole: string, pro
     const results = { scheduled: 0, conflicts: 0, conflictItems: [] as string[] }
 
     for (const item of items) {
-      const startsAt = new Date(`${item.proposed_date}T${item.start_time}`)
-      const endsAt = new Date(`${item.proposed_date}T${item.end_time}`)
+      const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
 
-      const { data: conflicts } = await supabase
-        .from('sessions')
-        .select('id')
-        .neq('status', 'cancelled')
-        .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
-        .lt('starts_at', endsAt.toISOString())
-        .gt('ends_at', startsAt.toISOString())
-
-      if (conflicts && conflicts.length > 0) {
+      if (conflict || !session) {
         await supabase.from('schedule_proposal_items')
-          .update({ item_status: 'conflict', conflict_reason: 'Time slot conflict with existing session' })
-          .eq('id', item.id)
-        results.conflicts++
-        continue
-      }
-
-      const durationMinutes = item.duration_minutes || Math.round((endsAt.getTime() - startsAt.getTime()) / 60000)
-      const { data: session, error: sErr } = await supabase
-        .from('sessions')
-        .insert({
-          student_id: proposal.student_id,
-          instructor_id: proposal.instructor_id,
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          duration_minutes: durationMinutes,
-          status: 'scheduled',
-          session_type: item.session_type || 'driving',
-          pickup_address: item.pickup_address,
-          dropoff_address: item.dropoff_address,
-          created_by: userId,
-        })
-        .select()
-        .single()
-
-      if (sErr) {
-        await supabase.from('schedule_proposal_items')
-          .update({ item_status: 'conflict', conflict_reason: sErr.message })
+          .update({ item_status: 'conflict', conflict_reason: error || 'Time slot conflict' })
           .eq('id', item.id)
         results.conflicts++
         continue
@@ -239,46 +296,11 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
   let conflicts = 0
 
   for (const item of items) {
-    const startsAt = new Date(`${item.proposed_date}T${item.start_time}`)
-    const endsAt = new Date(`${item.proposed_date}T${item.end_time}`)
+    const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
 
-    const { data: conflictSessions } = await supabase
-      .from('sessions')
-      .select('id')
-      .neq('status', 'cancelled')
-      .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
-      .lt('starts_at', endsAt.toISOString())
-      .gt('ends_at', startsAt.toISOString())
-
-    if (conflictSessions && conflictSessions.length > 0) {
+    if (conflict || !session) {
       await supabase.from('schedule_proposal_items')
-        .update({ item_status: 'conflict', conflict_reason: 'Time slot conflict' })
-        .eq('id', item.id)
-      conflicts++
-      continue
-    }
-
-    const durationMinutes = item.duration_minutes || Math.round((endsAt.getTime() - startsAt.getTime()) / 60000)
-    const { data: session, error: sErr } = await supabase
-      .from('sessions')
-      .insert({
-        student_id: proposal.student_id,
-        instructor_id: proposal.instructor_id,
-        starts_at: startsAt.toISOString(),
-        ends_at: endsAt.toISOString(),
-        duration_minutes: durationMinutes,
-        status: 'scheduled',
-        session_type: item.session_type || 'driving',
-        pickup_address: item.pickup_address,
-        dropoff_address: item.dropoff_address,
-        created_by: userId,
-      })
-      .select()
-      .single()
-
-    if (sErr) {
-      await supabase.from('schedule_proposal_items')
-        .update({ item_status: 'conflict', conflict_reason: sErr.message })
+        .update({ item_status: 'conflict', conflict_reason: error || 'Time slot conflict' })
         .eq('id', item.id)
       conflicts++
       continue
