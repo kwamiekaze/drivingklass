@@ -205,6 +205,127 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setNotesDialogOpen(true);
   };
 
+  const openEditDialog = (session: Session) => {
+    // Parse existing times and prefill - use formatInTimeZone-like approach
+    // Display in ET by formatting the ISO string 
+    const startDate = parseISO(session.starts_at);
+    const endDate = parseISO(session.ends_at);
+    // Format as ET using Intl
+    const etFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const etTimeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false });
+    
+    setEditDate(etFormatter.format(startDate));
+    const startTimeParts = etTimeFormatter.format(startDate).replace(/\u200E/g, '');
+    const endTimeParts = etTimeFormatter.format(endDate).replace(/\u200E/g, '');
+    // Normalize "24:xx" to "00:xx"
+    setEditStartTime(startTimeParts.startsWith('24') ? '00' + startTimeParts.slice(2) : startTimeParts);
+    setEditEndTime(endTimeParts.startsWith('24') ? '00' + endTimeParts.slice(2) : endTimeParts);
+    setEditConflictWarning(null);
+    setEditDialogOpen(true);
+  };
+
+  // Convert local ET date + time to UTC ISO string
+  const toEasternISO = (dateStr: string, timeStr: string): string => {
+    // Build a date string and use Intl to find the correct UTC offset
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    
+    // Create a rough UTC guess, then converge
+    let guess = new Date(Date.UTC(year, month - 1, day, hours + 5, minutes));
+    for (let i = 0; i < 3; i++) {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', hour12: false,
+      }).formatToParts(guess);
+      const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0');
+      const etH = get('hour') === 24 ? 0 : get('hour');
+      const diffMs = ((etH - hours) * 60 + (get('minute') - minutes)) * 60000;
+      if (diffMs === 0) break;
+      guess = new Date(guess.getTime() - diffMs);
+    }
+    return guess.toISOString();
+  };
+
+  const handleEditSession = async () => {
+    if (!selectedSession || !editDate || !editStartTime || !editEndTime) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    // Validate end > start
+    const [sh, sm] = editStartTime.split(':').map(Number);
+    const [eh, em] = editEndTime.split(':').map(Number);
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+    if (endMins <= startMins) {
+      toast({ title: "Error", description: "End time must be after start time", variant: "destructive" });
+      return;
+    }
+
+    const durationMinutes = endMins - startMins;
+    const newStartsAt = toEasternISO(editDate, editStartTime);
+    const newEndsAt = toEasternISO(editDate, editEndTime);
+
+    // Check for conflicts
+    setIsLoading(true);
+    setEditConflictWarning(null);
+    try {
+      // Check instructor conflicts
+      const { data: instructorConflicts } = await supabase
+        .from('sessions')
+        .select('id, starts_at, ends_at')
+        .eq('instructor_id', selectedSession.instructor_id)
+        .neq('id', selectedSession.id)
+        .neq('status', 'cancelled')
+        .lt('starts_at', newEndsAt)
+        .gt('ends_at', newStartsAt);
+
+      // Check student conflicts
+      const { data: studentConflicts } = await supabase
+        .from('sessions')
+        .select('id, starts_at, ends_at')
+        .eq('student_id', selectedSession.student_id)
+        .neq('id', selectedSession.id)
+        .neq('status', 'cancelled')
+        .lt('starts_at', newEndsAt)
+        .gt('ends_at', newStartsAt);
+
+      const conflicts = [
+        ...(instructorConflicts || []).map(() => 'instructor'),
+        ...(studentConflicts || []).map(() => 'student'),
+      ];
+
+      if (conflicts.length > 0) {
+        const who = [...new Set(conflicts)].join(' and ');
+        setEditConflictWarning(`This updated time conflicts with another scheduled session for the ${who}.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Update session
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          starts_at: newStartsAt,
+          ends_at: newEndsAt,
+          duration_minutes: durationMinutes,
+        })
+        .eq('id', selectedSession.id);
+
+      if (error) throw error;
+
+      toast({ title: "Session Updated", description: "Session updated successfully." });
+      setEditDialogOpen(false);
+      setSelectedSession(null);
+      onSessionUpdate?.();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update session", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ── Permission helpers ──
   const canCancel = (session: Session) => {
     if (session.status === 'cancelled') return false;
