@@ -71,16 +71,26 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
             fetchProfile(session.user.id);
             fetchRole(session.user.id);
           }, 0);
+
+          // Update last_sign_in_at on any sign-in or token refresh
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            setTimeout(() => {
+              supabase
+                .from('profiles')
+                .update({ last_sign_in_at: new Date().toISOString() })
+                .eq('id', session.user.id)
+                .then(() => {});
+            }, 0);
+          }
         } else {
           setProfile(null);
           setRole(null);
         }
 
-        // Handle OAuth callback: if user just signed in and landed on "/" or root, redirect to login for routing
+        // Handle OAuth callback
         if (event === 'SIGNED_IN' && session?.user) {
           const path = window.location.pathname;
           if (path === '/' || path === '') {
-            // Small delay to let profile/role load first
             setTimeout(() => {
               window.location.href = '/login';
             }, 500);
@@ -93,6 +103,13 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        // Update last_sign_in_at on session restore
+        supabase
+          .from('profiles')
+          .update({ last_sign_in_at: new Date().toISOString() })
+          .eq('id', session.user.id)
+          .then(() => {});
+
         Promise.all([
           fetchProfile(session.user.id),
           fetchRole(session.user.id)
