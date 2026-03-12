@@ -97,6 +97,7 @@ const App = () => (
                   
                   {/* Student Portal */}
                   <Route path="/student" element={<StudentDashboard />} />
+                  <Route path="/student/proposals" element={<StudentProposals />} />
                   
                   {/* Instructor Portal */}
                   <Route path="/instructor" element={<InstructorDashboard />} />
