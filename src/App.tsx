@@ -49,6 +49,7 @@ import AdminMap from "./pages/portal/AdminMap";
 import AdminProposals from "./pages/portal/AdminProposals";
 import InstructorMap from "./pages/portal/InstructorMap";
 import StudentProposals from "./pages/portal/StudentProposals";
+import PublicReportCard from "./pages/portal/PublicReportCard";
 import DrivingGamePage from "./pages/DrivingGame";
 const queryClient = new QueryClient();
 
@@ -109,6 +110,7 @@ const App = () => (
                   {/* Report Card Routes */}
                   <Route path="/report-cards/open/:id" element={<ReportCardOpen />} />
                   <Route path="/report-cards/:id" element={<ReportCardView />} />
+                  <Route path="/report/public/:slug" element={<PublicReportCard />} />
                   
                   {/* Admin Portal */}
                   <Route path="/admin" element={<AdminDashboard />} />

@@ -6,8 +6,11 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX, Share2, Lock, Link2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import { useTheme } from "@/components/ThemeProvider";
@@ -65,9 +68,18 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Public sharing state
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
+  const [accessCodeInput, setAccessCodeInput] = useState("");
+  const [confirmCodeInput, setConfirmCodeInput] = useState("");
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [publicCopied, setPublicCopied] = useState(false);
   
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
+  const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
 
   const fetchReportCard = async () => {
     if (!id) {
@@ -99,11 +111,22 @@ export default function ReportCardView() {
         setUnauthorized(true);
       } else {
         setReportCard(data[0] as ReportCardDetails);
+        // Load public sharing state
+        if (canManagePublic) {
+          const { data: rcRow } = await supabase
+            .from('report_cards')
+            .select('is_public, public_share_slug')
+            .eq('id', id)
+            .single();
+          if (rcRow) {
+            setIsPublic(rcRow.is_public || false);
+            setPublicSlug(rcRow.public_share_slug || null);
+          }
+        }
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error('Error fetching report card:', err);
-      // Check if it's a permission error vs a general fetch error
       if (err?.code === 'PGRST116' || err?.message?.includes('permission')) {
         setUnauthorized(true);
       } else {
@@ -111,6 +134,123 @@ export default function ReportCardView() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleEnablePublic = async () => {
+    if (!id || !user) return;
+    if (!accessCodeInput.trim()) {
+      toast({ title: "Access code required", description: "Please enter an access code.", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput !== confirmCodeInput) {
+      toast({ title: "Codes don't match", description: "Access code and confirmation must match.", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput.length < 4) {
+      toast({ title: "Code too short", description: "Access code must be at least 4 characters.", variant: "destructive" });
+      return;
+    }
+
+    setSharingLoading(true);
+    const slug = publicSlug || generateSlug();
+    
+    const { error } = await supabase
+      .from('report_cards')
+      .update({
+        is_public: true,
+        public_access_code: accessCodeInput.trim(),
+        public_share_slug: slug,
+        public_enabled_at: new Date().toISOString(),
+        public_enabled_by: user.id,
+      })
+      .eq('id', id);
+
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to enable public access.", variant: "destructive" });
+    } else {
+      setIsPublic(true);
+      setPublicSlug(slug);
+      setAccessCodeInput("");
+      setConfirmCodeInput("");
+      toast({ title: "Public Access Enabled", description: "Report card is now publicly accessible with the access code." });
+    }
+  };
+
+  const handleDisablePublic = async () => {
+    if (!id) return;
+    setSharingLoading(true);
+    
+    const { error } = await supabase
+      .from('report_cards')
+      .update({
+        is_public: false,
+        public_access_code: null,
+        public_share_slug: null,
+        public_enabled_at: null,
+        public_enabled_by: null,
+      })
+      .eq('id', id);
+
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to disable public access.", variant: "destructive" });
+    } else {
+      setIsPublic(false);
+      setPublicSlug(null);
+      toast({ title: "Public Access Disabled", description: "The public link will no longer work." });
+    }
+  };
+
+  const handleUpdateCode = async () => {
+    if (!id || !user) return;
+    if (!accessCodeInput.trim()) {
+      toast({ title: "Access code required", variant: "destructive" });
+      return;
+    }
+    if (accessCodeInput !== confirmCodeInput) {
+      toast({ title: "Codes don't match", variant: "destructive" });
+      return;
+    }
+
+    setSharingLoading(true);
+    const { error } = await supabase
+      .from('report_cards')
+      .update({ public_access_code: accessCodeInput.trim() })
+      .eq('id', id);
+    setSharingLoading(false);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update access code.", variant: "destructive" });
+    } else {
+      setAccessCodeInput("");
+      setConfirmCodeInput("");
+      toast({ title: "Access Code Updated" });
+    }
+  };
+
+  const handleCopyPublicLink = async () => {
+    if (!publicSlug) return;
+    const url = `${window.location.origin}/report/public/${publicSlug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setPublicCopied(true);
+      toast({ title: "Public Link Copied", description: "Share this link along with the access code." });
+      setTimeout(() => setPublicCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy Failed", variant: "destructive" });
     }
   };
 
@@ -419,6 +559,114 @@ export default function ReportCardView() {
                     <span className="font-medium text-sm text-destructive">Internal Notes (Staff Only)</span>
                   </div>
                   <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.internal_message}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Public Sharing Section (admin/instructor/staff only) */}
+            {canManagePublic && (
+              <Card className="portal-card border-primary/20">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Share2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Public Access</span>
+                  </div>
+
+                  {isPublic ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <Link2 className="h-4 w-4 text-green-500 shrink-0" />
+                        <span className="text-sm text-green-500 font-medium">Public access is enabled</span>
+                      </div>
+
+                      <Button
+                        onClick={handleCopyPublicLink}
+                        variant="outline"
+                        className="w-full gap-2 min-h-[44px]"
+                      >
+                        {publicCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {publicCopied ? "Copied!" : "Copy Public Link"}
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground">
+                        This public link is for viewers without a DrivingKlass account. They must enter the access code you set.
+                      </p>
+
+                      {/* Update access code */}
+                      <div className="border-t pt-4 space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground">Update Access Code</p>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="New access code"
+                            value={accessCodeInput}
+                            onChange={(e) => setAccessCodeInput(e.target.value)}
+                            autoComplete="off"
+                          />
+                          <Input
+                            placeholder="Confirm new access code"
+                            value={confirmCodeInput}
+                            onChange={(e) => setConfirmCodeInput(e.target.value)}
+                            autoComplete="off"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleUpdateCode}
+                            variant="outline"
+                            size="sm"
+                            disabled={sharingLoading || !accessCodeInput.trim()}
+                            className="flex-1"
+                          >
+                            {sharingLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update Code"}
+                          </Button>
+                          <Button
+                            onClick={handleDisablePublic}
+                            variant="destructive"
+                            size="sm"
+                            disabled={sharingLoading}
+                            className="flex-1"
+                          >
+                            Disable Public Access
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">This report card is private</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Access Code</Label>
+                        <Input
+                          placeholder="Set access code (min 4 characters)"
+                          value={accessCodeInput}
+                          onChange={(e) => setAccessCodeInput(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Confirm Access Code</Label>
+                        <Input
+                          placeholder="Confirm access code"
+                          value={confirmCodeInput}
+                          onChange={(e) => setConfirmCodeInput(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleEnablePublic}
+                        className="w-full cta-button min-h-[44px] gap-2"
+                        disabled={sharingLoading || !accessCodeInput.trim()}
+                      >
+                        {sharingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                        Make this report card public
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
