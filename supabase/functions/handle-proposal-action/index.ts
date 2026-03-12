@@ -190,6 +190,7 @@ async function handleAccept(supabase: any, userId: string, userRole: string, pro
     .eq('proposal_id', proposalId)
     .eq('item_status', 'proposed')
     .order('proposed_date', { ascending: true })
+    .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No proposal items found')
 
