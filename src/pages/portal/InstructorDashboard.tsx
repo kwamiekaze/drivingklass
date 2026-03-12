@@ -149,11 +149,17 @@ function InstructorDashboardContent() {
       </div>
 
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-          Klassroom Dashboard
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
+            Klassroom Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your lessons and students</p>
+        </div>
+        <Button className="gap-2 min-h-[40px] w-full sm:w-auto" onClick={() => setProposalOpen(true)}>
+          <Send className="h-4 w-4" />
+          Propose Schedule
+        </Button>
       </div>
 
       {/* Quick Stats */}
