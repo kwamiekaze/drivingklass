@@ -98,6 +98,10 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
     guardian_email: '',
   });
 
+  const [availabilityDays, setAvailabilityDays] = useState<string[]>([]);
+  const [availabilityWindows, setAvailabilityWindows] = useState<string[]>([]);
+  const [availabilityNotes, setAvailabilityNotes] = useState('');
+
   // Form draft hook - only enable for new intake (not admin edit or edit mode with server data)
   const draftEnabled = !isAdminEdit && !isFetchingProfile;
   const { clearDraft } = useFormDraft({
