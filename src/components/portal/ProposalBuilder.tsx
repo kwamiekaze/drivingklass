@@ -1,0 +1,348 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Send, Calendar } from "lucide-react";
+import { Profile } from "@/types/portal";
+import { getDisplayName } from "@/lib/profileUtils";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+interface ProposalItem {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: string;
+  session_type: string;
+}
+
+interface ProposalBuilderProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  preselectedStudentId?: string;
+  preselectedInstructorId?: string;
+  onProposalSent?: () => void;
+}
+
+const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
+  const hours = Math.floor(i / 2);
+  const mins = (i % 2) * 30;
+  const val = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  const displayH = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+  const ampm = hours < 12 ? 'AM' : 'PM';
+  return { value: val, label: `${displayH}:${mins.toString().padStart(2, '0')} ${ampm}` };
+});
+
+function computeEndTime(startTime: string, durationMinutes: number): string {
+  const [h, m] = startTime.split(':').map(Number);
+  const totalMins = h * 60 + m + durationMinutes;
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+}
+
+export function ProposalBuilder({ open, onOpenChange, preselectedStudentId, preselectedInstructorId, onProposalSent }: ProposalBuilderProps) {
+  const { role, user } = usePortalAuth();
+  const isAdmin = role === 'admin' || role === 'staff';
+
+  const [students, setStudents] = useState<Profile[]>([]);
+  const [instructors, setInstructors] = useState<Profile[]>([]);
+  const [studentId, setStudentId] = useState(preselectedStudentId || '');
+  const [instructorId, setInstructorId] = useState(preselectedInstructorId || (role === 'instructor' ? user?.id || '' : ''));
+  const [acceptanceMode, setAcceptanceMode] = useState('pending_admin_finalize');
+  const [noteToStudent, setNoteToStudent] = useState('');
+  const [items, setItems] = useState<ProposalItem[]>([createEmptyItem()]);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (open) fetchOptions();
+  }, [open]);
+
+  useEffect(() => {
+    if (preselectedStudentId) setStudentId(preselectedStudentId);
+    if (preselectedInstructorId) setInstructorId(preselectedInstructorId);
+  }, [preselectedStudentId, preselectedInstructorId]);
+
+  function createEmptyItem(): ProposalItem {
+    return {
+      id: crypto.randomUUID(),
+      date: '',
+      start_time: '09:00',
+      end_time: '11:00',
+      duration_minutes: '120',
+      session_type: 'driving',
+    };
+  }
+
+  const fetchOptions = async () => {
+    const { data: studentRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'student');
+    if (studentRoles?.length) {
+      const { data: sp } = await supabase.from('profiles').select('*').in('id', studentRoles.map(r => r.user_id)).eq('approval_status', 'approved');
+      setStudents((sp || []) as Profile[]);
+    }
+    const { data: instructorRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'instructor');
+    if (instructorRoles?.length) {
+      const { data: ip } = await supabase.from('profiles').select('*').in('id', instructorRoles.map(r => r.user_id)).eq('approval_status', 'approved');
+      setInstructors((ip || []) as Profile[]);
+    }
+  };
+
+  const addItem = () => {
+    if (items.length >= 20) {
+      toast.error('Maximum 20 dates per proposal');
+      return;
+    }
+    setItems(prev => [...prev, createEmptyItem()]);
+  };
+
+  const removeItem = (id: string) => {
+    if (items.length <= 1) return;
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const updateItem = (id: string, field: keyof ProposalItem, value: string) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const updated = { ...item, [field]: value };
+      if (field === 'start_time' || field === 'duration_minutes') {
+        const st = field === 'start_time' ? value : item.start_time;
+        const dur = field === 'duration_minutes' ? parseInt(value) : parseInt(item.duration_minutes);
+        updated.end_time = computeEndTime(st, dur);
+      }
+      return updated;
+    }));
+  };
+
+  const handleSend = async () => {
+    if (!studentId || !instructorId) { toast.error('Select student and instructor'); return; }
+    const validItems = items.filter(i => i.date && i.start_time);
+    if (validItems.length === 0) { toast.error('Add at least one date'); return; }
+
+    setSending(true);
+    try {
+      // Get student profile for pickup/dropoff defaults
+      const { data: studentProfile } = await supabase.from('profiles').select('pickup_address, dropoff_address').eq('id', studentId).single();
+
+      const { data: proposal, error: pErr } = await supabase
+        .from('schedule_proposals')
+        .insert({
+          student_id: studentId,
+          instructor_id: instructorId,
+          created_by: user!.id,
+          created_by_role: role,
+          proposal_status: 'sent',
+          acceptance_mode: acceptanceMode,
+          note_to_student: noteToStudent || null,
+        })
+        .select()
+        .single();
+
+      if (pErr) throw pErr;
+
+      const itemRows = validItems.map(item => ({
+        proposal_id: proposal.id,
+        proposed_date: item.date,
+        start_time: item.start_time,
+        end_time: item.end_time,
+        duration_minutes: parseInt(item.duration_minutes),
+        session_type: item.session_type,
+        pickup_address: studentProfile?.pickup_address || null,
+        dropoff_address: studentProfile?.dropoff_address || null,
+        item_status: 'proposed',
+      }));
+
+      const { error: iErr } = await supabase
+        .from('schedule_proposal_items')
+        .insert(itemRows);
+
+      if (iErr) throw iErr;
+
+      // Notify student
+      await supabase.from('notifications').insert({
+        user_id: studentId,
+        title: 'New Schedule Proposal',
+        message: `You have a new proposed schedule with ${validItems.length} date(s). Please review and accept or decline.`,
+        type: 'schedule',
+        severity: 'info',
+        link: '/student/proposals',
+      });
+
+      toast.success(`Proposal sent with ${validItems.length} date(s)`);
+      onOpenChange(false);
+      onProposalSent?.();
+      // Reset
+      setItems([createEmptyItem()]);
+      setNoteToStudent('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send proposal');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[min(95vw,640px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Propose Schedule
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Student & Instructor Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Student</Label>
+              <Select value={studentId} onValueChange={setStudentId}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select student" /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50 max-h-[200px]">
+                  {students.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{getDisplayName(s, 'Unknown')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Instructor</Label>
+              <Select value={instructorId} onValueChange={setInstructorId} disabled={role === 'instructor'}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select instructor" /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50 max-h-[200px]">
+                  {instructors.map(i => (
+                    <SelectItem key={i.id} value={i.id}>{getDisplayName(i, 'Unknown')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Acceptance Mode - Admin only can choose auto */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">After student accepts</Label>
+            <RadioGroup value={acceptanceMode} onValueChange={setAcceptanceMode} className="space-y-2">
+              <div className="flex items-start gap-3 p-3 rounded-lg border">
+                <RadioGroupItem value="pending_admin_finalize" id="mode-pending" className="mt-0.5" />
+                <Label htmlFor="mode-pending" className="text-sm cursor-pointer leading-relaxed">
+                  Mark accepted dates as pending for admin review
+                </Label>
+              </div>
+              <div className={`flex items-start gap-3 p-3 rounded-lg border ${!isAdmin ? 'opacity-50' : ''}`}>
+                <RadioGroupItem value="auto_schedule_on_accept" id="mode-auto" disabled={!isAdmin} className="mt-0.5" />
+                <Label htmlFor="mode-auto" className={`text-sm cursor-pointer leading-relaxed ${!isAdmin ? 'cursor-not-allowed' : ''}`}>
+                  Auto-schedule accepted dates immediately
+                  {!isAdmin && <span className="text-xs text-muted-foreground block mt-0.5">Admin only</span>}
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Note */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Note to student (optional)</Label>
+            <Textarea
+              value={noteToStudent}
+              onChange={e => setNoteToStudent(e.target.value)}
+              placeholder="Add any notes for the student..."
+              className="min-h-[60px]"
+            />
+          </div>
+
+          {/* Date Items */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Proposed Dates ({items.length}/20)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addItem} disabled={items.length >= 20} className="gap-1 min-h-[36px]">
+                <Plus className="h-3.5 w-3.5" />
+                Add Date
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              {items.map((item, idx) => (
+                <Card key={item.id} className="border-border/50">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="secondary" className="text-[10px] shrink-0 mt-1">{idx + 1}</Badge>
+                      <div className="flex-1 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Date</Label>
+                            <Input
+                              type="date"
+                              value={item.date}
+                              onChange={e => updateItem(item.id, 'date', e.target.value)}
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Start Time</Label>
+                            <Select value={item.start_time} onValueChange={v => updateItem(item.id, 'start_time', v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover border z-50 max-h-[200px]">
+                                {TIME_SLOTS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Duration</Label>
+                            <Select value={item.duration_minutes} onValueChange={v => updateItem(item.id, 'duration_minutes', v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover border z-50">
+                                <SelectItem value="60">1 hour</SelectItem>
+                                <SelectItem value="90">1.5 hours</SelectItem>
+                                <SelectItem value="120">2 hours</SelectItem>
+                                <SelectItem value="180">3 hours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Type</Label>
+                            <Select value={item.session_type} onValueChange={v => updateItem(item.id, 'session_type', v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover border z-50">
+                                <SelectItem value="driving">Driving</SelectItem>
+                                <SelectItem value="testing">Road Test</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => removeItem(item.id)}
+                        disabled={items.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Send */}
+          <Button className="w-full min-h-[44px] gap-2" onClick={handleSend} disabled={sending}>
+            <Send className="h-4 w-4" />
+            {sending ? 'Sending...' : `Send Proposal (${items.filter(i => i.date).length} dates)`}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
