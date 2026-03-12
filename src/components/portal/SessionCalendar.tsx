@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, FileText, MessageSquare, Loader2, Phone, ClipboardCheck } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Calendar, Clock, CheckCircle, XCircle, User, AlertTriangle, FileText, MessageSquare, Loader2, Phone, ClipboardCheck, Pencil } from "lucide-react";
+import { format, parseISO, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -39,6 +41,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [noteForStudent, setNoteForStudent] = useState("");
   const [noteForInstructor, setNoteForInstructor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +49,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
   const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
+
+  // Edit session form state
+  const [editDate, setEditDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
@@ -196,6 +205,127 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setNotesDialogOpen(true);
   };
 
+  const openEditDialog = (session: Session) => {
+    // Parse existing times and prefill - use formatInTimeZone-like approach
+    // Display in ET by formatting the ISO string 
+    const startDate = parseISO(session.starts_at);
+    const endDate = parseISO(session.ends_at);
+    // Format as ET using Intl
+    const etFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const etTimeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false });
+    
+    setEditDate(etFormatter.format(startDate));
+    const startTimeParts = etTimeFormatter.format(startDate).replace(/\u200E/g, '');
+    const endTimeParts = etTimeFormatter.format(endDate).replace(/\u200E/g, '');
+    // Normalize "24:xx" to "00:xx"
+    setEditStartTime(startTimeParts.startsWith('24') ? '00' + startTimeParts.slice(2) : startTimeParts);
+    setEditEndTime(endTimeParts.startsWith('24') ? '00' + endTimeParts.slice(2) : endTimeParts);
+    setEditConflictWarning(null);
+    setEditDialogOpen(true);
+  };
+
+  // Convert local ET date + time to UTC ISO string
+  const toEasternISO = (dateStr: string, timeStr: string): string => {
+    // Build a date string and use Intl to find the correct UTC offset
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    
+    // Create a rough UTC guess, then converge
+    let guess = new Date(Date.UTC(year, month - 1, day, hours + 5, minutes));
+    for (let i = 0; i < 3; i++) {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', hour12: false,
+      }).formatToParts(guess);
+      const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0');
+      const etH = get('hour') === 24 ? 0 : get('hour');
+      const diffMs = ((etH - hours) * 60 + (get('minute') - minutes)) * 60000;
+      if (diffMs === 0) break;
+      guess = new Date(guess.getTime() - diffMs);
+    }
+    return guess.toISOString();
+  };
+
+  const handleEditSession = async () => {
+    if (!selectedSession || !editDate || !editStartTime || !editEndTime) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    // Validate end > start
+    const [sh, sm] = editStartTime.split(':').map(Number);
+    const [eh, em] = editEndTime.split(':').map(Number);
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+    if (endMins <= startMins) {
+      toast({ title: "Error", description: "End time must be after start time", variant: "destructive" });
+      return;
+    }
+
+    const durationMinutes = endMins - startMins;
+    const newStartsAt = toEasternISO(editDate, editStartTime);
+    const newEndsAt = toEasternISO(editDate, editEndTime);
+
+    // Check for conflicts
+    setIsLoading(true);
+    setEditConflictWarning(null);
+    try {
+      // Check instructor conflicts
+      const { data: instructorConflicts } = await supabase
+        .from('sessions')
+        .select('id, starts_at, ends_at')
+        .eq('instructor_id', selectedSession.instructor_id)
+        .neq('id', selectedSession.id)
+        .neq('status', 'cancelled')
+        .lt('starts_at', newEndsAt)
+        .gt('ends_at', newStartsAt);
+
+      // Check student conflicts
+      const { data: studentConflicts } = await supabase
+        .from('sessions')
+        .select('id, starts_at, ends_at')
+        .eq('student_id', selectedSession.student_id)
+        .neq('id', selectedSession.id)
+        .neq('status', 'cancelled')
+        .lt('starts_at', newEndsAt)
+        .gt('ends_at', newStartsAt);
+
+      const conflicts = [
+        ...(instructorConflicts || []).map(() => 'instructor'),
+        ...(studentConflicts || []).map(() => 'student'),
+      ];
+
+      if (conflicts.length > 0) {
+        const who = [...new Set(conflicts)].join(' and ');
+        setEditConflictWarning(`This updated time conflicts with another scheduled session for the ${who}.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Update session
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          starts_at: newStartsAt,
+          ends_at: newEndsAt,
+          duration_minutes: durationMinutes,
+        })
+        .eq('id', selectedSession.id);
+
+      if (error) throw error;
+
+      toast({ title: "Session Updated", description: "Session updated successfully." });
+      setEditDialogOpen(false);
+      setSelectedSession(null);
+      onSessionUpdate?.();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update session", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ── Permission helpers ──
   const canCancel = (session: Session) => {
     if (session.status === 'cancelled') return false;
@@ -243,7 +373,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       />
 
       {/* ── Session Details Dialog ── */}
-      <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
+      <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen && !editDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Session Details</DialogTitle>
@@ -415,6 +545,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       </Button>
                     )}
                     {isStaffOrAdmin && (
+                      <Button variant="outline" onClick={() => openEditDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
+                        <Pencil className="h-4 w-4" />Edit Session
+                      </Button>
+                    )}
+                    {isStaffOrAdmin && (
                       <Button variant="outline" onClick={() => openNotesDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
                         <MessageSquare className="h-4 w-4" />Edit Notes
                       </Button>
@@ -495,6 +630,89 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         </DialogContent>
       </Dialog>
 
+      {/* Edit Session Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Edit Session</DialogTitle>
+            <DialogDescription>Update the date and time for this session.</DialogDescription>
+          </DialogHeader>
+          {selectedSession && sessionDetails && (
+            <div className="space-y-4">
+              {/* Read-only context */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Student</p>
+                  <p className="text-sm font-medium">{sessionDetails.student_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Instructor</p>
+                  <p className="text-sm font-medium">{sessionDetails.instructor_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <SessionTypeBadge sessionType={selectedSession.session_type} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                </div>
+              </div>
+
+              {selectedSession.report_card_id && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+                  ⚠️ This session has a submitted report card. Updating the date/time will keep the report linked.
+                </div>
+              )}
+
+              {/* Editable fields */}
+              <div className="space-y-2">
+                <Label className="text-sm">Date</Label>
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => { setEditDate(e.target.value); setEditConflictWarning(null); }}
+                  className="min-h-[44px]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">Start Time (ET)</Label>
+                  <Select value={editStartTime} onValueChange={(v) => { setEditStartTime(v); setEditConflictWarning(null); }}>
+                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Start" /></SelectTrigger>
+                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                      {generateTimeOptions()}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">End Time (ET)</Label>
+                  <Select value={editEndTime} onValueChange={(v) => { setEditEndTime(v); setEditConflictWarning(null); }}>
+                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="End" /></SelectTrigger>
+                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                      {generateTimeOptions()}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editConflictWarning && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  {editConflictWarning}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0 mt-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="min-h-[44px]">Cancel</Button>
+            <Button onClick={handleEditSession} disabled={isLoading} className="min-h-[44px] gap-2">
+              {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Profile Modal */}
       <AdminUserProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} userId={profileModalUserId} onProfileUpdated={onSessionUpdate} />
 
@@ -513,7 +731,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   );
 }
 
-// ── Color helpers ──
+// ── Time options helper ──
+function generateTimeOptions() {
+  return Array.from({ length: 48 }, (_, i) => {
+    const hours = Math.floor(i / 2);
+    const mins = (i % 2) * 30;
+    const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const ampm = hours < 12 ? 'AM' : 'PM';
+    return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
+  });
+}
+
 function getCalendarColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
