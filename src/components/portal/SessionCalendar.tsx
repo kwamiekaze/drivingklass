@@ -630,6 +630,89 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         </DialogContent>
       </Dialog>
 
+      {/* Edit Session Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Edit Session</DialogTitle>
+            <DialogDescription>Update the date and time for this session.</DialogDescription>
+          </DialogHeader>
+          {selectedSession && sessionDetails && (
+            <div className="space-y-4">
+              {/* Read-only context */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Student</p>
+                  <p className="text-sm font-medium">{sessionDetails.student_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Instructor</p>
+                  <p className="text-sm font-medium">{sessionDetails.instructor_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <SessionTypeBadge sessionType={selectedSession.session_type} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                </div>
+              </div>
+
+              {selectedSession.report_card_id && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+                  ⚠️ This session has a submitted report card. Updating the date/time will keep the report linked.
+                </div>
+              )}
+
+              {/* Editable fields */}
+              <div className="space-y-2">
+                <Label className="text-sm">Date</Label>
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => { setEditDate(e.target.value); setEditConflictWarning(null); }}
+                  className="min-h-[44px]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">Start Time (ET)</Label>
+                  <Select value={editStartTime} onValueChange={(v) => { setEditStartTime(v); setEditConflictWarning(null); }}>
+                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Start" /></SelectTrigger>
+                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                      {generateTimeOptions()}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">End Time (ET)</Label>
+                  <Select value={editEndTime} onValueChange={(v) => { setEditEndTime(v); setEditConflictWarning(null); }}>
+                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="End" /></SelectTrigger>
+                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                      {generateTimeOptions()}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editConflictWarning && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  {editConflictWarning}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0 mt-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="min-h-[44px]">Cancel</Button>
+            <Button onClick={handleEditSession} disabled={isLoading} className="min-h-[44px] gap-2">
+              {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Profile Modal */}
       <AdminUserProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} userId={profileModalUserId} onProfileUpdated={onSessionUpdate} />
 
