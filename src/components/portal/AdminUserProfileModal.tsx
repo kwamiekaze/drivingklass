@@ -72,6 +72,8 @@ export function AdminUserProfileModal({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [hoursRemaining, setHoursRemaining] = useState("");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [dropoffAddress, setDropoffAddress] = useState("");
 
   useEffect(() => {
     if (open && userId) {
@@ -111,6 +113,8 @@ export function AdminUserProfileModal({
       setFullName(fullProfile.full_name || `${fullProfile.first_name || ''} ${fullProfile.last_name || ''}`.trim());
       setPhone(fullProfile.phone || "");
       setHoursRemaining((fullProfile.hours_remaining ?? 0).toString());
+      setPickupAddress(fullProfile.pickup_address || "");
+      setDropoffAddress(fullProfile.dropoff_address || "");
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
@@ -171,6 +175,8 @@ export function AdminUserProfileModal({
           last_name: lastName,
           phone: phone.trim() || null,
           hours_remaining: numericHours,
+          pickup_address: pickupAddress.trim() || null,
+          dropoff_address: dropoffAddress.trim() || null,
         })
         .eq('id', profile.id);
 
@@ -348,20 +354,30 @@ export function AdminUserProfileModal({
                 </div>
               </div>
 
-              {/* Addresses Section (read-only, from intake) */}
+              {/* Editable Addresses Section */}
               <div className="space-y-3 p-4 rounded-xl bg-muted/30">
                 <p className="text-sm font-medium flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  Addresses (from intake)
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Pickup & Drop-Off
                 </p>
-                <div className="grid gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Pickup:</span>{' '}
-                    <span>{profile.pickup_address || 'Not provided'}</span>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Pickup Address</Label>
+                    <Input
+                      value={pickupAddress}
+                      onChange={(e) => setPickupAddress(e.target.value)}
+                      placeholder="Enter pickup address"
+                      className="min-h-[44px]"
+                    />
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Drop-off:</span>{' '}
-                    <span>{profile.dropoff_address || 'Not provided'}</span>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Drop-Off Address</Label>
+                    <Input
+                      value={dropoffAddress}
+                      onChange={(e) => setDropoffAddress(e.target.value)}
+                      placeholder="Enter drop-off address"
+                      className="min-h-[44px]"
+                    />
                   </div>
                 </div>
               </div>
