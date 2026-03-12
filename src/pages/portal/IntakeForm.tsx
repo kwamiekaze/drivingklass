@@ -189,7 +189,9 @@ function IntakeFormContent({ isAdminEdit = false }: IntakeFormContentProps) {
         guardian_email: profile?.guardian_email || '',
       });
       setExistingPermitUrl(profile?.permit_file_url || null);
-    }
+      setAvailabilityDays((profile as any)?.availability_days || []);
+      setAvailabilityWindows((profile as any)?.availability_windows || []);
+      setAvailabilityNotes((profile as any)?.availability_notes || '');
   }, [isAdminEdit, editUserId, user?.id, profile, isEditMode]);
 
   // For students: redirect if approved and not in edit mode
