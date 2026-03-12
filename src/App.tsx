@@ -123,6 +123,7 @@ const App = () => (
                   <Route path="/admin/instructors" element={<AdminInstructors />} />
                   <Route path="/admin/permits" element={<AdminPermitQueue />} />
                   <Route path="/admin/map" element={<AdminMap />} />
+                  <Route path="/admin/proposals" element={<AdminProposals />} />
                   
                   {/* Instructor Map */}
                   <Route path="/instructor/map" element={<InstructorMap />} />
