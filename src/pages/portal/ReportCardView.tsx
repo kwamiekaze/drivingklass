@@ -68,9 +68,18 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Public sharing state
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
+  const [accessCodeInput, setAccessCodeInput] = useState("");
+  const [confirmCodeInput, setConfirmCodeInput] = useState("");
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [publicCopied, setPublicCopied] = useState(false);
   
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
+  const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
 
   const fetchReportCard = async () => {
     if (!id) {
