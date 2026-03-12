@@ -72,6 +72,8 @@ export function AdminUserProfileModal({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [hoursRemaining, setHoursRemaining] = useState("");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [dropoffAddress, setDropoffAddress] = useState("");
 
   useEffect(() => {
     if (open && userId) {
