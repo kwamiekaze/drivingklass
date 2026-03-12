@@ -743,6 +743,9 @@ export type Database = {
           approved: boolean | null
           approved_at: string | null
           approved_by: string | null
+          availability_days: string[] | null
+          availability_notes: string | null
+          availability_windows: string[] | null
           avatar_url: string | null
           created_at: string
           dropoff_address: string | null
@@ -785,6 +788,9 @@ export type Database = {
           approved?: boolean | null
           approved_at?: string | null
           approved_by?: string | null
+          availability_days?: string[] | null
+          availability_notes?: string | null
+          availability_windows?: string[] | null
           avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
@@ -827,6 +833,9 @@ export type Database = {
           approved?: boolean | null
           approved_at?: string | null
           approved_by?: string | null
+          availability_days?: string[] | null
+          availability_notes?: string | null
+          availability_windows?: string[] | null
           avatar_url?: string | null
           created_at?: string
           dropoff_address?: string | null
@@ -865,6 +874,64 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      proposal_edit_requests: {
+        Row: {
+          created_at: string
+          id: string
+          note_text: string
+          proposal_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note_text: string
+          proposal_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note_text?: string
+          proposal_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_edit_requests_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_edit_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_edit_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_cards: {
         Row: {
@@ -1147,6 +1214,8 @@ export type Database = {
           finalized_at: string | null
           id: string
           instructor_id: string
+          latest_edit_request_at: string | null
+          latest_edit_request_note: string | null
           note_to_student: string | null
           proposal_status: string
           student_id: string
@@ -1163,6 +1232,8 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           instructor_id: string
+          latest_edit_request_at?: string | null
+          latest_edit_request_note?: string | null
           note_to_student?: string | null
           proposal_status?: string
           student_id: string
@@ -1179,6 +1250,8 @@ export type Database = {
           finalized_at?: string | null
           id?: string
           instructor_id?: string
+          latest_edit_request_at?: string | null
+          latest_edit_request_note?: string | null
           note_to_student?: string | null
           proposal_status?: string
           student_id?: string
@@ -1572,6 +1645,9 @@ export type Database = {
           approved: boolean | null
           approved_at: string | null
           approved_by: string | null
+          availability_days: string[] | null
+          availability_notes: string | null
+          availability_windows: string[] | null
           avatar_url: string | null
           created_at: string
           dropoff_address: string | null
