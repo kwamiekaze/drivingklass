@@ -243,6 +243,7 @@ function getNavItems(role: string | null) {
         { href: '/admin', label: 'Dashboard', icon: Home },
         { href: '/admin/students', label: 'Students', icon: Users },
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
+        { href: '/admin/proposals', label: 'Proposals', icon: Send },
         { href: '/admin/map', label: 'Map', icon: MapIcon },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
