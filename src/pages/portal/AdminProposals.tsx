@@ -314,7 +314,7 @@ function AdminProposalsContent() {
                       <Badge variant="secondary" className="text-[10px] shrink-0">{idx + 1}</Badge>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">{format(parseISO(item.proposed_date), 'EEE, MMM d, yyyy')}</p>
-                        <p className="text-xs text-muted-foreground">{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}</p>
+                        <p className="text-xs text-muted-foreground">{formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}</p>
                       </div>
                       <SessionTypeBadge sessionType={item.session_type} />
                       {item.item_status === 'pending_admin_finalize' && (
