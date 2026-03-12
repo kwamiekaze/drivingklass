@@ -731,7 +731,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   );
 }
 
-// ── Color helpers ──
+// ── Time options helper ──
+function generateTimeOptions() {
+  return Array.from({ length: 48 }, (_, i) => {
+    const hours = Math.floor(i / 2);
+    const mins = (i % 2) * 30;
+    const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const ampm = hours < 12 ? 'AM' : 'PM';
+    return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
+  });
+}
+
 function getCalendarColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
