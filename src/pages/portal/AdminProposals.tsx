@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Check, Clock, Send, Eye, CheckCircle, XCircle, AlertTriangle, Plus } from "lucide-react";
+import { Calendar, Check, Clock, Send, Eye, CheckCircle, XCircle, Plus, Edit3, AlertTriangle, RotateCcw } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { ProposalBuilder } from "@/components/portal/ProposalBuilder";
 import { format, parseISO } from "date-fns";
@@ -26,12 +27,14 @@ export default function AdminProposals() {
 }
 
 function AdminProposalsContent() {
+  const { user } = usePortalAuth();
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [finalizing, setFinalizing] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [editBuilderOpen, setEditBuilderOpen] = useState(false);
 
   useEffect(() => { fetchProposals(); }, []);
 
@@ -73,12 +76,45 @@ function AdminProposalsContent() {
     }
   };
 
+  const handleDirectFinalize = async () => {
+    if (!selectedProposal) return;
+    setFinalizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('handle-proposal-action', {
+        body: { action: 'finalize_edited', proposal_id: selectedProposal.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.scheduled} session(s) scheduled${data.conflicts > 0 ? `, ${data.conflicts} conflict(s)` : ''}`);
+      setSelectedProposal(null);
+      fetchProposals();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to finalize');
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
+  const handleMarkUnderRevision = async () => {
+    if (!selectedProposal) return;
+    await supabase
+      .from('schedule_proposals')
+      .update({ proposal_status: 'under_revision' })
+      .eq('id', selectedProposal.id);
+    toast.success('Marked as under revision');
+    setSelectedProposal(null);
+    fetchProposals();
+  };
+
   const statusColor = (status: string) => {
     switch (status) {
       case 'sent': return 'bg-blue-500/10 text-blue-500';
       case 'pending_admin_finalize': return 'bg-orange-500/10 text-orange-500';
-      case 'auto_scheduled': case 'finalized': return 'bg-green-500/10 text-green-500';
+      case 'auto_scheduled': case 'finalized': case 'revised_and_finalized': return 'bg-green-500/10 text-green-500';
       case 'declined': return 'bg-destructive/10 text-destructive';
+      case 'edit_requested': return 'bg-yellow-500/10 text-yellow-500';
+      case 'under_revision': return 'bg-purple-500/10 text-purple-500';
+      case 'revised_and_resent': return 'bg-blue-500/10 text-blue-500';
       case 'partially_scheduled': case 'partially_finalized': return 'bg-yellow-500/10 text-yellow-500';
       default: return 'bg-muted text-muted-foreground';
     }
@@ -89,16 +125,20 @@ function AdminProposalsContent() {
       case 'sent': return 'Sent';
       case 'pending_admin_finalize': return 'Pending Finalization';
       case 'auto_scheduled': return 'Auto-Scheduled';
-      case 'finalized': return 'Finalized';
+      case 'finalized': case 'revised_and_finalized': return 'Finalized';
       case 'declined': return 'Declined';
+      case 'edit_requested': return 'Edit Requested';
+      case 'under_revision': return 'Under Revision';
+      case 'revised_and_resent': return 'Revised & Resent';
       case 'partially_scheduled': case 'partially_finalized': return 'Partial';
       default: return status;
     }
   };
 
   const pendingProposals = proposals.filter(p => p.proposal_status === 'pending_admin_finalize');
-  const activeProposals = proposals.filter(p => ['sent'].includes(p.proposal_status));
-  const completedProposals = proposals.filter(p => ['auto_scheduled', 'finalized', 'declined', 'partially_scheduled', 'partially_finalized'].includes(p.proposal_status));
+  const editRequestedProposals = proposals.filter(p => ['edit_requested', 'under_revision'].includes(p.proposal_status));
+  const activeProposals = proposals.filter(p => ['sent', 'revised_and_resent'].includes(p.proposal_status));
+  const completedProposals = proposals.filter(p => ['auto_scheduled', 'finalized', 'revised_and_finalized', 'declined', 'partially_scheduled', 'partially_finalized'].includes(p.proposal_status));
 
   const renderProposalCard = (p: any) => (
     <Card key={p.id} className="portal-card cursor-pointer hover:border-primary/50 transition-colors" onClick={() => openProposal(p)}>
@@ -109,6 +149,11 @@ function AdminProposalsContent() {
             <p className="text-xs text-muted-foreground">
               Instructor: {getDisplayName(p.instructor, 'Instructor')} • {format(parseISO(p.created_at), 'MMM d, yyyy')}
             </p>
+            {p.latest_edit_request_note && ['edit_requested', 'under_revision'].includes(p.proposal_status) && (
+              <p className="text-xs text-yellow-500 mt-1 truncate">
+                Edit: "{p.latest_edit_request_note.slice(0, 60)}{p.latest_edit_request_note.length > 60 ? '...' : ''}"
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Badge className={`text-xs ${statusColor(p.proposal_status)}`}>
@@ -123,13 +168,17 @@ function AdminProposalsContent() {
     </Card>
   );
 
+  const canFinalize = selectedProposal && ['pending_admin_finalize'].includes(selectedProposal.proposal_status);
+  const canEditAndResend = selectedProposal && ['edit_requested', 'under_revision', 'sent', 'revised_and_resent'].includes(selectedProposal.proposal_status);
+  const canDirectFinalize = selectedProposal && ['edit_requested', 'under_revision'].includes(selectedProposal.proposal_status);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Schedule Proposals</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {pendingProposals.length} pending finalization
+            {pendingProposals.length} pending • {editRequestedProposals.length} edit requested
           </p>
         </div>
         <Button className="gap-2 min-h-[40px]" onClick={() => setBuilderOpen(true)}>
@@ -138,22 +187,33 @@ function AdminProposalsContent() {
         </Button>
       </div>
 
-      <Tabs defaultValue={pendingProposals.length > 0 ? "pending" : "all"} className="space-y-4">
-        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+      <Tabs defaultValue={editRequestedProposals.length > 0 ? "edits" : pendingProposals.length > 0 ? "pending" : "all"} className="space-y-4">
+        <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsTrigger value="edits" className="gap-1 text-xs sm:text-sm min-h-[40px]">
+            <Edit3 className="h-3.5 w-3.5" />
+            Edits ({editRequestedProposals.length})
+          </TabsTrigger>
           <TabsTrigger value="pending" className="gap-1 text-xs sm:text-sm min-h-[40px]">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-3.5 w-3.5" />
             Pending ({pendingProposals.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="gap-1 text-xs sm:text-sm min-h-[40px]">
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
             Sent ({activeProposals.length})
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1 text-xs sm:text-sm min-h-[40px]">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-3.5 w-3.5" />
             All ({proposals.length})
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="edits">
+          {editRequestedProposals.length === 0 ? (
+            <Card className="portal-card"><CardContent className="p-6 text-center text-muted-foreground">No edit requests</CardContent></Card>
+          ) : (
+            <div className="space-y-3">{editRequestedProposals.map(renderProposalCard)}</div>
+          )}
+        </TabsContent>
         <TabsContent value="pending">
           {pendingProposals.length === 0 ? (
             <Card className="portal-card"><CardContent className="p-6 text-center text-muted-foreground">No pending proposals</CardContent></Card>
@@ -218,6 +278,24 @@ function AdminProposalsContent() {
                 </p>
               )}
 
+              {/* Edit request note */}
+              {selectedProposal.latest_edit_request_note && ['edit_requested', 'under_revision'].includes(selectedProposal.proposal_status) && (
+                <Card className="border-yellow-500/30 bg-yellow-500/5">
+                  <CardContent className="p-3">
+                    <p className="text-xs font-medium text-yellow-500 mb-1 flex items-center gap-1">
+                      <Edit3 className="h-3 w-3" />
+                      Student Requested Edits
+                    </p>
+                    <p className="text-sm">{selectedProposal.latest_edit_request_note}</p>
+                    {selectedProposal.latest_edit_request_at && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {format(parseISO(selectedProposal.latest_edit_request_at), 'MMM d, yyyy h:mm a')}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Items */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Dates ({items.length})</Label>
@@ -244,17 +322,58 @@ function AdminProposalsContent() {
                 </div>
               </div>
 
-              {/* Finalize action for pending proposals */}
-              {selectedProposal.proposal_status === 'pending_admin_finalize' && (
-                <Button
-                  className="w-full min-h-[44px] gap-2"
-                  onClick={handleFinalize}
-                  disabled={finalizing}
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  {finalizing ? 'Finalizing...' : 'Confirm Payment & Finalize Schedule'}
-                </Button>
-              )}
+              {/* Actions */}
+              <div className="space-y-2 pt-2">
+                {/* Edit & Resend */}
+                {canEditAndResend && (
+                  <Button
+                    variant="outline"
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={() => {
+                      setEditBuilderOpen(true);
+                    }}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit & Resend Proposal
+                  </Button>
+                )}
+
+                {/* Mark as under revision */}
+                {selectedProposal.proposal_status === 'edit_requested' && (
+                  <Button
+                    variant="outline"
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={handleMarkUnderRevision}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Mark Under Revision
+                  </Button>
+                )}
+
+                {/* Direct finalize edited proposal */}
+                {canDirectFinalize && (
+                  <Button
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={handleDirectFinalize}
+                    disabled={finalizing}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {finalizing ? 'Finalizing...' : 'Finalize & Schedule Edited Proposal'}
+                  </Button>
+                )}
+
+                {/* Standard finalize for pending */}
+                {canFinalize && (
+                  <Button
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={handleFinalize}
+                    disabled={finalizing}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {finalizing ? 'Finalizing...' : 'Confirm Payment & Finalize Schedule'}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
@@ -265,6 +384,24 @@ function AdminProposalsContent() {
         onOpenChange={setBuilderOpen}
         onProposalSent={fetchProposals}
       />
+
+      {/* Edit Proposal Builder - preloaded with existing proposal data */}
+      {selectedProposal && (
+        <ProposalBuilder
+          open={editBuilderOpen}
+          onOpenChange={setEditBuilderOpen}
+          preselectedStudentId={selectedProposal.student_id}
+          preselectedInstructorId={selectedProposal.instructor_id}
+          editingProposalId={selectedProposal.id}
+          existingItems={items}
+          existingNote={selectedProposal.note_to_student || ''}
+          existingAcceptanceMode={selectedProposal.acceptance_mode}
+          onProposalSent={() => {
+            setSelectedProposal(null);
+            fetchProposals();
+          }}
+        />
+      )}
     </div>
   );
 }
