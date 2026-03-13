@@ -501,6 +501,9 @@ export default function ReportCardView() {
               </CardContent>
             </Card>
 
+            {/* Student Skill Progress Graph */}
+            <StudentProgressSection studentId={reportCard.student_id} />
+
             {/* Rating Categories */}
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
