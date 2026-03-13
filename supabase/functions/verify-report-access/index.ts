@@ -94,9 +94,11 @@ Deno.serve(async (req) => {
           ...safeReport,
           student_name: getName(student),
           instructor_name: getName(instructor),
+          student_id: report.student_id,
           session_starts_at: session?.starts_at || null,
           session_ends_at: session?.ends_at || null,
           session_type: session?.session_type || "driving",
+          show_graph_publicly: report.show_graph_publicly || false,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -318,6 +318,11 @@ export default function PublicReportCard() {
           </CardContent>
         </Card>
 
+        {/* Skill Progress Graph (if enabled publicly) */}
+        {report.show_graph_publicly && report.student_id && (
+          <StudentProgressSection studentId={report.student_id} compact />
+        )}
+
         {/* Skill Ratings */}
         <Card className="border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-4 sm:p-6">
