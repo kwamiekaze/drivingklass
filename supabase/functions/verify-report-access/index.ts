@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       .select(`
         id, created_at, session_id, student_id, instructor_id,
         is_public, public_access_code, public_share_slug,
+        show_graph_publicly,
         acceleration, braking, left_turns, right_turns,
         speed_maintenance, lane_maintenance, blind_spots, signal_usage,
         changing_lanes, following_distance, road_sign_awareness, distractions,
@@ -93,9 +94,11 @@ Deno.serve(async (req) => {
           ...safeReport,
           student_name: getName(student),
           instructor_name: getName(instructor),
+          student_id: report.student_id,
           session_starts_at: session?.starts_at || null,
           session_ends_at: session?.ends_at || null,
           session_type: session?.session_type || "driving",
+          show_graph_publicly: report.show_graph_publicly || false,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

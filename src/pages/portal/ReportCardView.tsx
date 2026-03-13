@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX, Share2, Lock, Link2 } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX, Share2, Lock, Link2, BarChart3 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 
 interface ReportCardDetails {
   id: string;
@@ -76,6 +77,7 @@ export default function ReportCardView() {
   const [confirmCodeInput, setConfirmCodeInput] = useState("");
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
+  const [showGraphPublicly, setShowGraphPublicly] = useState(false);
   
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
@@ -115,12 +117,13 @@ export default function ReportCardView() {
         if (canManagePublic) {
           const { data: rcRow } = await supabase
             .from('report_cards')
-            .select('is_public, public_share_slug')
+            .select('is_public, public_share_slug, show_graph_publicly')
             .eq('id', id)
             .single();
           if (rcRow) {
             setIsPublic(rcRow.is_public || false);
             setPublicSlug(rcRow.public_share_slug || null);
+            setShowGraphPublicly((rcRow as any).show_graph_publicly || false);
           }
         }
       }
@@ -498,6 +501,9 @@ export default function ReportCardView() {
               </CardContent>
             </Card>
 
+            {/* Student Skill Progress Graph */}
+            <StudentProgressSection studentId={reportCard.student_id} />
+
             {/* Rating Categories */}
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
@@ -591,6 +597,25 @@ export default function ReportCardView() {
                       <p className="text-xs text-muted-foreground">
                         This public link is for viewers without a DrivingKlass account. They must enter the access code you set.
                       </p>
+
+                      {/* Public Graph Toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                          <span className="text-xs sm:text-sm font-medium">Show progress graph on public report card</span>
+                        </div>
+                        <Switch
+                          checked={showGraphPublicly}
+                          onCheckedChange={async (checked) => {
+                            setShowGraphPublicly(checked);
+                            await supabase
+                              .from('report_cards')
+                              .update({ show_graph_publicly: checked } as any)
+                              .eq('id', id!);
+                            toast({ title: checked ? "Graph will be shown publicly" : "Graph hidden from public view" });
+                          }}
+                        />
+                      </div>
 
                       {/* Update access code */}
                       <div className="border-t pt-4 space-y-3">
