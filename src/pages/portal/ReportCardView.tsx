@@ -77,6 +77,7 @@ export default function ReportCardView() {
   const [confirmCodeInput, setConfirmCodeInput] = useState("");
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
+  const [showGraphPublicly, setShowGraphPublicly] = useState(false);
   
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
