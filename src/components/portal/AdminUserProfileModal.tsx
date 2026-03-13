@@ -8,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3 } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
 import { PermitViewerModal } from "./PermitViewerModal";
 import { SessionTypeBadge } from "./SessionTypeBadge";
 import { format, parseISO, isAfter } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { StudentProgressSection } from "./StudentProgressSection";
 
 interface AdminUserProfileModalProps {
   open: boolean;
