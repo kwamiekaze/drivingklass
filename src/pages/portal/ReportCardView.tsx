@@ -117,12 +117,13 @@ export default function ReportCardView() {
         if (canManagePublic) {
           const { data: rcRow } = await supabase
             .from('report_cards')
-            .select('is_public, public_share_slug')
+            .select('is_public, public_share_slug, show_graph_publicly')
             .eq('id', id)
             .single();
           if (rcRow) {
             setIsPublic(rcRow.is_public || false);
             setPublicSlug(rcRow.public_share_slug || null);
+            setShowGraphPublicly((rcRow as any).show_graph_publicly || false);
           }
         }
       }
