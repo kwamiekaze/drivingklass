@@ -493,6 +493,43 @@ export function AdminUserProfileModal({
                 </div>
               )}
 
+              {/* Report Cards & Progress Section */}
+              {profile.role === 'student' && (
+                <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                  <p className="text-sm font-semibold flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Driving Reports
+                  </p>
+                  
+                  {/* Progress Graph */}
+                  <StudentProgressSection studentId={profile.id} compact />
+                  
+                  {/* Report card links from sessions */}
+                  {studentSessions.filter(s => s.report_card_id).length > 0 ? (
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                      {studentSessions.filter(s => s.report_card_id).map(s => (
+                        <div key={s.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Star className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-xs truncate">
+                              {format(parseISO(s.starts_at), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                          <Link
+                            to={`/report-cards/${s.report_card_id}`}
+                            className="text-xs text-primary hover:underline shrink-0"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No report cards yet.</p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
                 <p className="text-sm font-semibold flex items-center gap-1.5">
                   <ClipboardList className="h-4 w-4 text-primary" />
