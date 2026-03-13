@@ -969,6 +969,7 @@ export type Database = {
           right_turns: number | null
           road_sign_awareness: number | null
           session_id: string
+          show_graph_publicly: boolean
           signal_usage: number | null
           speed_maintenance: number | null
           straight_line_backing: number | null
@@ -1011,6 +1012,7 @@ export type Database = {
           right_turns?: number | null
           road_sign_awareness?: number | null
           session_id: string
+          show_graph_publicly?: boolean
           signal_usage?: number | null
           speed_maintenance?: number | null
           straight_line_backing?: number | null
@@ -1053,6 +1055,7 @@ export type Database = {
           right_turns?: number | null
           road_sign_awareness?: number | null
           session_id?: string
+          show_graph_publicly?: boolean
           signal_usage?: number | null
           speed_maintenance?: number | null
           straight_line_backing?: number | null

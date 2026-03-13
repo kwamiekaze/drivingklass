@@ -1,0 +1,1 @@
+ALTER TABLE public.report_cards ADD COLUMN IF NOT EXISTS show_graph_publicly boolean NOT NULL DEFAULT false;
