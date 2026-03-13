@@ -598,6 +598,25 @@ export default function ReportCardView() {
                         This public link is for viewers without a DrivingKlass account. They must enter the access code you set.
                       </p>
 
+                      {/* Public Graph Toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                          <span className="text-xs sm:text-sm font-medium">Show progress graph on public report card</span>
+                        </div>
+                        <Switch
+                          checked={showGraphPublicly}
+                          onCheckedChange={async (checked) => {
+                            setShowGraphPublicly(checked);
+                            await supabase
+                              .from('report_cards')
+                              .update({ show_graph_publicly: checked } as any)
+                              .eq('id', id!);
+                            toast({ title: checked ? "Graph will be shown publicly" : "Graph hidden from public view" });
+                          }}
+                        />
+                      </div>
+
                       {/* Update access code */}
                       <div className="border-t pt-4 space-y-3">
                         <p className="text-xs font-medium text-muted-foreground">Update Access Code</p>
