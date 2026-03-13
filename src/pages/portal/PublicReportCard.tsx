@@ -8,18 +8,21 @@ import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, Sh
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
+import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 
 interface PublicReportData {
   id: string;
   created_at: string;
   student_name: string;
   instructor_name: string;
+  student_id: string;
   session_starts_at: string | null;
   session_ends_at: string | null;
   session_type: string;
   overall: number | null;
   transcription_summary: string | null;
   message_to_student: string | null;
+  show_graph_publicly: boolean;
   acceleration: number | null;
   braking: number | null;
   left_turns: number | null;
