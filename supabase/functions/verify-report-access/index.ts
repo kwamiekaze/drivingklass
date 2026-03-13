@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       .select(`
         id, created_at, session_id, student_id, instructor_id,
         is_public, public_access_code, public_share_slug,
+        show_graph_publicly,
         acceleration, braking, left_turns, right_turns,
         speed_maintenance, lane_maintenance, blind_spots, signal_usage,
         changing_lanes, following_distance, road_sign_awareness, distractions,
