@@ -294,7 +294,7 @@ export default function PublicReportCard() {
                 <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm text-foreground truncate">{report.student_name}</p>
+                  <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
                 </div>
               </div>
               <div className="col-span-2 flex items-start gap-2">
