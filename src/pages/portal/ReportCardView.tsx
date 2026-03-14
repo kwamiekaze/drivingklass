@@ -540,7 +540,7 @@ export default function ReportCardView() {
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
                   <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
-                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap report-animated-text">
                     {reportCard.transcription_summary}
                   </p>
                 </CardContent>
