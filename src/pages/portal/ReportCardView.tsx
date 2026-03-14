@@ -482,7 +482,7 @@ export default function ReportCardView() {
                     <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
-                      <p className="font-medium text-sm sm:text-base">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
+                      <p className="font-medium text-sm sm:text-base report-text-sweep">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                     </div>
                   </div>
                 </div>
