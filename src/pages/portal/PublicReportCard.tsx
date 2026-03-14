@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
+import { useScrollActive } from "@/hooks/useScrollActive";
 
 interface PublicReportData {
   id: string;
@@ -44,11 +45,12 @@ interface PublicReportData {
   interstate: number | null;
 }
 
-type ViewState = "splash" | "code_entry" | "viewing" | "not_found";
+type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
-  const [viewState, setViewState] = useState<ViewState>("splash");
+  // Start at code_entry — splash plays AFTER successful verification
+  const [viewState, setViewState] = useState<ViewState>("code_entry");
   const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,25 +59,23 @@ export default function PublicReportCard() {
   const [isFading, setIsFading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isScrolling = useScrollActive();
 
-  // Splash handlers
+  // Splash handlers — transition from splash to viewing
   const handleSplashComplete = () => {
     if (isFading) return;
     setIsFading(true);
-    setTimeout(() => setViewState("code_entry"), 400);
+    setTimeout(() => {
+      setViewState("viewing");
+      setIsFading(false);
+      setVideoLoaded(false);
+    }, 400);
   };
 
   const handleVideoLoaded = () => {
     setVideoLoaded(true);
     if (fallbackRef.current) clearTimeout(fallbackRef.current);
   };
-
-  // Start fallback timer on mount
-  if (viewState === "splash" && !fallbackRef.current) {
-    fallbackRef.current = setTimeout(() => {
-      if (!videoLoaded) handleSplashComplete();
-    }, 3000);
-  }
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,8 +108,14 @@ export default function PublicReportCard() {
         return;
       }
 
+      // Store report data, then show splash before revealing content
       setReport(data.report);
-      setViewState("viewing");
+      setViewState("splash");
+
+      // Start fallback timer for splash
+      fallbackRef.current = setTimeout(() => {
+        if (!videoLoaded) handleSplashComplete();
+      }, 4000);
     } catch {
       setError("Unable to verify. Please try again.");
     } finally {
@@ -125,7 +131,7 @@ export default function PublicReportCard() {
     return "bg-red-500";
   };
 
-  // ── Splash Screen ──
+  // ── Splash Screen (plays AFTER code verification) ──
   if (viewState === "splash") {
     return (
       <div
@@ -242,7 +248,7 @@ export default function PublicReportCard() {
   if (!report) return null;
 
   return (
-    <div className="min-h-screen p-4 sm:p-6"
+    <div className={`min-h-screen p-4 sm:p-6 ${isScrolling ? 'scroll-active' : ''}`}
       style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
       <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         {/* Branding */}
@@ -320,7 +326,9 @@ export default function PublicReportCard() {
 
         {/* Skill Progress Graph (if enabled publicly) */}
         {report.show_graph_publicly && report.student_id && (
-          <StudentProgressSection studentId={report.student_id} compact />
+          <div className="report-graph-section">
+            <StudentProgressSection studentId={report.student_id} compact />
+          </div>
         )}
 
         {/* Skill Ratings */}
@@ -331,7 +339,7 @@ export default function PublicReportCard() {
               {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
                 const rating = report[category.key as keyof PublicReportData] as number | null;
                 return (
-                  <div key={category.key} className="flex items-center gap-2 sm:gap-3">
+                  <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
                     <span className="text-xs sm:text-sm w-28 sm:w-40 truncate text-foreground">{category.label}</span>
                     <div className="flex-1">
                       <Progress value={rating ? rating * 10 : 0} className="h-2" />
@@ -351,7 +359,7 @@ export default function PublicReportCard() {
           <Card className="border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6">
               <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap report-animated-text">
                 {report.transcription_summary}
               </p>
             </CardContent>
@@ -366,7 +374,7 @@ export default function PublicReportCard() {
                 <MessageSquare className="h-4 w-4" />
                 <span className="font-medium text-sm text-foreground">Instructor's Message</span>
               </div>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground">{report.message_to_student}</p>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground report-animated-text">{report.message_to_student}</p>
             </CardContent>
           </Card>
         )}
