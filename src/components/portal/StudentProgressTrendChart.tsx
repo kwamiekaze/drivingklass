@@ -3,6 +3,7 @@ import {
   Tooltip, ResponsiveContainer,
 } from "recharts";
 import { TrendDataPoint } from "@/lib/reportCardGraphData";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface Props {
   data: TrendDataPoint[];
@@ -10,7 +11,16 @@ interface Props {
 }
 
 export function StudentProgressTrendChart({ data, className }: Props) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   if (data.length < 2) return null;
+
+  const gridStroke = isLight ? "hsl(220 10% 82%)" : "hsl(0 0% 20%)";
+  const tickFill = isLight ? "hsl(220 10% 35%)" : "hsl(0 0% 60%)";
+  const tooltipBg = isLight ? "hsl(0 0% 98%)" : "hsl(0 0% 8%)";
+  const tooltipBorder = isLight ? "hsl(40 30% 75%)" : "hsl(40 30% 25%)";
+  const tooltipLabel = isLight ? "hsl(220 15% 20%)" : "hsl(40 30% 80%)";
 
   return (
     <div className={className}>
@@ -23,27 +33,17 @@ export function StudentProgressTrendChart({ data, className }: Props) {
               <stop offset="95%" stopColor="hsl(40 80% 55%)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="hsl(0 0% 20%)"
-          />
-          <XAxis
-            dataKey="label"
-            tick={{ fill: "hsl(0 0% 60%)", fontSize: 11 }}
-          />
-          <YAxis
-            domain={[0, 10]}
-            tick={{ fill: "hsl(0 0% 60%)", fontSize: 11 }}
-            tickCount={6}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+          <XAxis dataKey="label" tick={{ fill: tickFill, fontSize: 11 }} />
+          <YAxis domain={[0, 10]} tick={{ fill: tickFill, fontSize: 11 }} tickCount={6} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(0 0% 8%)",
-              border: "1px solid hsl(40 30% 25%)",
+              backgroundColor: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
               borderRadius: 8,
               fontSize: 12,
             }}
-            labelStyle={{ color: "hsl(40 30% 80%)", fontWeight: 600 }}
+            labelStyle={{ color: tooltipLabel, fontWeight: 600 }}
           />
           <Area
             type="monotone"
