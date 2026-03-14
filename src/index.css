@@ -669,15 +669,28 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    hsl(var(--gold-shimmer) / 0.07) 35%,
-    hsl(var(--gold-shimmer) / 0.15) 50%,
-    hsl(var(--gold-shimmer) / 0.07) 65%,
+    hsl(var(--gold-shimmer) / 0.05) 30%,
+    hsl(var(--gold-shimmer) / 0.12) 50%,
+    hsl(var(--gold-shimmer) / 0.05) 70%,
     transparent 100%
   );
   background-size: 200% 100%;
-  animation: shimmer-sweep 2s ease-in-out infinite;
+  animation: shimmer-sweep 3.5s ease-in-out infinite;
   border-radius: inherit;
   z-index: 1;
+}
+
+/* Dark theme: even softer and slower for polished feel */
+.dark .scroll-active .portal-card::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--gold-shimmer) / 0.04) 25%,
+    hsl(var(--gold-shimmer) / 0.10) 50%,
+    hsl(var(--gold-shimmer) / 0.04) 75%,
+    transparent 100%
+  );
+  animation: shimmer-sweep 4.5s ease-in-out infinite;
 }
 
 /* Skill bar shimmer while scrolling — targets the Progress indicator */
