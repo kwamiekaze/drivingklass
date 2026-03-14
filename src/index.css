@@ -669,31 +669,6 @@ body {
   animation: shimmer-sweep 1.8s ease-in-out infinite;
 }
 
-/* Text shine while scrolling — overlay approach, no text-fill changes */
-.report-animated-text {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s ease-out;
-}
-
-.scroll-active .report-animated-text::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--gold-shimmer) / 0.12) 45%,
-    hsl(var(--gold-shimmer) / 0.22) 50%,
-    hsl(var(--gold-shimmer) / 0.12) 55%,
-    transparent 100%
-  );
-  background-size: 300% 100%;
-  animation: text-shimmer 2.5s ease-in-out infinite;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
 /* Graph glow while scrolling */
 .scroll-active .report-graph-section {
   animation: soft-glow-pulse 2s ease-in-out infinite;
