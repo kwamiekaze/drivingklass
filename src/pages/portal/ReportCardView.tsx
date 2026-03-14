@@ -555,7 +555,7 @@ export default function ReportCardView() {
                     <MessageSquare className="h-4 w-4" />
                     <span className="font-medium text-sm">Instructor's Message</span>
                   </div>
-                  <p className="text-xs sm:text-sm whitespace-pre-wrap report-animated-text">{reportCard.message_to_student}</p>
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.message_to_student}</p>
                 </CardContent>
               </Card>
             )}

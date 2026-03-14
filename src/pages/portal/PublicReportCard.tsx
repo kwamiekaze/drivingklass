@@ -374,7 +374,7 @@ export default function PublicReportCard() {
                 <MessageSquare className="h-4 w-4" />
                 <span className="font-medium text-sm text-foreground">Instructor's Message</span>
               </div>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground report-animated-text">{report.message_to_student}</p>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground">{report.message_to_student}</p>
             </CardContent>
           </Card>
         )}
