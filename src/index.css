@@ -655,6 +655,31 @@ body {
   50% { filter: brightness(1.08) drop-shadow(0 0 6px hsl(var(--gold) / 0.25)); }
 }
 
+/* Card panel shimmer while scrolling — all portal-card panels */
+.scroll-active .portal-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-active .portal-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--gold-shimmer) / 0.07) 35%,
+    hsl(var(--gold-shimmer) / 0.15) 50%,
+    hsl(var(--gold-shimmer) / 0.07) 65%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 2s ease-in-out infinite;
+  border-radius: inherit;
+  z-index: 1;
+}
+
 /* Skill bar shimmer while scrolling — targets the Progress indicator */
 .scroll-active .report-skill-bar [role="progressbar"] > div {
   background-image: linear-gradient(
@@ -678,12 +703,43 @@ body {
   transition: filter 0.4s ease-out;
 }
 
+/* ===== LESSON SUMMARY TEXT SWEEP ANIMATION (always looping) ===== */
+
+@keyframes text-sweep {
+  0% { background-position: -100% 0; }
+  50% { background-position: 200% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.report-text-sweep {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--text)) 0%,
+    hsl(var(--text)) 35%,
+    hsl(var(--gold-shimmer)) 50%,
+    hsl(var(--text)) 65%,
+    hsl(var(--text)) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-sweep 4s ease-in-out infinite;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+  .scroll-active .portal-card::after,
   .scroll-active .report-skill-bar [role="progressbar"] > div,
   .scroll-active .report-graph-section {
     animation: none !important;
     background-image: none !important;
     filter: none !important;
+  }
+  .report-text-sweep {
+    animation: none !important;
+    background: none !important;
+    -webkit-text-fill-color: unset !important;
+    color: hsl(var(--text));
   }
 }
