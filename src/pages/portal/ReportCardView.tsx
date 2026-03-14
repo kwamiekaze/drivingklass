@@ -17,7 +17,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
-import { useScrollActive } from "@/hooks/useScrollActive";
+
 
 interface ReportCardDetails {
   id: string;
@@ -85,7 +85,7 @@ export default function ReportCardView() {
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const isScrolling = useScrollActive();
+  
 
   const fetchReportCard = async () => {
     if (!id) {
@@ -359,7 +359,7 @@ export default function ReportCardView() {
         )}
       </div>
 
-      <div className={`max-w-3xl mx-auto space-y-6 relative ${isScrolling ? 'scroll-active' : ''}`}>
+      <div className="max-w-3xl mx-auto space-y-6 relative">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleGoBack}>
@@ -447,7 +447,7 @@ export default function ReportCardView() {
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
-                      <p className="font-medium text-sm sm:text-base">
+                      <p className="font-medium text-sm sm:text-base report-text-sweep">
                         {reportCard.session_starts_at 
                           ? format(parseISO(reportCard.session_starts_at), 'MMMM d, yyyy')
                           : format(parseISO(reportCard.created_at), 'MMMM d, yyyy')
@@ -457,7 +457,7 @@ export default function ReportCardView() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
-                    <p className="font-medium text-sm sm:text-base">
+                    <p className="font-medium text-sm sm:text-base report-text-sweep">
                       {reportCard.session_starts_at && reportCard.session_ends_at
                         ? `${format(parseISO(reportCard.session_starts_at), 'h:mm a')} - ${format(parseISO(reportCard.session_ends_at), 'h:mm a')}`
                         : 'N/A'
@@ -468,21 +468,21 @@ export default function ReportCardView() {
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.instructor_name}</p>
+                      <p className="font-medium text-sm sm:text-base truncate report-text-sweep">{reportCard.instructor_name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.student_name}</p>
+                      <p className="font-medium text-sm sm:text-base truncate report-text-sweep">{reportCard.student_name}</p>
                     </div>
                   </div>
                   <div className="col-span-2 flex items-start gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
-                      <p className="font-medium text-sm sm:text-base">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
+                      <p className="font-medium text-sm sm:text-base report-text-sweep">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                     </div>
                   </div>
                 </div>
@@ -496,7 +496,7 @@ export default function ReportCardView() {
                   <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
                   <div className="flex items-center justify-center gap-2">
                     <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                    <span className="text-3xl sm:text-4xl font-bold">{reportCard.overall || '-'}</span>
+                    <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{reportCard.overall || '-'}</span>
                     <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
                   </div>
                 </div>
@@ -517,14 +517,14 @@ export default function ReportCardView() {
                     const rating = reportCard[category.key as keyof ReportCardDetails] as number | null;
                     return (
                       <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
                         <div className="flex-1">
                           <Progress 
                             value={rating ? rating * 10 : 0} 
                             className="h-2"
                           />
                         </div>
-                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right">
+                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
                           {rating || '-'}
                         </span>
                       </div>

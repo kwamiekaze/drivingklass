@@ -643,80 +643,7 @@ body {
   filter: none;
 }
 
-/* ===== SCROLL-RESPONSIVE REPORT CARD ANIMATIONS ===== */
-
-@keyframes shimmer-sweep {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes soft-glow-pulse {
-  0%, 100% { filter: brightness(1) drop-shadow(0 0 0px transparent); }
-  50% { filter: brightness(1.08) drop-shadow(0 0 6px hsl(var(--gold) / 0.25)); }
-}
-
-/* Card panel shimmer while scrolling — all portal-card panels */
-.scroll-active .portal-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.scroll-active .portal-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--gold-shimmer) / 0.05) 30%,
-    hsl(var(--gold-shimmer) / 0.12) 50%,
-    hsl(var(--gold-shimmer) / 0.05) 70%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer-sweep 3.5s ease-in-out infinite;
-  border-radius: inherit;
-  z-index: 1;
-}
-
-/* Dark theme: even softer and slower for polished feel */
-.dark .scroll-active .portal-card::after {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--gold-shimmer) / 0.04) 25%,
-    hsl(var(--gold-shimmer) / 0.10) 50%,
-    hsl(var(--gold-shimmer) / 0.04) 75%,
-    transparent 100%
-  );
-  animation: shimmer-sweep 4.5s ease-in-out infinite;
-}
-
-/* Skill bar shimmer while scrolling — targets the Progress indicator */
-.scroll-active .report-skill-bar [role="progressbar"] > div {
-  background-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--gold-shimmer) / 0.25) 40%,
-    hsl(var(--gold-shimmer) / 0.45) 50%,
-    hsl(var(--gold-shimmer) / 0.25) 60%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer-sweep 1.8s ease-in-out infinite;
-}
-
-/* Graph glow while scrolling */
-.scroll-active .report-graph-section {
-  animation: soft-glow-pulse 2s ease-in-out infinite;
-}
-
-.report-graph-section {
-  transition: filter 0.4s ease-out;
-}
-
-/* ===== LESSON SUMMARY TEXT SWEEP ANIMATION (always looping) ===== */
+/* ===== LOOPING TEXT SWEEP ANIMATION ===== */
 
 @keyframes text-sweep {
   0% { background-position: -100% 0; }
@@ -742,13 +669,6 @@ body {
 
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .scroll-active .portal-card::after,
-  .scroll-active .report-skill-bar [role="progressbar"] > div,
-  .scroll-active .report-graph-section {
-    animation: none !important;
-    background-image: none !important;
-    filter: none !important;
-  }
   .report-text-sweep {
     animation: none !important;
     background: none !important;

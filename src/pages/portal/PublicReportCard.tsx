@@ -268,7 +268,7 @@ export default function PublicReportCard() {
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm text-foreground">
+                  <p className="font-medium text-sm report-text-sweep">
                     {report.session_starts_at
                       ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
                       : format(parseISO(report.created_at), "MMMM d, yyyy")}
@@ -277,7 +277,7 @@ export default function PublicReportCard() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Time</p>
-                <p className="font-medium text-sm text-foreground">
+                <p className="font-medium text-sm report-text-sweep">
                   {report.session_starts_at && report.session_ends_at
                     ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
                     : "N/A"}
@@ -287,21 +287,21 @@ export default function PublicReportCard() {
                 <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm text-foreground truncate">{report.instructor_name}</p>
+                  <p className="font-medium text-sm truncate report-text-sweep">{report.instructor_name}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm text-foreground truncate">{report.student_name}</p>
+                  <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
                 </div>
               </div>
               <div className="col-span-2 flex items-start gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Submitted</p>
-                  <p className="font-medium text-sm text-foreground">
+                  <p className="font-medium text-sm report-text-sweep">
                     {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export default function PublicReportCard() {
               <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
               <div className="flex items-center justify-center gap-2">
                 <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                <span className="text-3xl sm:text-4xl font-bold text-foreground">{report.overall || "-"}</span>
+                <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
                 <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
               </div>
             </div>
@@ -340,11 +340,11 @@ export default function PublicReportCard() {
                 const rating = report[category.key as keyof PublicReportData] as number | null;
                 return (
                   <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                    <span className="text-xs sm:text-sm w-28 sm:w-40 truncate text-foreground">{category.label}</span>
+                    <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
                     <div className="flex-1">
                       <Progress value={rating ? rating * 10 : 0} className="h-2" />
                     </div>
-                    <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right text-foreground">
+                    <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
                       {rating || "-"}
                     </span>
                   </div>
