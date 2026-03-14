@@ -83,6 +83,9 @@ export default function ReportCardView() {
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const isScrolling = useScrollActive();
 
   const fetchReportCard = async () => {
     if (!id) {
