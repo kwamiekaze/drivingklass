@@ -524,7 +524,7 @@ export default function ReportCardView() {
                             className="h-2"
                           />
                         </div>
-                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right">
+                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
                           {rating || '-'}
                         </span>
                       </div>
