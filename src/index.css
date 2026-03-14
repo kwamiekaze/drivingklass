@@ -660,8 +660,8 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* Skill bar shimmer while scrolling */
-.scroll-active .report-skill-bar [data-slot="range"] {
+/* Skill bar shimmer while scrolling — targets the Progress indicator */
+.scroll-active .report-skill-bar [role="progressbar"] > div {
   background-image: linear-gradient(
     90deg,
     transparent 0%,
