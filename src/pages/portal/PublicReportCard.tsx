@@ -261,7 +261,7 @@ export default function PublicReportCard() {
         </div>
 
         {/* Header Info */}
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
+        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="flex items-start gap-2">
