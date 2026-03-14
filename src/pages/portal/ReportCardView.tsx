@@ -333,9 +333,6 @@ export default function ReportCardView() {
     );
   }
 
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const isScrolling = useScrollActive();
 
   return (
     <PortalLayout>
