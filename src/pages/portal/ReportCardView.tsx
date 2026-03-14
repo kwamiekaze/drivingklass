@@ -17,6 +17,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
+import { useScrollActive } from "@/hooks/useScrollActive";
 
 interface ReportCardDetails {
   id: string;
@@ -82,6 +83,9 @@ export default function ReportCardView() {
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const isScrolling = useScrollActive();
 
   const fetchReportCard = async () => {
     if (!id) {
@@ -329,8 +333,6 @@ export default function ReportCardView() {
     );
   }
 
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
 
   return (
     <PortalLayout>
@@ -357,7 +359,7 @@ export default function ReportCardView() {
         )}
       </div>
 
-      <div className="max-w-3xl mx-auto space-y-6 relative">
+      <div className={`max-w-3xl mx-auto space-y-6 relative ${isScrolling ? 'scroll-active' : ''}`}>
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleGoBack}>
@@ -502,7 +504,9 @@ export default function ReportCardView() {
             </Card>
 
             {/* Student Skill Progress Graph */}
-            <StudentProgressSection studentId={reportCard.student_id} />
+            <div className="report-graph-section">
+              <StudentProgressSection studentId={reportCard.student_id} />
+            </div>
 
             {/* Rating Categories */}
             <Card className="portal-card">
@@ -512,7 +516,7 @@ export default function ReportCardView() {
                   {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
                     const rating = reportCard[category.key as keyof ReportCardDetails] as number | null;
                     return (
-                      <div key={category.key} className="flex items-center gap-2 sm:gap-3">
+                      <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
                         <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
                         <div className="flex-1">
                           <Progress 
@@ -536,7 +540,7 @@ export default function ReportCardView() {
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
                   <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
-                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap report-animated-text">
                     {reportCard.transcription_summary}
                   </p>
                 </CardContent>
@@ -551,7 +555,7 @@ export default function ReportCardView() {
                     <MessageSquare className="h-4 w-4" />
                     <span className="font-medium text-sm">Instructor's Message</span>
                   </div>
-                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.message_to_student}</p>
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap report-animated-text">{reportCard.message_to_student}</p>
                 </CardContent>
               </Card>
             )}

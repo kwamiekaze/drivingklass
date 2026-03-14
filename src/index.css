@@ -642,3 +642,77 @@ body {
 [data-theme="dark"] .leaflet-map-container .leaflet-tile-pane {
   filter: none;
 }
+
+/* ===== SCROLL-RESPONSIVE REPORT CARD ANIMATIONS ===== */
+
+@keyframes shimmer-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes soft-glow-pulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0px transparent); }
+  50% { filter: brightness(1.08) drop-shadow(0 0 6px hsl(var(--gold) / 0.25)); }
+}
+
+@keyframes text-shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Skill bar shimmer while scrolling — targets the Progress indicator */
+.scroll-active .report-skill-bar [role="progressbar"] > div {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--gold-shimmer) / 0.25) 40%,
+    hsl(var(--gold-shimmer) / 0.45) 50%,
+    hsl(var(--gold-shimmer) / 0.25) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+
+/* Text shimmer while scrolling */
+.scroll-active .report-animated-text {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--text)) 0%,
+    hsl(var(--gold-light)) 45%,
+    hsl(var(--gold-shimmer)) 50%,
+    hsl(var(--gold-light)) 55%,
+    hsl(var(--text)) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 2.5s ease-in-out infinite;
+}
+
+/* When NOT scrolling, reset text to normal */
+.report-animated-text {
+  transition: all 0.4s ease-out;
+}
+
+/* Graph glow while scrolling */
+.scroll-active .report-graph-section {
+  animation: soft-glow-pulse 2s ease-in-out infinite;
+}
+
+.report-graph-section {
+  transition: filter 0.4s ease-out;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-active .report-skill-bar [role="progressbar"] > div,
+  .scroll-active .report-animated-text,
+  .scroll-active .report-graph-section {
+    animation: none !important;
+    background-image: none !important;
+    -webkit-text-fill-color: unset !important;
+    filter: none !important;
+  }
+}
