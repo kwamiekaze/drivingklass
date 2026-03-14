@@ -655,11 +655,6 @@ body {
   50% { filter: brightness(1.08) drop-shadow(0 0 6px hsl(var(--gold) / 0.25)); }
 }
 
-@keyframes text-shimmer {
-  0% { background-position: -100% 0; }
-  100% { background-position: 200% 0; }
-}
-
 /* Skill bar shimmer while scrolling — targets the Progress indicator */
 .scroll-active .report-skill-bar [role="progressbar"] > div {
   background-image: linear-gradient(
