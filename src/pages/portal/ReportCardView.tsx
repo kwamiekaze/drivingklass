@@ -359,7 +359,7 @@ export default function ReportCardView() {
         )}
       </div>
 
-      <div className={`max-w-3xl mx-auto space-y-6 relative ${isScrolling ? 'scroll-active' : ''}`}>
+      <div className="max-w-3xl mx-auto space-y-6 relative">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleGoBack}>
