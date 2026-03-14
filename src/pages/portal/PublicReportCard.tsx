@@ -311,7 +311,7 @@ export default function PublicReportCard() {
         </Card>
 
         {/* Overall Rating */}
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
+        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-4 sm:p-6">
             <div className="text-center p-4 bg-primary/10 rounded-lg">
               <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
