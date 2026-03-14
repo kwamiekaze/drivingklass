@@ -344,7 +344,7 @@ export default function PublicReportCard() {
                     <div className="flex-1">
                       <Progress value={rating ? rating * 10 : 0} className="h-2" />
                     </div>
-                    <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right text-foreground">
+                    <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
                       {rating || "-"}
                     </span>
                   </div>
