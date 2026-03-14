@@ -447,7 +447,7 @@ export default function ReportCardView() {
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
-                      <p className="font-medium text-sm sm:text-base">
+                      <p className="font-medium text-sm sm:text-base report-text-sweep">
                         {reportCard.session_starts_at 
                           ? format(parseISO(reportCard.session_starts_at), 'MMMM d, yyyy')
                           : format(parseISO(reportCard.created_at), 'MMMM d, yyyy')
@@ -457,7 +457,7 @@ export default function ReportCardView() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
-                    <p className="font-medium text-sm sm:text-base">
+                    <p className="font-medium text-sm sm:text-base report-text-sweep">
                       {reportCard.session_starts_at && reportCard.session_ends_at
                         ? `${format(parseISO(reportCard.session_starts_at), 'h:mm a')} - ${format(parseISO(reportCard.session_ends_at), 'h:mm a')}`
                         : 'N/A'
@@ -468,14 +468,14 @@ export default function ReportCardView() {
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.instructor_name}</p>
+                      <p className="font-medium text-sm sm:text-base truncate report-text-sweep">{reportCard.instructor_name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                      <p className="font-medium text-sm sm:text-base truncate">{reportCard.student_name}</p>
+                      <p className="font-medium text-sm sm:text-base truncate report-text-sweep">{reportCard.student_name}</p>
                     </div>
                   </div>
                   <div className="col-span-2 flex items-start gap-2">
