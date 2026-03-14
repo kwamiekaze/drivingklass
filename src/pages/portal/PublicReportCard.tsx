@@ -317,7 +317,7 @@ export default function PublicReportCard() {
               <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
               <div className="flex items-center justify-center gap-2">
                 <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                <span className="text-3xl sm:text-4xl font-bold text-foreground">{report.overall || "-"}</span>
+                <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
                 <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
               </div>
             </div>
