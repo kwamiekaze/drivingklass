@@ -17,7 +17,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
-import { useScrollActive } from "@/hooks/useScrollActive";
+
 
 interface ReportCardDetails {
   id: string;
