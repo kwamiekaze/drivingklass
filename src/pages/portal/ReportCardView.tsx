@@ -540,7 +540,7 @@ export default function ReportCardView() {
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
                   <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
-                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                     {reportCard.transcription_summary}
                   </p>
                 </CardContent>
@@ -555,7 +555,7 @@ export default function ReportCardView() {
                     <MessageSquare className="h-4 w-4" />
                     <span className="font-medium text-sm">Instructor's Message</span>
                   </div>
-                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{reportCard.message_to_student}</p>
+                  <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{reportCard.message_to_student}</p>
                 </CardContent>
               </Card>
             )}
