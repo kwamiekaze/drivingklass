@@ -268,7 +268,7 @@ export default function PublicReportCard() {
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm text-foreground">
+                  <p className="font-medium text-sm report-text-sweep">
                     {report.session_starts_at
                       ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
                       : format(parseISO(report.created_at), "MMMM d, yyyy")}
