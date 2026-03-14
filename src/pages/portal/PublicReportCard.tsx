@@ -301,7 +301,7 @@ export default function PublicReportCard() {
                 <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Submitted</p>
-                  <p className="font-medium text-sm text-foreground">
+                  <p className="font-medium text-sm report-text-sweep">
                     {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
                   </p>
                 </div>
