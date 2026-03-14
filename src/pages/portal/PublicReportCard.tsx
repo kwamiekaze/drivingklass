@@ -359,7 +359,7 @@ export default function PublicReportCard() {
           <Card className="border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6">
               <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap report-animated-text">
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
                 {report.transcription_summary}
               </p>
             </CardContent>
@@ -374,7 +374,7 @@ export default function PublicReportCard() {
                 <MessageSquare className="h-4 w-4" />
                 <span className="font-medium text-sm text-foreground">Instructor's Message</span>
               </div>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground report-animated-text">{report.message_to_student}</p>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground">{report.message_to_student}</p>
             </CardContent>
           </Card>
         )}
