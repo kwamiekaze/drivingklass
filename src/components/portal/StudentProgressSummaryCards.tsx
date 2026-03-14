@@ -26,20 +26,20 @@ export function StudentProgressSummaryCards({ insights, className }: Props) {
       icon: TrendingUp,
       label: "Strongest",
       value: insights.strongestSkill,
-      color: "text-green-500",
+      color: "text-green-600 dark:text-green-500",
     },
     {
       icon: Target,
       label: "Most Improved",
       value: insights.mostImproved,
       sub: insights.mostImprovedGain > 0 ? `+${insights.mostImprovedGain.toFixed(1)}` : undefined,
-      color: "text-blue-400",
+      color: "text-blue-600 dark:text-blue-400",
     },
     {
       icon: AlertTriangle,
       label: "Focus Area",
       value: insights.focusArea,
-      color: "text-orange-400",
+      color: "text-orange-600 dark:text-orange-400",
     },
   ];
 
@@ -48,13 +48,13 @@ export function StudentProgressSummaryCards({ insights, className }: Props) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="rounded-lg border border-border/50 bg-card/60 backdrop-blur p-3 text-center space-y-1"
+          className="rounded-lg border border-border bg-card/80 backdrop-blur p-3 text-center space-y-1"
         >
           <card.icon className={`h-4 w-4 mx-auto ${card.color}`} />
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{card.label}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{card.label}</p>
           <p className="text-xs font-semibold text-foreground truncate">{card.value}</p>
           {card.sub && (
-            <p className="text-[10px] text-green-400 font-medium">{card.sub}</p>
+            <p className="text-[10px] text-green-600 dark:text-green-400 font-medium">{card.sub}</p>
           )}
         </div>
       ))}
