@@ -277,7 +277,7 @@ export default function PublicReportCard() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Time</p>
-                <p className="font-medium text-sm text-foreground">
+                <p className="font-medium text-sm report-text-sweep">
                   {report.session_starts_at && report.session_ends_at
                     ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
                     : "N/A"}
