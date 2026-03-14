@@ -517,7 +517,7 @@ export default function ReportCardView() {
                     const rating = reportCard[category.key as keyof ReportCardDetails] as number | null;
                     return (
                       <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
                         <div className="flex-1">
                           <Progress 
                             value={rating ? rating * 10 : 0} 
