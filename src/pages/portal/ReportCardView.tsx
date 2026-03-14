@@ -85,7 +85,7 @@ export default function ReportCardView() {
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const isScrolling = useScrollActive();
+  
 
   const fetchReportCard = async () => {
     if (!id) {
