@@ -340,7 +340,7 @@ export default function PublicReportCard() {
                 const rating = report[category.key as keyof PublicReportData] as number | null;
                 return (
                   <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                    <span className="text-xs sm:text-sm w-28 sm:w-40 truncate text-foreground">{category.label}</span>
+                    <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
                     <div className="flex-1">
                       <Progress value={rating ? rating * 10 : 0} className="h-2" />
                     </div>
