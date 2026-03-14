@@ -332,7 +332,7 @@ export default function PublicReportCard() {
         )}
 
         {/* Skill Ratings */}
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
+        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-4 sm:p-6">
             <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
             <div className="grid gap-2">
@@ -356,10 +356,10 @@ export default function PublicReportCard() {
 
         {/* Lesson Summary */}
         {report.transcription_summary && (
-          <Card className="border-border/50 bg-card/80 backdrop-blur">
+          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6">
               <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                 {report.transcription_summary}
               </p>
             </CardContent>
@@ -368,13 +368,13 @@ export default function PublicReportCard() {
 
         {/* Message to Student */}
         {report.message_to_student && (
-          <Card className="border-border/50 bg-card/80 backdrop-blur">
+          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6 bg-muted/50">
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4" />
                 <span className="font-medium text-sm text-foreground">Instructor's Message</span>
               </div>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap text-foreground">{report.message_to_student}</p>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
             </CardContent>
           </Card>
         )}
