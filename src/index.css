@@ -707,7 +707,7 @@ body {
 
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .scroll-active .report-skill-bar [data-slot="range"],
+  .scroll-active .report-skill-bar [role="progressbar"] > div,
   .scroll-active .report-animated-text,
   .scroll-active .report-graph-section {
     animation: none !important;
