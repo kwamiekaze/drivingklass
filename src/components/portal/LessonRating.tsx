@@ -499,7 +499,7 @@ export function LessonRating({
             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6">
               {[1, 2, 3, 4, 5].map((star) => {
                 const isActive = star <= displayRating;
-                const canClick = !feedbackSubmitted && !submitting && !(submitted && selectedRating === 5);
+                const canClick = !submitting && !submittingFeedback && !readOnly;
                 return (
                   <button
                     key={star}
