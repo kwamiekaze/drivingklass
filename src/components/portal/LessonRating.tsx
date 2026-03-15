@@ -167,8 +167,22 @@ export function LessonRating({
     }
   };
 
+  const openEditMode = (nextRating?: number) => {
+    const initialRating = nextRating ?? existingRating ?? selectedRating;
+    setEditRating(initialRating || 0);
+    setEditFeedback(existingFeedback || feedbackText || "");
+    setEditHover(0);
+    setEditing(true);
+  };
+
   const handleStarClick = (rating: number) => {
-    if (submitted || submitting || readOnly) return;
+    if (submitting || submittingFeedback || readOnly) return;
+
+    if (submitted) {
+      openEditMode(rating);
+      return;
+    }
+
     setSelectedRating(rating);
     if (rating === 5) {
       submitRating(rating);
@@ -263,9 +277,7 @@ export function LessonRating({
 
   // Edit mode handlers
   const startEditing = () => {
-    setEditRating(existingRating || selectedRating);
-    setEditFeedback(existingFeedback || feedbackText || "");
-    setEditing(true);
+    openEditMode();
   };
 
   const cancelEditing = () => {
@@ -487,7 +499,7 @@ export function LessonRating({
             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6">
               {[1, 2, 3, 4, 5].map((star) => {
                 const isActive = star <= displayRating;
-                const canClick = !feedbackSubmitted && !submitting && !(submitted && selectedRating === 5);
+                const canClick = !submitting && !submittingFeedback && !readOnly;
                 return (
                   <button
                     key={star}
