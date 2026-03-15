@@ -247,6 +247,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/map', label: 'Map', icon: MapIcon },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
+        { href: '/admin/feedback', label: 'Feedback', icon: Star },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/qa', label: 'QA', icon: Shield },
