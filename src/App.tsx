@@ -127,6 +127,8 @@ const App = () => (
                   <Route path="/admin/permits" element={<AdminPermitQueue />} />
                   <Route path="/admin/map" element={<AdminMap />} />
                   <Route path="/admin/proposals" element={<AdminProposals />} />
+                  <Route path="/admin/feedback" element={<AdminFeedback />} />
+                  <Route path="/instructor/feedback" element={<AdminFeedback />} />
                   
                   {/* Instructor Map */}
                   <Route path="/instructor/map" element={<InstructorMap />} />

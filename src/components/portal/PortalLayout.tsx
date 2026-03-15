@@ -269,6 +269,7 @@ function getNavItems(role: string | null) {
       items.push(
         { href: '/instructor', label: 'Dashboard', icon: Home },
         { href: '/instructor/students', label: 'Students', icon: Users },
+        { href: '/instructor/feedback', label: 'Feedback', icon: Star },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
