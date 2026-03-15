@@ -983,9 +983,11 @@ export type Database = {
       report_card_ratings: {
         Row: {
           created_at: string
+          edited_at: string | null
           feedback_text: string | null
           id: string
           instructor_id: string | null
+          is_edited: boolean
           is_public_view: boolean | null
           rating_value: number
           report_card_id: string
@@ -997,9 +999,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          edited_at?: string | null
           feedback_text?: string | null
           id?: string
           instructor_id?: string | null
+          is_edited?: boolean
           is_public_view?: boolean | null
           rating_value: number
           report_card_id: string
@@ -1011,9 +1015,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          edited_at?: string | null
           feedback_text?: string | null
           id?: string
           instructor_id?: string | null
+          is_edited?: boolean
           is_public_view?: boolean | null
           rating_value?: number
           report_card_id?: string

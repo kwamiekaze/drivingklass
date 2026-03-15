@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -247,6 +247,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/map', label: 'Map', icon: MapIcon },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
+        { href: '/admin/feedback', label: 'Feedback', icon: Star },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/qa', label: 'QA', icon: Shield },
@@ -259,6 +260,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
+        { href: '/admin/feedback', label: 'Feedback', icon: Star },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
       );
@@ -267,6 +269,7 @@ function getNavItems(role: string | null) {
       items.push(
         { href: '/instructor', label: 'Dashboard', icon: Home },
         { href: '/instructor/students', label: 'Students', icon: Users },
+        { href: '/instructor/feedback', label: 'Feedback', icon: Star },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
