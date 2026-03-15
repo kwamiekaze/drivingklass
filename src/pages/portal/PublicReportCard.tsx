@@ -11,7 +11,7 @@ import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ReportCardFeedback } from "@/components/portal/ReportCardFeedback";
+import { LessonRating } from "@/components/portal/LessonRating";
 
 interface PublicReportData {
   id: string;
