@@ -980,6 +980,80 @@ export type Database = {
           },
         ]
       }
+      report_card_ratings: {
+        Row: {
+          created_at: string
+          feedback_text: string | null
+          id: string
+          instructor_id: string | null
+          is_public_view: boolean | null
+          rating_value: number
+          report_card_id: string
+          session_id: string | null
+          student_id: string | null
+          submitted_by_name: string | null
+          submitted_by_role: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          instructor_id?: string | null
+          is_public_view?: boolean | null
+          rating_value: number
+          report_card_id: string
+          session_id?: string | null
+          student_id?: string | null
+          submitted_by_name?: string | null
+          submitted_by_role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          instructor_id?: string | null
+          is_public_view?: boolean | null
+          rating_value?: number
+          report_card_id?: string
+          session_id?: string | null
+          student_id?: string | null
+          submitted_by_name?: string | null
+          submitted_by_role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_card_ratings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_ratings_report_card_id_fkey"
+            columns: ["report_card_id"]
+            isOneToOne: false
+            referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_ratings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_ratings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_cards: {
         Row: {
           acceleration: number | null
