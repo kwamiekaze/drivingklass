@@ -253,8 +253,10 @@ export default function PublicReportCard() {
   if (!report) return null;
 
   return (
-    <div className={`min-h-screen p-4 sm:p-6 ${isScrolling ? 'scroll-active' : ''}`}
-      style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+    <div className={`min-h-screen p-4 sm:p-6 bg-background ${isScrolling ? 'scroll-active' : ''}`}>
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         {/* Branding */}
         <div className="text-center py-4">
