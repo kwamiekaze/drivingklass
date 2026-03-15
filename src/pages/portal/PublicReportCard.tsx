@@ -254,143 +254,160 @@ export default function PublicReportCard() {
   if (!report) return null;
 
   return (
-    <div className={`min-h-screen p-4 sm:p-6 bg-background ${isScrolling ? 'scroll-active' : ''}`}>
-      <div className="absolute top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
-      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
-        {/* Branding */}
-        <div className="text-center py-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-            <FileText className="h-6 w-6" />
-            Report Card
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1">DrivingKlass</p>
+    <div className={`min-h-screen bg-background ${isScrolling ? 'scroll-active' : ''}`}>
+      {/* Branded Header */}
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border/50">
+        <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Star className="h-5 w-5 text-primary fill-primary" />
+            <span className="font-poppins font-extrabold text-lg sm:text-xl tracking-widest uppercase text-foreground">
+              DrivingKlass
+            </span>
+          </Link>
+          <ThemeToggle />
         </div>
+      </header>
 
-        {/* Header Info */}
-        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="flex items-start gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium text-sm report-text-sweep">
-                    {report.session_starts_at
-                      ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
-                      : format(parseISO(report.created_at), "MMMM d, yyyy")}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Time</p>
-                <p className="font-medium text-sm report-text-sweep">
-                  {report.session_starts_at && report.session_ends_at
-                    ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
-                    : "N/A"}
-                </p>
-              </div>
-              <div className="flex items-start gap-2">
-                <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm truncate report-text-sweep">{report.instructor_name}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
-                </div>
-              </div>
-              <div className="col-span-2 flex items-start gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Submitted</p>
-                  <p className="font-medium text-sm report-text-sweep">
-                    {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Overall Rating */}
-        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-center p-4 bg-primary/10 rounded-lg">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
-              <div className="flex items-center justify-center gap-2">
-                <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
-                <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Skill Progress Graph (if enabled publicly) */}
-        {report.show_graph_publicly && report.student_id && (
-          <div className="report-graph-section">
-            <StudentProgressSection studentId={report.student_id} compact />
+      <div className="p-4 sm:p-6">
+        <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+          {/* Report Card Title */}
+          <div className="text-center py-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+              <FileText className="h-6 w-6" />
+              Report Card
+            </h1>
           </div>
-        )}
 
-        {/* Skill Ratings */}
-        <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="p-4 sm:p-6">
-            <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
-            <div className="grid gap-2">
-              {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
-                const rating = report[category.key as keyof PublicReportData] as number | null;
-                return (
-                  <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                    <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
-                    <div className="flex-1">
-                      <Progress value={rating ? rating * 10 : 0} className="h-2" />
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
-                      {rating || "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lesson Summary */}
-        {report.transcription_summary && (
+          {/* Header Info */}
           <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6">
-              <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
-                {report.transcription_summary}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Message to Student */}
-        {report.message_to_student && (
-          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-            <CardContent className="p-4 sm:p-6 bg-muted/50">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4" />
-                <span className="font-medium text-sm text-foreground">Instructor's Message</span>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="font-medium text-sm report-text-sweep">
+                      {report.session_starts_at
+                        ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
+                        : format(parseISO(report.created_at), "MMMM d, yyyy")}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="font-medium text-sm report-text-sweep">
+                    {report.session_starts_at && report.session_ends_at
+                      ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Instructor</p>
+                    <p className="font-medium text-sm truncate report-text-sweep">{report.instructor_name}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Student</p>
+                    <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
+                  </div>
+                </div>
+                <div className="col-span-2 flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Submitted</p>
+                    <p className="font-medium text-sm report-text-sweep">
+                      {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
             </CardContent>
           </Card>
-        )}
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground py-4">
-          Shared securely by DrivingKlass
-        </p>
+          {/* Overall Rating */}
+          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+            <CardContent className="p-4 sm:p-6">
+              <div className="text-center p-4 bg-primary/10 rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                  <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
+                  <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Skill Progress Graph (if enabled publicly) */}
+          {report.show_graph_publicly && report.student_id && (
+            <div className="report-graph-section">
+              <StudentProgressSection studentId={report.student_id} compact />
+            </div>
+          )}
+
+          {/* Skill Ratings */}
+          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+            <CardContent className="p-4 sm:p-6">
+              <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
+              <div className="grid gap-2">
+                {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
+                  const rating = report[category.key as keyof PublicReportData] as number | null;
+                  return (
+                    <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
+                      <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
+                      <div className="flex-1">
+                        <Progress value={rating ? rating * 10 : 0} className="h-2" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
+                        {rating || "-"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lesson Summary */}
+          {report.transcription_summary && (
+            <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+              <CardContent className="p-4 sm:p-6">
+                <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
+                <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
+                  {report.transcription_summary}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Message to Student */}
+          {report.message_to_student && (
+            <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+              <CardContent className="p-4 sm:p-6 bg-muted/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="font-medium text-sm text-foreground">Instructor's Message</span>
+                </div>
+                <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Feedback Form */}
+          <ReportCardFeedback
+            reportCardId={report.id}
+            studentName={report.student_name}
+          />
+
+          {/* Footer */}
+          <p className="text-center text-xs text-muted-foreground py-4">
+            Shared securely by DrivingKlass
+          </p>
+        </div>
       </div>
     </div>
   );
