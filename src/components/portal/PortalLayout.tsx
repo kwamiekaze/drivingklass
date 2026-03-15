@@ -260,6 +260,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/schedule', label: 'Schedule', icon: Calendar },
         { href: '/admin/approvals', label: 'Approvals', icon: CheckCircle },
         { href: '/admin/report-cards', label: 'Reports', icon: FileText },
+        { href: '/admin/feedback', label: 'Feedback', icon: Star },
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
       );
