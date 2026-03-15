@@ -39,6 +39,16 @@ export function resolveNotificationRoute(
       }
       return { path: dashboardPath };
 
+    case 'report_feedback_submitted':
+    case 'report_feedback_updated':
+      if (report_card_id) {
+        return { path: `/report-cards/${report_card_id}`, params: { focus: 'feedback' } };
+      }
+      if (userRole === 'admin' || userRole === 'staff') {
+        return { path: '/admin/feedback' };
+      }
+      return { path: dashboardPath };
+
     case 'session_created':
     case 'session_scheduled':
     case 'session_cancelled':
