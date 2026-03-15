@@ -548,15 +548,15 @@ export function LessonRating({
                   isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
                 )}
               >
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-3">
+                <p className="text-sm sm:text-base font-semibold text-foreground mb-3 report-text-sweep">
                   Thank you for your 5-star rating!
                 </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-5">
+                <p className={cn("text-xs sm:text-sm leading-relaxed mb-5", isDark ? "text-muted-foreground" : "report-text-sweep")}>
                   Driving Klass is locally owned and focuses on quality service rather than paid
                   sponsorships or advertising. Our growth comes directly from the experiences our
                   students share.
                 </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
+                <p className={cn("text-xs sm:text-sm leading-relaxed mb-6", isDark ? "text-muted-foreground" : "report-text-sweep")}>
                   If you'd like, we would greatly appreciate you taking a moment to share your
                   experience with a Google review. Your feedback helps future students and parents
                   feel confident in choosing Driving Klass.
@@ -645,14 +645,14 @@ export function LessonRating({
                 )}
               >
                 <Star className="h-8 w-8 text-primary mx-auto mb-3 fill-primary" />
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-2">
+                <p className="text-sm sm:text-base font-semibold text-foreground mb-2 report-text-sweep">
                   Thank you for your feedback.
                 </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                <p className={cn("text-xs sm:text-sm leading-relaxed", isDark ? "text-muted-foreground" : "report-text-sweep")}>
                   It helps us improve our quality of service. We appreciate you taking the time to share your experience.
                 </p>
                 {existingFeedback && (
-                  <p className="mt-3 text-xs sm:text-sm text-foreground/70 italic">"{existingFeedback}"</p>
+                  <p className={cn("mt-3 text-xs sm:text-sm italic", isDark ? "text-foreground/70" : "report-text-sweep")}>"{existingFeedback}"</p>
                 )}
                 <div className="mt-4">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
