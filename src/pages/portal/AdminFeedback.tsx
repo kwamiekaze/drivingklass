@@ -245,7 +245,7 @@ export default function AdminFeedback() {
                             <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5">Edited</Badge>
                           )}
                           {entry.rating_value === 5 && (
-                            <Badge className="ml-2 text-[10px] py-0 px-1.5 bg-green-500/10 text-green-600 border-green-500/20">5 Stars</Badge>
+                            <Badge className="ml-2 text-[10px] py-0 px-1.5 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/10">5 Stars</Badge>
                           )}
                           {entry.rating_value <= 2 && (
                             <Badge variant="destructive" className="ml-2 text-[10px] py-0 px-1.5">Needs Attention</Badge>
