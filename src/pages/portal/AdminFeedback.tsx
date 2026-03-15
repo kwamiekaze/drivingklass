@@ -84,7 +84,7 @@ export default function AdminFeedback() {
 
         const { data, error } = await query;
         if (error) throw error;
-        setRatings((data || []) as FeedbackEntry[]);
+        setRatings((data || []) as unknown as FeedbackEntry[]);
 
         // Gather unique student/instructor IDs to resolve names
         const ids = new Set<string>();
