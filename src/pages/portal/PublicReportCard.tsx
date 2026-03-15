@@ -10,6 +10,7 @@ import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { useScrollActive } from "@/hooks/useScrollActive";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface PublicReportData {
   id: string;
@@ -183,8 +184,10 @@ export default function PublicReportCard() {
   // ── Not Found ──
   if (viewState === "not_found") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="py-12 text-center">
             <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -201,8 +204,10 @@ export default function PublicReportCard() {
   // ── Access Code Entry ──
   if (viewState === "code_entry") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-6 sm:p-8">
             <div className="text-center mb-6">
@@ -248,8 +253,10 @@ export default function PublicReportCard() {
   if (!report) return null;
 
   return (
-    <div className={`min-h-screen p-4 sm:p-6 ${isScrolling ? 'scroll-active' : ''}`}
-      style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+    <div className={`min-h-screen p-4 sm:p-6 bg-background ${isScrolling ? 'scroll-active' : ''}`}>
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         {/* Branding */}
         <div className="text-center py-4">
