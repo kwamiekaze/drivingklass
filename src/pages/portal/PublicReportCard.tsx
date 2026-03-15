@@ -397,10 +397,11 @@ export default function PublicReportCard() {
             </Card>
           )}
 
-          {/* Feedback Form */}
-          <ReportCardFeedback
+          {/* Lesson Rating */}
+          <LessonRating
             reportCardId={report.id}
             studentName={report.student_name}
+            isPublicView={true}
           />
 
           {/* Footer */}
