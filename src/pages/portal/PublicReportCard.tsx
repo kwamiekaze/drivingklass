@@ -10,6 +10,7 @@ import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { useScrollActive } from "@/hooks/useScrollActive";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface PublicReportData {
   id: string;
