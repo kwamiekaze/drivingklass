@@ -701,6 +701,15 @@ export default function ReportCardView() {
               </Card>
             )}
 
+            {/* Feedback Form */}
+            <ReportCardFeedback
+              reportCardId={reportCard.id}
+              studentName={reportCard.student_name}
+              prefillName={user?.user_metadata?.full_name || ""}
+              prefillEmail={user?.email || ""}
+              instructorId={reportCard.instructor_id}
+            />
+
             {/* Edit Button for instructor/admin */}
             {(role === 'instructor' || role === 'admin' || role === 'staff') && (
               <Button 
