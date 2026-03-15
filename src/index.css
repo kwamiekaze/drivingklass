@@ -643,6 +643,73 @@ body {
   filter: none;
 }
 
+/* ===== REPORT RATING PANEL — Premium Gold Glare ===== */
+
+.report-rating-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card) / 0.85);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 24px -4px hsl(var(--gold) / 0.08),
+    0 0 0 1px hsl(var(--gold) / 0.06);
+}
+
+[data-theme="dark"] .report-rating-panel {
+  background: linear-gradient(
+    160deg,
+    hsl(var(--card) / 0.92) 0%,
+    hsl(var(--card) / 0.78) 100%
+  );
+  border-color: hsl(var(--gold) / 0.15);
+  box-shadow:
+    0 4px 30px -6px hsl(var(--gold) / 0.12),
+    inset 0 1px 0 0 hsl(var(--gold) / 0.06);
+}
+
+@keyframes rating-glare {
+  0% { transform: translateX(-100%) rotate(12deg); }
+  50% { transform: translateX(200%) rotate(12deg); }
+  100% { transform: translateX(-100%) rotate(12deg); }
+}
+
+.report-rating-glare {
+  position: absolute;
+  inset: -50%;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--gold-shimmer) / 0.05) 40%,
+    hsl(var(--gold-shimmer) / 0.10) 50%,
+    hsl(var(--gold-shimmer) / 0.05) 60%,
+    transparent 100%
+  );
+  animation: rating-glare 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="dark"] .report-rating-glare {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--gold-shimmer) / 0.06) 40%,
+    hsl(var(--gold-shimmer) / 0.14) 50%,
+    hsl(var(--gold-shimmer) / 0.06) 60%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-rating-glare {
+    animation: none !important;
+    display: none;
+  }
+}
+
 /* ===== LOOPING TEXT SWEEP ANIMATION ===== */
 
 @keyframes text-sweep {
