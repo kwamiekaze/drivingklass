@@ -50,6 +50,7 @@ import AdminProposals from "./pages/portal/AdminProposals";
 import InstructorMap from "./pages/portal/InstructorMap";
 import StudentProposals from "./pages/portal/StudentProposals";
 import PublicReportCard from "./pages/portal/PublicReportCard";
+import AdminFeedback from "./pages/portal/AdminFeedback";
 import DrivingGamePage from "./pages/DrivingGame";
 const queryClient = new QueryClient();
 
