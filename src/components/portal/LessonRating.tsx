@@ -277,9 +277,7 @@ export function LessonRating({
 
   // Edit mode handlers
   const startEditing = () => {
-    setEditRating(existingRating || selectedRating);
-    setEditFeedback(existingFeedback || feedbackText || "");
-    setEditing(true);
+    openEditMode();
   };
 
   const cancelEditing = () => {
