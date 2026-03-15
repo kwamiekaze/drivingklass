@@ -256,7 +256,7 @@ export default function PublicReportCard() {
 
   return (
     <div className={`min-h-screen bg-background ${isScrolling ? 'scroll-active' : ''}`}>
-      {/* Branded Header */}
+      {/* Branded Header with hamburger menu */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border/50">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -265,8 +265,40 @@ export default function PublicReportCard() {
               DrivingKlass
             </span>
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-9 w-9"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
+        {/* Mobile menu dropdown */}
+        {mobileMenuOpen && (
+          <div className="border-t border-border/50 bg-card/95 backdrop-blur px-4 py-3">
+            <nav className="flex flex-col gap-2">
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/login"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-primary hover:bg-accent transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Link>
+            </nav>
+          </div>
+        )}
       </header>
 
       <div className="p-4 sm:p-6">
