@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Star, ExternalLink, Loader2 } from "lucide-react";
+import { Star, ExternalLink, Loader2, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
+import { format, parseISO } from "date-fns";
 
 interface LessonRatingProps {
   reportCardId: string;
@@ -14,10 +17,17 @@ interface LessonRatingProps {
   instructorId?: string;
   sessionId?: string;
   studentName?: string;
-  /** If true, show read-only display for admin/instructor */
   readOnly?: boolean;
-  /** If true, this is a public (anonymous) view */
   isPublicView?: boolean;
+}
+
+interface RatingEntry {
+  rating_value: number;
+  feedback_text: string | null;
+  submitted_by_role: string | null;
+  submitted_by_name: string | null;
+  is_public_view: boolean | null;
+  created_at: string;
 }
 
 const GOOGLE_REVIEW_URL = "https://g.page/r/CRABMUtSlA6IEBE/review/";
@@ -38,33 +48,54 @@ export function LessonRating({
   const [hoveredStar, setHoveredStar] = useState(0);
   const [selectedRating, setSelectedRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
+  const [publicName, setPublicName] = useState("");
+  const [publicEmail, setPublicEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [existingRating, setExistingRating] = useState<number | null>(null);
+  const [existingFeedback, setExistingFeedback] = useState<string | null>(null);
   const [existingDate, setExistingDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // All ratings for staff/instructor read-only view
+  const [allRatings, setAllRatings] = useState<RatingEntry[]>([]);
 
-  // Check for existing rating
   useEffect(() => {
     const checkExisting = async () => {
       try {
-        let query = supabase
-          .from("report_card_ratings" as any)
-          .select("rating_value, created_at")
-          .eq("report_card_id", reportCardId);
+        if (readOnly) {
+          // Staff/instructor: load all ratings for this report card
+          const { data } = await supabase
+            .from("report_card_ratings" as any)
+            .select("rating_value, feedback_text, submitted_by_role, submitted_by_name, is_public_view, created_at")
+            .eq("report_card_id", reportCardId)
+            .order("created_at", { ascending: false });
+          if (data) setAllRatings(data as any);
+        } else {
+          let query = supabase
+            .from("report_card_ratings" as any)
+            .select("rating_value, feedback_text, created_at")
+            .eq("report_card_id", reportCardId);
 
-        if (studentId) {
-          query = query.eq("student_id", studentId);
-        } else if (isPublicView) {
-          query = query.eq("is_public_view", true).is("student_id", null);
-        }
+          if (studentId) {
+            query = query.eq("student_id", studentId);
+          } else if (isPublicView) {
+            query = query.eq("is_public_view", true).is("student_id", null);
+          }
 
-        const { data, error } = await query.maybeSingle();
-        if (!error && data) {
-          setExistingRating((data as any).rating_value);
-          setExistingDate((data as any).created_at);
-          setSelectedRating((data as any).rating_value);
-          setSubmitted(true);
+          const { data, error } = await query.maybeSingle();
+          if (!error && data) {
+            const d = data as any;
+            setExistingRating(d.rating_value);
+            setExistingDate(d.created_at);
+            setSelectedRating(d.rating_value);
+            setSubmitted(true);
+            if (d.feedback_text) {
+              setExistingFeedback(d.feedback_text);
+              setFeedbackSubmitted(true);
+            }
+          }
         }
       } catch (err) {
         console.error("Error checking existing rating:", err);
@@ -72,15 +103,20 @@ export function LessonRating({
         setLoading(false);
       }
     };
-
     checkExisting();
-  }, [reportCardId, studentId, isPublicView]);
+  }, [reportCardId, studentId, isPublicView, readOnly]);
 
-  const handleStarClick = async (rating: number) => {
+  const handleStarClick = (rating: number) => {
     if (submitted || submitting || readOnly) return;
     setSelectedRating(rating);
-    setSubmitting(true);
+    // For 5 stars, submit immediately; for 1-4, wait for feedback
+    if (rating === 5) {
+      submitRating(rating);
+    }
+  };
 
+  const submitRating = async (rating: number, feedback?: string) => {
+    setSubmitting(true);
     try {
       const insertData: any = {
         report_card_id: reportCardId,
@@ -89,8 +125,9 @@ export function LessonRating({
         student_id: studentId || null,
         instructor_id: instructorId || null,
         submitted_by_role: isPublicView ? "public" : (studentId ? "student" : "anonymous"),
-        submitted_by_name: studentName || null,
+        submitted_by_name: isPublicView ? (publicName.trim() || null) : (studentName || null),
         is_public_view: isPublicView,
+        feedback_text: feedback?.trim() || null,
       };
 
       const { error } = await supabase
@@ -99,7 +136,6 @@ export function LessonRating({
 
       if (error) {
         if (error.code === "23505") {
-          // Duplicate — already rated
           toast({ title: "Already rated", description: "You've already rated this lesson." });
           setSubmitted(true);
           setExistingRating(rating);
@@ -110,33 +146,61 @@ export function LessonRating({
 
       setSubmitted(true);
       setExistingRating(rating);
-      toast({ title: "Rating submitted!", description: "Thank you for your feedback." });
+      if (feedback?.trim()) setFeedbackSubmitted(true);
+      toast({ title: "Thank you!", description: rating === 5 ? "Thank you for your 5-star rating!" : "Your feedback has been submitted." });
     } catch (err) {
       console.error("Rating submission error:", err);
-      setSelectedRating(0);
-      toast({ title: "Failed to submit rating", variant: "destructive" });
+      if (!feedback) setSelectedRating(0);
+      toast({ title: "Failed to submit", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleSubmitFeedback = async () => {
-    if (!feedbackText.trim()) return;
-    try {
-      await supabase
-        .from("report_card_ratings" as any)
-        .update({ feedback_text: feedbackText.trim() })
-        .eq("report_card_id", reportCardId)
-        .eq(studentId ? "student_id" : "is_public_view", studentId || true);
-      toast({ title: "Feedback saved!" });
-    } catch {
-      // Silent fail for optional feedback
+    if (!feedbackText.trim() || submittingFeedback) return;
+    // Validate email format if provided
+    if (publicEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(publicEmail.trim())) {
+      toast({ title: "Invalid email format", variant: "destructive" });
+      return;
+    }
+
+    if (!submitted) {
+      // Rating + feedback in one go
+      await submitRating(selectedRating, feedbackText);
+    } else {
+      // Update existing rating with feedback
+      setSubmittingFeedback(true);
+      try {
+        const updateData: any = { feedback_text: feedbackText.trim() };
+        if (isPublicView && publicName.trim()) updateData.submitted_by_name = publicName.trim();
+
+        let query = supabase
+          .from("report_card_ratings" as any)
+          .update(updateData)
+          .eq("report_card_id", reportCardId);
+
+        if (studentId) {
+          query = query.eq("student_id", studentId);
+        } else {
+          query = query.eq("is_public_view", true).is("student_id", null);
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+        setFeedbackSubmitted(true);
+        toast({ title: "Feedback saved!" });
+      } catch {
+        toast({ title: "Failed to save feedback", variant: "destructive" });
+      } finally {
+        setSubmittingFeedback(false);
+      }
     }
   };
 
   if (loading) {
     return (
-      <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+      <Card className="report-rating-panel border-border/50 bg-card/80 backdrop-blur">
         <CardContent className="p-6 flex items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
@@ -144,35 +208,53 @@ export function LessonRating({
     );
   }
 
-  // Read-only mode for admin/instructor
+  // Read-only mode for admin/instructor — show all feedback entries
   if (readOnly) {
-    if (!existingRating) return null;
+    if (allRatings.length === 0) return null;
     return (
-      <Card className="portal-card border-primary/20">
+      <Card className="report-rating-panel border-primary/20">
         <CardContent className="p-4 sm:p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Student Rating</p>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={cn(
-                      "h-5 w-5 transition-colors",
-                      star <= existingRating
-                        ? "fill-primary text-primary"
-                        : "text-muted-foreground/30"
-                    )}
-                  />
-                ))}
-                <span className="ml-2 text-sm font-medium text-foreground">{existingRating}/5</span>
+          <h4 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Star className="h-4 w-4 text-primary" />
+            Student / Viewer Feedback
+          </h4>
+          <div className="space-y-4">
+            {allRatings.map((entry, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "rounded-xl p-3 sm:p-4 border",
+                  isDark ? "bg-primary/5 border-primary/10" : "bg-muted/50 border-border/50"
+                )}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={cn(
+                          "h-4 w-4 transition-colors",
+                          s <= entry.rating_value
+                            ? "fill-primary text-primary"
+                            : "text-muted-foreground/30"
+                        )}
+                      />
+                    ))}
+                    <span className="ml-2 text-sm font-medium text-foreground">{entry.rating_value}/5</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {format(parseISO(entry.created_at), "MMM d, yyyy h:mm a")}
+                  </p>
+                </div>
+                {entry.feedback_text && (
+                  <p className="text-sm text-foreground/80 mt-2 whitespace-pre-wrap">{entry.feedback_text}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  {entry.submitted_by_name ? `${entry.submitted_by_name} · ` : ""}
+                  {entry.is_public_view ? "Public viewer" : entry.submitted_by_role === "student" ? "Student" : "Viewer"}
+                </p>
               </div>
-            </div>
-            {existingDate && (
-              <p className="text-xs text-muted-foreground">
-                {new Date(existingDate).toLocaleDateString()}
-              </p>
-            )}
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -180,25 +262,18 @@ export function LessonRating({
   }
 
   const displayRating = submitted ? selectedRating : hoveredStar || selectedRating;
+  const showFeedbackForm = selectedRating >= 1 && selectedRating <= 4 && !feedbackSubmitted;
+  const showThankYou14 = selectedRating >= 1 && selectedRating <= 4 && feedbackSubmitted;
 
   return (
-    <Card
-      className={cn(
-        "overflow-hidden border-border/50 backdrop-blur transition-all duration-500",
-        isDark
-          ? "bg-gradient-to-b from-card/90 to-card/70 border-primary/20 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.15)]"
-          : "bg-card/90 shadow-lg"
-      )}
-    >
-      <CardContent className="p-5 sm:p-8">
+    <Card className="report-rating-panel overflow-hidden border-border/50 backdrop-blur transition-all duration-500">
+      {/* Gold glare overlay */}
+      <div className="report-rating-glare" />
+
+      <CardContent className="relative z-10 p-5 sm:p-8">
         {/* Title */}
         <div className="text-center mb-6">
-          <h3
-            className={cn(
-              "text-lg sm:text-xl font-bold mb-1 tracking-wide",
-              isDark ? "text-primary" : "text-foreground"
-            )}
-          >
+          <h3 className="text-lg sm:text-xl font-bold mb-1 tracking-wide report-text-sweep">
             Rate Your Experience
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground">
@@ -210,21 +285,23 @@ export function LessonRating({
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6">
           {[1, 2, 3, 4, 5].map((star) => {
             const isActive = star <= displayRating;
-            const isInteractive = !submitted && !submitting;
+            const isInteractive = !submitted && !submitting && !(selectedRating >= 1 && selectedRating <= 4 && !feedbackSubmitted && selectedRating === selectedRating);
+            // For 1-4 stars, allow re-selection until feedback submitted
+            const canClick = !feedbackSubmitted && !submitting && !(submitted && selectedRating === 5);
             return (
               <button
                 key={star}
                 type="button"
-                disabled={!isInteractive}
+                disabled={!canClick}
                 onClick={() => handleStarClick(star)}
-                onMouseEnter={() => isInteractive && setHoveredStar(star)}
-                onMouseLeave={() => isInteractive && setHoveredStar(0)}
+                onMouseEnter={() => canClick && setHoveredStar(star)}
+                onMouseLeave={() => canClick && setHoveredStar(0)}
                 className={cn(
                   "relative p-1 rounded-full transition-all duration-300 ease-out",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                  isInteractive && "cursor-pointer hover:scale-110 active:scale-95",
-                  !isInteractive && "cursor-default",
-                  isActive && "scale-105"
+                  canClick && "cursor-pointer hover:scale-125 active:scale-95",
+                  !canClick && "cursor-default",
+                  isActive && "scale-110"
                 )}
                 aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
               >
@@ -232,7 +309,7 @@ export function LessonRating({
                   className={cn(
                     "h-10 w-10 sm:h-12 sm:w-12 transition-all duration-300",
                     isActive
-                      ? "fill-primary text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
+                      ? "fill-primary text-primary"
                       : isDark
                       ? "text-muted-foreground/30 hover:text-muted-foreground/50"
                       : "text-muted-foreground/25 hover:text-muted-foreground/40"
@@ -247,13 +324,6 @@ export function LessonRating({
                       : undefined
                   }
                 />
-                {/* Pulse ring on selection */}
-                {isActive && submitted && (
-                  <span
-                    className="absolute inset-0 rounded-full animate-ping opacity-20"
-                    style={{ backgroundColor: "hsl(var(--primary))" }}
-                  />
-                )}
               </button>
             );
           })}
@@ -266,86 +336,142 @@ export function LessonRating({
           </div>
         )}
 
-        {/* Post-rating content */}
-        {submitted && selectedRating > 0 && (
+        {/* === 5-Star Thank You + Google Review === */}
+        {submitted && selectedRating === 5 && (
           <div
             className={cn(
               "rounded-xl p-4 sm:p-6 mt-2 transition-all duration-500 animate-in fade-in-0 slide-in-from-bottom-4",
-              isDark
-                ? "bg-primary/5 border border-primary/10"
-                : "bg-primary/5 border border-primary/15"
+              isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
             )}
           >
-            {selectedRating === 5 ? (
-              <>
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-3">
-                  Thank you for your 5-star rating!
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-5">
-                  Driving Klass is a locally owned driving school that focuses on quality service
-                  rather than paid sponsorships or advertising. Our growth comes directly from the
-                  experiences our students share.
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
-                  If you'd like, we would greatly appreciate you taking a moment to share your
-                  experience with a Google review. Your feedback helps future students and parents
-                  feel confident in choosing Driving Klass.
-                </p>
-                <a
-                  href={GOOGLE_REVIEW_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button
-                    className={cn(
-                      "w-full min-h-[48px] gap-2 font-semibold text-sm sm:text-base tracking-wide",
-                      "bg-gradient-to-r from-primary via-primary to-primary/90",
-                      "hover:from-primary/90 hover:via-primary hover:to-primary",
-                      "text-primary-foreground shadow-lg",
-                      "transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
-                      isDark && "shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.5)]"
-                    )}
-                  >
-                    <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-                    Leave a Google Review
-                    <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </Button>
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-2">
-                  Thank you for your feedback.
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">
-                  We appreciate you taking the time to share your experience.
-                </p>
-                {/* Optional feedback text area for 1-4 stars */}
-                {!feedbackText && (
-                  <div className="space-y-3">
-                    <Textarea
-                      placeholder="Tell us more (optional)"
-                      value={feedbackText}
-                      onChange={(e) => setFeedbackText(e.target.value)}
-                      rows={3}
-                      maxLength={1000}
-                      className="resize-none text-sm"
-                    />
-                    {feedbackText.trim() && (
-                      <Button
-                        onClick={handleSubmitFeedback}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        Submit Feedback
-                      </Button>
-                    )}
-                  </div>
+            <p className="text-sm sm:text-base font-semibold text-foreground mb-3">
+              Thank you for your 5-star rating!
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-5">
+              Driving Klass is a locally owned driving school that focuses on quality service
+              rather than paid sponsorships or advertising. Our growth comes directly from the
+              experiences our students share.
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
+              If you'd like, we would greatly appreciate you taking a moment to share your
+              experience with a Google review. Your feedback helps future students and parents
+              feel confident in choosing Driving Klass.
+            </p>
+            <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer" className="block">
+              <Button
+                className={cn(
+                  "w-full min-h-[48px] gap-2 font-semibold text-sm sm:text-base tracking-wide",
+                  "bg-gradient-to-r from-primary via-primary to-primary/90",
+                  "hover:from-primary/90 hover:via-primary hover:to-primary",
+                  "text-primary-foreground shadow-lg",
+                  "transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
+                  isDark && "shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.5)]"
                 )}
-              </>
+              >
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
+                Leave a Google Review
+                <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            </a>
+          </div>
+        )}
+
+        {/* === 1-4 Stars: Feedback Form === */}
+        {showFeedbackForm && selectedRating > 0 && (
+          <div
+            className={cn(
+              "rounded-xl p-4 sm:p-6 mt-2 transition-all duration-500 animate-in fade-in-0 slide-in-from-bottom-4",
+              isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
             )}
+          >
+            <p className="text-sm sm:text-base font-semibold text-foreground mb-1">
+              Tell us more
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">
+              We appreciate your feedback and would love to know more about your experience.
+            </p>
+
+            <div className="space-y-3">
+              {/* Name & Email for non-logged-in users */}
+              {isPublicView && !studentId && (
+                <>
+                  <div>
+                    <Label htmlFor="rating-name" className="text-xs text-muted-foreground">Name (optional)</Label>
+                    <Input
+                      id="rating-name"
+                      placeholder="Your name"
+                      value={publicName}
+                      onChange={(e) => setPublicName(e.target.value)}
+                      maxLength={100}
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rating-email" className="text-xs text-muted-foreground">Email (optional)</Label>
+                    <Input
+                      id="rating-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={publicEmail}
+                      onChange={(e) => setPublicEmail(e.target.value)}
+                      maxLength={255}
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <Label htmlFor="rating-feedback" className="text-xs text-muted-foreground">Your feedback</Label>
+                <Textarea
+                  id="rating-feedback"
+                  placeholder="Tell us what went well or what could have been better…"
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  className="mt-1 resize-none text-sm"
+                />
+              </div>
+
+              <Button
+                onClick={handleSubmitFeedback}
+                disabled={!feedbackText.trim() || submitting || submittingFeedback}
+                className={cn(
+                  "w-full min-h-[48px] gap-2 font-semibold text-sm",
+                  "bg-gradient-to-r from-primary via-primary to-primary/90",
+                  "hover:from-primary/90 hover:via-primary hover:to-primary",
+                  "text-primary-foreground shadow-lg",
+                  "transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
+                  isDark && "shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.5)]"
+                )}
+              >
+                {submitting || submittingFeedback ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Submit Feedback
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* === 1-4 Stars: Thank You After Submission === */}
+        {showThankYou14 && (
+          <div
+            className={cn(
+              "rounded-xl p-4 sm:p-6 mt-2 text-center transition-all duration-500 animate-in fade-in-0 slide-in-from-bottom-4",
+              isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
+            )}
+          >
+            <Star className="h-8 w-8 text-primary mx-auto mb-3 fill-primary" />
+            <p className="text-sm sm:text-base font-semibold text-foreground mb-2">
+              Thank you for your feedback.
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              It helps us improve our quality of service. We appreciate you taking the time to share your experience.
+            </p>
           </div>
         )}
       </CardContent>
