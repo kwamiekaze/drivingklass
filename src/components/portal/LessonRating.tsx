@@ -552,9 +552,9 @@ export function LessonRating({
                   Thank you for your 5-star rating!
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-5">
-                  Driving Klass is a locally owned driving school that focuses on quality service
-                  rather than paid sponsorships or advertising. Our growth comes directly from the
-                  experiences our students share.
+                  Driving Klass is locally owned and focuses on quality service rather than paid
+                  sponsorships or advertising. Our growth comes directly from the experiences our
+                  students share.
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
                   If you'd like, we would greatly appreciate you taking a moment to share your
