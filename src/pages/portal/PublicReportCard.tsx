@@ -184,8 +184,10 @@ export default function PublicReportCard() {
   // ── Not Found ──
   if (viewState === "not_found") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="py-12 text-center">
             <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
