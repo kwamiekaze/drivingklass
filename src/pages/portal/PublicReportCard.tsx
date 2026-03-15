@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ReportCardFeedback } from "@/components/portal/ReportCardFeedback";
 
 interface PublicReportData {
   id: string;
