@@ -314,7 +314,7 @@ function AdminScheduleContent() {
         sessions={filteredSessions}
         userRole="admin"
         onSessionUpdate={fetchData}
-        defaultView="week"
+        defaultView="month"
         onSlotClick={openCreateFromSlot}
       />
     </div>

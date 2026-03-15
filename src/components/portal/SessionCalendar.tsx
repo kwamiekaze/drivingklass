@@ -361,7 +361,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   };
 
   // Resolve default view
-  const resolvedDefaultView = defaultView || (userRole === 'student' ? 'agenda' : 'week');
+  const resolvedDefaultView = defaultView || (userRole === 'student' ? 'agenda' : 'month');
 
   return (
     <div className="space-y-4">

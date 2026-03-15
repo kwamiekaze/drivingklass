@@ -36,7 +36,7 @@ const HOUR_HEIGHT = 60; // px per hour
 
 export function FullCalendarView({
   events,
-  defaultView = 'week',
+  defaultView = 'month',
   onEventClick,
   onSlotClick,
   className,

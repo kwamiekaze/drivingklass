@@ -204,8 +204,10 @@ export default function PublicReportCard() {
   // ── Access Code Entry ──
   if (viewState === "code_entry") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="p-6 sm:p-8">
             <div className="text-center mb-6">
