@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX } from "lucide-react";
+import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ReportCardFeedback } from "@/components/portal/ReportCardFeedback";
+import { LessonRating } from "@/components/portal/LessonRating";
 
 interface PublicReportData {
   id: string;
@@ -62,6 +62,7 @@ export default function PublicReportCard() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrolling = useScrollActive();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Splash handlers — transition from splash to viewing
   const handleSplashComplete = () => {
@@ -255,7 +256,7 @@ export default function PublicReportCard() {
 
   return (
     <div className={`min-h-screen bg-background ${isScrolling ? 'scroll-active' : ''}`}>
-      {/* Branded Header */}
+      {/* Branded Header with hamburger menu */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border/50">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -264,8 +265,40 @@ export default function PublicReportCard() {
               DrivingKlass
             </span>
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-9 w-9"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
+        {/* Mobile menu dropdown */}
+        {mobileMenuOpen && (
+          <div className="border-t border-border/50 bg-card/95 backdrop-blur px-4 py-3">
+            <nav className="flex flex-col gap-2">
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/login"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-primary hover:bg-accent transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Link>
+            </nav>
+          </div>
+        )}
       </header>
 
       <div className="p-4 sm:p-6">
@@ -397,10 +430,11 @@ export default function PublicReportCard() {
             </Card>
           )}
 
-          {/* Feedback Form */}
-          <ReportCardFeedback
+          {/* Lesson Rating */}
+          <LessonRating
             reportCardId={report.id}
             studentName={report.student_name}
+            isPublicView={true}
           />
 
           {/* Footer */}

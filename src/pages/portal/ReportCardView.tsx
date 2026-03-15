@@ -17,7 +17,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
-import { ReportCardFeedback } from "@/components/portal/ReportCardFeedback";
+import { LessonRating } from "@/components/portal/LessonRating";
 
 
 interface ReportCardDetails {
@@ -701,13 +701,14 @@ export default function ReportCardView() {
               </Card>
             )}
 
-            {/* Feedback Form */}
-            <ReportCardFeedback
+            {/* Lesson Rating */}
+            <LessonRating
               reportCardId={reportCard.id}
-              studentName={reportCard.student_name}
-              prefillName={user?.user_metadata?.full_name || ""}
-              prefillEmail={user?.email || ""}
+              studentId={role === 'student' ? user?.id : undefined}
               instructorId={reportCard.instructor_id}
+              sessionId={reportCard.session_id}
+              studentName={reportCard.student_name}
+              readOnly={role === 'admin' || role === 'staff' || role === 'instructor'}
             />
 
             {/* Edit Button for instructor/admin */}
