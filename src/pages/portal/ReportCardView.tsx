@@ -17,6 +17,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
+import { ReportCardFeedback } from "@/components/portal/ReportCardFeedback";
 
 
 interface ReportCardDetails {
@@ -699,6 +700,15 @@ export default function ReportCardView() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Feedback Form */}
+            <ReportCardFeedback
+              reportCardId={reportCard.id}
+              studentName={reportCard.student_name}
+              prefillName={user?.user_metadata?.full_name || ""}
+              prefillEmail={user?.email || ""}
+              instructorId={reportCard.instructor_id}
+            />
 
             {/* Edit Button for instructor/admin */}
             {(role === 'instructor' || role === 'admin' || role === 'staff') && (

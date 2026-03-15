@@ -933,6 +933,53 @@ export type Database = {
           },
         ]
       }
+      report_card_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          is_authenticated: boolean
+          message: string
+          report_card_id: string
+          sender_email: string
+          sender_name: string
+          sender_phone: string | null
+          sender_user_id: string | null
+          student_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_authenticated?: boolean
+          message: string
+          report_card_id: string
+          sender_email: string
+          sender_name: string
+          sender_phone?: string | null
+          sender_user_id?: string | null
+          student_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_authenticated?: boolean
+          message?: string
+          report_card_id?: string
+          sender_email?: string
+          sender_name?: string
+          sender_phone?: string | null
+          sender_user_id?: string | null
+          student_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_card_feedback_report_card_id_fkey"
+            columns: ["report_card_id"]
+            isOneToOne: false
+            referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_cards: {
         Row: {
           acceleration: number | null
