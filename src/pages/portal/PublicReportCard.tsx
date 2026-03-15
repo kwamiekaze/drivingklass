@@ -62,6 +62,7 @@ export default function PublicReportCard() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrolling = useScrollActive();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Splash handlers — transition from splash to viewing
   const handleSplashComplete = () => {
