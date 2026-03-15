@@ -167,8 +167,22 @@ export function LessonRating({
     }
   };
 
+  const openEditMode = (nextRating?: number) => {
+    const initialRating = nextRating ?? existingRating ?? selectedRating;
+    setEditRating(initialRating || 0);
+    setEditFeedback(existingFeedback || feedbackText || "");
+    setEditHover(0);
+    setEditing(true);
+  };
+
   const handleStarClick = (rating: number) => {
-    if (submitted || submitting || readOnly) return;
+    if (submitting || submittingFeedback || readOnly) return;
+
+    if (submitted) {
+      openEditMode(rating);
+      return;
+    }
+
     setSelectedRating(rating);
     if (rating === 5) {
       submitRating(rating);
