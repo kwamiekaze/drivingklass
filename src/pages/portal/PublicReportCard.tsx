@@ -88,10 +88,10 @@ export default function PublicReportCard() {
     setError("");
 
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/verify-report-access`,
+        `${supabaseUrl}/functions/v1/verify-report-access`,
         {
           method: "POST",
           headers: {
