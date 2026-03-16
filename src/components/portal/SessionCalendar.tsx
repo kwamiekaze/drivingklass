@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionAddressSection } from "./SessionAddressSection";
 import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
+import { IntakePreviewModal } from "./IntakePreviewModal";
 import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
