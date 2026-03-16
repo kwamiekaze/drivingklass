@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 import { ReportCard, Profile, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
