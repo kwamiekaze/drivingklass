@@ -1092,6 +1092,7 @@ export type Database = {
           public_enabled_at: string | null
           public_enabled_by: string | null
           public_share_slug: string | null
+          report_card_status: string
           reverse_parking: number | null
           right_turns: number | null
           road_sign_awareness: number | null
@@ -1101,6 +1102,7 @@ export type Database = {
           speed_maintenance: number | null
           straight_line_backing: number | null
           student_id: string
+          submitted_at: string | null
           transcription_summary: string | null
           turn_about: number | null
         }
@@ -1135,6 +1137,7 @@ export type Database = {
           public_enabled_at?: string | null
           public_enabled_by?: string | null
           public_share_slug?: string | null
+          report_card_status?: string
           reverse_parking?: number | null
           right_turns?: number | null
           road_sign_awareness?: number | null
@@ -1144,6 +1147,7 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           student_id: string
+          submitted_at?: string | null
           transcription_summary?: string | null
           turn_about?: number | null
         }
@@ -1178,6 +1182,7 @@ export type Database = {
           public_enabled_at?: string | null
           public_enabled_by?: string | null
           public_share_slug?: string | null
+          report_card_status?: string
           reverse_parking?: number | null
           right_turns?: number | null
           road_sign_awareness?: number | null
@@ -1187,6 +1192,7 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           student_id?: string
+          submitted_at?: string | null
           transcription_summary?: string | null
           turn_about?: number | null
         }
