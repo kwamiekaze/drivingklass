@@ -324,7 +324,7 @@ function InstructorDashboardContent() {
   );
 }
 
-function NeedingReportCard({ session, onUpdate }: { session: Session; onUpdate: () => void }) {
+function NeedingReportCard({ session, existingReport, onUpdate }: { session: Session; existingReport?: ReportCard; onUpdate: () => void }) {
   const { toast } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -347,6 +347,24 @@ function NeedingReportCard({ session, onUpdate }: { session: Session; onUpdate: 
     } finally { setIsLoading(false); }
   };
 
+  // Determine button label and route based on report card status
+  const getReportButton = () => {
+    if (existingReport) {
+      const status = existingReport.report_card_status;
+      if (status === 'completed') {
+        return { label: 'View Report', route: `/report-cards/open/${existingReport.id}`, icon: <FileText className="h-4 w-4" /> };
+      }
+      return { label: 'Continue Report', route: `/instructor/report-cards/edit/${existingReport.id}`, icon: <FileText className="h-4 w-4" /> };
+    }
+    return { 
+      label: session.session_type === 'testing' ? 'Grade Road Test' : 'Start Report', 
+      route: `/instructor/report-cards/new?session_id=${session.id}`, 
+      icon: <Plus className="h-4 w-4" /> 
+    };
+  };
+
+  const reportBtn = getReportButton();
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
@@ -354,27 +372,38 @@ function NeedingReportCard({ session, onUpdate }: { session: Session; onUpdate: 
           <div className="flex items-center gap-2">
             <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(session.student, 'Student')}</p>
             <SessionTypeBadge sessionType={session.session_type} />
+            {existingReport && existingReport.report_card_status !== 'completed' && (
+              <Badge variant="secondary" className={
+                existingReport.report_card_status === 'draft' 
+                  ? 'bg-muted text-muted-foreground text-[10px]' 
+                  : 'bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[10px]'
+              }>
+                {existingReport.report_card_status === 'draft' ? 'Draft' : 'In Progress'}
+              </Badge>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Link to={`/instructor/report-cards/new?session_id=${session.id}`} className="flex-1 sm:flex-initial">
+          <Link to={reportBtn.route} className="flex-1 sm:flex-initial">
             <Button size="sm" className="gap-2 w-full min-h-[40px]">
-              <Plus className="h-4 w-4" />
-              {session.session_type === 'testing' ? 'Grade Road Test' : 'Create Report'}
+              {reportBtn.icon}
+              {reportBtn.label}
             </Button>
           </Link>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
-            onClick={() => setCancelOpen(true)}
-          >
-            <XCircle className="h-4 w-4" />
-            Cancel
-          </Button>
+          {session.status === 'scheduled' && (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+              onClick={() => setCancelOpen(true)}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel
+            </Button>
+          )}
         </div>
       </div>
       <CancelConfirmationModal
