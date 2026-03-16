@@ -427,10 +427,25 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                       <div className="flex items-center gap-1">
-                        {isStaffOrAdmin && sessionDetails.student_id ? (
+                        {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id ? (
                           <>
                             <ClickableUserName userId={sessionDetails.student_id} name={sessionDetails.student_name || 'Not assigned'} className="font-medium text-sm sm:text-base" onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} />
                             <OpenProfileButton userId={sessionDetails.student_id} onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} className="h-6 w-6" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="View Intake Form"
+                              onClick={async () => {
+                                const { data } = await supabase.from('profiles').select('*').eq('id', sessionDetails.student_id).single();
+                                if (data) {
+                                  setIntakePreviewProfile(data);
+                                  setIntakePreviewOpen(true);
+                                }
+                              }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
                           </>
                         ) : (
                           <p className="font-medium text-sm sm:text-base">{sessionDetails.student_name || 'Not assigned'}</p>
