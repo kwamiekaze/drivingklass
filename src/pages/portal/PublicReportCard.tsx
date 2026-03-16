@@ -53,6 +53,7 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
+  const { resolvedTheme } = useTheme();
   // Start at code_entry — splash plays AFTER successful verification
   const [viewState, setViewState] = useState<ViewState>("code_entry");
   const [accessCode, setAccessCode] = useState("");
