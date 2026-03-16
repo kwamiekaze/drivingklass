@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Calendar, User } from "lucide-react";
-import { Session, ReportCard, RATING_CATEGORIES } from "@/types/portal";
-import { format, parseISO } from "date-fns";
+import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock } from "lucide-react";
+import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
+import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
-import { useFormDraft } from "@/hooks/useFormDraft";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 
@@ -42,6 +42,11 @@ function ReportCardFormContent() {
   const [existingCard, setExistingCard] = useState<ReportCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [draftId, setDraftId] = useState<string | null>(id || null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef<string>('');
 
   const [formData, setFormData] = useState({
     transcription_summary: '',
@@ -69,18 +74,6 @@ function ReportCardFormContent() {
     overall: 5,
   });
 
-  // Form draft hook - keyed by session id for new reports, or report id for edits
-  const draftRouteKey = isEditing ? `/instructor/report-cards/edit/${id}` : `/instructor/report-cards/new?session_id=${sessionId}`;
-  const { clearDraft } = useFormDraft({
-    formName: 'report-card',
-    values: formData,
-    setValue: (values) => setFormData(prev => ({ ...prev, ...values })),
-    userId: user?.id,
-    routePath: draftRouteKey,
-    serverTimestamp: existingCard?.created_at,
-    enabled: !loading,
-  });
-
   useEffect(() => {
     if (isEditing && id) {
       fetchExistingCard();
@@ -100,6 +93,43 @@ function ReportCardFormContent() {
 
     if (data) {
       setSession(data as Session);
+      // Check if there's already a draft for this session
+      const { data: existingDraft } = await supabase
+        .from('report_cards')
+        .select('*')
+        .eq('session_id', sessionId!)
+        .in('report_card_status', ['draft', 'in_progress'])
+        .maybeSingle();
+
+      if (existingDraft) {
+        setDraftId(existingDraft.id);
+        setExistingCard(existingDraft as ReportCard);
+        setFormData({
+          transcription_summary: existingDraft.transcription_summary || '',
+          message_to_student: existingDraft.message_to_student || '',
+          internal_message: existingDraft.internal_message || '',
+          acceleration: existingDraft.acceleration || 5,
+          braking: existingDraft.braking || 5,
+          left_turns: existingDraft.left_turns || 5,
+          right_turns: existingDraft.right_turns || 5,
+          speed_maintenance: existingDraft.speed_maintenance || 5,
+          lane_maintenance: existingDraft.lane_maintenance || 5,
+          blind_spots: existingDraft.blind_spots || 5,
+          signal_usage: existingDraft.signal_usage || 5,
+          changing_lanes: existingDraft.changing_lanes || 5,
+          following_distance: existingDraft.following_distance || 5,
+          road_sign_awareness: existingDraft.road_sign_awareness || 5,
+          distractions: existingDraft.distractions || 5,
+          general_parking: existingDraft.general_parking || 5,
+          reverse_parking: existingDraft.reverse_parking || 5,
+          parallel_parking: existingDraft.parallel_parking || 5,
+          straight_line_backing: existingDraft.straight_line_backing || 5,
+          turn_about: existingDraft.turn_about || 5,
+          merging: existingDraft.merging || 5,
+          interstate: existingDraft.interstate || 5,
+          overall: existingDraft.overall || 5,
+        });
+      }
     }
     setLoading(false);
   };
@@ -114,6 +144,7 @@ function ReportCardFormContent() {
     if (data) {
       setExistingCard(data as ReportCard);
       setSession(data.session as Session);
+      setDraftId(data.id);
       setFormData({
         transcription_summary: data.transcription_summary || '',
         message_to_student: data.message_to_student || '',
@@ -147,11 +178,14 @@ function ReportCardFormContent() {
     setFormData(prev => ({ ...prev, [key]: value[0] }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-save logic
+  const performAutoSave = useCallback(async () => {
     if (!session || !user) return;
 
-    setSaving(true);
+    const serialized = JSON.stringify(formData);
+    if (serialized === lastSavedRef.current) return;
+
+    setAutoSaveStatus('saving');
 
     try {
       const reportDataBase = {
@@ -161,38 +195,116 @@ function ReportCardFormContent() {
         instructor_id: session.instructor_id,
       };
 
-      if (isEditing && existingCard) {
+      if (draftId) {
+        // Update existing draft
         const { error } = await supabase
-          .from("report_cards")
+          .from('report_cards')
+          .update({ ...reportDataBase, report_card_status: 'in_progress' as string })
+          .eq('id', draftId);
+        if (error) throw error;
+      } else {
+        // Create new draft
+        const { data, error } = await supabase
+          .from('report_cards')
+          .insert({ ...reportDataBase, report_card_status: 'draft' as string })
+          .select('id')
+          .single();
+        if (error) throw error;
+        if (data) setDraftId(data.id);
+      }
+
+      lastSavedRef.current = serialized;
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+      setAutoSaveStatus('idle');
+    }
+  }, [formData, session, user, draftId]);
+
+  // Debounced auto-save on form changes
+  useEffect(() => {
+    if (loading || !session) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [formData, loading, session, performAutoSave]);
+
+  // Save draft manually
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    await performAutoSave();
+    setSaving(false);
+    toast({
+      title: "Draft Saved",
+      description: "Your report card draft has been saved.",
+    });
+  };
+
+  // Submit report card (mark as completed)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session || !user) return;
+
+    setSubmitting(true);
+
+    try {
+      const reportDataBase = {
+        ...formData,
+        session_id: session.id,
+        student_id: session.student_id,
+        instructor_id: session.instructor_id,
+        report_card_status: 'completed' as string,
+        submitted_at: new Date().toISOString(),
+      };
+
+      if (draftId) {
+        const { error } = await supabase
+          .from('report_cards')
           .update(reportDataBase)
-          .eq("id", existingCard.id);
+          .eq('id', draftId);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("report_cards")
+          .from('report_cards')
           .insert(reportDataBase);
         if (error) throw error;
       }
 
-      // Clear draft on successful save
-      clearDraft();
-
       toast({
-        title: isEditing ? "Report Updated" : "Report Created",
-        description: "The report card has been saved successfully.",
+        title: "Report Card Submitted",
+        description: "The report card is now visible to the student.",
       });
 
       navigate(-1);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save report card",
+        description: error.message || "Failed to submit report card",
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
+
+  // Check if lesson is currently in progress
+  const isLessonInProgress = session ? (
+    isBefore(parseISO(session.starts_at), new Date()) && 
+    isAfter(parseISO(session.ends_at), new Date())
+  ) : false;
+
+  const currentStatus: ReportCardStatus = existingCard?.report_card_status as ReportCardStatus || 'draft';
+  const isCompleted = currentStatus === 'completed';
 
   if (loading) {
     return (
@@ -245,15 +357,43 @@ function ReportCardFormContent() {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold theme-heading">
-            {isEditing ? 'Edit Report Card' : 'New Report Card'}
-          </h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
+              {isCompleted ? 'Edit Report Card' : draftId ? 'Continue Report' : 'New Report Card'}
+            </h1>
+            <ReportCardStatusBadge status={currentStatus} />
+          </div>
           <p className="text-muted-foreground">
             {getDisplayName(session.student, 'Student')} - {format(parseISO(session.starts_at), 'MMMM d, yyyy h:mm a')}
           </p>
         </div>
       </div>
+
+      {/* Lesson In Progress indicator */}
+      {isLessonInProgress && (
+        <Card className="border-orange-500/50 bg-orange-500/10">
+          <CardContent className="p-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-orange-500 animate-pulse" />
+            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Lesson In Progress</span>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Auto-save indicator */}
+      {!isCompleted && (
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          {autoSaveStatus === 'saving' && (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Saving...</span>
+            </>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="text-green-600 dark:text-green-400">✓ Draft Saved</span>
+          )}
+        </div>
+      )}
 
       {/* Session Info */}
       <Card>
@@ -345,7 +485,7 @@ function ReportCardFormContent() {
                 placeholder="Feedback and encouragement for the student..."
                 rows={4}
               />
-              <p className="text-xs text-muted-foreground">This will be visible to the student</p>
+              <p className="text-xs text-muted-foreground">This will be visible to the student after submission</p>
             </div>
 
             <div className="space-y-2">
@@ -362,20 +502,61 @@ function ReportCardFormContent() {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full cta-button" disabled={saving}>
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              {isEditing ? 'Update Report Card' : 'Submit Report Card'}
-            </>
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {!isCompleted && (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 min-h-[44px]"
+              disabled={saving}
+              onClick={handleSaveDraft}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Draft
+                </>
+              )}
+            </Button>
           )}
-        </Button>
+          <Button
+            type="submit"
+            className="flex-1 cta-button min-h-[44px]"
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                {isCompleted ? 'Update Report Card' : 'Submit Report Card'}
+              </>
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   );
+}
+
+export function ReportCardStatusBadge({ status }: { status: ReportCardStatus | string }) {
+  switch (status) {
+    case 'draft':
+      return <Badge variant="secondary" className="bg-muted text-muted-foreground">Draft</Badge>;
+    case 'in_progress':
+      return <Badge variant="secondary" className="bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30">In Progress</Badge>;
+    case 'completed':
+      return <Badge variant="secondary" className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30">Completed</Badge>;
+    default:
+      return null;
+  }
 }

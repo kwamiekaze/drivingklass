@@ -41,6 +41,7 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
       .from('report_cards')
       .select(`${selectFields}, session:sessions!report_cards_session_id_fkey(session_type)`)
       .eq('student_id', studentId)
+      .eq('report_card_status', 'completed')
       .order('created_at', { ascending: true });
 
     if (data) {

@@ -64,11 +64,12 @@ function StudentDashboardContent() {
         setSessions(sessionsData as Session[]);
       }
 
-      // Fetch report cards with explicit FK names (excluding internal_message for students)
+      // Fetch report cards - only completed ones (RLS enforces this, but also filter client-side)
       const { data: reportCardsData, error: reportCardsError } = await supabase
         .from('report_cards')
         .select('*, session:sessions!report_cards_session_id_fkey(*), instructor:profiles!report_cards_instructor_id_fkey(*), student:profiles!report_cards_student_id_fkey(*)')
         .eq('student_id', user.id)
+        .eq('report_card_status', 'completed')
         .order('created_at', { ascending: false });
 
       if (reportCardsError) throw reportCardsError;

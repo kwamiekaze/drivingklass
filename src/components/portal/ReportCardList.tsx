@@ -10,6 +10,7 @@ import { FileText, Calendar, User, Star, MessageSquare, Clock, ExternalLink, Cop
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useToast } from "@/hooks/use-toast";
+import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
@@ -105,10 +106,13 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       </span>
                     </div>
                   </div>
-                  <Badge className={`${getRatingColor(card.overall)} text-xs shrink-0`}>
+                <Badge className={`${getRatingColor(card.overall)} text-xs shrink-0`}>
                     <Star className="h-3 w-3 mr-1" />
                     {card.overall || '-'}/10
                   </Badge>
+                  {card.report_card_status && card.report_card_status !== 'completed' && (
+                    <ReportCardStatusBadge status={card.report_card_status} />
+                  )}
                 </div>
                 
                 {card.message_to_student && (
