@@ -102,12 +102,16 @@ export interface SessionDetails {
   dropoff_address: string | null;
 }
 
+export type ReportCardStatus = 'draft' | 'in_progress' | 'completed';
+
 export interface ReportCard {
   id: string;
   created_at: string;
   session_id: string;
   student_id: string;
   instructor_id: string;
+  report_card_status: ReportCardStatus;
+  submitted_at: string | null;
   lesson_audio_url: string | null; // legacy public URL
   audio_path?: string | null; // canonical private storage path
   audio_mime?: string | null;
