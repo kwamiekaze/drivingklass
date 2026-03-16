@@ -266,7 +266,7 @@ export function LessonRating({
         setFeedbackSubmitted(true);
         setExistingFeedback(feedbackText.trim());
         toast({ title: "Feedback saved!" });
-        await sendFeedbackNotification(selectedRating, false);
+        await sendFeedbackNotification(selectedRating, true);
       } catch {
         toast({ title: "Failed to save feedback", variant: "destructive" });
       } finally {
