@@ -10,6 +10,7 @@ import { FileText, Calendar, User, Star, MessageSquare, Clock, ExternalLink, Cop
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useToast } from "@/hooks/use-toast";
+import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
