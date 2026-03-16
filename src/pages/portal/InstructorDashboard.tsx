@@ -106,11 +106,23 @@ function InstructorDashboardContent() {
     s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date())
   );
 
+  // Sessions that need attention: past end time, not completed, not cancelled
   const sessionsNeedingReportCard = sessions.filter(s => 
     s.status === 'scheduled' && 
     !s.completed && 
     !isAfter(parseISO(s.ends_at), new Date())
   );
+
+  // All sessions that can have report cards started (scheduled, not cancelled)
+  const sessionsForReports = sessions.filter(s => 
+    s.status !== 'cancelled'
+  );
+
+  // Build a map of session_id -> report card for quick lookup
+  const reportCardBySessionId = new Map<string, ReportCard>();
+  reportCards.forEach(rc => {
+    reportCardBySessionId.set(rc.session_id, rc);
+  });
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
 
