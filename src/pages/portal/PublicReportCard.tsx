@@ -12,6 +12,7 @@ import { StudentProgressSection } from "@/components/portal/StudentProgressSecti
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LessonRating } from "@/components/portal/LessonRating";
+import { HeaderBrand } from "@/components/HeaderBrand";
 
 interface PublicReportData {
   id: string;
@@ -264,11 +265,8 @@ export default function PublicReportCard() {
       {/* Branded Header with hamburger menu */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border/50">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Star className="h-5 w-5 text-primary fill-primary" />
-            <span className="font-poppins font-extrabold text-lg sm:text-xl tracking-widest uppercase text-foreground">
-              DrivingKlass
-            </span>
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <HeaderBrand className="scale-[0.6] origin-left -ml-2" />
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
