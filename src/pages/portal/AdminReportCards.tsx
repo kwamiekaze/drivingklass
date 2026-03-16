@@ -233,6 +233,7 @@ function AdminReportCardsContent() {
                     <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
                       Overall: {rc.overall || 'N/A'}
                     </Badge>
+                    <ReportCardStatusBadge status={rc.report_card_status || 'completed'} />
                     <div className="hidden xs:flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                       {format(parseISO(rc.created_at!), 'MMM d, yyyy')}
