@@ -67,7 +67,7 @@ function AdminReportCardsContent() {
 
     setStudents((profilesData?.filter(p => studentIds.has(p.id)) || []) as any);
     setInstructors((profilesData?.filter(p => instructorIds.has(p.id)) || []) as any);
-    setReportCards(reportCardsData || []);
+    setReportCards((reportCardsData || []) as ReportCard[]);
     setLoading(false);
   };
 
