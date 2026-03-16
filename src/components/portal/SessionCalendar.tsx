@@ -734,6 +734,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       {/* Profile Modal */}
       <AdminUserProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} userId={profileModalUserId} onProfileUpdated={onSessionUpdate} />
 
+      {/* Intake Preview Modal */}
+      <IntakePreviewModal open={intakePreviewOpen} onOpenChange={setIntakePreviewOpen} profile={intakePreviewProfile} />
+
       {/* Road Test Result Modal */}
       {selectedSession && selectedSession.session_type === 'testing' && (
         <RoadTestResultModal
