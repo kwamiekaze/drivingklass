@@ -12,7 +12,8 @@ import { StudentProgressSection } from "@/components/portal/StudentProgressSecti
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LessonRating } from "@/components/portal/LessonRating";
-import { HeaderBrand } from "@/components/HeaderBrand";
+import { useTheme } from "@/components/ThemeProvider";
+import { cn } from "@/lib/utils";
 
 interface PublicReportData {
   id: string;
