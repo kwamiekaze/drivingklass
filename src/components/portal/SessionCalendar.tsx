@@ -50,6 +50,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
   const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
+  const [intakePreviewOpen, setIntakePreviewOpen] = useState(false);
+  const [intakePreviewProfile, setIntakePreviewProfile] = useState<any>(null);
 
   // Edit session form state
   const [editDate, setEditDate] = useState("");
