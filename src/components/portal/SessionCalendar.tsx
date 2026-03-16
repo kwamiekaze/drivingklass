@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionAddressSection } from "./SessionAddressSection";
 import { AdminUserProfileModal, ClickableUserName, OpenProfileButton } from "./AdminUserProfileModal";
+import { IntakePreviewModal } from "./IntakePreviewModal";
 import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
@@ -49,6 +50,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [roadTestModalOpen, setRoadTestModalOpen] = useState(false);
   const [roadTestResults, setRoadTestResults] = useState<Record<string, { result: string; notes: string | null }>>({});
+  const [intakePreviewOpen, setIntakePreviewOpen] = useState(false);
+  const [intakePreviewProfile, setIntakePreviewProfile] = useState<any>(null);
 
   // Edit session form state
   const [editDate, setEditDate] = useState("");
@@ -424,10 +427,25 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                       <div className="flex items-center gap-1">
-                        {isStaffOrAdmin && sessionDetails.student_id ? (
+                        {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id ? (
                           <>
                             <ClickableUserName userId={sessionDetails.student_id} name={sessionDetails.student_name || 'Not assigned'} className="font-medium text-sm sm:text-base" onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} />
                             <OpenProfileButton userId={sessionDetails.student_id} onOpenProfile={(id) => { setProfileModalUserId(id); setProfileModalOpen(true); }} className="h-6 w-6" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="View Intake Form"
+                              onClick={async () => {
+                                const { data } = await supabase.from('profiles').select('*').eq('id', sessionDetails.student_id).single();
+                                if (data) {
+                                  setIntakePreviewProfile(data);
+                                  setIntakePreviewOpen(true);
+                                }
+                              }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
                           </>
                         ) : (
                           <p className="font-medium text-sm sm:text-base">{sessionDetails.student_name || 'Not assigned'}</p>
@@ -715,6 +733,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
 
       {/* Profile Modal */}
       <AdminUserProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} userId={profileModalUserId} onProfileUpdated={onSessionUpdate} />
+
+      {/* Intake Preview Modal */}
+      <IntakePreviewModal open={intakePreviewOpen} onOpenChange={setIntakePreviewOpen} profile={intakePreviewProfile} />
 
       {/* Road Test Result Modal */}
       {selectedSession && selectedSession.session_type === 'testing' && (
