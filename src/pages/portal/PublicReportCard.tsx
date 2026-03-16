@@ -268,7 +268,23 @@ export default function PublicReportCard() {
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border/50">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <HeaderBrand className="scale-[0.6] origin-left -ml-2" />
+            <h1 
+              className={cn(
+                "font-poppins font-extrabold tracking-widest uppercase",
+                "text-xl sm:text-2xl md:text-3xl",
+                "tracking-[0.15em]",
+                "relative transition-colors duration-300",
+                resolvedTheme === "dark" && "text-neon-gold animate-breathing-glow"
+              )}
+              style={{
+                color: resolvedTheme === "dark" ? 'hsl(48 90% 78%)' : 'hsl(0 0% 12%)',
+                textShadow: resolvedTheme === "dark"
+                  ? undefined
+                  : '0 0 2px hsl(43 75% 50% / 0.7), 0 0 10px hsl(43 75% 50% / 0.35), 1px 1px 0 hsl(43 75% 50% / 0.25), -1px -1px 0 hsl(43 75% 50% / 0.25)',
+              }}
+            >
+              DRIVINGKLASS
+            </h1>
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
