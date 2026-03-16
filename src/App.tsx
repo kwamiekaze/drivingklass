@@ -62,15 +62,15 @@ const App = () => (
         <Sonner />
         <ThemeDebugBadge />
         <BrowserRouter>
-          <AnalyticsProvider>
-            <Routes>
-              {/* Fully public route — NO auth providers */}
-              <Route path="/report/public/:slug" element={<PublicReportCard />} />
+          <Routes>
+            {/* Fully public route — NO auth providers, no analytics */}
+            <Route path="/report/public/:slug" element={<PublicReportCard />} />
 
-              {/* All other routes wrapped in auth providers */}
-              <Route path="/*" element={
-                <AuthProvider>
-                  <PortalAuthProvider>
+            {/* All other routes wrapped in auth + analytics providers */}
+            <Route path="/*" element={
+              <AuthProvider>
+                <PortalAuthProvider>
+                  <AnalyticsProvider>
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/" element={<Index />} />
@@ -84,14 +84,14 @@ const App = () => (
                       <Route path="/pending-approval" element={<PendingApproval />} />
                       <Route path="/rejected" element={<RejectedStatus />} />
                       
-                      {/* Intake Form (separate from profile) */}
+                      {/* Intake Form */}
                       <Route path="/intake" element={<IntakeForm />} />
                       <Route path="/intake-form" element={<IntakeForm />} />
                       
                       {/* Admin Intake Edit */}
                       <Route path="/admin/intake-edit" element={<AdminIntakeEdit />} />
                       
-                      {/* Canonical Profile Route (all roles) */}
+                      {/* Canonical Profile Route */}
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Legacy Profile Redirects */}
@@ -148,11 +148,11 @@ const App = () => (
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
-                  </PortalAuthProvider>
-                </AuthProvider>
-              } />
-            </Routes>
-          </AnalyticsProvider>
+                  </AnalyticsProvider>
+                </PortalAuthProvider>
+              </AuthProvider>
+            } />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
