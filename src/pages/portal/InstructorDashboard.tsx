@@ -241,9 +241,17 @@ function InstructorDashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
-              {sessionsNeedingReportCard.slice(0, 5).map(session => (
-                <NeedingReportCard key={session.id} session={session} onUpdate={fetchData} />
-              ))}
+              {sessionsNeedingReportCard.slice(0, 5).map(session => {
+                const existingReport = reportCardBySessionId.get(session.id);
+                return (
+                  <NeedingReportCard 
+                    key={session.id} 
+                    session={session} 
+                    existingReport={existingReport}
+                    onUpdate={fetchData} 
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>
