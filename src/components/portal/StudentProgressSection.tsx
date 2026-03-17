@@ -11,7 +11,6 @@ import {
 import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
 import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
-import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 
 interface Props {
   studentId: string;
@@ -31,10 +30,14 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
 
   const fetchReports = async () => {
     setLoading(true);
-    // Get all driving report cards for this student (via driving sessions)
+    // Explicitly select every skill field to guarantee 1:1 match with SKILL_KEYS
     const selectFields = [
       'id', 'created_at', 'overall',
-      ...SKILL_KEYS,
+      'acceleration', 'braking', 'left_turns', 'right_turns',
+      'speed_maintenance', 'lane_maintenance', 'blind_spots', 'signal_usage',
+      'changing_lanes', 'following_distance', 'road_sign_awareness', 'distractions',
+      'general_parking', 'reverse_parking', 'parallel_parking',
+      'straight_line_backing', 'turn_about', 'merging', 'interstate',
     ].join(', ');
 
     const { data } = await supabase
