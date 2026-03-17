@@ -1080,6 +1080,7 @@ export type Database = {
           changing_lanes: number | null
           created_at: string | null
           distractions: number | null
+          focus_areas: Json | null
           following_distance: number | null
           general_parking: number | null
           id: string
@@ -1092,6 +1093,7 @@ export type Database = {
           lesson_audio_url: string | null
           merging: number | null
           message_to_student: string | null
+          most_improved_skills: Json | null
           overall: number | null
           parallel_parking: number | null
           public_access_code: string | null
@@ -1107,6 +1109,7 @@ export type Database = {
           signal_usage: number | null
           speed_maintenance: number | null
           straight_line_backing: number | null
+          strongest_skills: Json | null
           student_id: string
           submitted_at: string | null
           transcription_summary: string | null
@@ -1125,6 +1128,7 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
           id?: string
@@ -1137,6 +1141,7 @@ export type Database = {
           lesson_audio_url?: string | null
           merging?: number | null
           message_to_student?: string | null
+          most_improved_skills?: Json | null
           overall?: number | null
           parallel_parking?: number | null
           public_access_code?: string | null
@@ -1152,6 +1157,7 @@ export type Database = {
           signal_usage?: number | null
           speed_maintenance?: number | null
           straight_line_backing?: number | null
+          strongest_skills?: Json | null
           student_id: string
           submitted_at?: string | null
           transcription_summary?: string | null
@@ -1170,6 +1176,7 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
           id?: string
@@ -1182,6 +1189,7 @@ export type Database = {
           lesson_audio_url?: string | null
           merging?: number | null
           message_to_student?: string | null
+          most_improved_skills?: Json | null
           overall?: number | null
           parallel_parking?: number | null
           public_access_code?: string | null
@@ -1197,6 +1205,7 @@ export type Database = {
           signal_usage?: number | null
           speed_maintenance?: number | null
           straight_line_backing?: number | null
+          strongest_skills?: Json | null
           student_id?: string
           submitted_at?: string | null
           transcription_summary?: string | null
