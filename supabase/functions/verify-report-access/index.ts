@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
         changing_lanes, following_distance, road_sign_awareness, distractions,
         general_parking, reverse_parking, parallel_parking, straight_line_backing,
         turn_about, merging, interstate, overall,
-        transcription_summary, message_to_student
+        transcription_summary, message_to_student,
+        strongest_skills, most_improved_skills, focus_areas
       `)
       .eq("public_share_slug", slug)
       .eq("is_public", true)
