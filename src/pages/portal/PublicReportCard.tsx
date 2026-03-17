@@ -403,7 +403,12 @@ export default function PublicReportCard() {
           {/* Skill Progress Graph (if enabled publicly) */}
           {report.show_graph_publicly && report.student_id && (
             <div className="report-graph-section">
-              <StudentProgressSection studentId={report.student_id} compact />
+              <StudentProgressSection
+                studentId={report.student_id}
+                reportCardId={report.id}
+                anchorReport={report}
+                compact
+              />
             </div>
           )}
 

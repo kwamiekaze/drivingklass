@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, BarChart3 } from "lucide-react";
@@ -7,6 +7,7 @@ import {
   computeTrendData,
   computeInsights,
   type ReportCardRatings,
+  type ReportCardSkillSnapshot,
 } from "@/lib/reportCardGraphData";
 import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
@@ -14,13 +15,26 @@ import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
 
 interface Props {
   studentId: string;
+  reportCardId?: string;
+  anchorReport?: ReportCardSkillSnapshot;
   /** If true, a minimal version (e.g. for public view) */
   compact?: boolean;
   className?: string;
 }
 
-export function StudentProgressSection({ studentId, compact, className }: Props) {
-  const [reports, setReports] = useState<ReportCardRatings[]>([]);
+const sortReportsByCreatedAt = (reports: ReportCardRatings[]) =>
+  [...reports].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+export function StudentProgressSection({
+  studentId,
+  reportCardId,
+  anchorReport,
+  compact,
+  className,
+}: Props) {
+  const [historyReports, setHistoryReports] = useState<ReportCardRatings[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +44,6 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
 
   const fetchReports = async () => {
     setLoading(true);
-    // Explicitly select every skill field to guarantee 1:1 match with SKILL_KEYS
     const selectFields = [
       'id', 'created_at', 'overall',
       'acceleration', 'braking', 'left_turns', 'right_turns',
@@ -48,14 +61,53 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
       .order('created_at', { ascending: true });
 
     if (data) {
-      // Filter to driving sessions only
       const drivingReports = data.filter(
         (r: any) => !r.session || r.session.session_type === 'driving'
       ) as unknown as ReportCardRatings[];
-      setReports(drivingReports);
+      setHistoryReports(drivingReports);
     }
+
     setLoading(false);
   };
+
+  const reports = useMemo(() => {
+    const mergedReports = [...historyReports];
+
+    if (anchorReport?.id) {
+      const targetId = reportCardId || anchorReport.id;
+      const existingIndex = mergedReports.findIndex((report) => report.id === targetId);
+      const mergedAnchor = existingIndex >= 0
+        ? { ...mergedReports[existingIndex], ...anchorReport }
+        : { ...anchorReport };
+
+      if (existingIndex >= 0) {
+        mergedReports[existingIndex] = mergedAnchor;
+      } else {
+        mergedReports.push(mergedAnchor);
+      }
+    }
+
+    const orderedReports = sortReportsByCreatedAt(mergedReports);
+
+    if (!reportCardId) return orderedReports;
+
+    const anchorIndex = orderedReports.findIndex((report) => report.id === reportCardId);
+    return anchorIndex >= 0 ? orderedReports.slice(0, anchorIndex + 1) : orderedReports;
+  }, [historyReports, reportCardId, anchorReport]);
+
+  const radarData = useMemo(() => computeRadarData(reports), [reports]);
+  const trendData = useMemo(() => computeTrendData(reports), [reports]);
+  const insights = useMemo(() => computeInsights(reports), [reports]);
+
+  if (typeof window !== 'undefined' && (window as any).__DEBUG_RADAR) {
+    console.log('[RadarData][resolved-reports]', {
+      studentId,
+      reportCardId,
+      reportIds: reports.map((report) => report.id),
+      latestReportId: reports[reports.length - 1]?.id,
+      latestRatings: radarData.map((point) => ({ skill: point.skill, latest: point.latest })),
+    });
+  }
 
   if (loading) {
     return (
@@ -78,13 +130,8 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
     );
   }
 
-  const radarData = computeRadarData(reports);
-  const trendData = computeTrendData(reports);
-  const insights = computeInsights(reports);
-
   return (
     <div className={`space-y-4 ${className || ''}`}>
-      {/* Section Header */}
       <div className="flex items-center gap-2">
         <BarChart3 className="h-5 w-5 text-primary" />
         <h3 className="text-sm sm:text-base font-semibold text-foreground">
@@ -92,10 +139,8 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
         </h3>
       </div>
 
-      {/* Summary Cards */}
       {!compact && <StudentProgressSummaryCards insights={insights} />}
 
-      {/* Radar Chart */}
       <Card className="border-border/50 bg-card/60 backdrop-blur overflow-hidden">
         <CardContent className="p-2 sm:p-4">
           <StudentProgressRadarChart data={radarData} />
@@ -107,7 +152,6 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
         </CardContent>
       </Card>
 
-      {/* Trend Chart */}
       {!compact && trendData.length >= 2 && (
         <Card className="border-border/50 bg-card/60 backdrop-blur overflow-hidden">
           <CardContent className="p-3 sm:p-4">
@@ -116,9 +160,7 @@ export function StudentProgressSection({ studentId, compact, className }: Props)
         </Card>
       )}
 
-      {compact && (
-        <StudentProgressSummaryCards insights={insights} />
-      )}
+      {compact && <StudentProgressSummaryCards insights={insights} />}
     </div>
   );
 }

@@ -516,7 +516,11 @@ export default function ReportCardView() {
 
             {/* Student Skill Progress Graph */}
             <div className="report-graph-section">
-              <StudentProgressSection studentId={reportCard.student_id} />
+              <StudentProgressSection
+                studentId={reportCard.student_id}
+                reportCardId={reportCard.id}
+                anchorReport={reportCard}
+              />
             </div>
 
             {/* Skill Progress Highlights */}
