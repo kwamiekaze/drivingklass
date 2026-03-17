@@ -7,6 +7,7 @@ import {
   computeTrendData,
   computeInsights,
   type ReportCardRatings,
+  type ReportCardSkillSnapshot,
 } from "@/lib/reportCardGraphData";
 import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
@@ -15,7 +16,7 @@ import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
 interface Props {
   studentId: string;
   reportCardId?: string;
-  anchorReport?: ReportCardRatings;
+  anchorReport?: ReportCardSkillSnapshot;
   /** If true, a minimal version (e.g. for public view) */
   compact?: boolean;
   className?: string;

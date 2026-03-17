@@ -5,15 +5,19 @@ export const SKILL_KEYS = RATING_CATEGORIES
   .filter(c => c.key !== 'overall')
   .map(c => c.key);
 
+export type SkillKey = (typeof SKILL_KEYS)[number];
+
 export const SKILL_LABELS: Record<string, string> = Object.fromEntries(
   RATING_CATEGORIES.filter(c => c.key !== 'overall').map(c => [c.key, c.label])
 );
 
-export interface ReportCardRatings {
+export type ReportCardSkillSnapshot = {
   id: string;
   created_at: string;
-  [key: string]: number | string | null | undefined;
-}
+  overall?: number | string | null;
+} & Partial<Record<SkillKey, number | string | null | undefined>>;
+
+export type ReportCardRatings = ReportCardSkillSnapshot;
 
 export interface RadarDataPoint {
   skill: string;
