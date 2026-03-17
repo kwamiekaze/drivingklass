@@ -13,6 +13,8 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
+import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
+import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
