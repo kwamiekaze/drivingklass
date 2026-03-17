@@ -406,6 +406,16 @@ export function AdminUserProfileModal({
                 </Button>
               </div>
 
+              {/* Document History Section */}
+              {profile && (
+                <StudentDocumentSection
+                  studentId={profile.id}
+                  isOwnProfile={false}
+                  isStaffOrAdmin={true}
+                  onDocumentUploaded={() => fetchProfile(profile.id)}
+                />
+              )}
+
               {/* Meta info */}
               <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl bg-muted/30">
                 <div>
