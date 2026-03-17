@@ -226,6 +226,9 @@ function ReportCardFormContent() {
         session_id: session.id,
         student_id: session.student_id,
         instructor_id: session.instructor_id,
+        strongest_skills: highlightStrongest,
+        most_improved_skills: highlightMostImproved,
+        focus_areas: highlightFocusAreas,
       };
 
       if (draftId) {
