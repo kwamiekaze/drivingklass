@@ -490,6 +490,22 @@ function ReportCardFormContent() {
           </CardContent>
         </Card>
 
+        {/* Skill Progress Highlights */}
+        {session.session_type !== 'testing' && (
+          <SkillHighlightsEditor
+            strongest={highlightStrongest}
+            mostImproved={highlightMostImproved}
+            focusAreas={highlightFocusAreas}
+            onChange={(field, items) => {
+              if (field === 'strongest') setHighlightStrongest(items);
+              else if (field === 'mostImproved') setHighlightMostImproved(items);
+              else setHighlightFocusAreas(items);
+            }}
+            currentRatings={formData as unknown as Record<string, number>}
+            priorReports={priorReports}
+          />
+        )}
+
         {/* Lesson Summary */}
         <Card className="luxury-card">
           <CardHeader>
