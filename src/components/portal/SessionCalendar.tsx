@@ -226,6 +226,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditStartTime(startTimeParts.startsWith('24') ? '00' + startTimeParts.slice(2) : startTimeParts);
     setEditEndTime(endTimeParts.startsWith('24') ? '00' + endTimeParts.slice(2) : endTimeParts);
     setEditConflictWarning(null);
+    // Prefill pickup/dropoff from session-specific values
+    setEditPickupAddress(sessionDetails?.pickup_address || '');
+    setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditDialogOpen(true);
   };
 
