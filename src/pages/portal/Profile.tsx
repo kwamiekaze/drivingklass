@@ -5,6 +5,7 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { AvatarUpload } from "@/components/portal/AvatarUpload";
 import { PermitPreview } from "@/components/portal/PermitPreview";
+import { StudentDocumentSection } from "@/components/portal/StudentDocumentSection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
