@@ -48,6 +48,9 @@ interface PublicReportData {
   turn_about: number | null;
   merging: number | null;
   interstate: number | null;
+  strongest_skills?: any[];
+  most_improved_skills?: any[];
+  focus_areas?: any[];
 }
 
 type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
