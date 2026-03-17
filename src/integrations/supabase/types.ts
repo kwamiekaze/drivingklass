@@ -628,9 +628,11 @@ export type Database = {
         Row: {
           bucket: string
           created_at: string
+          document_type: string
           file_name: string | null
           file_path: string
           id: string
+          is_current: boolean
           mime_type: string | null
           review_note: string | null
           reviewed_at: string | null
@@ -646,9 +648,11 @@ export type Database = {
         Insert: {
           bucket?: string
           created_at?: string
+          document_type?: string
           file_name?: string | null
           file_path: string
           id?: string
+          is_current?: boolean
           mime_type?: string | null
           review_note?: string | null
           reviewed_at?: string | null
@@ -664,9 +668,11 @@ export type Database = {
         Update: {
           bucket?: string
           created_at?: string
+          document_type?: string
           file_name?: string | null
           file_path?: string
           id?: string
+          is_current?: boolean
           mime_type?: string | null
           review_note?: string | null
           reviewed_at?: string | null

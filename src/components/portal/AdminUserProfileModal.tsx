@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { StudentDocumentSection } from "./StudentDocumentSection";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -404,6 +405,16 @@ export function AdminUserProfileModal({
                   View Permits
                 </Button>
               </div>
+
+              {/* Document History Section */}
+              {profile && (
+                <StudentDocumentSection
+                  studentId={profile.id}
+                  isOwnProfile={false}
+                  isStaffOrAdmin={true}
+                  onDocumentUploaded={() => fetchProfile(profile.id)}
+                />
+              )}
 
               {/* Meta info */}
               <div className="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl bg-muted/30">
