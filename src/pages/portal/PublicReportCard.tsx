@@ -407,6 +407,13 @@ export default function PublicReportCard() {
             </div>
           )}
 
+          {/* Skill Progress Highlights */}
+          <SkillHighlightsDisplay
+            strongest={report.strongest_skills}
+            mostImproved={report.most_improved_skills}
+            focusAreas={report.focus_areas}
+          />
+
           {/* Skill Ratings */}
           <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
             <CardContent className="p-4 sm:p-6">
