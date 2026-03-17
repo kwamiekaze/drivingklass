@@ -11,7 +11,6 @@ import {
 import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
 import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
-import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 
 interface Props {
   studentId: string;
