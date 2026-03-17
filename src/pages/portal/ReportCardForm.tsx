@@ -76,6 +76,11 @@ function ReportCardFormContent() {
     overall: 5,
   });
 
+  const [highlightStrongest, setHighlightStrongest] = useState<SkillHighlightItem[]>([]);
+  const [highlightMostImproved, setHighlightMostImproved] = useState<SkillHighlightItem[]>([]);
+  const [highlightFocusAreas, setHighlightFocusAreas] = useState<SkillHighlightItem[]>([]);
+  const [priorReports, setPriorReports] = useState<Array<Record<string, number | string | null | undefined>>>([]);
+
   useEffect(() => {
     if (isEditing && id) {
       fetchExistingCard();
