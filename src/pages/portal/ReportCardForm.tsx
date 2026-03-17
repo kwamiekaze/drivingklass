@@ -176,6 +176,8 @@ function ReportCardFormContent() {
       setExistingCard(data as ReportCard);
       setSession(data.session as Session);
       setDraftId(data.id);
+      loadHighlightsFromRecord(data);
+      fetchPriorReports(data.student_id);
       setFormData({
         transcription_summary: data.transcription_summary || '',
         message_to_student: data.message_to_student || '',
