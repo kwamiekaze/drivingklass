@@ -123,18 +123,23 @@ export default function ReportCardView() {
         setUnauthorized(true);
       } else {
         setReportCard(data[0] as ReportCardDetails);
-        // Load public sharing state
-        if (canManagePublic) {
-          const { data: rcRow } = await supabase
-            .from('report_cards')
-            .select('is_public, public_share_slug, show_graph_publicly')
-            .eq('id', id)
-            .single();
-          if (rcRow) {
+        // Load skill highlights + public sharing state
+        const { data: rcRow } = await supabase
+          .from('report_cards')
+          .select('is_public, public_share_slug, show_graph_publicly, strongest_skills, most_improved_skills, focus_areas')
+          .eq('id', id)
+          .single();
+        if (rcRow) {
+          if (canManagePublic) {
             setIsPublic(rcRow.is_public || false);
             setPublicSlug(rcRow.public_share_slug || null);
             setShowGraphPublicly((rcRow as any).show_graph_publicly || false);
           }
+          setSkillHighlights({
+            strongest_skills: Array.isArray((rcRow as any).strongest_skills) ? (rcRow as any).strongest_skills : [],
+            most_improved_skills: Array.isArray((rcRow as any).most_improved_skills) ? (rcRow as any).most_improved_skills : [],
+            focus_areas: Array.isArray((rcRow as any).focus_areas) ? (rcRow as any).focus_areas : [],
+          });
         }
       }
     } catch (err: any) {
