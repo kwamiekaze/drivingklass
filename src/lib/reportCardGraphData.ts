@@ -120,7 +120,7 @@ export function computeTrendData(reports: ReportCardRatings[]): TrendDataPoint[]
   return sorted.map((r, i) => ({
     index: i + 1,
     label: `#${i + 1}`,
-    overall: isRated(r.overall) ? r.overall : 0,
+    overall: safeRating(r, 'overall'),
     date: r.created_at,
   }));
 }
@@ -145,7 +145,7 @@ export function computeInsights(reports: ReportCardRatings[]): ProgressInsights 
   );
 
   // Overall average
-  const overalls = sorted.map(r => r.overall).filter(isRated);
+  const overalls = sorted.map(r => toNumber(r.overall)).filter((n): n is number => n !== null && n >= 1 && n <= 10);
   const overallAverage = overalls.length > 0
     ? Math.round((overalls.reduce((s, v) => s + v, 0) / overalls.length) * 10) / 10
     : 0;
@@ -153,7 +153,7 @@ export function computeInsights(reports: ReportCardRatings[]): ProgressInsights 
   // Per-skill averages
   const skillAverages: Record<string, number> = {};
   SKILL_KEYS.forEach(key => {
-    const vals = sorted.map(r => r[key]).filter(isRated);
+    const vals = sorted.map(r => toNumber(r[key])).filter((n): n is number => n !== null && n >= 1 && n <= 10);
     skillAverages[key] = vals.length > 0
       ? vals.reduce((s, v) => s + v, 0) / vals.length
       : 0;
@@ -183,8 +183,8 @@ export function computeInsights(reports: ReportCardRatings[]): ProgressInsights 
   let bestGain = -Infinity;
 
   SKILL_KEYS.forEach(key => {
-    const fv = isRated(first[key]) ? (first[key] as number) : 0;
-    const lv = isRated(latest[key]) ? (latest[key] as number) : 0;
+    const fv = safeRating(first, key);
+    const lv = safeRating(latest, key);
     const gain = lv - fv;
     if (gain > bestGain) {
       bestGain = gain;
