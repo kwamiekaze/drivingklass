@@ -13,6 +13,8 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
+import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
+import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
@@ -74,6 +76,11 @@ function ReportCardFormContent() {
     overall: 5,
   });
 
+  const [highlightStrongest, setHighlightStrongest] = useState<SkillHighlightItem[]>([]);
+  const [highlightMostImproved, setHighlightMostImproved] = useState<SkillHighlightItem[]>([]);
+  const [highlightFocusAreas, setHighlightFocusAreas] = useState<SkillHighlightItem[]>([]);
+  const [priorReports, setPriorReports] = useState<Array<Record<string, number | string | null | undefined>>>([]);
+
   useEffect(() => {
     if (isEditing && id) {
       fetchExistingCard();
@@ -84,6 +91,28 @@ function ReportCardFormContent() {
     }
   }, [sessionId, id]);
 
+  const fetchPriorReports = async (studentId: string) => {
+    const selectFields = ['id', 'created_at', ...SKILL_KEYS].join(', ');
+    const { data } = await supabase
+      .from('report_cards')
+      .select(selectFields)
+      .eq('student_id', studentId)
+      .eq('report_card_status', 'completed')
+      .order('created_at', { ascending: true });
+    if (data) setPriorReports(data as any[]);
+  };
+
+  const loadHighlightsFromRecord = (record: any) => {
+    const parse = (val: any): SkillHighlightItem[] => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') { try { return JSON.parse(val); } catch { return []; } }
+      return [];
+    };
+    setHighlightStrongest(parse(record.strongest_skills));
+    setHighlightMostImproved(parse(record.most_improved_skills));
+    setHighlightFocusAreas(parse(record.focus_areas));
+  };
+
   const fetchSession = async () => {
     const { data } = await supabase
       .from('sessions')
@@ -93,6 +122,7 @@ function ReportCardFormContent() {
 
     if (data) {
       setSession(data as Session);
+      fetchPriorReports(data.student_id);
       // Check if there's already a draft for this session
       const { data: existingDraft } = await supabase
         .from('report_cards')
@@ -104,6 +134,7 @@ function ReportCardFormContent() {
       if (existingDraft) {
         setDraftId(existingDraft.id);
         setExistingCard(existingDraft as ReportCard);
+        loadHighlightsFromRecord(existingDraft);
         setFormData({
           transcription_summary: existingDraft.transcription_summary || '',
           message_to_student: existingDraft.message_to_student || '',
@@ -145,6 +176,8 @@ function ReportCardFormContent() {
       setExistingCard(data as ReportCard);
       setSession(data.session as Session);
       setDraftId(data.id);
+      loadHighlightsFromRecord(data);
+      fetchPriorReports(data.student_id);
       setFormData({
         transcription_summary: data.transcription_summary || '',
         message_to_student: data.message_to_student || '',
@@ -193,6 +226,9 @@ function ReportCardFormContent() {
         session_id: session.id,
         student_id: session.student_id,
         instructor_id: session.instructor_id,
+        strongest_skills: JSON.parse(JSON.stringify(highlightStrongest)),
+        most_improved_skills: JSON.parse(JSON.stringify(highlightMostImproved)),
+        focus_areas: JSON.parse(JSON.stringify(highlightFocusAreas)),
       };
 
       if (draftId) {
@@ -265,6 +301,9 @@ function ReportCardFormContent() {
         instructor_id: session.instructor_id,
         report_card_status: 'completed' as string,
         submitted_at: new Date().toISOString(),
+        strongest_skills: JSON.parse(JSON.stringify(highlightStrongest)),
+        most_improved_skills: JSON.parse(JSON.stringify(highlightMostImproved)),
+        focus_areas: JSON.parse(JSON.stringify(highlightFocusAreas)),
       };
 
       if (draftId) {
@@ -450,6 +489,22 @@ function ReportCardFormContent() {
             ))}
           </CardContent>
         </Card>
+
+        {/* Skill Progress Highlights */}
+        {session.session_type !== 'testing' && (
+          <SkillHighlightsEditor
+            strongest={highlightStrongest}
+            mostImproved={highlightMostImproved}
+            focusAreas={highlightFocusAreas}
+            onChange={(field, items) => {
+              if (field === 'strongest') setHighlightStrongest(items);
+              else if (field === 'mostImproved') setHighlightMostImproved(items);
+              else setHighlightFocusAreas(items);
+            }}
+            currentRatings={formData as unknown as Record<string, number>}
+            priorReports={priorReports}
+          />
+        )}
 
         {/* Lesson Summary */}
         <Card className="luxury-card">

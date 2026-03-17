@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,9 @@ interface PublicReportData {
   turn_about: number | null;
   merging: number | null;
   interstate: number | null;
+  strongest_skills?: any[];
+  most_improved_skills?: any[];
+  focus_areas?: any[];
 }
 
 type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
@@ -402,6 +406,13 @@ export default function PublicReportCard() {
               <StudentProgressSection studentId={report.student_id} compact />
             </div>
           )}
+
+          {/* Skill Progress Highlights */}
+          <SkillHighlightsDisplay
+            strongest={report.strongest_skills}
+            mostImproved={report.most_improved_skills}
+            focusAreas={report.focus_areas}
+          />
 
           {/* Skill Ratings */}
           <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">

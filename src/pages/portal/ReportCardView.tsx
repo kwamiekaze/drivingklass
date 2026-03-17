@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -80,7 +81,11 @@ export default function ReportCardView() {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
   const [showGraphPublicly, setShowGraphPublicly] = useState(false);
-  
+  const [skillHighlights, setSkillHighlights] = useState<{
+    strongest_skills?: any[];
+    most_improved_skills?: any[];
+    focus_areas?: any[];
+  }>({});
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
@@ -118,18 +123,23 @@ export default function ReportCardView() {
         setUnauthorized(true);
       } else {
         setReportCard(data[0] as ReportCardDetails);
-        // Load public sharing state
-        if (canManagePublic) {
-          const { data: rcRow } = await supabase
-            .from('report_cards')
-            .select('is_public, public_share_slug, show_graph_publicly')
-            .eq('id', id)
-            .single();
-          if (rcRow) {
+        // Load skill highlights + public sharing state
+        const { data: rcRow } = await supabase
+          .from('report_cards')
+          .select('is_public, public_share_slug, show_graph_publicly, strongest_skills, most_improved_skills, focus_areas')
+          .eq('id', id)
+          .single();
+        if (rcRow) {
+          if (canManagePublic) {
             setIsPublic(rcRow.is_public || false);
             setPublicSlug(rcRow.public_share_slug || null);
             setShowGraphPublicly((rcRow as any).show_graph_publicly || false);
           }
+          setSkillHighlights({
+            strongest_skills: Array.isArray((rcRow as any).strongest_skills) ? (rcRow as any).strongest_skills : [],
+            most_improved_skills: Array.isArray((rcRow as any).most_improved_skills) ? (rcRow as any).most_improved_skills : [],
+            focus_areas: Array.isArray((rcRow as any).focus_areas) ? (rcRow as any).focus_areas : [],
+          });
         }
       }
     } catch (err: any) {
@@ -508,6 +518,13 @@ export default function ReportCardView() {
             <div className="report-graph-section">
               <StudentProgressSection studentId={reportCard.student_id} />
             </div>
+
+            {/* Skill Progress Highlights */}
+            <SkillHighlightsDisplay
+              strongest={skillHighlights.strongest_skills}
+              mostImproved={skillHighlights.most_improved_skills}
+              focusAreas={skillHighlights.focus_areas}
+            />
 
             {/* Rating Categories */}
             <Card className="portal-card">
