@@ -91,6 +91,28 @@ function ReportCardFormContent() {
     }
   }, [sessionId, id]);
 
+  const fetchPriorReports = async (studentId: string) => {
+    const selectFields = ['id', 'created_at', ...SKILL_KEYS].join(', ');
+    const { data } = await supabase
+      .from('report_cards')
+      .select(selectFields)
+      .eq('student_id', studentId)
+      .eq('report_card_status', 'completed')
+      .order('created_at', { ascending: true });
+    if (data) setPriorReports(data as any[]);
+  };
+
+  const loadHighlightsFromRecord = (record: any) => {
+    const parse = (val: any): SkillHighlightItem[] => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') { try { return JSON.parse(val); } catch { return []; } }
+      return [];
+    };
+    setHighlightStrongest(parse(record.strongest_skills));
+    setHighlightMostImproved(parse(record.most_improved_skills));
+    setHighlightFocusAreas(parse(record.focus_areas));
+  };
+
   const fetchSession = async () => {
     const { data } = await supabase
       .from('sessions')
@@ -100,6 +122,7 @@ function ReportCardFormContent() {
 
     if (data) {
       setSession(data as Session);
+      fetchPriorReports(data.student_id);
       // Check if there's already a draft for this session
       const { data: existingDraft } = await supabase
         .from('report_cards')
@@ -111,6 +134,7 @@ function ReportCardFormContent() {
       if (existingDraft) {
         setDraftId(existingDraft.id);
         setExistingCard(existingDraft as ReportCard);
+        loadHighlightsFromRecord(existingDraft);
         setFormData({
           transcription_summary: existingDraft.transcription_summary || '',
           message_to_student: existingDraft.message_to_student || '',
