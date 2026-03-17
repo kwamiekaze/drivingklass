@@ -519,6 +519,13 @@ export default function ReportCardView() {
               <StudentProgressSection studentId={reportCard.student_id} />
             </div>
 
+            {/* Skill Progress Highlights */}
+            <SkillHighlightsDisplay
+              strongest={skillHighlights.strongest_skills}
+              mostImproved={skillHighlights.most_improved_skills}
+              focusAreas={skillHighlights.focus_areas}
+            />
+
             {/* Rating Categories */}
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
