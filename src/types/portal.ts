@@ -32,6 +32,8 @@ export interface Profile {
   guardian_phone: string | null;
   guardian_email: string | null;
   permit_file_url: string | null;
+  hours_remaining?: number;
+  last_sign_in_at?: string | null;
 }
 
 export type SessionType = 'driving' | 'testing';

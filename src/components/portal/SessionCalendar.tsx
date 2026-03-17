@@ -57,6 +57,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDate, setEditDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  const [editPickupAddress, setEditPickupAddress] = useState("");
+  const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
@@ -224,6 +226,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditStartTime(startTimeParts.startsWith('24') ? '00' + startTimeParts.slice(2) : startTimeParts);
     setEditEndTime(endTimeParts.startsWith('24') ? '00' + endTimeParts.slice(2) : endTimeParts);
     setEditConflictWarning(null);
+    // Prefill pickup/dropoff from session-specific values
+    setEditPickupAddress(sessionDetails?.pickup_address || '');
+    setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditDialogOpen(true);
   };
 
@@ -306,14 +311,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         return;
       }
 
-      // Update session
+      // Update session including addresses
+      const updatePayload: Record<string, any> = {
+        starts_at: newStartsAt,
+        ends_at: newEndsAt,
+        duration_minutes: durationMinutes,
+        pickup_address: editPickupAddress.trim() || null,
+        dropoff_address: editDropoffAddress.trim() || null,
+      };
+
       const { error } = await supabase
         .from('sessions')
-        .update({
-          starts_at: newStartsAt,
-          ends_at: newEndsAt,
-          duration_minutes: durationMinutes,
-        })
+        .update(updatePayload)
         .eq('id', selectedSession.id);
 
       if (error) throw error;
@@ -653,7 +662,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Edit Session</DialogTitle>
-            <DialogDescription>Update the date and time for this session.</DialogDescription>
+            <DialogDescription>Update the date, time, and addresses for this session.</DialogDescription>
           </DialogHeader>
           {selectedSession && sessionDetails && (
             <div className="space-y-4">
@@ -712,6 +721,26 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Pickup / Drop-off */}
+              <div className="space-y-2">
+                <Label className="text-sm">Pickup Address</Label>
+                <Input
+                  placeholder="Enter pickup address"
+                  value={editPickupAddress}
+                  onChange={(e) => setEditPickupAddress(e.target.value)}
+                  className="min-h-[44px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Drop-Off Address</Label>
+                <Input
+                  placeholder="Enter drop-off address"
+                  value={editDropoffAddress}
+                  onChange={(e) => setEditDropoffAddress(e.target.value)}
+                  className="min-h-[44px]"
+                />
               </div>
 
               {editConflictWarning && (
