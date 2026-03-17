@@ -40,17 +40,33 @@ export interface ProgressInsights {
 }
 
 /**
+ * Coerce a raw DB value to a numeric rating.
+ * Handles strings, floats, nulls safely.
+ */
+function toNumber(val: unknown): number | null {
+  if (val === null || val === undefined) return null;
+  const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
  * Determines if a rating value should be treated as "not covered" / placeholder.
- * We treat null/undefined as not covered. We do NOT exclude low values by default
- * since instructors may legitimately rate a skill as 1.
  */
 function isRated(val: unknown): val is number {
-  return typeof val === 'number' && val >= 1 && val <= 10;
+  const n = toNumber(val);
+  return n !== null && n >= 1 && n <= 10;
+}
+
+/** Safe accessor: always returns the numeric value for a skill key, or 0. */
+function safeRating(report: ReportCardRatings, key: string): number {
+  const n = toNumber(report[key]);
+  return (n !== null && n >= 1 && n <= 10) ? n : 0;
 }
 
 /**
  * Compute radar chart data from an array of report cards.
  * Returns { first, average, latest } for each skill.
+ * Uses SKILL_KEYS (canonical order from RATING_CATEGORIES) as single source of truth.
  */
 export function computeRadarData(reports: ReportCardRatings[]): RadarDataPoint[] {
   if (reports.length === 0) return [];
@@ -62,23 +78,35 @@ export function computeRadarData(reports: ReportCardRatings[]): RadarDataPoint[]
   const first = sorted[0];
   const latest = sorted[sorted.length - 1];
 
-  return SKILL_KEYS.map(key => {
-    // Compute average excluding unrated
-    const rated = sorted
-      .map(r => r[key])
-      .filter(isRated);
-    const avg = rated.length > 0
-      ? Math.round((rated.reduce((s, v) => s + v, 0) / rated.length) * 10) / 10
+  const result = SKILL_KEYS.map(key => {
+    // Compute average excluding unrated, using safe number coercion
+    const ratedValues: number[] = [];
+    for (const r of sorted) {
+      const n = toNumber(r[key]);
+      if (n !== null && n >= 1 && n <= 10) ratedValues.push(n);
+    }
+    const avg = ratedValues.length > 0
+      ? Math.round((ratedValues.reduce((s, v) => s + v, 0) / ratedValues.length) * 10) / 10
       : 0;
 
     return {
       skill: key,
       label: SKILL_LABELS[key] || key,
-      first: isRated(first[key]) ? first[key] : 0,
+      first: safeRating(first, key),
       average: avg,
-      latest: isRated(latest[key]) ? latest[key] : 0,
+      latest: safeRating(latest, key),
     };
   });
+
+  // Debug: log data pipeline for verification (remove after confirming fix)
+  if (typeof window !== 'undefined' && (window as any).__DEBUG_RADAR) {
+    console.log('[RadarData] reports count:', sorted.length);
+    console.log('[RadarData] latest report id:', latest.id);
+    console.log('[RadarData] latest raw values:', SKILL_KEYS.map(k => ({ key: k, raw: latest[k], safe: safeRating(latest, k) })));
+    console.log('[RadarData] result:', result);
+  }
+
+  return result;
 }
 
 /**
