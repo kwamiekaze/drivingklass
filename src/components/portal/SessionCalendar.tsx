@@ -662,7 +662,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg">Edit Session</DialogTitle>
-            <DialogDescription>Update the date and time for this session.</DialogDescription>
+            <DialogDescription>Update the date, time, and addresses for this session.</DialogDescription>
           </DialogHeader>
           {selectedSession && sessionDetails && (
             <div className="space-y-4">
