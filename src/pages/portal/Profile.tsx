@@ -450,75 +450,18 @@ function ProfileContent() {
                   {errors.permit_expiration_date && <p className="text-xs text-destructive">{errors.permit_expiration_date}</p>}
                 </div>
               </div>
-
-              {/* Permit Photo - Admin/staff can upload, others just view */}
-              <div className="space-y-3">
-                <Label className="text-sm">Permit Photo</Label>
-                
-                {canEditPermit && (
-                  <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="gap-2 min-h-[44px] flex-1 xs:flex-none"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Choose File
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="gap-2 min-h-[44px] flex-1 xs:flex-none"
-                    >
-                      <Camera className="h-4 w-4" />
-                      Take Photo
-                    </Button>
-                  </div>
-                )}
-                
-                {permitPreview ? (
-                  <div className="mt-4">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">
-                      {permitFile ? 'Preview:' : 'Current Permit:'}
-                    </p>
-                    {permitFile ? (
-                      <img 
-                        src={permitPreview} 
-                        alt="Permit preview" 
-                        className="max-w-full sm:max-w-xs rounded-lg border"
-                      />
-                    ) : (
-                      <PermitPreview 
-                        permitFileUrl={permitPreview} 
-                        className="max-w-full sm:max-w-xs"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    No permit photo on file
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Document Upload Section - Always available to students */}
+        {(isStudent || isStaffOrAdmin) && user && (
+          <StudentDocumentSection
+            studentId={user.id}
+            isOwnProfile={isStudent}
+            isStaffOrAdmin={isStaffOrAdmin}
+            onDocumentUploaded={refetchProfile}
+          />
         )}
 
         {/* Guardian Information - Students and Admin/Staff only */}
