@@ -301,6 +301,9 @@ function ReportCardFormContent() {
         instructor_id: session.instructor_id,
         report_card_status: 'completed' as string,
         submitted_at: new Date().toISOString(),
+        strongest_skills: highlightStrongest,
+        most_improved_skills: highlightMostImproved,
+        focus_areas: highlightFocusAreas,
       };
 
       if (draftId) {
