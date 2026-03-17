@@ -311,14 +311,18 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         return;
       }
 
-      // Update session
+      // Update session including addresses
+      const updatePayload: Record<string, any> = {
+        starts_at: newStartsAt,
+        ends_at: newEndsAt,
+        duration_minutes: durationMinutes,
+        pickup_address: editPickupAddress.trim() || null,
+        dropoff_address: editDropoffAddress.trim() || null,
+      };
+
       const { error } = await supabase
         .from('sessions')
-        .update({
-          starts_at: newStartsAt,
-          ends_at: newEndsAt,
-          duration_minutes: durationMinutes,
-        })
+        .update(updatePayload)
         .eq('id', selectedSession.id);
 
       if (error) throw error;
