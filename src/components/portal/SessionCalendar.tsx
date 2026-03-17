@@ -723,6 +723,26 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 </div>
               </div>
 
+              {/* Pickup / Drop-off */}
+              <div className="space-y-2">
+                <Label className="text-sm">Pickup Address</Label>
+                <Input
+                  placeholder="Enter pickup address"
+                  value={editPickupAddress}
+                  onChange={(e) => setEditPickupAddress(e.target.value)}
+                  className="min-h-[44px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Drop-Off Address</Label>
+                <Input
+                  placeholder="Enter drop-off address"
+                  value={editDropoffAddress}
+                  onChange={(e) => setEditDropoffAddress(e.target.value)}
+                  className="min-h-[44px]"
+                />
+              </div>
+
               {editConflictWarning && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
