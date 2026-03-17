@@ -81,7 +81,11 @@ export default function ReportCardView() {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
   const [showGraphPublicly, setShowGraphPublicly] = useState(false);
-  
+  const [skillHighlights, setSkillHighlights] = useState<{
+    strongest_skills?: any[];
+    most_improved_skills?: any[];
+    focus_areas?: any[];
+  }>({});
   // Check if admin/instructor/staff for copy link visibility
   const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
   const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
