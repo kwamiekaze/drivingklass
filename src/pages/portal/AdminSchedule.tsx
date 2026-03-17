@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, User } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format } from "date-fns";
 import { Session, Profile } from "@/types/portal";
 import { toast } from "sonner";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
+import { StudentPickerModal } from "@/components/portal/StudentPickerModal";
 
 export default function AdminSchedule() {
   return (
@@ -34,6 +35,7 @@ function AdminScheduleContent() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
 
   // Filters
   const [filterInstructor, setFilterInstructor] = useState<string>("all");
@@ -50,6 +52,8 @@ function AdminScheduleContent() {
     start_time: "",
     duration_minutes: "120",
     session_type: "driving",
+    pickup_address: "",
+    dropoff_address: "",
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -63,7 +67,10 @@ function AdminScheduleContent() {
 
     const { data: studentRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'student');
     if (studentRoles && studentRoles.length > 0) {
-      const { data: studentProfiles } = await supabase.from('profiles').select('*').in('id', studentRoles.map(r => r.user_id)).eq('approval_status', 'approved');
+      const { data: studentProfiles } = await supabase.from('profiles')
+        .select('id, first_name, last_name, full_name, email, phone, approval_status, approved_at, hours_remaining, last_sign_in_at, pickup_address, dropoff_address, created_at, updated_at, approved, intake_submitted, public_id, permit_number, permit_issue_date, permit_expiration_date, guardian_name, guardian_phone, guardian_email, permit_file_url')
+        .in('id', studentRoles.map(r => r.user_id))
+        .eq('approval_status', 'approved');
       setStudents((studentProfiles || []) as Profile[]);
     } else { setStudents([]); }
 
@@ -75,6 +82,21 @@ function AdminScheduleContent() {
 
     setLoading(false);
   };
+
+  // When a student is selected, prefill their pickup/dropoff
+  const handleStudentSelect = (student: Profile) => {
+    setFormData(f => ({
+      ...f,
+      student_id: student.id,
+      pickup_address: student.pickup_address || "",
+      dropoff_address: student.dropoff_address || "",
+    }));
+  };
+
+  const selectedStudent = useMemo(
+    () => students.find(s => s.id === formData.student_id),
+    [students, formData.student_id]
+  );
 
   const handleCreateSession = async () => {
     if (!formData.student_id || !formData.instructor_id || !formData.date || !formData.start_time) {
@@ -96,8 +118,14 @@ function AdminScheduleContent() {
       return;
     }
 
-    if (formData.session_type !== 'driving' && newSession?.id) {
-      await supabase.from('sessions').update({ session_type: formData.session_type }).eq('id', newSession.id);
+    // Update session type and addresses if needed
+    const updates: Record<string, any> = {};
+    if (formData.session_type !== 'driving') updates.session_type = formData.session_type;
+    if (formData.pickup_address.trim()) updates.pickup_address = formData.pickup_address.trim();
+    if (formData.dropoff_address.trim()) updates.dropoff_address = formData.dropoff_address.trim();
+
+    if (Object.keys(updates).length > 0 && newSession?.id) {
+      await supabase.from('sessions').update(updates).eq('id', newSession.id);
     }
 
     toast.success("Session created successfully");
@@ -107,7 +135,7 @@ function AdminScheduleContent() {
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "" });
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -163,24 +191,33 @@ function AdminScheduleContent() {
                 New Session
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto p-4 sm:p-6">
+            <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>{editingSession ? 'Edit Session' : 'Create New Session'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                {/* Student Picker */}
                 <div className="space-y-2">
                   <Label className="text-sm">Student</Label>
-                  <Select value={formData.student_id} onValueChange={v => setFormData(f => ({ ...f, student_id: v }))}>
-                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select student" /></SelectTrigger>
-                    <SelectContent className="bg-popover border z-50">
-                      {students.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">No approved students</div>
-                      ) : students.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{getDisplayName(s, 'Unknown')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setStudentPickerOpen(true)}
+                    className="w-full flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-md border border-input bg-background text-sm hover:bg-accent/30 transition-colors text-left"
+                  >
+                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                    {selectedStudent ? (
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium">{getDisplayName(selectedStudent, 'Unknown')}</span>
+                        {selectedStudent.email && (
+                          <span className="text-muted-foreground ml-2 text-xs">{selectedStudent.email}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select student...</span>
+                    )}
+                  </button>
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-sm">Instructor</Label>
                   <Select value={formData.instructor_id} onValueChange={v => setFormData(f => ({ ...f, instructor_id: v }))}>
@@ -242,6 +279,27 @@ function AdminScheduleContent() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Pickup / Drop-off */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Pickup Address</Label>
+                  <Input
+                    placeholder="Enter pickup address"
+                    value={formData.pickup_address}
+                    onChange={e => setFormData(f => ({ ...f, pickup_address: e.target.value }))}
+                    className="min-h-[44px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Drop-Off Address</Label>
+                  <Input
+                    placeholder="Enter drop-off address"
+                    value={formData.dropoff_address}
+                    onChange={e => setFormData(f => ({ ...f, dropoff_address: e.target.value }))}
+                    className="min-h-[44px]"
+                  />
+                </div>
+
                 <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
                   Create Session
                 </Button>
@@ -250,6 +308,15 @@ function AdminScheduleContent() {
           </Dialog>
         </div>
       </div>
+
+      {/* Student Picker Modal */}
+      <StudentPickerModal
+        open={studentPickerOpen}
+        onOpenChange={setStudentPickerOpen}
+        students={students}
+        selectedId={formData.student_id}
+        onSelect={handleStudentSelect}
+      />
 
       {/* Filters Panel */}
       {showFilters && (
