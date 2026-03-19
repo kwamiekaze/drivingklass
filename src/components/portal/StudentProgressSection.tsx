@@ -13,10 +13,24 @@ import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
 import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
 
+interface SkillHighlightItem {
+  skill_key: string;
+  skill_label: string;
+  source_type?: string;
+}
+
+export interface SavedHighlights {
+  strongest_skills?: SkillHighlightItem[];
+  most_improved_skills?: SkillHighlightItem[];
+  focus_areas?: SkillHighlightItem[];
+}
+
 interface Props {
   studentId: string;
   reportCardId?: string;
   anchorReport?: ReportCardSkillSnapshot;
+  /** Saved highlight data from the report card — used as source of truth for summary cards */
+  savedHighlights?: SavedHighlights;
   /** If true, a minimal version (e.g. for public view) */
   compact?: boolean;
   className?: string;
@@ -31,6 +45,7 @@ export function StudentProgressSection({
   studentId,
   reportCardId,
   anchorReport,
+  savedHighlights,
   compact,
   className,
 }: Props) {
@@ -97,7 +112,28 @@ export function StudentProgressSection({
 
   const radarData = useMemo(() => computeRadarData(reports), [reports]);
   const trendData = useMemo(() => computeTrendData(reports), [reports]);
-  const insights = useMemo(() => computeInsights(reports), [reports]);
+  const computedInsights = useMemo(() => computeInsights(reports), [reports]);
+
+  // Override computed insights with saved highlights when available
+  const insights = useMemo(() => {
+    const result = { ...computedInsights };
+    const hasStrongest = savedHighlights?.strongest_skills && savedHighlights.strongest_skills.length > 0;
+    const hasMostImproved = savedHighlights?.most_improved_skills && savedHighlights.most_improved_skills.length > 0;
+    const hasFocus = savedHighlights?.focus_areas && savedHighlights.focus_areas.length > 0;
+
+    if (hasStrongest) {
+      result.strongestSkill = savedHighlights!.strongest_skills!.map(s => s.skill_label).join(', ');
+    }
+    if (hasMostImproved) {
+      result.mostImproved = savedHighlights!.most_improved_skills!.map(s => s.skill_label).join(', ');
+      // Clear the gain display when using saved values to avoid confusing mismatch
+      result.mostImprovedGain = 0;
+    }
+    if (hasFocus) {
+      result.focusArea = savedHighlights!.focus_areas!.map(s => s.skill_label).join(', ');
+    }
+    return result;
+  }, [computedInsights, savedHighlights]);
 
   if (typeof window !== 'undefined' && (window as any).__DEBUG_RADAR) {
     console.log('[RadarData][resolved-reports]', {
