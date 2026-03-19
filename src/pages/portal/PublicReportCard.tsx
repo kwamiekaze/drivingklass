@@ -407,6 +407,11 @@ export default function PublicReportCard() {
                 studentId={report.student_id}
                 reportCardId={report.id}
                 anchorReport={report}
+                savedHighlights={{
+                  strongest_skills: report.strongest_skills,
+                  most_improved_skills: report.most_improved_skills,
+                  focus_areas: report.focus_areas,
+                }}
                 compact
               />
             </div>
