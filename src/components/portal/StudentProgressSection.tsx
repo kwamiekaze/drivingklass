@@ -45,6 +45,7 @@ export function StudentProgressSection({
   studentId,
   reportCardId,
   anchorReport,
+  savedHighlights,
   compact,
   className,
 }: Props) {
