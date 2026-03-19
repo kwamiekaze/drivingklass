@@ -520,6 +520,7 @@ export default function ReportCardView() {
                 studentId={reportCard.student_id}
                 reportCardId={reportCard.id}
                 anchorReport={reportCard}
+                savedHighlights={skillHighlights}
               />
             </div>
 
