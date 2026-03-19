@@ -13,10 +13,24 @@ import { StudentProgressRadarChart } from "./StudentProgressRadarChart";
 import { StudentProgressTrendChart } from "./StudentProgressTrendChart";
 import { StudentProgressSummaryCards } from "./StudentProgressSummaryCards";
 
+interface SkillHighlightItem {
+  skill_key: string;
+  skill_label: string;
+  source_type?: string;
+}
+
+export interface SavedHighlights {
+  strongest_skills?: SkillHighlightItem[];
+  most_improved_skills?: SkillHighlightItem[];
+  focus_areas?: SkillHighlightItem[];
+}
+
 interface Props {
   studentId: string;
   reportCardId?: string;
   anchorReport?: ReportCardSkillSnapshot;
+  /** Saved highlight data from the report card — used as source of truth for summary cards */
+  savedHighlights?: SavedHighlights;
   /** If true, a minimal version (e.g. for public view) */
   compact?: boolean;
   className?: string;
