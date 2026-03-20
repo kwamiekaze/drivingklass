@@ -82,6 +82,7 @@ function ReportCardFormContent() {
   const [highlightMostImproved, setHighlightMostImproved] = useState<SkillHighlightItem[]>([]);
   const [highlightFocusAreas, setHighlightFocusAreas] = useState<SkillHighlightItem[]>([]);
   const [priorReports, setPriorReports] = useState<Array<Record<string, number | string | null | undefined>>>([]);
+  const [previousReport, setPreviousReport] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
     if (isEditing && id) {
@@ -93,15 +94,29 @@ function ReportCardFormContent() {
     }
   }, [sessionId, id]);
 
-  const fetchPriorReports = async (studentId: string) => {
-    const selectFields = ['id', 'created_at', ...SKILL_KEYS].join(', ');
+  const fetchPriorReports = async (studentId: string, currentReportCreatedAt?: string) => {
+    const selectFields = ['id', 'created_at', 'overall', 'instructor_id', 'session_id',
+      'strongest_skills', 'most_improved_skills', 'focus_areas', ...SKILL_KEYS].join(', ');
     const { data } = await supabase
       .from('report_cards')
       .select(selectFields)
       .eq('student_id', studentId)
       .eq('report_card_status', 'completed')
       .order('created_at', { ascending: true });
-    if (data) setPriorReports(data as any[]);
+    if (data) {
+      setPriorReports(data as any[]);
+      // Find the most recent completed report before the current one
+      const sorted = [...data].sort((a, b) =>
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+      );
+      // If editing, exclude the current report itself
+      const prev = sorted.find(r => {
+        if (id && r.id === id) return false;
+        if (currentReportCreatedAt && r.created_at! >= currentReportCreatedAt) return false;
+        return true;
+      }) || (sorted.length > 0 ? sorted.find(r => r.id !== id) : null);
+      setPreviousReport(prev || null);
+    }
   };
 
   const loadHighlightsFromRecord = (record: any) => {
