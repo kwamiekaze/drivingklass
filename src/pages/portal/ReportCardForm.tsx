@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock, FileText, Star } from "lucide-react";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
 import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
 import { SKILL_KEYS } from "@/lib/reportCardGraphData";
@@ -19,6 +19,8 @@ import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
+import { LatestReportSnapshot } from "@/components/portal/LatestReportSnapshot";
+import { Link } from "react-router-dom";
 
 export default function ReportCardForm() {
   return (
