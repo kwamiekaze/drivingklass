@@ -19,6 +19,7 @@ import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { LessonRating } from "@/components/portal/LessonRating";
+import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
 
 
 interface ReportCardDetails {
