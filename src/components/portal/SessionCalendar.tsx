@@ -23,6 +23,7 @@ import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
+import { LatestReportSnapshot } from "./LatestReportSnapshot";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -593,6 +594,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     <Link to={`/report-cards/${sessionDetails.report_card_id}`}>
                       <Button variant="outline" className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />View Report Card</Button>
                     </Link>
+                  )}
+
+                  {/* Latest Report Snapshot for coaching - admin/instructor only */}
+                  {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id && (
+                    <LatestReportSnapshot
+                      studentId={sessionDetails.student_id}
+                      currentSessionId={selectedSession.id}
+                    />
                   )}
                 </>
               )}
