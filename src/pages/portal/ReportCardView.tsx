@@ -743,6 +743,12 @@ export default function ReportCardView() {
                 Edit Report Card
               </Button>
             )}
+
+            {/* Report Card History */}
+            <ReportCardHistoryList
+              studentId={reportCard.student_id}
+              currentReportCardId={reportCard.id}
+            />
           </div>
         ) : null}
       </div>

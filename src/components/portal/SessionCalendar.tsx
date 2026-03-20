@@ -595,6 +595,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       <Button variant="outline" className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />View Report Card</Button>
                     </Link>
                   )}
+
+                  {/* Latest Report Snapshot for coaching - admin/instructor only */}
+                  {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id && (
+                    <LatestReportSnapshot
+                      studentId={sessionDetails.student_id}
+                      currentSessionId={selectedSession.id}
+                    />
+                  )}
                 </>
               )}
             </div>
