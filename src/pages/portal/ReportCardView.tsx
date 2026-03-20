@@ -422,10 +422,15 @@ export default function ReportCardView() {
           </Card>
         ) : reportCard ? (
           <div className="space-y-4 sm:space-y-6">
-            {/* Copy Link Button (admin/instructor/staff only) */}
+            {/* Copy Link + Open Previous Report (admin/instructor/staff only) */}
             {canCopyLink && (
               <>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2 flex-wrap">
+                  <PreviousReportButton
+                    studentId={reportCard.student_id}
+                    currentReportId={reportCard.id}
+                    currentReportCreatedAt={reportCard.created_at}
+                  />
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -753,5 +758,45 @@ export default function ReportCardView() {
         ) : null}
       </div>
     </PortalLayout>
+  );
+}
+
+function PreviousReportButton({ studentId, currentReportId, currentReportCreatedAt }: {
+  studentId: string;
+  currentReportId: string;
+  currentReportCreatedAt: string;
+}) {
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('report_cards')
+        .select('id, created_at')
+        .eq('student_id', studentId)
+        .eq('report_card_status', 'completed')
+        .lt('created_at', currentReportCreatedAt)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].id !== currentReportId) {
+        setPrevId(data[0].id);
+      }
+    };
+    load();
+  }, [studentId, currentReportId, currentReportCreatedAt]);
+
+  if (!prevId) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-2"
+      onClick={() => navigate(`/report-cards/${prevId}`)}
+    >
+      <FileText className="h-4 w-4" />
+      Previous Report
+    </Button>
   );
 }
