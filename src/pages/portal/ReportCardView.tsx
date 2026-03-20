@@ -760,3 +760,43 @@ export default function ReportCardView() {
     </PortalLayout>
   );
 }
+
+function PreviousReportButton({ studentId, currentReportId, currentReportCreatedAt }: {
+  studentId: string;
+  currentReportId: string;
+  currentReportCreatedAt: string;
+}) {
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('report_cards')
+        .select('id, created_at')
+        .eq('student_id', studentId)
+        .eq('report_card_status', 'completed')
+        .lt('created_at', currentReportCreatedAt)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].id !== currentReportId) {
+        setPrevId(data[0].id);
+      }
+    };
+    load();
+  }, [studentId, currentReportId, currentReportCreatedAt]);
+
+  if (!prevId) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-2"
+      onClick={() => navigate(`/report-cards/${prevId}`)}
+    >
+      <FileText className="h-4 w-4" />
+      Previous Report
+    </Button>
+  );
+}
