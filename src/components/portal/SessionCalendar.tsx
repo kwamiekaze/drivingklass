@@ -23,6 +23,7 @@ import { SessionTypeBadge } from "./SessionTypeBadge";
 import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
+import { LatestReportSnapshot } from "./LatestReportSnapshot";
 
 interface SessionCalendarProps {
   sessions: Session[];
