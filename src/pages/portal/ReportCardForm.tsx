@@ -193,7 +193,7 @@ function ReportCardFormContent() {
       setSession(data.session as Session);
       setDraftId(data.id);
       loadHighlightsFromRecord(data);
-      fetchPriorReports(data.student_id);
+      fetchPriorReports(data.student_id, data.created_at);
       setFormData({
         transcription_summary: data.transcription_summary || '',
         message_to_student: data.message_to_student || '',
