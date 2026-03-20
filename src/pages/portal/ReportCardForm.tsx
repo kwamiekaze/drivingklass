@@ -479,30 +479,128 @@ function ReportCardFormContent() {
       </Card>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Previous Lesson Comparison */}
+        {session.session_type !== 'testing' && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Previous Lesson Comparison</p>
+              </div>
+              {previousReport ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Previous Report Date</p>
+                      <p className="font-medium">{format(parseISO(previousReport.created_at), 'MMM d, yyyy')}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <p className="text-muted-foreground">Overall:</p>
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Star className="h-3 w-3 text-yellow-500" />
+                        {previousReport.overall || '-'}/10
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* Show highlights from previous report */}
+                  {(previousReport.focus_areas?.length > 0 || previousReport.strongest_skills?.length > 0 || previousReport.most_improved_skills?.length > 0) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      {previousReport.focus_areas?.length > 0 && (
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Focus Areas</p>
+                          {previousReport.focus_areas.map((s: any, i: number) => (
+                            <p key={i} className="font-medium text-orange-500">{s.skill_label || s}</p>
+                          ))}
+                        </div>
+                      )}
+                      {previousReport.strongest_skills?.length > 0 && (
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Strongest</p>
+                          {previousReport.strongest_skills.map((s: any, i: number) => (
+                            <p key={i} className="font-medium text-green-500">{s.skill_label || s}</p>
+                          ))}
+                        </div>
+                      )}
+                      {previousReport.most_improved_skills?.length > 0 && (
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Most Improved</p>
+                          {previousReport.most_improved_skills.map((s: any, i: number) => (
+                            <p key={i} className="font-medium text-blue-500">{s.skill_label || s}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <Link to={`/report-cards/${previousReport.id}`} target="_blank">
+                    <Button variant="outline" size="sm" className="w-full min-h-[40px] gap-2">
+                      <FileText className="h-3.5 w-3.5" />
+                      Open Previous Report Card
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No previous report card available yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Ratings */}
         <Card className="luxury-card">
           <CardHeader>
             <CardTitle>Skill Ratings (1-10)</CardTitle>
+            {previousReport && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Green markers show previous lesson scores for comparison
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {RATING_CATEGORIES.map(category => (
-              <div key={category.key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{category.label}</Label>
-                  <span className="font-bold text-primary">
-                    {formData[category.key as keyof typeof formData]}
-                  </span>
+            {RATING_CATEGORIES.map(category => {
+              const currentVal = formData[category.key as keyof typeof formData] as number;
+              const prevVal = previousReport ? (previousReport[category.key] as number | null) : null;
+              const delta = prevVal != null ? currentVal - prevVal : null;
+
+              return (
+                <div key={category.key} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      {category.label}
+                      {prevVal != null && delta !== null && delta !== 0 && (
+                        <span className={`text-[10px] font-semibold ${delta > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {delta > 0 ? `+${delta}` : delta}
+                        </span>
+                      )}
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      {prevVal != null && (
+                        <span className="text-[10px] text-green-500 font-medium">Prev: {prevVal}</span>
+                      )}
+                      <span className="font-bold text-primary">{currentVal}</span>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Slider
+                      value={[currentVal]}
+                      onValueChange={(value) => handleRatingChange(category.key, value)}
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="w-full"
+                    />
+                    {/* Green previous-lesson comparison marker */}
+                    {prevVal != null && (
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 pointer-events-none z-10"
+                        style={{ left: `${((prevVal - 1) / 9) * 100}%` }}
+                      >
+                        <div className="w-0.5 h-5 bg-green-500 rounded-full opacity-80 -translate-x-1/2" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <Slider
-                  value={[formData[category.key as keyof typeof formData] as number]}
-                  onValueChange={(value) => handleRatingChange(category.key, value)}
-                  min={1}
-                  max={10}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 

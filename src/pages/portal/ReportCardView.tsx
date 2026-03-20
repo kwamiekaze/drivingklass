@@ -422,10 +422,15 @@ export default function ReportCardView() {
           </Card>
         ) : reportCard ? (
           <div className="space-y-4 sm:space-y-6">
-            {/* Copy Link Button (admin/instructor/staff only) */}
+            {/* Copy Link + Open Previous Report (admin/instructor/staff only) */}
             {canCopyLink && (
               <>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2 flex-wrap">
+                  <PreviousReportButton
+                    studentId={reportCard.student_id}
+                    currentReportId={reportCard.id}
+                    currentReportCreatedAt={reportCard.created_at}
+                  />
                   <Button 
                     variant="outline" 
                     size="sm" 
