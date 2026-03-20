@@ -106,15 +106,14 @@ function ReportCardFormContent() {
     if (data) {
       setPriorReports(data as any[]);
       // Find the most recent completed report before the current one
-      const sorted = [...data].sort((a, b) =>
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+      const sorted = [...data].sort((a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      // If editing, exclude the current report itself
-      const prev = sorted.find(r => {
+      const prev = sorted.find((r: any) => {
         if (id && r.id === id) return false;
-        if (currentReportCreatedAt && r.created_at! >= currentReportCreatedAt) return false;
+        if (currentReportCreatedAt && r.created_at >= currentReportCreatedAt) return false;
         return true;
-      }) || (sorted.length > 0 ? sorted.find(r => r.id !== id) : null);
+      }) || (sorted.length > 0 ? sorted.find((r: any) => r.id !== id) : null);
       setPreviousReport(prev || null);
     }
   };
