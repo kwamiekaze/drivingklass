@@ -695,6 +695,54 @@ export type Database = {
           },
         ]
       }
+      permit_questions: {
+        Row: {
+          category: string
+          correct_answer: string
+          created_at: string
+          difficulty: string
+          explanation: string | null
+          id: string
+          image_url: string | null
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          correct_answer?: string
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          correct_answer?: string
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       permits: {
         Row: {
           admin_note: string | null

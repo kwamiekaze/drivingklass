@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -251,6 +251,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/qa', label: 'QA', icon: Shield },
+        { href: '/admin/practice-test', label: 'Practice Test', icon: BookOpen },
       );
       break;
     case 'staff':
@@ -271,6 +272,7 @@ function getNavItems(role: string | null) {
         { href: '/instructor/students', label: 'Students', icon: Users },
         { href: '/instructor/feedback', label: 'Feedback', icon: Star },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
+        { href: '/instructor/practice-test', label: 'Practice Test', icon: BookOpen },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;
