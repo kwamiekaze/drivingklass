@@ -251,6 +251,7 @@ function getNavItems(role: string | null) {
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/qa', label: 'QA', icon: Shield },
+        { href: '/admin/practice-test', label: 'Practice Test', icon: BookOpen },
       );
       break;
     case 'staff':
