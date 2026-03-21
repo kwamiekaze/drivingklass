@@ -272,6 +272,7 @@ function getNavItems(role: string | null) {
         { href: '/instructor/students', label: 'Students', icon: Users },
         { href: '/instructor/feedback', label: 'Feedback', icon: Star },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
+        { href: '/instructor/practice-test', label: 'Practice Test', icon: BookOpen },
         { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;
