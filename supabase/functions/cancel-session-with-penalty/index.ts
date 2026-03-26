@@ -94,6 +94,9 @@ Deno.serve(async (req: Request) => {
     let cancelledByRole = userRole;
     if (cancelledByRole === "staff") cancelledByRole = "admin";
 
+    // Determine if student notification should be suppressed
+    const suppressNotification = suppress_student_notification === true && isStaffOrAdmin;
+
     // 1. Update session
     const { error: updateError } = await serviceClient
       .from("sessions")
@@ -106,6 +109,7 @@ Deno.serve(async (req: Request) => {
         cancel_penalty_hours: penaltyHours,
         cancel_penalty_applied: penaltyApplies,
         cancellation_fee_waived: shouldWaiveFee,
+        suppress_student_notification: suppressNotification,
       })
       .eq("id", session_id);
 
