@@ -60,6 +60,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editEndTime, setEditEndTime] = useState("");
   const [editPickupAddress, setEditPickupAddress] = useState("");
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
+  const [editSessionType, setEditSessionType] = useState<string>("driving");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
