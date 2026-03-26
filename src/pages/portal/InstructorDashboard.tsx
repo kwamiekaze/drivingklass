@@ -329,11 +329,11 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
   const [cancelOpen, setCancelOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleCancel = async (reason: string, waiveFee?: boolean) => {
+  const handleCancel = async (reason: string, waiveFee?: boolean, suppressStudentNotification?: boolean) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('cancel-session-with-penalty', {
-        body: { session_id: session.id, reason: reason.trim(), waive_fee: waiveFee || false }
+        body: { session_id: session.id, reason: reason.trim(), waive_fee: waiveFee || false, suppress_student_notification: suppressStudentNotification || false }
       });
       if (error) throw error;
       let desc = "The session has been cancelled successfully.";
