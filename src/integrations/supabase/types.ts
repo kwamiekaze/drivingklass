@@ -1583,6 +1583,7 @@ export type Database = {
           starts_at: string
           status: string
           student_id: string
+          suppress_student_notification: boolean
         }
         Insert: {
           cancel_penalty_applied?: boolean
@@ -1611,6 +1612,7 @@ export type Database = {
           starts_at: string
           status?: string
           student_id: string
+          suppress_student_notification?: boolean
         }
         Update: {
           cancel_penalty_applied?: boolean
@@ -1639,6 +1641,7 @@ export type Database = {
           starts_at?: string
           status?: string
           student_id?: string
+          suppress_student_notification?: boolean
         }
         Relationships: [
           {
@@ -1742,6 +1745,7 @@ export type Database = {
           starts_at: string
           status: string
           student_id: string
+          suppress_student_notification: boolean
         }
         SetofOptions: {
           from: "*"
@@ -1779,6 +1783,7 @@ export type Database = {
           starts_at: string
           status: string
           student_id: string
+          suppress_student_notification: boolean
         }
         SetofOptions: {
           from: "*"
@@ -1829,6 +1834,7 @@ export type Database = {
           starts_at: string
           status: string
           student_id: string
+          suppress_student_notification: boolean
         }
         SetofOptions: {
           from: "*"
@@ -2049,6 +2055,7 @@ export type Database = {
           starts_at: string
           status: string
           student_id: string
+          suppress_student_notification: boolean
         }
         SetofOptions: {
           from: "*"
