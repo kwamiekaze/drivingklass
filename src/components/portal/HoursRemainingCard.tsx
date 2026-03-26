@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils";
 interface HoursRemainingCardProps {
   hoursRemaining: number;
   purchasedHours?: number;
+  completedHours?: number;
   className?: string;
 }
 
-export function HoursRemainingCard({ hoursRemaining, purchasedHours, className }: HoursRemainingCardProps) {
+export function HoursRemainingCard({ hoursRemaining, purchasedHours, completedHours, className }: HoursRemainingCardProps) {
   const formattedHours = Number(hoursRemaining || 0).toFixed(1);
   const formattedPurchased = purchasedHours !== undefined ? Number(purchasedHours || 0).toFixed(1) : null;
+  const formattedCompleted = completedHours !== undefined ? Number(completedHours || 0).toFixed(1) : null;
   
   return (
     <Card className={cn(
@@ -40,6 +42,11 @@ export function HoursRemainingCard({ hoursRemaining, purchasedHours, className }
         {formattedPurchased && (
           <p className="mt-1 text-sm text-muted-foreground">
             of {formattedPurchased}h purchased
+          </p>
+        )}
+        {formattedCompleted && (
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {formattedCompleted}h completed
           </p>
         )}
         <CardDescription className="mt-2 text-sm">
