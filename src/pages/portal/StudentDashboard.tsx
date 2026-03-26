@@ -37,6 +37,7 @@ function StudentDashboardContent() {
   const [instructor, setInstructor] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [completedHours, setCompletedHours] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
@@ -94,6 +95,12 @@ function StudentDashboardContent() {
       
       if (assignmentData?.instructor) {
         setInstructor(assignmentData.instructor as Profile);
+      }
+
+      // Fetch completed hours via RPC
+      const { data: completedHoursData } = await supabase.rpc('compute_completed_hours', { p_student_id: user.id });
+      if (completedHoursData !== null && completedHoursData !== undefined) {
+        setCompletedHours(Number(completedHoursData));
       }
     } catch (err: any) {
       console.error('Error fetching student data:', err);
@@ -196,6 +203,7 @@ function StudentDashboardContent() {
         <HoursRemainingCard 
           hoursRemaining={(profile as any).hours_remaining ?? 0}
           purchasedHours={(profile as any).purchased_hours ?? undefined}
+          completedHours={completedHours}
           className="max-w-md"
         />
       )}
