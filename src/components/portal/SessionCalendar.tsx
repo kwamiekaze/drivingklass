@@ -231,6 +231,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     // Prefill pickup/dropoff from session-specific values
     setEditPickupAddress(sessionDetails?.pickup_address || '');
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
+    setEditSessionType(session.session_type || 'driving');
     setEditDialogOpen(true);
   };
 
@@ -320,6 +321,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         duration_minutes: durationMinutes,
         pickup_address: editPickupAddress.trim() || null,
         dropoff_address: editDropoffAddress.trim() || null,
+        session_type: editSessionType,
       };
 
       const { error } = await supabase
@@ -688,7 +690,13 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Type</p>
-                  <SessionTypeBadge sessionType={selectedSession.session_type} />
+                  <Select value={editSessionType} onValueChange={setEditSessionType}>
+                    <SelectTrigger className="min-h-[44px] mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border z-50">
+                      <SelectItem value="driving">Driving</SelectItem>
+                      <SelectItem value="testing">Road Test</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
