@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { session_id, reason, waive_fee } = await req.json();
+    const { session_id, reason, waive_fee, suppress_student_notification } = await req.json();
     if (!session_id) {
       return new Response(
         JSON.stringify({ error: "session_id is required" }),
@@ -94,6 +94,9 @@ Deno.serve(async (req: Request) => {
     let cancelledByRole = userRole;
     if (cancelledByRole === "staff") cancelledByRole = "admin";
 
+    // Determine if student notification should be suppressed
+    const suppressNotification = suppress_student_notification === true && isStaffOrAdmin;
+
     // 1. Update session
     const { error: updateError } = await serviceClient
       .from("sessions")
@@ -106,6 +109,7 @@ Deno.serve(async (req: Request) => {
         cancel_penalty_hours: penaltyHours,
         cancel_penalty_applied: penaltyApplies,
         cancellation_fee_waived: shouldWaiveFee,
+        suppress_student_notification: suppressNotification,
       })
       .eq("id", session_id);
 
@@ -143,34 +147,39 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Build student-facing notification message (privacy-safe)
-    let studentMessage: string;
-    if (isLate && penaltyApplies) {
-      studentMessage = "Cancellation fee incurred due to late cancellation, cancellations made within 24 hours of a session are subject to a 30 minute reduction in remaining hours cancellation fee.";
-    } else if (isLate && shouldWaiveFee) {
-      // Show role-based waiver message (admin/instructor), but never personal name
-      const waivingRole = cancelledByRole === "instructor" ? "instructor" : "admin";
-      studentMessage = `Cancellation waived by ${waivingRole}`;
+    // Only send if not suppressed
+    const shouldNotifyStudent = !(suppress_student_notification === true && isStaffOrAdmin);
+
+    if (shouldNotifyStudent) {
+      let studentMessage: string;
+      if (isLate && penaltyApplies) {
+        studentMessage = "Cancellation fee incurred due to late cancellation, cancellations made within 24 hours of a session are subject to a 30 minute reduction in remaining hours cancellation fee.";
+      } else if (isLate && shouldWaiveFee) {
+        const waivingRole = cancelledByRole === "instructor" ? "instructor" : "admin";
+        studentMessage = `Cancellation waived by ${waivingRole}`;
+      } else {
+        studentMessage = "No cancellation fee applied.";
+      }
+
+      const notifTitle = cancelledByRole === "student" ? "Session Canceled" : "Session Canceled by DrivingKlass";
+
+      const { error: notifError } = await serviceClient
+        .from("notifications")
+        .insert({
+          user_id: session.student_id,
+          type: "session_cancelled",
+          title: notifTitle,
+          message: studentMessage,
+          session_id: session_id,
+          severity: penaltyApplies ? "warning" : "info",
+          dedupe_key: `cancel_${session_id}`,
+        });
+
+      if (notifError) {
+        console.error("Notification insert error:", notifError);
+      }
     } else {
-      studentMessage = "No cancellation fee applied.";
-    }
-
-    // Never expose who cancelled — always "DrivingKlass" for non-student cancellers
-    const notifTitle = cancelledByRole === "student" ? "Session Canceled" : "Session Canceled by DrivingKlass";
-
-    const { error: notifError } = await serviceClient
-      .from("notifications")
-      .insert({
-        user_id: session.student_id,
-        type: "session_cancelled",
-        title: notifTitle,
-        message: studentMessage,
-        session_id: session_id,
-        severity: penaltyApplies ? "warning" : "info",
-        dedupe_key: `cancel_${session_id}`,
-      });
-
-    if (notifError) {
-      console.error("Notification insert error:", notifError);
+      console.log(`Student notification suppressed for session ${session_id}`);
     }
 
     return new Response(

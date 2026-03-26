@@ -15,7 +15,7 @@ interface CancelConfirmationModalProps {
   studentName?: string;
   instructorName?: string;
   userRole: 'student' | 'instructor' | 'staff' | 'admin';
-  onConfirmCancel: (reason: string, waiveFee?: boolean) => void;
+  onConfirmCancel: (reason: string, waiveFee?: boolean, suppressStudentNotification?: boolean) => void;
   onRequestReschedule?: () => void;
   isLoading?: boolean;
 }
@@ -34,6 +34,7 @@ export function CancelConfirmationModal({
 }: CancelConfirmationModalProps) {
   const [reason, setReason] = useState("");
   const [waiveFee, setWaiveFee] = useState(false);
+  const [suppressNotify, setSuppressNotify] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [rescheduleSubmitted, setRescheduleSubmitted] = useState(false);
@@ -47,6 +48,7 @@ export function CancelConfirmationModal({
     if (!val) {
       setReason("");
       setWaiveFee(false);
+      setSuppressNotify(false);
       setShowRescheduleForm(false);
       setRescheduleReason("");
       setRescheduleSubmitted(false);
@@ -197,6 +199,28 @@ export function CancelConfirmationModal({
             </div>
           )}
 
+          {/* Do not notify student checkbox — staff only */}
+          {isStaff && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-lg">
+                <Checkbox
+                  id="suppress-notify"
+                  checked={suppressNotify}
+                  onCheckedChange={(checked) => setSuppressNotify(checked === true)}
+                />
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="suppress-notify" className="text-sm font-medium cursor-pointer">
+                    Do not notify student
+                  </Label>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground pl-1">
+                If selected, this cancellation will not send a notification to the student.
+              </p>
+            </div>
+          )}
+
           {isStaff && !userRole.includes('student') && (
             <p className="text-sm text-muted-foreground">
               The student will see this cancellation as "Cancelled by DrivingKlass" — your identity will not be shown.
@@ -225,7 +249,7 @@ export function CancelConfirmationModal({
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button
               variant="destructive"
-              onClick={() => onConfirmCancel(reason, waiveFee)}
+              onClick={() => onConfirmCancel(reason, waiveFee, suppressNotify)}
               disabled={!reason.trim() || isLoading}
               className="flex-1 min-h-[44px]"
             >
