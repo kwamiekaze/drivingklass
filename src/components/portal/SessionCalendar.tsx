@@ -410,7 +410,6 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 : 'Session Details'}
             </DialogTitle>
           </DialogHeader>
-          </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">
               {detailsLoading && (
