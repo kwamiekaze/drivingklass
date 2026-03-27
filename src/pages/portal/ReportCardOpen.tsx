@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 
 /**
