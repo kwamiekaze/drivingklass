@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 
 /**
@@ -27,6 +28,29 @@ export default function ReportCardOpen() {
       navigate(`/login?redirect=${redirectPath}`);
     }
   }, [user, authLoading, navigate, id, location.pathname]);
+
+  // Check if this report card belongs to a road test session — redirect to road test splash
+  useEffect(() => {
+    if (!user || !id) return;
+    const checkSessionType = async () => {
+      const { data: rc } = await supabase
+        .from('report_cards')
+        .select('session_id')
+        .eq('id', id)
+        .single();
+      if (rc?.session_id) {
+        const { data: session } = await supabase
+          .from('sessions')
+          .select('session_type')
+          .eq('id', rc.session_id)
+          .single();
+        if (session?.session_type === 'testing') {
+          navigate(`/road-test-results/${rc.session_id}/open`, { replace: true });
+        }
+      }
+    };
+    checkSessionType();
+  }, [user, id, navigate]);
 
   // Set fallback timer in case video fails to load
   useEffect(() => {

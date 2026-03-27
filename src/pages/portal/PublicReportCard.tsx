@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn, ChevronRight } from "lucide-react";
+import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn, ChevronRight, CheckCircle, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
@@ -55,6 +55,8 @@ interface PublicReportData {
   most_improved_skills?: any[];
   focus_areas?: any[];
   session_number?: number | null;
+  road_test_result?: string | null;
+  road_test_notes?: string | null;
 }
 
 type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
@@ -336,7 +338,9 @@ export default function PublicReportCard() {
           <div className="text-center py-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
               <FileText className="h-6 w-6" />
-              {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
+              {report.session_type === 'testing'
+                ? (report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result')
+                : (report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card')}
             </h1>
           </div>
 
@@ -390,104 +394,159 @@ export default function PublicReportCard() {
             </CardContent>
           </Card>
 
-          {/* Overall Rating */}
-          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-            <CardContent className="p-4 sm:p-6">
-              <div className="text-center p-4 bg-primary/10 rounded-lg">
-                <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
-                <div className="flex items-center justify-center gap-2">
-                  <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                  <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
-                  <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Skill Progress Graph (if enabled publicly) */}
-          {report.show_graph_publicly && report.student_id && (
-            <div className="report-graph-section">
-              <StudentProgressSection
-                studentId={report.student_id}
-                reportCardId={report.id}
-                anchorReport={report}
-                savedHighlights={{
-                  strongest_skills: report.strongest_skills,
-                  most_improved_skills: report.most_improved_skills,
-                  focus_areas: report.focus_areas,
-                }}
-                compact
-              />
-            </div>
-          )}
-
-          {/* Skill Progress Highlights */}
-          <SkillHighlightsDisplay
-            strongest={report.strongest_skills}
-            mostImproved={report.most_improved_skills}
-            focusAreas={report.focus_areas}
-          />
-
-          {/* Skill Ratings */}
-          <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-            <CardContent className="p-4 sm:p-6">
-              <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
-              <div className="grid gap-2">
-                {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
-                  const rating = report[category.key as keyof PublicReportData] as number | null;
-                  return (
-                    <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                      <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
-                      <div className="flex-1">
-                        <Progress value={rating ? rating * 10 : 0} className="h-2" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
-                        {rating || "-"}
-                      </span>
+          {report.session_type === 'testing' ? (
+            <>
+              {/* Road Test Result */}
+              <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                <CardContent className="p-6 sm:p-8">
+                  <div className={`text-center p-6 sm:p-8 rounded-xl ${report.road_test_result === 'passed' ? "bg-green-500/10 border border-green-500/20" : "bg-orange-500/10 border border-orange-500/20"}`}>
+                    <div className="mb-3">
+                      {report.road_test_result === 'passed' ? (
+                        <CheckCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-green-600 dark:text-green-400" />
+                      ) : (
+                        <XCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-orange-600 dark:text-orange-400" />
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    <h2 className={`text-2xl sm:text-3xl font-bold mb-1 ${report.road_test_result === 'passed' ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}>
+                      {report.road_test_result === 'passed' ? "Passed 🚀" : "Must Retry"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {report.road_test_result === 'passed' ? "Congratulations on passing the road test!" : "Keep practicing — you'll get there!"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Lesson Summary */}
-          {report.transcription_summary && (
-            <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-              <CardContent className="p-4 sm:p-6">
-                <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
-                <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
-                  {report.transcription_summary}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              {/* Road Test Notes */}
+              {(report.road_test_notes || report.message_to_student) && (
+                <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                  <CardContent className="p-4 sm:p-6 bg-muted/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="font-medium text-sm text-foreground">Road Test Notes</span>
+                    </div>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
+                      {report.road_test_notes || report.message_to_student}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
-          {/* Message to Student */}
-          {report.message_to_student && (
-            <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
-              <CardContent className="p-4 sm:p-6 bg-muted/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="font-medium text-sm text-foreground">Instructor's Message</span>
+              {/* Lesson Rating */}
+              <LessonRating
+                reportCardId={report.id}
+                studentName={report.student_name}
+                isPublicView={true}
+              />
+
+              {/* Previous Report Cards (public only) */}
+              <PublicReportHistory
+                studentId={report.student_id}
+                currentReportId={report.id}
+              />
+            </>
+          ) : (
+            <>
+              {/* Overall Rating */}
+              <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-center p-4 bg-primary/10 rounded-lg">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                      <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
+                      <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skill Progress Graph (if enabled publicly) */}
+              {report.show_graph_publicly && report.student_id && (
+                <div className="report-graph-section">
+                  <StudentProgressSection
+                    studentId={report.student_id}
+                    reportCardId={report.id}
+                    anchorReport={report}
+                    savedHighlights={{
+                      strongest_skills: report.strongest_skills,
+                      most_improved_skills: report.most_improved_skills,
+                      focus_areas: report.focus_areas,
+                    }}
+                    compact
+                  />
                 </div>
-                <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
-              </CardContent>
-            </Card>
+              )}
+
+              {/* Skill Progress Highlights */}
+              <SkillHighlightsDisplay
+                strongest={report.strongest_skills}
+                mostImproved={report.most_improved_skills}
+                focusAreas={report.focus_areas}
+              />
+
+              {/* Skill Ratings */}
+              <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                <CardContent className="p-4 sm:p-6">
+                  <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
+                  <div className="grid gap-2">
+                    {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
+                      const rating = report[category.key as keyof PublicReportData] as number | null;
+                      return (
+                        <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
+                          <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
+                          <div className="flex-1">
+                            <Progress value={rating ? rating * 10 : 0} className="h-2" />
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right report-text-sweep">
+                            {rating || "-"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Lesson Summary */}
+              {report.transcription_summary && (
+                <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                  <CardContent className="p-4 sm:p-6">
+                    <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
+                      {report.transcription_summary}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Message to Student */}
+              {report.message_to_student && (
+                <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                  <CardContent className="p-4 sm:p-6 bg-muted/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="font-medium text-sm text-foreground">Instructor's Message</span>
+                    </div>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Lesson Rating */}
+              <LessonRating
+                reportCardId={report.id}
+                studentName={report.student_name}
+                isPublicView={true}
+              />
+
+              {/* Previous Report Cards (public only) */}
+              <PublicReportHistory
+                studentId={report.student_id}
+                currentReportId={report.id}
+              />
+            </>
           )}
-
-          {/* Lesson Rating */}
-          <LessonRating
-            reportCardId={report.id}
-            studentName={report.student_name}
-            isPublicView={true}
-          />
-
-          {/* Previous Report Cards (public only) */}
-          <PublicReportHistory
-            studentId={report.student_id}
-            currentReportId={report.id}
-          />
 
           {/* Footer */}
           <p className="text-center text-xs text-muted-foreground py-4">
