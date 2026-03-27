@@ -82,6 +82,7 @@ export default function ReportCardView() {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
   const [showGraphPublicly, setShowGraphPublicly] = useState(false);
+  const [sessionNumber, setSessionNumber] = useState<number | null>(null);
   const [skillHighlights, setSkillHighlights] = useState<{
     strongest_skills?: any[];
     most_improved_skills?: any[];
