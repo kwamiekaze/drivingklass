@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp, CheckCircle, XCircle } from "lucide-react";
 import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 import { ReportCard, Profile, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
