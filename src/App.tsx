@@ -8,6 +8,7 @@ import { ThemeDebugBadge } from "@/components/ThemeDebugBadge";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PortalAuthProvider } from "@/hooks/usePortalAuth";
 import { AnalyticsProvider } from "@/hooks/useAnalytics";
+import { ViewAsStudentProvider } from "@/contexts/ViewAsStudentContext";
 
 // Public pages
 import Index from "./pages/Index";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/*" element={
               <AuthProvider>
                 <PortalAuthProvider>
+                  <ViewAsStudentProvider>
                   <AnalyticsProvider>
                     <Routes>
                       {/* Public Routes */}
@@ -154,6 +156,7 @@ const App = () => (
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AnalyticsProvider>
+                  </ViewAsStudentProvider>
                 </PortalAuthProvider>
               </AuthProvider>
             } />
