@@ -15,6 +15,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LessonRating } from "@/components/portal/LessonRating";
 import { useTheme } from "@/components/ThemeProvider";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PublicReportData {
   id: string;
