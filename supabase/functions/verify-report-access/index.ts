@@ -101,6 +101,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // If road test, fetch the result
+    let roadTestResult: string | null = null;
+    let roadTestNotes: string | null = null;
+    if (session?.session_type === "testing") {
+      const { data: rtResult } = await supabaseAdmin
+        .from("road_test_results")
+        .select("result, notes")
+        .eq("session_id", report.session_id)
+        .single();
+      if (rtResult) {
+        roadTestResult = rtResult.result;
+        roadTestNotes = rtResult.notes;
+      }
+    }
+
     // Remove sensitive fields
     const { public_access_code: _code, ...safeReport } = report;
 
@@ -116,6 +131,8 @@ Deno.serve(async (req) => {
           session_type: session?.session_type || "driving",
           show_graph_publicly: report.show_graph_publicly || false,
           session_number: sessionNumber,
+          road_test_result: roadTestResult,
+          road_test_notes: roadTestNotes,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
