@@ -35,7 +35,8 @@ function AdminReportCardsContent() {
   const [instructorFilter, setInstructorFilter] = useState<string>("all");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-
+  const [sessionTypeMap, setSessionTypeMap] = useState<Record<string, string>>({});
+  const [roadTestResultMap, setRoadTestResultMap] = useState<Record<string, string>>({});
   useEffect(() => {
     fetchData();
   }, []);
