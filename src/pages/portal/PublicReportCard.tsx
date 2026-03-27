@@ -479,6 +479,12 @@ export default function PublicReportCard() {
             isPublicView={true}
           />
 
+          {/* Previous Report Cards (public only) */}
+          <PublicReportHistory
+            studentId={report.student_id}
+            currentReportId={report.id}
+          />
+
           {/* Footer */}
           <p className="text-center text-xs text-muted-foreground py-4">
             Shared securely by DrivingKlass
