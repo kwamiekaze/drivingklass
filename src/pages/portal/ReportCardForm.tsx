@@ -137,6 +137,12 @@ function ReportCardFormContent() {
       .single();
 
     if (data) {
+      // If this is a road test session, don't show driving report form
+      if (data.session_type === 'testing') {
+        navigate(-1);
+        toast({ title: "Road test sessions use the Road Test grading flow, not the report card form.", variant: "destructive" });
+        return;
+      }
       setSession(data as Session);
       fetchPriorReports(data.student_id);
       // Check if there's already a draft for this session
