@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReportCard, RATING_CATEGORIES } from "@/types/portal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Calendar, User, Star, MessageSquare, Clock, ExternalLink, Copy, Check } from "lucide-react";
+import { FileText, Calendar, User, Star, MessageSquare, Clock, ExternalLink, Copy, Check, CheckCircle, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useToast } from "@/hooks/use-toast";
 import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
