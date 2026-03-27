@@ -497,3 +497,122 @@ export default function PublicReportCard() {
     </div>
   );
 }
+
+function PublicReportHistory({ studentId, currentReportId }: { studentId: string; currentReportId: string }) {
+  const [items, setItems] = useState<Array<{
+    id: string;
+    public_share_slug: string | null;
+    created_at: string;
+    overall: number | null;
+    instructor_id: string;
+    instructor_name: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        // Anon can only read public completed reports (RLS enforced)
+        const { data: reports } = await supabase
+          .from('report_cards')
+          .select('id, created_at, overall, instructor_id, public_share_slug')
+          .eq('student_id', studentId)
+          .eq('is_public', true)
+          .eq('report_card_status', 'completed')
+          .not('public_share_slug', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (cancelled || !reports || reports.length === 0) {
+          if (!cancelled) setItems([]);
+          return;
+        }
+
+        const instrIds = [...new Set(reports.map(r => r.instructor_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, first_name, last_name')
+          .in('id', instrIds);
+
+        const instrMap: Record<string, string> = {};
+        (profiles || []).forEach(p => {
+          instrMap[p.id] = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Instructor';
+        });
+
+        if (!cancelled) {
+          setItems(reports.map(r => ({
+            id: r.id,
+            public_share_slug: r.public_share_slug,
+            created_at: r.created_at!,
+            overall: r.overall,
+            instructor_id: r.instructor_id,
+            instructor_name: instrMap[r.instructor_id] || 'Instructor',
+          })));
+        }
+      } catch (e) {
+        console.error('Failed to load public report history', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [studentId]);
+
+  if (loading) return null;
+  if (items.length <= 1) return null;
+
+  return (
+    <Card className="border-border/50 bg-card/80 backdrop-blur">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2 text-foreground">
+          <FileText className="h-4 w-4" />
+          Previous Report Cards
+          <Badge variant="secondary" className="text-xs ml-auto">{items.length} total</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+        {items.map(item => {
+          const isCurrent = item.id === currentReportId;
+          return (
+            <a
+              key={item.id}
+              href={isCurrent ? undefined : `/report/public/${item.public_share_slug}`}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                isCurrent
+                  ? 'bg-primary/10 border-primary/30 cursor-default'
+                  : 'bg-card hover:bg-accent/50 border-border cursor-pointer'
+              }`}
+              onClick={isCurrent ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-foreground">
+                    {format(parseISO(item.created_at), 'MMM d, yyyy')}
+                  </span>
+                  {isCurrent && (
+                    <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
+                      Currently Viewing
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {item.instructor_name}
+                </p>
+              </div>
+              {item.overall && (
+                <div className="flex items-center gap-1 text-sm font-semibold shrink-0 text-foreground">
+                  <Star className="h-3.5 w-3.5 text-yellow-500" />
+                  {item.overall}/10
+                </div>
+              )}
+              {!isCurrent && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+            </a>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
