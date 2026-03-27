@@ -317,7 +317,7 @@ export default function RoadTestResultView() {
   // Determine what to show based on view mode
   const showInternalNotes = viewMode === "normal" && isStaff;
   const showSharingSection = viewMode === "normal" && isStaff;
-  const showRating = viewMode !== "normal" || !isStaff || role === "student";
+  const showRating = viewMode !== "normal" || role === "student";
 
   return (
     <PortalLayout>
