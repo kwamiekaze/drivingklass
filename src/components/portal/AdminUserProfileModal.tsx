@@ -156,6 +156,19 @@ export function AdminUserProfileModal({
     return true;
   });
 
+  // Session numbering
+  const sessionNumberMap = useMemo(() => {
+    return computeSessionNumbers(studentSessions.map(s => ({ id: s.id, starts_at: s.starts_at, status: s.status })));
+  }, [studentSessions]);
+
+  const handleViewAsStudent = () => {
+    if (!profile) return;
+    const name = getDisplayName(profile, 'Student');
+    startViewingAs(profile.id, name);
+    onOpenChange(false);
+    navigate('/student');
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     
