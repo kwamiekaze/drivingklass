@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Search, Filter, Eye, Edit, Calendar, ChevronDown, ChevronUp, CheckCircle, XCircle } from "lucide-react";
 import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 import { ReportCard, Profile, RATING_CATEGORIES } from "@/types/portal";
 import { format, parseISO } from "date-fns";
@@ -35,7 +35,8 @@ function AdminReportCardsContent() {
   const [instructorFilter, setInstructorFilter] = useState<string>("all");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-
+  const [sessionTypeMap, setSessionTypeMap] = useState<Record<string, string>>({});
+  const [roadTestResultMap, setRoadTestResultMap] = useState<Record<string, string>>({});
   useEffect(() => {
     fetchData();
   }, []);
@@ -69,8 +70,38 @@ function AdminReportCardsContent() {
     setStudents((profilesData?.filter(p => studentIds.has(p.id)) || []) as any);
     setInstructors((profilesData?.filter(p => instructorIds.has(p.id)) || []) as any);
     setReportCards((reportCardsData || []) as ReportCard[]);
+
+    // Fetch session types for all report cards
+    const sessionIds = [...new Set((reportCardsData || []).map((rc: any) => rc.session_id).filter(Boolean))];
+    if (sessionIds.length > 0) {
+      const { data: sessions } = await supabase
+        .from('sessions')
+        .select('id, session_type')
+        .in('id', sessionIds);
+      if (sessions) {
+        const stMap: Record<string, string> = {};
+        sessions.forEach(s => { stMap[s.id] = s.session_type; });
+        setSessionTypeMap(stMap);
+
+        const testingIds = sessions.filter(s => s.session_type === 'testing').map(s => s.id);
+        if (testingIds.length > 0) {
+          const { data: rtResults } = await supabase
+            .from('road_test_results')
+            .select('session_id, result')
+            .in('session_id', testingIds);
+          if (rtResults) {
+            const rtMap: Record<string, string> = {};
+            rtResults.forEach(r => { rtMap[r.session_id] = r.result; });
+            setRoadTestResultMap(rtMap);
+          }
+        }
+      }
+    }
+
     setLoading(false);
   };
+
+  const isRoadTest = (rc: ReportCard) => sessionTypeMap[rc.session_id] === 'testing';
 
   const getStudentName = (id: string) => students.find(s => s.id === id)?.full_name || 'Unknown';
   const getInstructorName = (id: string) => instructors.find(i => i.id === id)?.full_name || 'Unknown';
@@ -230,9 +261,19 @@ function AdminReportCardsContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
-                    <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
-                      Overall: {rc.overall || 'N/A'}
-                    </Badge>
+                    {isRoadTest(rc) ? (
+                      <Badge className={`${roadTestResultMap[rc.session_id] === 'passed' ? 'bg-green-500/20 text-green-700 dark:text-green-300' : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'} text-xs`}>
+                        {roadTestResultMap[rc.session_id] === 'passed' ? (
+                          <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                        ) : (
+                          <><XCircle className="h-3 w-3 mr-1" />Must Retry</>
+                        )}
+                      </Badge>
+                    ) : (
+                      <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
+                        Overall: {rc.overall || 'N/A'}
+                      </Badge>
+                    )}
                     <ReportCardStatusBadge status={rc.report_card_status || 'completed'} />
                     <div className="hidden xs:flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -244,51 +285,89 @@ function AdminReportCardsContent() {
                       className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/report-cards/${rc.id}`);
+                        if (isRoadTest(rc)) {
+                          navigate(`/road-test-results/open/${rc.session_id}`);
+                        } else {
+                          navigate(`/report-cards/${rc.id}`);
+                        }
                       }}
-                      title="View Report Card"
+                      title={isRoadTest(rc) ? "View Road Test Result" : "View Report Card"}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Link to={`/instructor/report-cards/edit/${rc.id}`} onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" title="Edit Report Card">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    {!isRoadTest(rc) && (
+                      <Link to={`/instructor/report-cards/edit/${rc.id}`} onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" title="Edit Report Card">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               
               {expandedCard === rc.id && (
                 <CardContent className="border-t p-3 sm:p-4">
-                  {/* Ratings Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
-                    {RATING_CATEGORIES.map(category => {
-                      const rating = rc[category.key as keyof ReportCard] as number | null;
-                      return (
-                        <div
-                          key={category.key}
-                          className={`p-2 rounded text-center ${getRatingColor(rating)}`}
-                        >
-                          <p className="text-[10px] sm:text-xs font-medium truncate">{category.label}</p>
-                          <p className="text-sm sm:text-lg font-bold">{rating || '-'}</p>
+                  {isRoadTest(rc) ? (
+                    <div className="space-y-3">
+                      <div className={`text-center p-4 rounded-xl ${roadTestResultMap[rc.session_id] === 'passed' ? 'bg-green-500/10 border border-green-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+                        {roadTestResultMap[rc.session_id] === 'passed' ? (
+                          <>
+                            <CheckCircle className="h-10 w-10 mx-auto mb-2 text-green-600 dark:text-green-400" />
+                            <h3 className="text-lg font-bold text-green-600 dark:text-green-400">Passed 🚀</h3>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-10 w-10 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
+                            <h3 className="text-lg font-bold text-orange-600 dark:text-orange-400">Must Retry</h3>
+                          </>
+                        )}
+                      </div>
+                      {rc.message_to_student && (
+                        <div className="bg-muted p-3 rounded-lg">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Road Test Notes</p>
+                          <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                      {rc.internal_message && (
+                        <div className="bg-orange-500/10 p-3 rounded-lg">
+                          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
+                          <p className="text-xs sm:text-sm">{rc.internal_message}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Ratings Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
+                        {RATING_CATEGORIES.map(category => {
+                          const rating = rc[category.key as keyof ReportCard] as number | null;
+                          return (
+                            <div
+                              key={category.key}
+                              className={`p-2 rounded text-center ${getRatingColor(rating)}`}
+                            >
+                              <p className="text-[10px] sm:text-xs font-medium truncate">{category.label}</p>
+                              <p className="text-sm sm:text-lg font-bold">{rating || '-'}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                  {/* Messages */}
-                  {rc.message_to_student && (
-                    <div className="bg-muted p-3 rounded-lg mb-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Message to Student</p>
-                      <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
-                    </div>
-                  )}
-                  {rc.internal_message && (
-                    <div className="bg-orange-500/10 p-3 rounded-lg">
-                      <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
-                      <p className="text-xs sm:text-sm">{rc.internal_message}</p>
-                    </div>
+                      {/* Messages */}
+                      {rc.message_to_student && (
+                        <div className="bg-muted p-3 rounded-lg mb-2">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Message to Student</p>
+                          <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
+                        </div>
+                      )}
+                      {rc.internal_message && (
+                        <div className="bg-orange-500/10 p-3 rounded-lg">
+                          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
+                          <p className="text-xs sm:text-sm">{rc.internal_message}</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               )}
