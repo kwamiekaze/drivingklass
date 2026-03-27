@@ -238,9 +238,9 @@ export default function RoadTestResultView() {
                 <div className={`text-center p-6 sm:p-8 rounded-xl ${isPassed ? "bg-green-500/10 border border-green-500/20" : "bg-orange-500/10 border border-orange-500/20"}`}>
                   <div className="mb-3">
                     {isPassed ? (
-                      <CheckCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-green-500" />
+                      <CheckCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-green-600 dark:text-green-400" />
                     ) : (
-                      <XCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-orange-500" />
+                      <XCircle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-orange-600 dark:text-orange-400" />
                     )}
                   </div>
                   <h2 className={`text-2xl sm:text-3xl font-bold mb-1 ${isPassed ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}>
