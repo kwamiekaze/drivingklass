@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { StudentDocumentSection } from "./StudentDocumentSection";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3, Eye } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
@@ -18,6 +18,8 @@ import { SessionTypeBadge } from "./SessionTypeBadge";
 import { format, parseISO, isAfter } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { StudentProgressSection } from "./StudentProgressSection";
+import { useViewAsStudent } from "@/contexts/ViewAsStudentContext";
+import { computeSessionNumbers } from "@/lib/sessionNumbering";
 
 interface AdminUserProfileModalProps {
   open: boolean;
