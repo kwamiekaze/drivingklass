@@ -13,17 +13,17 @@ interface ReportCardHistoryListProps {
 }
 
 interface HistoryItem {
-  id: string;
-  type: 'report_card' | 'road_test';
-  created_at: string;
-  overall: number | null;
-  instructor_id: string;
-  instructor_name: string;
-  session_starts_at: string | null;
-  session_type: string;
   session_id: string;
-  sessionNumber: number | null;
-  road_test_result?: string | null;
+  session_type: string;
+  session_starts_at: string;
+  sessionNumber: number;
+  instructor_name: string;
+  // Driving report data
+  report_card_id: string | null;
+  overall: number | null;
+  // Road test data
+  road_test_result_id: string | null;
+  road_test_outcome: string | null;
 }
 
 export function ReportCardHistoryList({ studentId, currentReportCardId, currentSessionId }: ReportCardHistoryListProps) {
@@ -36,53 +36,53 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, currentS
     const load = async () => {
       setLoading(true);
       try {
-        // Fetch report cards and road test results in parallel
-        const [reportsRes, roadTestsRes, allSessRes] = await Promise.all([
-          supabase
-            .from('report_cards')
-            .select('id, created_at, overall, instructor_id, session_id')
-            .eq('student_id', studentId)
-            .eq('report_card_status', 'completed')
-            .order('created_at', { ascending: false })
-            .limit(50),
-          supabase
-            .from('road_test_results')
-            .select('id, created_at, session_id, instructor_id, result')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false })
-            .limit(50),
-          supabase
-            .from('sessions')
-            .select('id, starts_at, session_type')
-            .eq('student_id', studentId)
-            .neq('status', 'cancelled')
-            .order('starts_at', { ascending: true }),
-        ]);
+        // Source of truth: sessions table — all non-cancelled sessions for student
+        const { data: allSessions } = await supabase
+          .from('sessions')
+          .select('id, starts_at, session_type, status, instructor_id')
+          .eq('student_id', studentId)
+          .neq('status', 'cancelled')
+          .order('starts_at', { ascending: true });
 
-        const reports = reportsRes.data || [];
-        const roadTests = roadTestsRes.data || [];
-        const allSessions = allSessRes.data || [];
-
-        if (cancelled) return;
-        if (reports.length === 0 && roadTests.length === 0) {
+        if (cancelled || !allSessions || allSessions.length === 0) {
           setItems([]);
           return;
         }
 
-        // Build session number map
-        const sessionNumMap: Record<string, number> = {};
-        allSessions.forEach((s: any, i: number) => { sessionNumMap[s.id] = i + 1; });
+        // Fetch report cards and road test results in parallel
+        const sessionIds = allSessions.map(s => s.id);
+        const [reportsRes, roadTestsRes] = await Promise.all([
+          supabase
+            .from('report_cards')
+            .select('id, session_id, overall')
+            .eq('student_id', studentId)
+            .eq('report_card_status', 'completed')
+            .in('session_id', sessionIds),
+          supabase
+            .from('road_test_results')
+            .select('id, session_id, result')
+            .eq('student_id', studentId)
+            .in('session_id', sessionIds),
+        ]);
 
-        // Build session info map
-        const sessMap: Record<string, { starts_at: string; session_type: string }> = {};
-        allSessions.forEach((s: any) => { sessMap[s.id] = { starts_at: s.starts_at, session_type: s.session_type }; });
+        const reportMap: Record<string, { id: string; overall: number | null }> = {};
+        (reportsRes.data || []).forEach(r => { reportMap[r.session_id] = { id: r.id, overall: r.overall }; });
 
-        // Collect all instructor IDs
-        const instrIds = [...new Set([
-          ...reports.map(r => r.instructor_id),
-          ...roadTests.map(r => r.instructor_id),
-        ])];
+        const roadTestMap: Record<string, { id: string; result: string }> = {};
+        (roadTestsRes.data || []).forEach(rt => { roadTestMap[rt.session_id] = { id: rt.id, result: rt.result }; });
 
+        // Only include sessions that have a completed report card or road test result
+        const completedSessions = allSessions.filter(s =>
+          reportMap[s.id] || roadTestMap[s.id]
+        );
+
+        if (completedSessions.length === 0) {
+          if (!cancelled) setItems([]);
+          return;
+        }
+
+        // Fetch instructor names
+        const instrIds = [...new Set(completedSessions.map(s => s.instructor_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, first_name, last_name, email')
@@ -93,50 +93,37 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, currentS
           instrMap[p.id] = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email || 'Instructor';
         });
 
-        // Track which session IDs already have report cards to avoid duplicates
-        const reportSessionIds = new Set(reports.map(r => r.session_id));
+        // Build session number map from ALL non-cancelled sessions
+        const sessionNumMap: Record<string, number> = {};
+        allSessions.forEach((s, i) => { sessionNumMap[s.id] = i + 1; });
 
-        // Build combined list
-        const combined: HistoryItem[] = [
-          ...reports.map(r => ({
-            id: r.id,
-            type: 'report_card' as const,
-            created_at: r.created_at!,
-            overall: r.overall,
-            instructor_id: r.instructor_id,
-            instructor_name: instrMap[r.instructor_id] || 'Instructor',
-            session_starts_at: sessMap[r.session_id]?.starts_at || null,
-            session_type: sessMap[r.session_id]?.session_type || 'driving',
-            session_id: r.session_id,
-            sessionNumber: sessionNumMap[r.session_id] || null,
-          })),
-          ...roadTests
-            .filter(rt => !reportSessionIds.has(rt.session_id)) // Don't duplicate if session has both
-            .map(rt => ({
-              id: rt.id,
-              type: 'road_test' as const,
-              created_at: rt.created_at!,
-              overall: null,
-              instructor_id: rt.instructor_id,
-              instructor_name: instrMap[rt.instructor_id] || 'Instructor',
-              session_starts_at: sessMap[rt.session_id]?.starts_at || null,
-              session_type: 'testing',
-              session_id: rt.session_id,
-              sessionNumber: sessionNumMap[rt.session_id] || null,
-              road_test_result: rt.result,
-            })),
-        ];
+        // Build history items
+        const historyItems: HistoryItem[] = completedSessions.map(s => {
+          const report = reportMap[s.id];
+          const roadTest = roadTestMap[s.id];
+          const isRoadTest = s.session_type === 'testing';
 
-        // Sort by session date descending
-        combined.sort((a, b) => {
-          const dateA = a.session_starts_at || a.created_at;
-          const dateB = b.session_starts_at || b.created_at;
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
+          return {
+            session_id: s.id,
+            session_type: s.session_type,
+            session_starts_at: s.starts_at,
+            sessionNumber: sessionNumMap[s.id] || 0,
+            instructor_name: instrMap[s.instructor_id] || 'Instructor',
+            report_card_id: !isRoadTest && report ? report.id : null,
+            overall: !isRoadTest && report ? report.overall : null,
+            road_test_result_id: isRoadTest && roadTest ? roadTest.id : null,
+            road_test_outcome: isRoadTest && roadTest ? roadTest.result : null,
+          };
         });
 
-        if (!cancelled) setItems(combined);
+        // Sort by session date descending (most recent first)
+        historyItems.sort((a, b) =>
+          new Date(b.session_starts_at).getTime() - new Date(a.session_starts_at).getTime()
+        );
+
+        if (!cancelled) setItems(historyItems);
       } catch (e) {
-        console.error('Failed to load report card history', e);
+        console.error('Failed to load session history', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -179,22 +166,23 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, currentS
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
         {items.map(item => {
-          const isCurrent = item.type === 'report_card'
-            ? item.id === currentReportCardId
-            : item.session_id === currentSessionId;
+          const isRoadTest = item.session_type === 'testing';
+          const isCurrent = isRoadTest
+            ? item.session_id === currentSessionId
+            : item.report_card_id === currentReportCardId;
 
           const handleClick = () => {
             if (isCurrent) return;
-            if (item.type === 'road_test') {
+            if (isRoadTest) {
               navigate(`/road-test-results/${item.session_id}`);
-            } else {
-              navigate(`/report-cards/${item.id}`);
+            } else if (item.report_card_id) {
+              navigate(`/report-cards/${item.report_card_id}`);
             }
           };
 
           return (
             <button
-              key={`${item.type}-${item.id}`}
+              key={item.session_id}
               onClick={handleClick}
               disabled={isCurrent}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
@@ -205,28 +193,24 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, currentS
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {item.sessionNumber && (
-                    <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
-                  )}
+                  <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
                   <span className="text-sm font-medium">
-                    {item.session_starts_at
-                      ? format(parseISO(item.session_starts_at), 'MMM d, yyyy')
-                      : format(parseISO(item.created_at), 'MMM d, yyyy')}
+                    {format(parseISO(item.session_starts_at), 'MMM d, yyyy')}
                   </span>
-                  {item.type === 'road_test' ? (
+                  {isRoadTest ? (
                     <Badge variant="outline" className="text-[10px] gap-1">
                       <ClipboardCheck className="h-2.5 w-2.5" />Road Test
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] capitalize">{item.session_type}</Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">Driving</Badge>
                   )}
-                  {item.type === 'road_test' && item.road_test_result && (
+                  {isRoadTest && item.road_test_outcome && (
                     <Badge className={`text-[10px] gap-1 border-0 ${
-                      item.road_test_result === 'passed'
+                      item.road_test_outcome === 'passed'
                         ? 'bg-green-500/20 text-green-700 dark:text-green-300'
                         : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
                     }`}>
-                      {item.road_test_result === 'passed' ? (
+                      {item.road_test_outcome === 'passed' ? (
                         <><CheckCircle className="h-2.5 w-2.5" />Passed</>
                       ) : (
                         <><XCircle className="h-2.5 w-2.5" />Must Retry</>
@@ -243,7 +227,8 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, currentS
                   {item.instructor_name}
                 </p>
               </div>
-              {item.overall && (
+              {/* Only show score for driving sessions, never for road tests */}
+              {!isRoadTest && item.overall && (
                 <div className="flex items-center gap-1 text-sm font-semibold shrink-0">
                   <Star className="h-3.5 w-3.5 text-yellow-500" />
                   {item.overall}/10
