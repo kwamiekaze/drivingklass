@@ -125,6 +125,20 @@ export default function ReportCardView() {
         setUnauthorized(true);
       } else {
         const rc = data[0] as ReportCardDetails;
+
+        // Check if this report card belongs to a road test session — redirect to dedicated view
+        if (rc.session_id) {
+          const { data: sessionRow } = await supabase
+            .from('sessions')
+            .select('session_type')
+            .eq('id', rc.session_id)
+            .single();
+          if (sessionRow?.session_type === 'testing') {
+            navigate(`/road-test-results/${rc.session_id}`, { replace: true });
+            return;
+          }
+        }
+
         setReportCard(rc);
         // Fetch session number
         if (rc.session_id && rc.student_id) {

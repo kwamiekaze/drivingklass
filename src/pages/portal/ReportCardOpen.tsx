@@ -28,6 +28,29 @@ export default function ReportCardOpen() {
     }
   }, [user, authLoading, navigate, id, location.pathname]);
 
+  // Check if this report card belongs to a road test session — redirect to road test splash
+  useEffect(() => {
+    if (!user || !id) return;
+    const checkSessionType = async () => {
+      const { data: rc } = await supabase
+        .from('report_cards')
+        .select('session_id')
+        .eq('id', id)
+        .single();
+      if (rc?.session_id) {
+        const { data: session } = await supabase
+          .from('sessions')
+          .select('session_type')
+          .eq('id', rc.session_id)
+          .single();
+        if (session?.session_type === 'testing') {
+          navigate(`/road-test-results/${rc.session_id}/open`, { replace: true });
+        }
+      }
+    };
+    checkSessionType();
+  }, [user, id, navigate]);
+
   // Set fallback timer in case video fails to load
   useEffect(() => {
     fallbackTimerRef.current = setTimeout(() => {
