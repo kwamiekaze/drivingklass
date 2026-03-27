@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
+import { ViewAsStudentBanner } from "@/components/portal/ViewAsStudentBanner";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -56,6 +57,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
   return (
     <div className="min-h-screen">
+      <ViewAsStudentBanner />
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">

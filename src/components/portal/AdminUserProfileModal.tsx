@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { StudentDocumentSection } from "./StudentDocumentSection";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3, Eye } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
@@ -18,6 +18,8 @@ import { SessionTypeBadge } from "./SessionTypeBadge";
 import { format, parseISO, isAfter } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { StudentProgressSection } from "./StudentProgressSection";
+import { useViewAsStudent } from "@/contexts/ViewAsStudentContext";
+import { computeSessionNumbers } from "@/lib/sessionNumbering";
 
 interface AdminUserProfileModalProps {
   open: boolean;
@@ -62,6 +64,8 @@ export function AdminUserProfileModal({
   onProfileUpdated 
 }: AdminUserProfileModalProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { startViewingAs } = useViewAsStudent();
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -151,6 +155,19 @@ export function AdminUserProfileModal({
     if (sessionFilter === 'cancelled') return s.status === 'cancelled';
     return true;
   });
+
+  // Session numbering
+  const sessionNumberMap = useMemo(() => {
+    return computeSessionNumbers(studentSessions.map(s => ({ id: s.id, starts_at: s.starts_at, status: s.status })));
+  }, [studentSessions]);
+
+  const handleViewAsStudent = () => {
+    if (!profile) return;
+    const name = getDisplayName(profile, 'Student');
+    startViewingAs(profile.id, name);
+    onOpenChange(false);
+    navigate('/student');
+  };
 
   const handleSave = async () => {
     if (!profile) return;
@@ -273,6 +290,19 @@ export function AdminUserProfileModal({
                     <p className="text-xs text-muted-foreground mt-1.5">No instructor assigned</p>
                   )}
                 </div>
+
+                {/* View as Student Button — admin only, student role */}
+                {profile.role === 'student' && profile.approval_status === 'approved' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleViewAsStudent}
+                    className="gap-1.5 mt-2 w-full sm:w-auto"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View as Student
+                  </Button>
+                )}
               </div>
 
               {/* Editable Fields */}
@@ -466,10 +496,14 @@ export function AdminUserProfileModal({
                         const instructorName = s.instructor
                           ? (s.instructor.full_name || `${s.instructor.first_name || ''} ${s.instructor.last_name || ''}`.trim() || s.instructor.email || 'Instructor')
                           : 'Unknown';
+                        const sessNum = sessionNumberMap.get(s.id);
                         return (
                           <div key={s.id} className="p-2.5 rounded-lg border bg-background/50 space-y-1">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2 min-w-0">
+                                {sessNum && (
+                                  <Badge variant="outline" className="text-[10px] font-semibold shrink-0">S{sessNum}</Badge>
+                                )}
                                 <SessionTypeBadge sessionType={s.session_type} size="sm" />
                                 <span className="text-xs font-medium truncate">
                                   {format(parseISO(s.starts_at), 'EEE, MMM d, yyyy')}
