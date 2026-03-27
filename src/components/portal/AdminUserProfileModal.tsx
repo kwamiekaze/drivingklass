@@ -496,10 +496,14 @@ export function AdminUserProfileModal({
                         const instructorName = s.instructor
                           ? (s.instructor.full_name || `${s.instructor.first_name || ''} ${s.instructor.last_name || ''}`.trim() || s.instructor.email || 'Instructor')
                           : 'Unknown';
+                        const sessNum = sessionNumberMap.get(s.id);
                         return (
                           <div key={s.id} className="p-2.5 rounded-lg border bg-background/50 space-y-1">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2 min-w-0">
+                                {sessNum && (
+                                  <Badge variant="outline" className="text-[10px] font-semibold shrink-0">S{sessNum}</Badge>
+                                )}
                                 <SessionTypeBadge sessionType={s.session_type} size="sm" />
                                 <span className="text-xs font-medium truncate">
                                   {format(parseISO(s.starts_at), 'EEE, MMM d, yyyy')}
