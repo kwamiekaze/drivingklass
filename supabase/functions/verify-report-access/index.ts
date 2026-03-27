@@ -86,6 +86,21 @@ Deno.serve(async (req) => {
       return combined || p.full_name || "Unknown";
     };
 
+    // Compute session number for this student
+    let sessionNumber: number | null = null;
+    if (report.student_id && report.session_id) {
+      const { data: allSessions } = await supabaseAdmin
+        .from("sessions")
+        .select("id, starts_at")
+        .eq("student_id", report.student_id)
+        .neq("status", "cancelled")
+        .order("starts_at", { ascending: true });
+      if (allSessions) {
+        const idx = allSessions.findIndex((s: any) => s.id === report.session_id);
+        if (idx >= 0) sessionNumber = idx + 1;
+      }
+    }
+
     // Remove sensitive fields
     const { public_access_code: _code, ...safeReport } = report;
 
@@ -100,6 +115,7 @@ Deno.serve(async (req) => {
           session_ends_at: session?.ends_at || null,
           session_type: session?.session_type || "driving",
           show_graph_publicly: report.show_graph_publicly || false,
+          session_number: sessionNumber,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

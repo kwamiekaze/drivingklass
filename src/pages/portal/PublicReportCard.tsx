@@ -54,6 +54,7 @@ interface PublicReportData {
   strongest_skills?: any[];
   most_improved_skills?: any[];
   focus_areas?: any[];
+  session_number?: number | null;
 }
 
 type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
@@ -335,7 +336,7 @@ export default function PublicReportCard() {
           <div className="text-center py-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
               <FileText className="h-6 w-6" />
-              Report Card
+              {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
             </h1>
           </div>
 

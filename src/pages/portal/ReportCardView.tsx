@@ -20,7 +20,7 @@ import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { LessonRating } from "@/components/portal/LessonRating";
 import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
-
+import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 
 interface ReportCardDetails {
   id: string;
@@ -82,6 +82,7 @@ export default function ReportCardView() {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
   const [showGraphPublicly, setShowGraphPublicly] = useState(false);
+  const [sessionNumber, setSessionNumber] = useState<number | null>(null);
   const [skillHighlights, setSkillHighlights] = useState<{
     strongest_skills?: any[];
     most_improved_skills?: any[];
@@ -123,7 +124,14 @@ export default function ReportCardView() {
       if (!data || data.length === 0) {
         setUnauthorized(true);
       } else {
-        setReportCard(data[0] as ReportCardDetails);
+        const rc = data[0] as ReportCardDetails;
+        setReportCard(rc);
+        // Fetch session number
+        if (rc.session_id && rc.student_id) {
+          fetchSessionNumberForStudent(supabase, rc.student_id, rc.session_id).then(num => {
+            setSessionNumber(num);
+          });
+        }
         // Load skill highlights + public sharing state
         const { data: rcRow } = await supabase
           .from('report_cards')
@@ -380,7 +388,7 @@ export default function ReportCardView() {
           <div className="flex-1">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold theme-heading flex items-center gap-2">
               <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
-              Report Card
+              {sessionNumber ? `Session ${sessionNumber} — Report Card` : 'Report Card'}
             </h1>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { computeSessionNumbers } from "@/lib/sessionNumbering";
 import { Session, SessionDetails } from "@/types/portal";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
@@ -104,6 +105,17 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     fetchRoadTestResults(testingSessions);
   }, [sessions, fetchRoadTestResults]);
 
+  // Compute per-student session numbering
+  const sessionNumberMap = useMemo(() => {
+    // Group by student and compute numbers for each
+    const studentIds = [...new Set(sessions.map(s => s.student_id))];
+    const combined: Record<string, number> = {};
+    for (const sid of studentIds) {
+      Object.assign(combined, computeSessionNumbers(sessions, sid));
+    }
+    return combined;
+  }, [sessions]);
+
   // Convert sessions to CalendarEvents
   const calendarEvents: CalendarEvent[] = useMemo(() => {
     return sessions.map(s => {
@@ -112,14 +124,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       const studentName = userRole === 'student'
         ? getDisplayName(s.instructor, 'Instructor')
         : getDisplayName(s.student, 'Student');
-      const otherName = userRole === 'student'
-        ? getDisplayName(s.student, 'Student')
-        : getDisplayName(s.instructor, 'Instructor');
+      const sessionNum = sessionNumberMap[s.id];
+      const numLabel = sessionNum ? `Session ${sessionNum}` : '';
+      const typeLabel = s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving';
 
       return {
         id: s.id,
         title: studentName,
-        subtitle: s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving',
+        subtitle: numLabel ? `${numLabel} · ${typeLabel}` : typeLabel,
         start: s.starts_at,
         end: s.ends_at,
         color,
@@ -127,7 +139,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         meta: { session: s },
       };
     });
-  }, [sessions, userRole]);
+  }, [sessions, userRole, sessionNumberMap]);
 
   const handleEventClick = (event: CalendarEvent) => {
     const session = (event.meta?.session as Session) || sessions.find(s => s.id === event.id);
@@ -392,7 +404,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen && !editDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">Session Details</DialogTitle>
+            <DialogTitle className="text-lg">
+              {selectedSession && sessionNumberMap[selectedSession.id]
+                ? `Session ${sessionNumberMap[selectedSession.id]} Details`
+                : 'Session Details'}
+            </DialogTitle>
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">
