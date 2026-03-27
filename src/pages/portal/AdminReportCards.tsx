@@ -261,9 +261,19 @@ function AdminReportCardsContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
-                    <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
-                      Overall: {rc.overall || 'N/A'}
-                    </Badge>
+                    {isRoadTest(rc) ? (
+                      <Badge className={`${roadTestResultMap[rc.session_id] === 'passed' ? 'bg-green-500/20 text-green-700 dark:text-green-300' : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'} text-xs`}>
+                        {roadTestResultMap[rc.session_id] === 'passed' ? (
+                          <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                        ) : (
+                          <><XCircle className="h-3 w-3 mr-1" />Must Retry</>
+                        )}
+                      </Badge>
+                    ) : (
+                      <Badge className={`${getRatingColor(rc.overall)} text-xs`}>
+                        Overall: {rc.overall || 'N/A'}
+                      </Badge>
+                    )}
                     <ReportCardStatusBadge status={rc.report_card_status || 'completed'} />
                     <div className="hidden xs:flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -275,17 +285,23 @@ function AdminReportCardsContent() {
                       className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/report-cards/${rc.id}`);
+                        if (isRoadTest(rc)) {
+                          navigate(`/road-test-results/open/${rc.session_id}`);
+                        } else {
+                          navigate(`/report-cards/${rc.id}`);
+                        }
                       }}
-                      title="View Report Card"
+                      title={isRoadTest(rc) ? "View Road Test Result" : "View Report Card"}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Link to={`/instructor/report-cards/edit/${rc.id}`} onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" title="Edit Report Card">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    {!isRoadTest(rc) && (
+                      <Link to={`/instructor/report-cards/edit/${rc.id}`} onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" title="Edit Report Card">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </CardHeader>
