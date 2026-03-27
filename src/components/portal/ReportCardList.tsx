@@ -149,10 +149,20 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       </span>
                     </div>
                   </div>
-                <Badge className={`${getRatingColor(card.overall)} text-xs shrink-0`}>
-                    <Star className="h-3 w-3 mr-1" />
-                    {card.overall || '-'}/10
-                  </Badge>
+                {isRoadTest(card) ? (
+                    <Badge className={`${roadTestResultMap[card.session_id] === 'passed' ? 'bg-green-500' : 'bg-orange-500'} text-xs shrink-0 text-white`}>
+                      {roadTestResultMap[card.session_id] === 'passed' ? (
+                        <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                      ) : (
+                        <><XCircle className="h-3 w-3 mr-1" />Must Retry</>
+                      )}
+                    </Badge>
+                  ) : (
+                    <Badge className={`${getRatingColor(card.overall)} text-xs shrink-0`}>
+                      <Star className="h-3 w-3 mr-1" />
+                      {card.overall || '-'}/10
+                    </Badge>
+                  )}
                   {card.report_card_status && card.report_card_status !== 'completed' && (
                     <ReportCardStatusBadge status={card.report_card_status} />
                   )}
@@ -172,7 +182,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     className="flex-1 gap-1 text-xs h-8"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenReportCard(card.id);
+                      handleOpenReportCard(card);
                     }}
                   >
                     <ExternalLink className="h-3 w-3" />
