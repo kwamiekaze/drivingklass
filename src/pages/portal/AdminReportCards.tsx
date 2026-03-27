@@ -308,34 +308,66 @@ function AdminReportCardsContent() {
               
               {expandedCard === rc.id && (
                 <CardContent className="border-t p-3 sm:p-4">
-                  {/* Ratings Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
-                    {RATING_CATEGORIES.map(category => {
-                      const rating = rc[category.key as keyof ReportCard] as number | null;
-                      return (
-                        <div
-                          key={category.key}
-                          className={`p-2 rounded text-center ${getRatingColor(rating)}`}
-                        >
-                          <p className="text-[10px] sm:text-xs font-medium truncate">{category.label}</p>
-                          <p className="text-sm sm:text-lg font-bold">{rating || '-'}</p>
+                  {isRoadTest(rc) ? (
+                    <div className="space-y-3">
+                      <div className={`text-center p-4 rounded-xl ${roadTestResultMap[rc.session_id] === 'passed' ? 'bg-green-500/10 border border-green-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+                        {roadTestResultMap[rc.session_id] === 'passed' ? (
+                          <>
+                            <CheckCircle className="h-10 w-10 mx-auto mb-2 text-green-600 dark:text-green-400" />
+                            <h3 className="text-lg font-bold text-green-600 dark:text-green-400">Passed 🚀</h3>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-10 w-10 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
+                            <h3 className="text-lg font-bold text-orange-600 dark:text-orange-400">Must Retry</h3>
+                          </>
+                        )}
+                      </div>
+                      {rc.message_to_student && (
+                        <div className="bg-muted p-3 rounded-lg">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Road Test Notes</p>
+                          <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                      {rc.internal_message && (
+                        <div className="bg-orange-500/10 p-3 rounded-lg">
+                          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
+                          <p className="text-xs sm:text-sm">{rc.internal_message}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Ratings Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
+                        {RATING_CATEGORIES.map(category => {
+                          const rating = rc[category.key as keyof ReportCard] as number | null;
+                          return (
+                            <div
+                              key={category.key}
+                              className={`p-2 rounded text-center ${getRatingColor(rating)}`}
+                            >
+                              <p className="text-[10px] sm:text-xs font-medium truncate">{category.label}</p>
+                              <p className="text-sm sm:text-lg font-bold">{rating || '-'}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                  {/* Messages */}
-                  {rc.message_to_student && (
-                    <div className="bg-muted p-3 rounded-lg mb-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Message to Student</p>
-                      <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
-                    </div>
-                  )}
-                  {rc.internal_message && (
-                    <div className="bg-orange-500/10 p-3 rounded-lg">
-                      <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
-                      <p className="text-xs sm:text-sm">{rc.internal_message}</p>
-                    </div>
+                      {/* Messages */}
+                      {rc.message_to_student && (
+                        <div className="bg-muted p-3 rounded-lg mb-2">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Message to Student</p>
+                          <p className="text-xs sm:text-sm">{rc.message_to_student}</p>
+                        </div>
+                      )}
+                      {rc.internal_message && (
+                        <div className="bg-orange-500/10 p-3 rounded-lg">
+                          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Internal Note</p>
+                          <p className="text-xs sm:text-sm">{rc.internal_message}</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               )}
