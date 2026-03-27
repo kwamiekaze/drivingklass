@@ -404,7 +404,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen && !editDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">Session Details</DialogTitle>
+            <DialogTitle className="text-lg">
+              {selectedSession && sessionNumberMap[selectedSession.id]
+                ? `Session ${sessionNumberMap[selectedSession.id]} Details`
+                : 'Session Details'}
+            </DialogTitle>
+          </DialogHeader>
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">
