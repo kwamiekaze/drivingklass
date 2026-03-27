@@ -290,6 +290,19 @@ export function AdminUserProfileModal({
                     <p className="text-xs text-muted-foreground mt-1.5">No instructor assigned</p>
                   )}
                 </div>
+
+                {/* View as Student Button — admin only, student role */}
+                {profile.role === 'student' && profile.approval_status === 'approved' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleViewAsStudent}
+                    className="gap-1.5 mt-2 w-full sm:w-auto"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View as Student
+                  </Button>
+                )}
               </div>
 
               {/* Editable Fields */}
