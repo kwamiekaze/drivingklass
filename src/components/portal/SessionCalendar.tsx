@@ -558,6 +558,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </div>
                   )}
 
+                  {/* Open Report Card — prominent for completed sessions */}
+                  {sessionDetails.report_card_id && (
+                    <Link to={`/report-cards/${sessionDetails.report_card_id}`}>
+                      <Button className="w-full min-h-[44px] gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                        <FileText className="h-4 w-4" />Open Report Card
+                      </Button>
+                    </Link>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
@@ -591,13 +600,6 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       </Button>
                     )}
                   </div>
-
-                  {/* View Report Card link */}
-                  {sessionDetails.report_card_id && (
-                    <Link to={`/report-cards/${sessionDetails.report_card_id}`}>
-                      <Button variant="outline" className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />View Report Card</Button>
-                    </Link>
-                  )}
 
                   {/* Latest Report Snapshot for coaching - admin/instructor only */}
                   {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id && (
