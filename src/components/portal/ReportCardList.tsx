@@ -24,6 +24,44 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
   const { toast } = useToast();
   const [selectedCard, setSelectedCard] = useState<ReportCard | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sessionTypeMap, setSessionTypeMap] = useState<Record<string, string>>({});
+  const [roadTestResultMap, setRoadTestResultMap] = useState<Record<string, string>>({});
+
+  // Fetch session types and road test results for all report cards
+  useEffect(() => {
+    const sessionIds = [...new Set(reportCards.map(rc => rc.session_id).filter(Boolean))];
+    if (sessionIds.length === 0) return;
+
+    const fetchSessionTypes = async () => {
+      const { data: sessions } = await supabase
+        .from("sessions")
+        .select("id, session_type")
+        .in("id", sessionIds);
+      
+      if (sessions) {
+        const map: Record<string, string> = {};
+        sessions.forEach(s => { map[s.id] = s.session_type; });
+        setSessionTypeMap(map);
+
+        // Fetch road test results for testing sessions
+        const testingSessionIds = sessions.filter(s => s.session_type === 'testing').map(s => s.id);
+        if (testingSessionIds.length > 0) {
+          const { data: rtResults } = await supabase
+            .from("road_test_results")
+            .select("session_id, result")
+            .in("session_id", testingSessionIds);
+          if (rtResults) {
+            const rtMap: Record<string, string> = {};
+            rtResults.forEach(r => { rtMap[r.session_id] = r.result; });
+            setRoadTestResultMap(rtMap);
+          }
+        }
+      }
+    };
+    fetchSessionTypes();
+  }, [reportCards]);
+
+  const isRoadTest = (card: ReportCard) => sessionTypeMap[card.session_id] === 'testing';
 
   const getRatingColor = (rating: number | null) => {
     if (!rating) return 'bg-muted';
@@ -53,9 +91,13 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
     }
   };
 
-  const handleOpenReportCard = (reportCardId: string) => {
-    // Route through splash screen for student/instructor
-    navigate(`/report-cards/open/${reportCardId}`);
+  const handleOpenReportCard = (card: ReportCard) => {
+    if (isRoadTest(card)) {
+      // Route to road test result splash
+      navigate(`/road-test-results/open/${card.session_id}`);
+    } else {
+      navigate(`/report-cards/open/${card.id}`);
+    }
   };
 
   const canSeeInternalMessage = userRole === 'staff' || userRole === 'admin';
