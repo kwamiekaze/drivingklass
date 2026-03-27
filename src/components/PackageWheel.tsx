@@ -356,7 +356,7 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
               {/* Headlights OFF image */}
               <img 
                 src={carHeadlightsOff} 
-                alt="DrivingKlass car headlights off" 
+                alt="DrivingKlass sports car" 
                 className="w-full h-auto object-contain relative z-10 transition-opacity duration-150"
                 style={{
                   filter: 'contrast(1.08) saturate(1.05)',
@@ -367,7 +367,7 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
               {/* Headlights ON image - overlaid */}
               <img 
                 src={carHeadlightsOn} 
-                alt="DrivingKlass car headlights on" 
+                alt="DrivingKlass sports car illuminated" 
                 className="absolute inset-0 w-full h-auto object-contain z-10 transition-opacity duration-150"
                 style={{
                   filter: 'contrast(1.08) saturate(1.05)',
