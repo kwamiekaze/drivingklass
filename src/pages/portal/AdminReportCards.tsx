@@ -70,8 +70,38 @@ function AdminReportCardsContent() {
     setStudents((profilesData?.filter(p => studentIds.has(p.id)) || []) as any);
     setInstructors((profilesData?.filter(p => instructorIds.has(p.id)) || []) as any);
     setReportCards((reportCardsData || []) as ReportCard[]);
+
+    // Fetch session types for all report cards
+    const sessionIds = [...new Set((reportCardsData || []).map((rc: any) => rc.session_id).filter(Boolean))];
+    if (sessionIds.length > 0) {
+      const { data: sessions } = await supabase
+        .from('sessions')
+        .select('id, session_type')
+        .in('id', sessionIds);
+      if (sessions) {
+        const stMap: Record<string, string> = {};
+        sessions.forEach(s => { stMap[s.id] = s.session_type; });
+        setSessionTypeMap(stMap);
+
+        const testingIds = sessions.filter(s => s.session_type === 'testing').map(s => s.id);
+        if (testingIds.length > 0) {
+          const { data: rtResults } = await supabase
+            .from('road_test_results')
+            .select('session_id, result')
+            .in('session_id', testingIds);
+          if (rtResults) {
+            const rtMap: Record<string, string> = {};
+            rtResults.forEach(r => { rtMap[r.session_id] = r.result; });
+            setRoadTestResultMap(rtMap);
+          }
+        }
+      }
+    }
+
     setLoading(false);
   };
+
+  const isRoadTest = (rc: ReportCard) => sessionTypeMap[rc.session_id] === 'testing';
 
   const getStudentName = (id: string) => students.find(s => s.id === id)?.full_name || 'Unknown';
   const getInstructorName = (id: string) => instructors.find(i => i.id === id)?.full_name || 'Unknown';
