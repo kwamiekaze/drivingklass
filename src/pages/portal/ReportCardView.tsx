@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX, Share2, Lock, Link2, BarChart3 } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Clock, Copy, Check, ShieldX, Share2, Lock, Link2, BarChart3, Eye, EyeOff } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import { useTheme } from "@/components/ThemeProvider";
@@ -61,6 +61,8 @@ interface ReportCardDetails {
   can_see_internal: boolean;
 }
 
+type StaffViewMode = "normal" | "student" | "accessed";
+
 export default function ReportCardView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -73,6 +75,10 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Staff view mode
+  const [viewMode, setViewMode] = useState<StaffViewMode>("normal");
+  const isStaff = role === 'admin' || role === 'staff' || role === 'instructor';
 
   // Public sharing state
   const [isPublic, setIsPublic] = useState(false);
@@ -88,12 +94,11 @@ export default function ReportCardView() {
     most_improved_skills?: any[];
     focus_areas?: any[];
   }>({});
-  // Check if admin/instructor/staff for copy link visibility
-  const canCopyLink = role === 'admin' || role === 'staff' || role === 'instructor';
-  const canManagePublic = role === 'admin' || role === 'staff' || role === 'instructor';
+
+  const canCopyLink = isStaff;
+  const canManagePublic = isStaff;
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  
 
   const fetchReportCard = async () => {
     if (!id) {
@@ -106,7 +111,6 @@ export default function ReportCardView() {
     setFetchError(false);
     setUnauthorized(false);
 
-    // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setFetchError(true);
       setLoading(false);
@@ -331,14 +335,9 @@ export default function ReportCardView() {
   };
 
   const handleGoBack = () => {
-    // Navigate to appropriate dashboard based on role
-    if (role === 'student') {
-      navigate('/student');
-    } else if (role === 'instructor') {
-      navigate('/instructor');
-    } else {
-      navigate('/admin');
-    }
+    if (role === 'student') navigate('/student');
+    else if (role === 'instructor') navigate('/instructor');
+    else navigate('/admin');
   };
 
   // Redirect to login if not authenticated
@@ -349,7 +348,6 @@ export default function ReportCardView() {
     }
   }, [user, authLoading, navigate, id]);
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -358,7 +356,6 @@ export default function ReportCardView() {
     );
   }
 
-  // If not authenticated, redirecting via useEffect
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -367,6 +364,12 @@ export default function ReportCardView() {
     );
   }
 
+  // View mode visibility rules
+  const showInternalNotes = viewMode === "normal" && isStaff;
+  const showSharingSection = viewMode === "normal" && canManagePublic;
+  const showEditButton = viewMode === "normal" && isStaff;
+  const showCopyLink = viewMode === "normal" && canCopyLink;
+  const showGraphSection = viewMode === "accessed" ? showGraphPublicly : true;
 
   return (
     <PortalLayout>
@@ -444,8 +447,54 @@ export default function ReportCardView() {
           </Card>
         ) : reportCard ? (
           <div className="space-y-4 sm:space-y-6">
-            {/* Copy Link + Open Previous Report (admin/instructor/staff only) */}
-            {canCopyLink && (
+            {/* Staff View Mode Toggle */}
+            {isStaff && (
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={viewMode === "normal" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("normal")}
+                  className="gap-1.5"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Normal View
+                </Button>
+                <Button
+                  variant={viewMode === "student" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("student")}
+                  className="gap-1.5"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  View as Student
+                </Button>
+                <Button
+                  variant={viewMode === "accessed" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("accessed")}
+                  className="gap-1.5"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  View as Accessed
+                </Button>
+              </div>
+            )}
+
+            {/* View Mode Banner */}
+            {isStaff && viewMode !== "normal" && (
+              <div className={`p-3 rounded-lg border text-sm font-medium text-center ${
+                viewMode === "student"
+                  ? "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300"
+                  : "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300"
+              }`}>
+                {viewMode === "student"
+                  ? `👁️ Viewing as Student: ${reportCard.student_name}`
+                  : "🔗 Viewing as Access-Granted Viewer"}
+              </div>
+            )}
+
+            {/* Copy Link + Open Previous Report (admin/instructor/staff only, normal view) */}
+            {showCopyLink && (
               <>
                 <div className="flex justify-end gap-2 flex-wrap">
                   <PreviousReportButton
@@ -542,22 +591,26 @@ export default function ReportCardView() {
               </CardContent>
             </Card>
 
-            {/* Student Skill Progress Graph */}
-            <div className="report-graph-section">
-              <StudentProgressSection
-                studentId={reportCard.student_id}
-                reportCardId={reportCard.id}
-                anchorReport={reportCard}
-                savedHighlights={skillHighlights}
-              />
-            </div>
+            {/* Student Skill Progress Graph (hidden in accessed mode if not enabled publicly) */}
+            {showGraphSection && (
+              <div className="report-graph-section">
+                <StudentProgressSection
+                  studentId={reportCard.student_id}
+                  reportCardId={reportCard.id}
+                  anchorReport={reportCard}
+                  savedHighlights={skillHighlights}
+                />
+              </div>
+            )}
 
-            {/* Skill Progress Highlights */}
-            <SkillHighlightsDisplay
-              strongest={skillHighlights.strongest_skills}
-              mostImproved={skillHighlights.most_improved_skills}
-              focusAreas={skillHighlights.focus_areas}
-            />
+            {/* Skill Progress Highlights (hidden in accessed mode if graph not public) */}
+            {showGraphSection && (
+              <SkillHighlightsDisplay
+                strongest={skillHighlights.strongest_skills}
+                mostImproved={skillHighlights.most_improved_skills}
+                focusAreas={skillHighlights.focus_areas}
+              />
+            )}
 
             {/* Rating Categories */}
             <Card className="portal-card">
@@ -585,7 +638,6 @@ export default function ReportCardView() {
               </CardContent>
             </Card>
 
-
             {/* Transcription */}
             {reportCard.transcription_summary && (
               <Card className="portal-card">
@@ -611,8 +663,8 @@ export default function ReportCardView() {
               </Card>
             )}
 
-            {/* Internal Message (staff/admin only) */}
-            {reportCard.can_see_internal && reportCard.internal_message && (
+            {/* Internal Message (staff/admin only, normal view only) */}
+            {showInternalNotes && reportCard.can_see_internal && reportCard.internal_message && (
               <Card className="portal-card border-destructive/20">
                 <CardContent className="p-4 sm:p-6 bg-destructive/10">
                   <div className="flex items-center gap-2 mb-2">
@@ -624,8 +676,8 @@ export default function ReportCardView() {
               </Card>
             )}
 
-            {/* Public Sharing Section (admin/instructor/staff only) */}
-            {canManagePublic && (
+            {/* Public Sharing Section (admin/instructor/staff only, normal view) */}
+            {showSharingSection && (
               <Card className="portal-card border-primary/20">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -758,11 +810,12 @@ export default function ReportCardView() {
               instructorId={reportCard.instructor_id}
               sessionId={reportCard.session_id}
               studentName={reportCard.student_name}
-              readOnly={role === 'admin' || role === 'staff' || role === 'instructor'}
+              readOnly={viewMode !== "normal" ? true : (role === 'admin' || role === 'staff' || role === 'instructor')}
+              isPublicView={viewMode === "accessed"}
             />
 
-            {/* Edit Button for instructor/admin */}
-            {(role === 'instructor' || role === 'admin' || role === 'staff') && (
+            {/* Edit Button for instructor/admin (normal view only) */}
+            {showEditButton && (
               <Button 
                 onClick={() => navigate(`/instructor/report-cards/edit/${reportCard.id}`)} 
                 className="w-full cta-button min-h-[44px]"

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn, ChevronRight, CheckCircle, XCircle, ClipboardCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
@@ -64,9 +64,9 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
   const { resolvedTheme } = useTheme();
-  // Start at code_entry — splash plays AFTER successful verification
   const [viewState, setViewState] = useState<ViewState>("code_entry");
   const [accessCode, setAccessCode] = useState("");
+  const [verifiedAccessCode, setVerifiedAccessCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<PublicReportData | null>(null);
@@ -77,7 +77,6 @@ export default function PublicReportCard() {
   const isScrolling = useScrollActive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Splash handlers — transition from splash to viewing
   const handleSplashComplete = () => {
     if (isFading) return;
     setIsFading(true);
@@ -129,11 +128,10 @@ export default function PublicReportCard() {
         return;
       }
 
-      // Store report data, then show splash before revealing content
       setReport(data.report);
+      setVerifiedAccessCode(accessCode.trim());
       setViewState("splash");
 
-      // Start fallback timer for splash
       fallbackRef.current = setTimeout(() => {
         if (!videoLoaded) handleSplashComplete();
       }, 4000);
@@ -152,7 +150,7 @@ export default function PublicReportCard() {
     return "bg-red-500";
   };
 
-  // ── Splash Screen (plays AFTER code verification) ──
+  // ── Splash Screen ──
   if (viewState === "splash") {
     return (
       <div
@@ -308,7 +306,6 @@ export default function PublicReportCard() {
             </Button>
           </div>
         </div>
-        {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
           <div className="border-t border-border/50 bg-card/95 backdrop-blur px-4 py-3">
             <nav className="flex flex-col gap-2">
@@ -337,10 +334,17 @@ export default function PublicReportCard() {
           {/* Report Card Title */}
           <div className="text-center py-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-              <FileText className="h-6 w-6" />
-              {report.session_type === 'testing'
-                ? (report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result')
-                : (report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card')}
+              {report.session_type === 'testing' ? (
+                <>
+                  <ClipboardCheck className="h-6 w-6" />
+                  {report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result'}
+                </>
+              ) : (
+                <>
+                  <FileText className="h-6 w-6" />
+                  {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
+                </>
+              )}
             </h1>
           </div>
 
@@ -439,10 +443,11 @@ export default function PublicReportCard() {
                 isPublicView={true}
               />
 
-              {/* Previous Report Cards (public only) */}
-              <PublicReportHistory
+              {/* Session History for authorized viewer */}
+              <PublicSessionHistory
                 studentId={report.student_id}
                 currentReportId={report.id}
+                accessCode={verifiedAccessCode}
               />
             </>
           ) : (
@@ -540,10 +545,11 @@ export default function PublicReportCard() {
                 isPublicView={true}
               />
 
-              {/* Previous Report Cards (public only) */}
-              <PublicReportHistory
+              {/* Session History for authorized viewer */}
+              <PublicSessionHistory
                 studentId={report.student_id}
                 currentReportId={report.id}
+                accessCode={verifiedAccessCode}
               />
             </>
           )}
@@ -558,14 +564,26 @@ export default function PublicReportCard() {
   );
 }
 
-function PublicReportHistory({ studentId, currentReportId }: { studentId: string; currentReportId: string }) {
+/**
+ * PublicSessionHistory — shows all public completed results for authorized viewers
+ * Includes both driving reports and road test results
+ */
+function PublicSessionHistory({ studentId, currentReportId, accessCode }: { 
+  studentId: string; 
+  currentReportId: string;
+  accessCode: string;
+}) {
   const [items, setItems] = useState<Array<{
     id: string;
     public_share_slug: string | null;
+    session_id: string;
     created_at: string;
     overall: number | null;
     instructor_id: string;
     instructor_name: string;
+    session_type: string;
+    road_test_outcome: string | null;
+    sessionNumber: number;
   }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -574,10 +592,10 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
     const load = async () => {
       setLoading(true);
       try {
-        // Anon can only read public completed reports (RLS enforced)
+        // Get all public completed report cards for this student
         const { data: reports } = await supabase
           .from('report_cards')
-          .select('id, created_at, overall, instructor_id, public_share_slug')
+          .select('id, created_at, overall, instructor_id, public_share_slug, session_id')
           .eq('student_id', studentId)
           .eq('is_public', true)
           .eq('report_card_status', 'completed')
@@ -590,6 +608,40 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
           return;
         }
 
+        // Get session info for all reports
+        const sessionIds = reports.map(r => r.session_id).filter(Boolean);
+        const [sessionsRes, roadTestsRes] = await Promise.all([
+          supabase
+            .from('sessions')
+            .select('id, starts_at, session_type')
+            .in('id', sessionIds)
+            .neq('status', 'cancelled')
+            .order('starts_at', { ascending: true }),
+          supabase
+            .from('road_test_results')
+            .select('session_id, result')
+            .eq('student_id', studentId)
+            .in('session_id', sessionIds),
+        ]);
+
+        const sessionMap: Record<string, { starts_at: string; session_type: string }> = {};
+        (sessionsRes.data || []).forEach(s => { sessionMap[s.id] = { starts_at: s.starts_at, session_type: s.session_type }; });
+
+        const roadTestMap: Record<string, string> = {};
+        (roadTestsRes.data || []).forEach(rt => { roadTestMap[rt.session_id] = rt.result; });
+
+        // Build session number map from ALL non-cancelled sessions for the student
+        const { data: allSessions } = await supabase
+          .from('sessions')
+          .select('id, starts_at')
+          .eq('student_id', studentId)
+          .neq('status', 'cancelled')
+          .order('starts_at', { ascending: true });
+
+        const sessionNumMap: Record<string, number> = {};
+        (allSessions || []).forEach((s, i) => { sessionNumMap[s.id] = i + 1; });
+
+        // Instructor names
         const instrIds = [...new Set(reports.map(r => r.instructor_id))];
         const { data: profiles } = await supabase
           .from('profiles')
@@ -602,17 +654,25 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
         });
 
         if (!cancelled) {
-          setItems(reports.map(r => ({
-            id: r.id,
-            public_share_slug: r.public_share_slug,
-            created_at: r.created_at!,
-            overall: r.overall,
-            instructor_id: r.instructor_id,
-            instructor_name: instrMap[r.instructor_id] || 'Instructor',
-          })));
+          setItems(reports.map(r => {
+            const sess = sessionMap[r.session_id] || null;
+            const isRoadTest = sess?.session_type === 'testing';
+            return {
+              id: r.id,
+              public_share_slug: r.public_share_slug,
+              session_id: r.session_id,
+              created_at: r.created_at!,
+              overall: isRoadTest ? null : r.overall,
+              instructor_id: r.instructor_id,
+              instructor_name: instrMap[r.instructor_id] || 'Instructor',
+              session_type: sess?.session_type || 'driving',
+              road_test_outcome: isRoadTest ? (roadTestMap[r.session_id] || null) : null,
+              sessionNumber: sessionNumMap[r.session_id] || 0,
+            };
+          }));
         }
       } catch (e) {
-        console.error('Failed to load public report history', e);
+        console.error('Failed to load public session history', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -629,13 +689,14 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2 text-foreground">
           <FileText className="h-4 w-4" />
-          Previous Report Cards
+          Session History
           <Badge variant="secondary" className="text-xs ml-auto">{items.length} total</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
         {items.map(item => {
           const isCurrent = item.id === currentReportId;
+          const isRoadTest = item.session_type === 'testing';
           return (
             <a
               key={item.id}
@@ -649,9 +710,32 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                  {item.sessionNumber > 0 && (
+                    <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
+                  )}
                   <span className="text-sm font-medium text-foreground">
                     {format(parseISO(item.created_at), 'MMM d, yyyy')}
                   </span>
+                  {isRoadTest ? (
+                    <Badge variant="outline" className="text-[10px] gap-1">
+                      <ClipboardCheck className="h-2.5 w-2.5" />Road Test
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] capitalize">Driving</Badge>
+                  )}
+                  {isRoadTest && item.road_test_outcome && (
+                    <Badge className={`text-[10px] gap-1 border-0 ${
+                      item.road_test_outcome === 'passed'
+                        ? 'bg-green-500/20 text-green-700 dark:text-green-300'
+                        : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                    }`}>
+                      {item.road_test_outcome === 'passed' ? (
+                        <><CheckCircle className="h-2.5 w-2.5" />Passed</>
+                      ) : (
+                        <><XCircle className="h-2.5 w-2.5" />Must Retry</>
+                      )}
+                    </Badge>
+                  )}
                   {isCurrent && (
                     <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
                       Currently Viewing
@@ -662,7 +746,7 @@ function PublicReportHistory({ studentId, currentReportId }: { studentId: string
                   {item.instructor_name}
                 </p>
               </div>
-              {item.overall && (
+              {!isRoadTest && item.overall && (
                 <div className="flex items-center gap-1 text-sm font-semibold shrink-0 text-foreground">
                   <Star className="h-3.5 w-3.5 text-yellow-500" />
                   {item.overall}/10
