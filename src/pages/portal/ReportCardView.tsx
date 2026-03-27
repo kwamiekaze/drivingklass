@@ -388,7 +388,7 @@ export default function ReportCardView() {
           <div className="flex-1">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold theme-heading flex items-center gap-2">
               <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
-              Report Card
+              {sessionNumber ? `Session ${sessionNumber} — Report Card` : 'Report Card'}
             </h1>
           </div>
         </div>
