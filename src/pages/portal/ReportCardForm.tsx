@@ -195,6 +195,11 @@ function ReportCardFormContent() {
       .single();
 
     if (data) {
+      // If this report card belongs to a road test session, redirect
+      if ((data.session as any)?.session_type === 'testing') {
+        navigate(`/road-test-results/${(data.session as any)?.id}`, { replace: true });
+        return;
+      }
       setExistingCard(data as ReportCard);
       setSession(data.session as Session);
       setDraftId(data.id);
