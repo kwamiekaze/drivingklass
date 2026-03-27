@@ -55,6 +55,8 @@ interface PublicReportData {
   most_improved_skills?: any[];
   focus_areas?: any[];
   session_number?: number | null;
+  road_test_result?: string | null;
+  road_test_notes?: string | null;
 }
 
 type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
