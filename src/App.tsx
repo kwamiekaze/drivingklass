@@ -34,6 +34,8 @@ import InstructorStudents from "./pages/portal/InstructorStudents";
 import ReportCardForm from "./pages/portal/ReportCardForm";
 import ReportCardView from "./pages/portal/ReportCardView";
 import ReportCardOpen from "./pages/portal/ReportCardOpen";
+import RoadTestResultView from "./pages/portal/RoadTestResultView";
+import RoadTestResultOpen from "./pages/portal/RoadTestResultOpen";
 import AdminDashboard from "./pages/portal/AdminDashboard";
 import AdminApprovals from "./pages/portal/AdminApprovals";
 import AdminSchedule from "./pages/portal/AdminSchedule";
