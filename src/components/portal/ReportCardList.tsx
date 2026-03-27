@@ -211,7 +211,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileText className="h-5 w-5" />
-              Report Card Details
+              {selectedCard && isRoadTest(selectedCard) ? "Road Test Details" : "Report Card Details"}
             </DialogTitle>
           </DialogHeader>
           
@@ -251,60 +251,91 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
               </div>
 
-              {/* Overall Rating */}
-              <div className="text-center p-4 bg-primary/10 rounded-lg">
-                <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
-                <div className="flex items-center justify-center gap-2">
-                  <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                  <span className="text-3xl sm:text-4xl font-bold">{selectedCard.overall || '-'}</span>
-                  <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
-                </div>
-              </div>
-
-              {/* Rating Categories */}
-              <div>
-                <h4 className="font-medium mb-3 text-sm sm:text-base">Skill Ratings</h4>
-                <div className="grid gap-2">
-                  {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
-                    const rating = selectedCard[category.key as keyof ReportCard] as number | null;
-                    return (
-                      <div key={category.key} className="flex items-center gap-2 sm:gap-3">
-                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
-                        <div className="flex-1">
-                          <Progress 
-                            value={rating ? rating * 10 : 0} 
-                            className="h-2"
-                          />
-                        </div>
-                        <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right">
-                          {rating || '-'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-
-              {/* Transcription */}
-              {selectedCard.transcription_summary && (
-                <div>
-                  <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
-                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
-                    {selectedCard.transcription_summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Message to Student */}
-              {selectedCard.message_to_student && (
-                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="font-medium text-sm">Instructor's Message</span>
+              {isRoadTest(selectedCard) ? (
+                <>
+                  {/* Road Test Result */}
+                  <div className={`text-center p-6 rounded-xl ${roadTestResultMap[selectedCard.session_id] === 'passed' ? 'bg-green-500/10 border border-green-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+                    {roadTestResultMap[selectedCard.session_id] === 'passed' ? (
+                      <>
+                        <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600 dark:text-green-400" />
+                        <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">Passed 🚀</h2>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-12 w-12 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
+                        <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400">Must Retry</h2>
+                      </>
+                    )}
                   </div>
-                  <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
-                </div>
+
+                  {/* Notes */}
+                  {selectedCard.message_to_student && (
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="font-medium text-sm">Road Test Notes</span>
+                      </div>
+                      <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Overall Rating */}
+                  <div className="text-center p-4 bg-primary/10 rounded-lg">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                      <span className="text-3xl sm:text-4xl font-bold">{selectedCard.overall || '-'}</span>
+                      <span className="text-xl sm:text-2xl text-muted-foreground">/10</span>
+                    </div>
+                  </div>
+
+                  {/* Rating Categories */}
+                  <div>
+                    <h4 className="font-medium mb-3 text-sm sm:text-base">Skill Ratings</h4>
+                    <div className="grid gap-2">
+                      {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
+                        const rating = selectedCard[category.key as keyof ReportCard] as number | null;
+                        return (
+                          <div key={category.key} className="flex items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                            <div className="flex-1">
+                              <Progress 
+                                value={rating ? rating * 10 : 0} 
+                                className="h-2"
+                              />
+                            </div>
+                            <span className="text-xs sm:text-sm font-medium w-6 sm:w-8 text-right">
+                              {rating || '-'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Transcription */}
+                  {selectedCard.transcription_summary && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
+                        {selectedCard.transcription_summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Message to Student */}
+                  {selectedCard.message_to_student && (
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="font-medium text-sm">Instructor's Message</span>
+                      </div>
+                      <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Internal Message (staff/admin only) */}
@@ -318,8 +349,8 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 </div>
               )}
 
-              {/* Edit Button */}
-              {onEdit && (userRole === 'instructor' || userRole === 'staff' || userRole === 'admin') && (
+              {/* Edit Button - only for driving reports */}
+              {onEdit && !isRoadTest(selectedCard) && (userRole === 'instructor' || userRole === 'staff' || userRole === 'admin') && (
                 <Button onClick={() => { onEdit(selectedCard); setSelectedCard(null); }} className="w-full min-h-[44px]">
                   Edit Report Card
                 </Button>
