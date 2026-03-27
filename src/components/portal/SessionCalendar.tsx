@@ -24,7 +24,6 @@ import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
 import { LatestReportSnapshot } from "./LatestReportSnapshot";
-import { computeSessionNumbers } from "@/lib/sessionNumbering";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -105,36 +104,21 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     fetchRoadTestResults(testingSessions);
   }, [sessions, fetchRoadTestResults]);
 
-  // Compute session numbers per student
-  const sessionNumbers = useMemo(() => {
-    // Group sessions by student for numbering
-    const studentSessions: Record<string, Array<{ id: string; starts_at: string; status: string }>> = {};
-    sessions.forEach(s => {
-      if (!studentSessions[s.student_id]) studentSessions[s.student_id] = [];
-      studentSessions[s.student_id].push({ id: s.id, starts_at: s.starts_at, status: s.status });
-    });
-    const merged = new Map<string, number>();
-    Object.values(studentSessions).forEach(group => {
-      const nums = computeSessionNumbers(group);
-      nums.forEach((v, k) => merged.set(k, v));
-    });
-    return merged;
-  }, [sessions]);
-
   // Convert sessions to CalendarEvents
   const calendarEvents: CalendarEvent[] = useMemo(() => {
     return sessions.map(s => {
       const color = getCalendarColor(s);
       const dotColor = getDotColor(s);
-      const sessionNum = sessionNumbers.get(s.id);
-      const sessionLabel = sessionNum ? `Session ${sessionNum}` : '';
       const studentName = userRole === 'student'
         ? getDisplayName(s.instructor, 'Instructor')
         : getDisplayName(s.student, 'Student');
+      const otherName = userRole === 'student'
+        ? getDisplayName(s.student, 'Student')
+        : getDisplayName(s.instructor, 'Instructor');
 
       return {
         id: s.id,
-        title: sessionLabel ? `${sessionLabel} — ${studentName}` : studentName,
+        title: studentName,
         subtitle: s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving',
         start: s.starts_at,
         end: s.ends_at,
@@ -143,7 +127,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         meta: { session: s },
       };
     });
-  }, [sessions, userRole, sessionNumbers]);
+  }, [sessions, userRole]);
 
   const handleEventClick = (event: CalendarEvent) => {
     const session = (event.meta?.session as Session) || sessions.find(s => s.id === event.id);
@@ -408,11 +392,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       <Dialog open={!!selectedSession && !cancelDialogOpen && !completeDialogOpen && !notesDialogOpen && !editDialogOpen} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[80vh] overflow-y-auto mx-auto fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">
-              {selectedSession && sessionNumbers.get(selectedSession.id)
-                ? `Session ${sessionNumbers.get(selectedSession.id)} Details`
-                : 'Session Details'}
-            </DialogTitle>
+            <DialogTitle className="text-lg">Session Details</DialogTitle>
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-4">

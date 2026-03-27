@@ -10,10 +10,6 @@ import { useNavigate } from "react-router-dom";
 interface ReportCardHistoryListProps {
   studentId: string;
   currentReportCardId?: string;
-  /** If true, uses public slug navigation instead of internal routes */
-  isPublicView?: boolean;
-  /** Current slug for public view, to highlight current */
-  currentSlug?: string;
 }
 
 interface HistoryItem {
@@ -24,11 +20,9 @@ interface HistoryItem {
   instructor_name: string;
   session_starts_at: string | null;
   session_type: string;
-  session_number: number | null;
-  public_share_slug: string | null;
 }
 
-export function ReportCardHistoryList({ studentId, currentReportCardId, isPublicView, currentSlug }: ReportCardHistoryListProps) {
+export function ReportCardHistoryList({ studentId, currentReportCardId }: ReportCardHistoryListProps) {
   const navigate = useNavigate();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,20 +32,13 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
     const load = async () => {
       setLoading(true);
       try {
-        const query = supabase
+        const { data: reports } = await supabase
           .from('report_cards')
-          .select('id, created_at, overall, instructor_id, session_id, public_share_slug')
+          .select('id, created_at, overall, instructor_id, session_id')
           .eq('student_id', studentId)
           .eq('report_card_status', 'completed')
           .order('created_at', { ascending: false })
           .limit(50);
-
-        // For public view, only show reports that are public
-        if (isPublicView) {
-          query.eq('is_public', true).not('public_share_slug', 'is', null);
-        }
-
-        const { data: reports } = await query;
 
         if (cancelled || !reports || reports.length === 0) {
           if (!cancelled) setItems([]);
@@ -79,23 +66,6 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
           sessMap[s.id] = { starts_at: s.starts_at, session_type: s.session_type };
         });
 
-        // Compute session numbers: get all non-cancelled sessions for this student
-        let allSessions: Array<{ id: string; starts_at: string }> = [];
-        if (sessIds.length > 0) {
-          const { data: allSessData } = await supabase
-            .from('sessions')
-            .select('id, starts_at')
-            .eq('student_id', studentId)
-            .neq('status', 'cancelled')
-            .order('starts_at', { ascending: true });
-          allSessions = allSessData || [];
-        }
-        
-        const sessionNumberMap = new Map<string, number>();
-        allSessions.forEach((s, i) => {
-          sessionNumberMap.set(s.id, i + 1);
-        });
-
         if (!cancelled) {
           setItems(reports.map(r => ({
             id: r.id,
@@ -105,8 +75,6 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
             instructor_name: instrMap[r.instructor_id] || 'Instructor',
             session_starts_at: sessMap[r.session_id]?.starts_at || null,
             session_type: sessMap[r.session_id]?.session_type || 'driving',
-            session_number: sessionNumberMap.get(r.session_id) || null,
-            public_share_slug: r.public_share_slug,
           })));
         }
       } catch (e) {
@@ -117,11 +85,11 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
     };
     load();
     return () => { cancelled = true; };
-  }, [studentId, isPublicView]);
+  }, [studentId]);
 
   if (loading) {
     return (
-      <Card className={isPublicView ? "border-border/50 bg-card/80 backdrop-blur" : ""}>
+      <Card>
         <CardContent className="flex items-center justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
@@ -129,7 +97,7 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
     );
   }
 
-  if (items.length <= 1 && !isPublicView) {
+  if (items.length <= 1) {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -142,35 +110,22 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
     );
   }
 
-  if (items.length === 0) return null;
-
-  const handleClick = (item: HistoryItem) => {
-    if (isPublicView && item.public_share_slug) {
-      // Navigate to the public report card, reload to trigger access code check
-      window.location.href = `/report/public/${item.public_share_slug}`;
-    } else {
-      navigate(`/report-cards/${item.id}`);
-    }
-  };
-
   return (
-    <Card className={isPublicView ? "border-border/50 bg-card/80 backdrop-blur" : ""}>
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          {isPublicView ? 'Previous Report Cards' : 'Report Card History'}
+          Report Card History
           <Badge variant="secondary" className="text-xs ml-auto">{items.length} total</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
         {items.map(item => {
-          const isCurrent = isPublicView
-            ? item.public_share_slug === currentSlug
-            : item.id === currentReportCardId;
+          const isCurrent = item.id === currentReportCardId;
           return (
             <button
               key={item.id}
-              onClick={() => { if (!isCurrent) handleClick(item); }}
+              onClick={() => { if (!isCurrent) navigate(`/report-cards/${item.id}`); }}
               disabled={isCurrent}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                 isCurrent
@@ -180,11 +135,6 @@ export function ReportCardHistoryList({ studentId, currentReportCardId, isPublic
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {item.session_number && (
-                    <Badge variant="outline" className="text-[10px] font-semibold">
-                      Session {item.session_number}
-                    </Badge>
-                  )}
                   <span className="text-sm font-medium">
                     {item.session_starts_at
                       ? format(parseISO(item.session_starts_at), 'MMM d, yyyy')

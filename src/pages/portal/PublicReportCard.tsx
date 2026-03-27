@@ -10,7 +10,6 @@ import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
-import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
 import { useScrollActive } from "@/hooks/useScrollActive";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LessonRating } from "@/components/portal/LessonRating";
@@ -471,15 +470,6 @@ export default function PublicReportCard() {
                 <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
               </CardContent>
             </Card>
-          )}
-
-          {/* Previous Report Cards (public) */}
-          {report.student_id && (
-            <ReportCardHistoryList
-              studentId={report.student_id}
-              isPublicView={true}
-              currentSlug={slug}
-            />
           )}
 
           {/* Lesson Rating */}
