@@ -338,7 +338,9 @@ export default function PublicReportCard() {
           <div className="text-center py-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
               <FileText className="h-6 w-6" />
-              {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
+              {report.session_type === 'testing'
+                ? (report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result')
+                : (report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card')}
             </h1>
           </div>
 
