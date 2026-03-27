@@ -24,6 +24,7 @@ import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
 import { LatestReportSnapshot } from "./LatestReportSnapshot";
+import { computeSessionNumbers } from "@/lib/sessionNumbering";
 
 interface SessionCalendarProps {
   sessions: Session[];
