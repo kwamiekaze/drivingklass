@@ -64,6 +64,8 @@ export function AdminUserProfileModal({
   onProfileUpdated 
 }: AdminUserProfileModalProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { startViewingAs } = useViewAsStudent();
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
