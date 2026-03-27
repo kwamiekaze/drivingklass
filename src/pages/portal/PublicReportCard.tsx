@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn } from "lucide-react";
+import { Loader2, Lock, Star, FileText, Calendar, User, Clock, MessageSquare, ShieldX, Menu, X, LogIn, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
