@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, Star, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -20,6 +19,8 @@ interface HistoryItem {
   instructor_name: string;
   session_starts_at: string | null;
   session_type: string;
+  session_id: string;
+  sessionNumber: number | null;
 }
 
 export function ReportCardHistoryList({ studentId, currentReportCardId }: ReportCardHistoryListProps) {
@@ -45,15 +46,17 @@ export function ReportCardHistoryList({ studentId, currentReportCardId }: Report
           return;
         }
 
-        // Fetch instructor names and session info in batch
+        // Fetch instructor names, session info, AND all non-cancelled sessions for numbering
         const instrIds = [...new Set(reports.map(r => r.instructor_id))];
         const sessIds = reports.map(r => r.session_id).filter(Boolean);
 
-        const [instrRes, sessRes] = await Promise.all([
+        const [instrRes, sessRes, allSessRes] = await Promise.all([
           supabase.from('profiles').select('id, full_name, first_name, last_name, email').in('id', instrIds),
           sessIds.length > 0
             ? supabase.from('sessions').select('id, starts_at, session_type').in('id', sessIds)
             : Promise.resolve({ data: [] as any[] }),
+          // Fetch all non-cancelled sessions for this student to compute numbering
+          supabase.from('sessions').select('id, starts_at').eq('student_id', studentId).neq('status', 'cancelled').order('starts_at', { ascending: true }),
         ]);
 
         const instrMap: Record<string, string> = {};
@@ -66,6 +69,12 @@ export function ReportCardHistoryList({ studentId, currentReportCardId }: Report
           sessMap[s.id] = { starts_at: s.starts_at, session_type: s.session_type };
         });
 
+        // Build session number map
+        const sessionNumMap: Record<string, number> = {};
+        (allSessRes.data || []).forEach((s: any, i: number) => {
+          sessionNumMap[s.id] = i + 1;
+        });
+
         if (!cancelled) {
           setItems(reports.map(r => ({
             id: r.id,
@@ -75,6 +84,8 @@ export function ReportCardHistoryList({ studentId, currentReportCardId }: Report
             instructor_name: instrMap[r.instructor_id] || 'Instructor',
             session_starts_at: sessMap[r.session_id]?.starts_at || null,
             session_type: sessMap[r.session_id]?.session_type || 'driving',
+            session_id: r.session_id,
+            sessionNumber: sessionNumMap[r.session_id] || null,
           })));
         }
       } catch (e) {
@@ -135,6 +146,9 @@ export function ReportCardHistoryList({ studentId, currentReportCardId }: Report
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                  {item.sessionNumber && (
+                    <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
+                  )}
                   <span className="text-sm font-medium">
                     {item.session_starts_at
                       ? format(parseISO(item.session_starts_at), 'MMM d, yyyy')
