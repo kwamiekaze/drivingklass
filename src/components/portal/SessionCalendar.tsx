@@ -574,11 +574,20 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </div>
                   )}
 
-                  {/* Open Report Card — prominent for completed sessions */}
-                  {sessionDetails.report_card_id && (
+                  {/* Open Report Card — prominent for completed sessions with report cards */}
+                  {sessionDetails.report_card_id && selectedSession.session_type !== 'testing' && (
                     <Link to={`/report-cards/${sessionDetails.report_card_id}`}>
                       <Button className="w-full min-h-[44px] gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                         <FileText className="h-4 w-4" />Open Report Card
+                      </Button>
+                    </Link>
+                  )}
+
+                  {/* Open Road Test Result — for completed road tests */}
+                  {selectedSession.session_type === 'testing' && selectedSession.status === 'completed' && roadTestResults[selectedSession.id] && (
+                    <Link to={`/road-test-results/${selectedSession.id}`}>
+                      <Button className="w-full min-h-[44px] gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                        <ClipboardCheck className="h-4 w-4" />View Road Test Result
                       </Button>
                     </Link>
                   )}

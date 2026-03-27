@@ -34,6 +34,8 @@ import InstructorStudents from "./pages/portal/InstructorStudents";
 import ReportCardForm from "./pages/portal/ReportCardForm";
 import ReportCardView from "./pages/portal/ReportCardView";
 import ReportCardOpen from "./pages/portal/ReportCardOpen";
+import RoadTestResultView from "./pages/portal/RoadTestResultView";
+import RoadTestResultOpen from "./pages/portal/RoadTestResultOpen";
 import AdminDashboard from "./pages/portal/AdminDashboard";
 import AdminApprovals from "./pages/portal/AdminApprovals";
 import AdminSchedule from "./pages/portal/AdminSchedule";
@@ -119,6 +121,8 @@ const App = () => (
                       {/* Report Card Routes */}
                       <Route path="/report-cards/open/:id" element={<ReportCardOpen />} />
                       <Route path="/report-cards/:id" element={<ReportCardView />} />
+                      <Route path="/road-test-results/open/:sessionId" element={<RoadTestResultOpen />} />
+                      <Route path="/road-test-results/:sessionId" element={<RoadTestResultView />} />
                       
                       {/* Admin Portal */}
                       <Route path="/admin" element={<AdminDashboard />} />
