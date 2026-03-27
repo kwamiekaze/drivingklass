@@ -124,7 +124,14 @@ export default function ReportCardView() {
       if (!data || data.length === 0) {
         setUnauthorized(true);
       } else {
-        setReportCard(data[0] as ReportCardDetails);
+        const rc = data[0] as ReportCardDetails;
+        setReportCard(rc);
+        // Fetch session number
+        if (rc.session_id && rc.student_id) {
+          fetchSessionNumberForStudent(supabase, rc.student_id, rc.session_id).then(num => {
+            setSessionNumber(num);
+          });
+        }
         // Load skill highlights + public sharing state
         const { data: rcRow } = await supabase
           .from('report_cards')
