@@ -280,6 +280,15 @@ function InstructorStudentViewContent() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Document History */}
+          {id && (
+            <StudentDocumentSection
+              studentId={id}
+              isOwnProfile={false}
+              isStaffOrAdmin={true}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="sessions">
