@@ -14,6 +14,8 @@ import { format, parseISO } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { getDisplayName } from "@/lib/profileUtils";
+import { PermitPreview } from "@/components/portal/PermitPreview";
+import { StudentDocumentSection } from "@/components/portal/StudentDocumentSection";
 
 export default function InstructorStudentView() {
   return (
