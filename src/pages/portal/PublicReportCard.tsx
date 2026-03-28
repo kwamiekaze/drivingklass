@@ -436,18 +436,18 @@ export default function PublicReportCard() {
                 </Card>
               )}
 
-              {/* Lesson Rating */}
-              <LessonRating
-                reportCardId={report.id}
-                studentName={report.student_name}
-                isPublicView={true}
-              />
-
               {/* Session History for authorized viewer */}
               <PublicSessionHistory
                 studentId={report.student_id}
                 currentReportId={report.id}
                 accessCode={verifiedAccessCode}
+              />
+
+              {/* Lesson Rating — below session history */}
+              <LessonRating
+                reportCardId={report.id}
+                studentName={report.student_name}
+                isPublicView={true}
               />
             </>
           ) : (
@@ -538,18 +538,18 @@ export default function PublicReportCard() {
                 </Card>
               )}
 
-              {/* Lesson Rating */}
-              <LessonRating
-                reportCardId={report.id}
-                studentName={report.student_name}
-                isPublicView={true}
-              />
-
               {/* Session History for authorized viewer */}
               <PublicSessionHistory
                 studentId={report.student_id}
                 currentReportId={report.id}
                 accessCode={verifiedAccessCode}
+              />
+
+              {/* Lesson Rating — below session history */}
+              <LessonRating
+                reportCardId={report.id}
+                studentName={report.student_name}
+                isPublicView={true}
               />
             </>
           )}

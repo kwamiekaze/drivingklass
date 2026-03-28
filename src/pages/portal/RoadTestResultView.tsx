@@ -504,18 +504,7 @@ export default function RoadTestResultView() {
               </Card>
             )}
 
-            {/* Lesson Rating (show for student view mode, actual students, or accessed mode) */}
-            {data.report_card_id && (viewMode !== "normal" || role === "student") && (
-              <LessonRating
-                reportCardId={data.report_card_id}
-                studentId={role === "student" ? user?.id : undefined}
-                instructorId={data.instructor_id}
-                sessionId={data.session_id}
-                studentName={data.student_name}
-                readOnly={viewMode !== "normal" || isStaff}
-                isPublicView={viewMode === "accessed"}
-              />
-            )}
+            {/* Lesson Rating moved below session history */}
 
             {/* Public Sharing Section (staff only, normal view) */}
             {showSharingSection && (
@@ -630,6 +619,19 @@ export default function RoadTestResultView() {
               studentId={data.student_id}
               currentSessionId={sessionId}
             />
+
+            {/* Lesson Rating — below session history */}
+            {data.report_card_id && (
+              <LessonRating
+                reportCardId={data.report_card_id}
+                studentId={role === "student" ? user?.id : undefined}
+                instructorId={data.instructor_id}
+                sessionId={data.session_id}
+                studentName={data.student_name}
+                readOnly={viewMode !== "normal" ? true : isStaff}
+                isPublicView={viewMode === "accessed"}
+              />
+            )}
           </div>
         ) : null}
       </div>
