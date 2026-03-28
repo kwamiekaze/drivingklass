@@ -254,14 +254,7 @@ function InstructorStudentViewContent() {
                   </p>
                 )}
                 {student.permit_file_url && (
-                  <a 
-                    href={student.permit_file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View Permit Photo
-                  </a>
+                  <PermitPreview permitFileUrl={student.permit_file_url} className="max-w-full sm:max-w-md" />
                 )}
               </CardContent>
             </Card>
