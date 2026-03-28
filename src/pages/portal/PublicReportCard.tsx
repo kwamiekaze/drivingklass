@@ -443,12 +443,14 @@ export default function PublicReportCard() {
                 accessCode={verifiedAccessCode}
               />
 
-              {/* Lesson Rating — below session history */}
-              <LessonRating
-                reportCardId={report.id}
-                studentName={report.student_name}
-                isPublicView={true}
-              />
+              {/* Lesson Rating — always at the very bottom */}
+              <div className="pb-8">
+                <LessonRating
+                  reportCardId={report.id}
+                  studentName={report.student_name}
+                  isPublicView={true}
+                />
+              </div>
             </>
           ) : (
             <>
@@ -545,12 +547,14 @@ export default function PublicReportCard() {
                 accessCode={verifiedAccessCode}
               />
 
-              {/* Lesson Rating — below session history */}
-              <LessonRating
-                reportCardId={report.id}
-                studentName={report.student_name}
-                isPublicView={true}
-              />
+              {/* Lesson Rating — always at the very bottom */}
+              <div className="pb-8">
+                <LessonRating
+                  reportCardId={report.id}
+                  studentName={report.student_name}
+                  isPublicView={true}
+                />
+              </div>
             </>
           )}
 
