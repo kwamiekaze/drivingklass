@@ -14,6 +14,8 @@ import { format, parseISO } from "date-fns";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { ReportCardList } from "@/components/portal/ReportCardList";
 import { getDisplayName } from "@/lib/profileUtils";
+import { PermitPreview } from "@/components/portal/PermitPreview";
+import { StudentDocumentSection } from "@/components/portal/StudentDocumentSection";
 
 export default function InstructorStudentView() {
   return (
@@ -252,14 +254,7 @@ function InstructorStudentViewContent() {
                   </p>
                 )}
                 {student.permit_file_url && (
-                  <a 
-                    href={student.permit_file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View Permit Photo
-                  </a>
+                  <PermitPreview permitFileUrl={student.permit_file_url} className="max-w-full sm:max-w-md" />
                 )}
               </CardContent>
             </Card>
@@ -285,6 +280,15 @@ function InstructorStudentViewContent() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Document History */}
+          {id && (
+            <StudentDocumentSection
+              studentId={id}
+              isOwnProfile={false}
+              isStaffOrAdmin={true}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="sessions">
