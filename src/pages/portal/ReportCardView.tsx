@@ -819,16 +819,18 @@ export default function ReportCardView() {
               currentReportCardId={reportCard.id}
             />
 
-            {/* Lesson Rating — below session history */}
-            <LessonRating
-              reportCardId={reportCard.id}
-              studentId={role === 'student' ? user?.id : undefined}
-              instructorId={reportCard.instructor_id}
-              sessionId={reportCard.session_id}
-              studentName={reportCard.student_name}
-              readOnly={viewMode !== "normal" ? true : (role === 'admin' || role === 'staff' || role === 'instructor')}
-              isPublicView={viewMode === "accessed"}
-            />
+            {/* Lesson Rating — always at the very bottom */}
+            <div className="pb-8">
+              <LessonRating
+                reportCardId={reportCard.id}
+                studentId={role === 'student' ? user?.id : undefined}
+                instructorId={reportCard.instructor_id}
+                sessionId={reportCard.session_id}
+                studentName={reportCard.student_name}
+                readOnly={viewMode !== "normal" ? true : (role === 'admin' || role === 'staff' || role === 'instructor')}
+                isPublicView={viewMode === "accessed"}
+              />
+            </div>
           </div>
         ) : null}
       </div>

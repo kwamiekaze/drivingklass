@@ -620,17 +620,19 @@ export default function RoadTestResultView() {
               currentSessionId={sessionId}
             />
 
-            {/* Lesson Rating — below session history */}
+            {/* Lesson Rating — always at the very bottom */}
             {data.report_card_id && (
-              <LessonRating
-                reportCardId={data.report_card_id}
-                studentId={role === "student" ? user?.id : undefined}
-                instructorId={data.instructor_id}
-                sessionId={data.session_id}
-                studentName={data.student_name}
-                readOnly={viewMode !== "normal" ? true : isStaff}
-                isPublicView={viewMode === "accessed"}
-              />
+              <div className="pb-8">
+                <LessonRating
+                  reportCardId={data.report_card_id}
+                  studentId={role === "student" ? user?.id : undefined}
+                  instructorId={data.instructor_id}
+                  sessionId={data.session_id}
+                  studentName={data.student_name}
+                  readOnly={viewMode !== "normal" ? true : isStaff}
+                  isPublicView={viewMode === "accessed"}
+                />
+              </div>
             )}
           </div>
         ) : null}
