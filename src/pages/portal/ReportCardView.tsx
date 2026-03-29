@@ -827,7 +827,7 @@ export default function ReportCardView() {
                 instructorId={reportCard.instructor_id}
                 sessionId={reportCard.session_id}
                 studentName={reportCard.student_name}
-                readOnly={viewMode !== "normal" ? true : (role === 'admin' || role === 'staff' || role === 'instructor')}
+                readOnly={viewMode === "normal" && (role === 'admin' || role === 'staff' || role === 'instructor')}
                 isPublicView={viewMode === "accessed"}
               />
             </div>
