@@ -556,7 +556,7 @@ export default function ReportCardView() {
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                      <p className="font-medium text-sm sm:text-base truncate report-text-sweep">{reportCard.instructor_name}</p>
+                      <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
