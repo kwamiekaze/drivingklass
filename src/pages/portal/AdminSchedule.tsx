@@ -33,10 +33,13 @@ function AdminScheduleContent() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
+  const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [studentPickerOpen, setStudentPickerOpen] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<any | null>(null);
 
   // Filters
   const [filterInstructor, setFilterInstructor] = useState<string>("all");
@@ -55,6 +58,16 @@ function AdminScheduleContent() {
     session_type: "driving",
     pickup_address: "",
     dropoff_address: "",
+  });
+
+  // Block form state
+  const [blockForm, setBlockForm] = useState({
+    title: "Unavailable",
+    notes: "",
+    date: "",
+    start_time: "",
+    duration_minutes: "60",
+    instructor_id: "all",
   });
 
   useEffect(() => { fetchData(); }, []);
