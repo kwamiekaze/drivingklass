@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, User } from "lucide-react";
+import { Plus, Filter, User, Ban, Trash2 } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format } from "date-fns";
 import { Session, Profile } from "@/types/portal";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { StudentPickerModal } from "@/components/portal/StudentPickerModal";
+import type { CalendarEvent } from "@/components/portal/FullCalendarView";
 
 export default function AdminSchedule() {
   return (
