@@ -198,15 +198,7 @@ function StudentDashboardContent() {
         )}
       </div>
 
-      {/* Hours Remaining Card */}
-      {!loading && profile && (
-        <HoursRemainingCard 
-          hoursRemaining={(profile as any).hours_remaining ?? 0}
-          purchasedHours={(profile as any).purchased_hours ?? undefined}
-          completedHours={completedHours}
-          className="max-w-md"
-        />
-      )}
+      {/* Hours Remaining is intentionally hidden from students — only staff/admin/instructors can view */}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
