@@ -143,7 +143,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     });
   }, [sessions, userRole, sessionNumberMap]);
 
+  const mergedEvents = useMemo(
+    () => [...calendarEvents, ...(extraEvents || [])],
+    [calendarEvents, extraEvents]
+  );
+
   const handleEventClick = (event: CalendarEvent) => {
+    if (event.meta?.type === 'block') {
+      onExtraEventClick?.(event);
+      return;
+    }
     const session = (event.meta?.session as Session) || sessions.find(s => s.id === event.id);
     if (session) setSelectedSession(session);
   };
