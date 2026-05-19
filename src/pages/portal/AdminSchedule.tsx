@@ -287,6 +287,14 @@ function AdminScheduleContent() {
               </Badge>
             )}
           </Button>
+          <Button
+            variant="outline"
+            className="gap-2 min-h-[40px]"
+            onClick={() => { resetBlockForm(); setBlockDialogOpen(true); }}
+          >
+            <Ban className="h-4 w-4" />
+            <span className="hidden sm:inline">Block Time</span>
+          </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingSession(null); resetForm(); } }}>
             <DialogTrigger asChild>
               <Button className="gap-2 min-h-[40px]">
