@@ -494,7 +494,101 @@ function AdminScheduleContent() {
         onSessionUpdate={fetchData}
         defaultView="month"
         onSlotClick={openCreateFromSlot}
+        extraEvents={blockEvents}
+        onExtraEventClick={handleBlockEventClick}
       />
+
+      {/* Unavailable Block Dialog */}
+      <Dialog open={blockDialogOpen} onOpenChange={(open) => { setBlockDialogOpen(open); if (!open) resetBlockForm(); }}>
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              {editingBlock ? 'Edit Unavailable Block' : 'Block Time (Unavailable)'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Title</Label>
+              <Input
+                placeholder="e.g. Personal, Day Off, Doctor's Appt"
+                value={blockForm.title}
+                onChange={e => setBlockForm(f => ({ ...f, title: e.target.value }))}
+                className="min-h-[44px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Applies To</Label>
+              <Select value={blockForm.instructor_id} onValueChange={v => setBlockForm(f => ({ ...f, instructor_id: v }))}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50">
+                  <SelectItem value="all">All instructors (global block)</SelectItem>
+                  {instructors.map(i => (
+                    <SelectItem key={i.id} value={i.id}>{getDisplayName(i, 'Unknown')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Date</Label>
+                <Input type="date" value={blockForm.date} onChange={e => setBlockForm(f => ({ ...f, date: e.target.value }))} className="min-h-[44px]" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Start Time</Label>
+                <Select value={blockForm.start_time} onValueChange={v => setBlockForm(f => ({ ...f, start_time: v }))}>
+                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select time" /></SelectTrigger>
+                  <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const mins = (i % 2) * 30;
+                      const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                      const ampm = hours < 12 ? 'AM' : 'PM';
+                      return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Duration</Label>
+              <Select value={blockForm.duration_minutes} onValueChange={v => setBlockForm(f => ({ ...f, duration_minutes: v }))}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50">
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="90">1.5 hours</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
+                  <SelectItem value="180">3 hours</SelectItem>
+                  <SelectItem value="240">4 hours</SelectItem>
+                  <SelectItem value="360">6 hours</SelectItem>
+                  <SelectItem value="480">8 hours (full day)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Notes (optional)</Label>
+              <Input
+                placeholder="Any extra context"
+                value={blockForm.notes}
+                onChange={e => setBlockForm(f => ({ ...f, notes: e.target.value }))}
+                className="min-h-[44px]"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              {editingBlock && (
+                <Button variant="destructive" onClick={handleDeleteBlock} className="gap-2 min-h-[44px]">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              )}
+              <Button className="flex-1 min-h-[44px]" onClick={handleSaveBlock}>
+                {editingBlock ? 'Save Changes' : 'Create Block'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
