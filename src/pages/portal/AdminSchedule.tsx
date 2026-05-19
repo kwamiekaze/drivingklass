@@ -94,6 +94,12 @@ function AdminScheduleContent() {
       setInstructors((instructorProfiles || []) as Profile[]);
     } else { setInstructors([]); }
 
+    const { data: blockData } = await (supabase as any)
+      .from('schedule_blocks')
+      .select('*')
+      .order('starts_at', { ascending: true });
+    setBlocks(blockData || []);
+
     setLoading(false);
   };
 
