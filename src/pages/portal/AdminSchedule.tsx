@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, User } from "lucide-react";
+import { Plus, Filter, User, Ban, Trash2 } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format } from "date-fns";
 import { Session, Profile } from "@/types/portal";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { getDisplayName } from "@/lib/profileUtils";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { StudentPickerModal } from "@/components/portal/StudentPickerModal";
+import type { CalendarEvent } from "@/components/portal/FullCalendarView";
 
 export default function AdminSchedule() {
   return (
@@ -32,10 +33,13 @@ function AdminScheduleContent() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
+  const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [studentPickerOpen, setStudentPickerOpen] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<any | null>(null);
 
   // Filters
   const [filterInstructor, setFilterInstructor] = useState<string>("all");
@@ -54,6 +58,16 @@ function AdminScheduleContent() {
     session_type: "driving",
     pickup_address: "",
     dropoff_address: "",
+  });
+
+  // Block form state
+  const [blockForm, setBlockForm] = useState({
+    title: "Unavailable",
+    notes: "",
+    date: "",
+    start_time: "",
+    duration_minutes: "60",
+    instructor_id: "all",
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -79,6 +93,12 @@ function AdminScheduleContent() {
       const { data: instructorProfiles } = await supabase.from('profiles').select('*').in('id', instructorRoles.map(r => r.user_id)).eq('approval_status', 'approved');
       setInstructors((instructorProfiles || []) as Profile[]);
     } else { setInstructors([]); }
+
+    const { data: blockData } = await (supabase as any)
+      .from('schedule_blocks')
+      .select('*')
+      .order('starts_at', { ascending: true });
+    setBlocks(blockData || []);
 
     setLoading(false);
   };
@@ -159,6 +179,89 @@ function AdminScheduleContent() {
 
   const activeFilterCount = [filterInstructor, filterStudent, filterType, filterStatus].filter(f => f !== 'all').length;
 
+  // Filter blocks by instructor filter and convert to CalendarEvents
+  const filteredBlocks = blocks.filter(b => {
+    if (filterInstructor !== 'all' && b.instructor_id && b.instructor_id !== filterInstructor) return false;
+    return true;
+  });
+
+  const blockEvents: CalendarEvent[] = filteredBlocks.map(b => {
+    const inst = instructors.find(i => i.id === b.instructor_id);
+    const who = b.instructor_id ? getDisplayName(inst, 'Instructor') : 'All instructors';
+    return {
+      id: `block-${b.id}`,
+      title: b.title || 'Unavailable',
+      subtitle: `🚫 ${who}`,
+      start: b.starts_at,
+      end: b.ends_at,
+      color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
+      dotColor: 'bg-muted-foreground',
+      meta: { type: 'block', block: b },
+    };
+  });
+
+  const handleBlockEventClick = (event: CalendarEvent) => {
+    const b = event.meta?.block;
+    if (!b) return;
+    const start = new Date(b.starts_at);
+    const end = new Date(b.ends_at);
+    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    setEditingBlock(b);
+    setBlockForm({
+      title: b.title || 'Unavailable',
+      notes: b.notes || '',
+      date: format(start, 'yyyy-MM-dd'),
+      start_time: format(start, 'HH:mm'),
+      duration_minutes: String(duration),
+      instructor_id: b.instructor_id || 'all',
+    });
+    setBlockDialogOpen(true);
+  };
+
+  const resetBlockForm = () => {
+    setBlockForm({ title: "Unavailable", notes: "", date: "", start_time: "", duration_minutes: "60", instructor_id: "all" });
+    setEditingBlock(null);
+  };
+
+  const handleSaveBlock = async () => {
+    if (!blockForm.date || !blockForm.start_time) {
+      toast.error("Please pick a date and start time");
+      return;
+    }
+    const startsAt = new Date(`${blockForm.date}T${blockForm.start_time}`);
+    const endsAt = new Date(startsAt.getTime() + parseInt(blockForm.duration_minutes) * 60000);
+    const payload: any = {
+      title: blockForm.title.trim() || 'Unavailable',
+      notes: blockForm.notes.trim() || null,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      instructor_id: blockForm.instructor_id === 'all' ? null : blockForm.instructor_id,
+    };
+
+    if (editingBlock) {
+      const { error } = await (supabase as any).from('schedule_blocks').update(payload).eq('id', editingBlock.id);
+      if (error) { toast.error(`Failed to update block: ${error.message}`); return; }
+      toast.success("Unavailable block updated");
+    } else {
+      const { error } = await (supabase as any).from('schedule_blocks').insert(payload);
+      if (error) { toast.error(`Failed to create block: ${error.message}`); return; }
+      toast.success("Unavailable block created");
+    }
+    setBlockDialogOpen(false);
+    resetBlockForm();
+    fetchData();
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!editingBlock) return;
+    const { error } = await (supabase as any).from('schedule_blocks').delete().eq('id', editingBlock.id);
+    if (error) { toast.error(`Failed to delete: ${error.message}`); return; }
+    toast.success("Unavailable block removed");
+    setBlockDialogOpen(false);
+    resetBlockForm();
+    fetchData();
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -183,6 +286,14 @@ function AdminScheduleContent() {
                 {activeFilterCount}
               </Badge>
             )}
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 min-h-[40px]"
+            onClick={() => { resetBlockForm(); setBlockDialogOpen(true); }}
+          >
+            <Ban className="h-4 w-4" />
+            <span className="hidden sm:inline">Block Time</span>
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingSession(null); resetForm(); } }}>
             <DialogTrigger asChild>
@@ -383,7 +494,101 @@ function AdminScheduleContent() {
         onSessionUpdate={fetchData}
         defaultView="month"
         onSlotClick={openCreateFromSlot}
+        extraEvents={blockEvents}
+        onExtraEventClick={handleBlockEventClick}
       />
+
+      {/* Unavailable Block Dialog */}
+      <Dialog open={blockDialogOpen} onOpenChange={(open) => { setBlockDialogOpen(open); if (!open) resetBlockForm(); }}>
+        <DialogContent className="w-[min(92vw,520px)] max-w-[520px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              {editingBlock ? 'Edit Unavailable Block' : 'Block Time (Unavailable)'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Title</Label>
+              <Input
+                placeholder="e.g. Personal, Day Off, Doctor's Appt"
+                value={blockForm.title}
+                onChange={e => setBlockForm(f => ({ ...f, title: e.target.value }))}
+                className="min-h-[44px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Applies To</Label>
+              <Select value={blockForm.instructor_id} onValueChange={v => setBlockForm(f => ({ ...f, instructor_id: v }))}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50">
+                  <SelectItem value="all">All instructors (global block)</SelectItem>
+                  {instructors.map(i => (
+                    <SelectItem key={i.id} value={i.id}>{getDisplayName(i, 'Unknown')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Date</Label>
+                <Input type="date" value={blockForm.date} onChange={e => setBlockForm(f => ({ ...f, date: e.target.value }))} className="min-h-[44px]" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Start Time</Label>
+                <Select value={blockForm.start_time} onValueChange={v => setBlockForm(f => ({ ...f, start_time: v }))}>
+                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select time" /></SelectTrigger>
+                  <SelectContent className="bg-popover border z-50 max-h-[300px]">
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const hours = Math.floor(i / 2);
+                      const mins = (i % 2) * 30;
+                      const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                      const ampm = hours < 12 ? 'AM' : 'PM';
+                      return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Duration</Label>
+              <Select value={blockForm.duration_minutes} onValueChange={v => setBlockForm(f => ({ ...f, duration_minutes: v }))}>
+                <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border z-50">
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="90">1.5 hours</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
+                  <SelectItem value="180">3 hours</SelectItem>
+                  <SelectItem value="240">4 hours</SelectItem>
+                  <SelectItem value="360">6 hours</SelectItem>
+                  <SelectItem value="480">8 hours (full day)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Notes (optional)</Label>
+              <Input
+                placeholder="Any extra context"
+                value={blockForm.notes}
+                onChange={e => setBlockForm(f => ({ ...f, notes: e.target.value }))}
+                className="min-h-[44px]"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              {editingBlock && (
+                <Button variant="destructive" onClick={handleDeleteBlock} className="gap-2 min-h-[44px]">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              )}
+              <Button className="flex-1 min-h-[44px]" onClick={handleSaveBlock}>
+                {editingBlock ? 'Save Changes' : 'Create Block'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

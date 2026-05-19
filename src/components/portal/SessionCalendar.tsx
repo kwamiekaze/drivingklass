@@ -32,9 +32,11 @@ interface SessionCalendarProps {
   onSessionUpdate?: () => void;
   defaultView?: CalendarViewMode;
   onSlotClick?: (date: Date) => void;
+  extraEvents?: CalendarEvent[];
+  onExtraEventClick?: (event: CalendarEvent) => void;
 }
 
-export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultView, onSlotClick }: SessionCalendarProps) {
+export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultView, onSlotClick, extraEvents, onExtraEventClick }: SessionCalendarProps) {
   const { user, role, isStaffOrAdmin } = usePortalAuth();
   const { toast } = useToast();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -141,7 +143,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     });
   }, [sessions, userRole, sessionNumberMap]);
 
+  const mergedEvents = useMemo(
+    () => [...calendarEvents, ...(extraEvents || [])],
+    [calendarEvents, extraEvents]
+  );
+
   const handleEventClick = (event: CalendarEvent) => {
+    if (event.meta?.type === 'block') {
+      onExtraEventClick?.(event);
+      return;
+    }
     const session = (event.meta?.session as Session) || sessions.find(s => s.id === event.id);
     if (session) setSelectedSession(session);
   };
@@ -394,7 +405,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   return (
     <div className="space-y-4">
       <FullCalendarView
-        events={calendarEvents}
+        events={mergedEvents}
         defaultView={resolvedDefaultView}
         onEventClick={handleEventClick}
         onSlotClick={onSlotClick}
