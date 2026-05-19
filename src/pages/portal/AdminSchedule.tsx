@@ -179,6 +179,89 @@ function AdminScheduleContent() {
 
   const activeFilterCount = [filterInstructor, filterStudent, filterType, filterStatus].filter(f => f !== 'all').length;
 
+  // Filter blocks by instructor filter and convert to CalendarEvents
+  const filteredBlocks = blocks.filter(b => {
+    if (filterInstructor !== 'all' && b.instructor_id && b.instructor_id !== filterInstructor) return false;
+    return true;
+  });
+
+  const blockEvents: CalendarEvent[] = filteredBlocks.map(b => {
+    const inst = instructors.find(i => i.id === b.instructor_id);
+    const who = b.instructor_id ? getDisplayName(inst, 'Instructor') : 'All instructors';
+    return {
+      id: `block-${b.id}`,
+      title: b.title || 'Unavailable',
+      subtitle: `🚫 ${who}`,
+      start: b.starts_at,
+      end: b.ends_at,
+      color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
+      dotColor: 'bg-muted-foreground',
+      meta: { type: 'block', block: b },
+    };
+  });
+
+  const handleBlockEventClick = (event: CalendarEvent) => {
+    const b = event.meta?.block;
+    if (!b) return;
+    const start = new Date(b.starts_at);
+    const end = new Date(b.ends_at);
+    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    setEditingBlock(b);
+    setBlockForm({
+      title: b.title || 'Unavailable',
+      notes: b.notes || '',
+      date: format(start, 'yyyy-MM-dd'),
+      start_time: format(start, 'HH:mm'),
+      duration_minutes: String(duration),
+      instructor_id: b.instructor_id || 'all',
+    });
+    setBlockDialogOpen(true);
+  };
+
+  const resetBlockForm = () => {
+    setBlockForm({ title: "Unavailable", notes: "", date: "", start_time: "", duration_minutes: "60", instructor_id: "all" });
+    setEditingBlock(null);
+  };
+
+  const handleSaveBlock = async () => {
+    if (!blockForm.date || !blockForm.start_time) {
+      toast.error("Please pick a date and start time");
+      return;
+    }
+    const startsAt = new Date(`${blockForm.date}T${blockForm.start_time}`);
+    const endsAt = new Date(startsAt.getTime() + parseInt(blockForm.duration_minutes) * 60000);
+    const payload: any = {
+      title: blockForm.title.trim() || 'Unavailable',
+      notes: blockForm.notes.trim() || null,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      instructor_id: blockForm.instructor_id === 'all' ? null : blockForm.instructor_id,
+    };
+
+    if (editingBlock) {
+      const { error } = await (supabase as any).from('schedule_blocks').update(payload).eq('id', editingBlock.id);
+      if (error) { toast.error(`Failed to update block: ${error.message}`); return; }
+      toast.success("Unavailable block updated");
+    } else {
+      const { error } = await (supabase as any).from('schedule_blocks').insert(payload);
+      if (error) { toast.error(`Failed to create block: ${error.message}`); return; }
+      toast.success("Unavailable block created");
+    }
+    setBlockDialogOpen(false);
+    resetBlockForm();
+    fetchData();
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!editingBlock) return;
+    const { error } = await (supabase as any).from('schedule_blocks').delete().eq('id', editingBlock.id);
+    if (error) { toast.error(`Failed to delete: ${error.message}`); return; }
+    toast.success("Unavailable block removed");
+    setBlockDialogOpen(false);
+    resetBlockForm();
+    fetchData();
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
