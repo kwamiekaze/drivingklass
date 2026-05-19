@@ -32,9 +32,11 @@ interface SessionCalendarProps {
   onSessionUpdate?: () => void;
   defaultView?: CalendarViewMode;
   onSlotClick?: (date: Date) => void;
+  extraEvents?: CalendarEvent[];
+  onExtraEventClick?: (event: CalendarEvent) => void;
 }
 
-export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultView, onSlotClick }: SessionCalendarProps) {
+export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultView, onSlotClick, extraEvents, onExtraEventClick }: SessionCalendarProps) {
   const { user, role, isStaffOrAdmin } = usePortalAuth();
   const { toast } = useToast();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
