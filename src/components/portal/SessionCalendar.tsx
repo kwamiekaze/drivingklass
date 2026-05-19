@@ -405,7 +405,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   return (
     <div className="space-y-4">
       <FullCalendarView
-        events={calendarEvents}
+        events={mergedEvents}
         defaultView={resolvedDefaultView}
         onEventClick={handleEventClick}
         onSlotClick={onSlotClick}
