@@ -118,11 +118,21 @@ function AdminDashboardContent() {
     const nowIso = new Date().toISOString();
     const { data: pastUnfinished } = await supabase
       .from('sessions')
-      .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*), report_card:report_cards!report_cards_session_id_fkey(id, report_card_status)')
+      .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*)')
       .eq('status', 'scheduled')
       .lt('ends_at', nowIso)
       .order('ends_at', { ascending: false });
-    setNeedsAttention(pastUnfinished || []);
+
+    const sessionIds = (pastUnfinished || []).map((s: any) => s.id);
+    let rcMap = new Map<string, any>();
+    if (sessionIds.length > 0) {
+      const { data: rcs } = await supabase
+        .from('report_cards')
+        .select('id, session_id, report_card_status')
+        .in('session_id', sessionIds);
+      (rcs || []).forEach((rc: any) => rcMap.set(rc.session_id, rc));
+    }
+    setNeedsAttention((pastUnfinished || []).map((s: any) => ({ ...s, report_card: rcMap.get(s.id) || null })));
 
     setLoading(false);
   };
