@@ -39,7 +39,9 @@ function AdminDashboardContent() {
     newMessages: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [needsAttention, setNeedsAttention] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStats();
