@@ -241,7 +241,7 @@ function InstructorDashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 sm:space-y-3">
-              {sessionsNeedingReportCard.slice(0, 5).map(session => {
+              {sessionsNeedingReportCard.map(session => {
                 const existingReport = reportCardBySessionId.get(session.id);
                 return (
                   <NeedingReportCard 
