@@ -113,7 +113,29 @@ function AdminDashboardContent() {
       .limit(5);
 
     setRecentActivity(recentProfiles || []);
+
+    // Past sessions still needing completion / grading
+    const nowIso = new Date().toISOString();
+    const { data: pastUnfinished } = await supabase
+      .from('sessions')
+      .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*), report_card:report_cards!report_cards_session_id_fkey(id, report_card_status)')
+      .eq('status', 'scheduled')
+      .lt('ends_at', nowIso)
+      .order('ends_at', { ascending: false });
+    setNeedsAttention(pastUnfinished || []);
+
     setLoading(false);
+  };
+
+  const handleMarkComplete = async (sessionId: string) => {
+    try {
+      const { error } = await supabase.rpc('complete_session', { _session_id: sessionId, _via: 'manual' });
+      if (error) throw error;
+      toast({ title: "Session Completed", description: "Marked complete and hours deducted." });
+      fetchStats();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed", variant: "destructive" });
+    }
   };
 
   const quickLinks = [
