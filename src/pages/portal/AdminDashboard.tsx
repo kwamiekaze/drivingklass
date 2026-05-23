@@ -252,6 +252,65 @@ function AdminDashboardContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Needs Attention: past sessions not yet completed or graded */}
+      {needsAttention.length > 0 && (
+        <Card className="border-orange-500/50 portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-orange-500">
+              <Clock className="h-5 w-5" />
+              Sessions Needing Completion / Grading ({needsAttention.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 sm:space-y-3">
+              {needsAttention.map((s: any) => {
+                const rc = Array.isArray(s.report_card) ? s.report_card[0] : s.report_card;
+                const reportRoute = rc
+                  ? (rc.report_card_status === 'completed'
+                      ? `/report-cards/open/${rc.id}`
+                      : `/admin/report-cards/edit/${rc.id}`)
+                  : `/admin/report-cards/new?session_id=${s.id}`;
+                const reportLabel = rc
+                  ? (rc.report_card_status === 'completed' ? 'View Report' : 'Continue Report')
+                  : (s.session_type === 'testing' ? 'Grade Road Test' : 'Start Report');
+                return (
+                  <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-sm sm:text-base truncate">
+                          {getDisplayName(s.student, 'Student')}
+                        </p>
+                        <SessionTypeBadge sessionType={s.session_type} />
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {format(parseISO(s.starts_at), 'MMM d, yyyy h:mm a')} • {getDisplayName(s.instructor, 'Instructor')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+                      <Link to={reportRoute} className="flex-1 sm:flex-initial">
+                        <Button size="sm" className="gap-2 w-full min-h-[40px]">
+                          {rc ? <FileText className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                          {reportLabel}
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+                        onClick={() => handleMarkComplete(s.id)}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Mark Complete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
