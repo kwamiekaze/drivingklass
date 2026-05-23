@@ -5,13 +5,17 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset, Clock, Plus } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
-import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
+import { isAfter, parseISO, startOfDay, subDays, format } from "date-fns";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
+import { getDisplayName } from "@/lib/profileUtils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   return (
@@ -35,7 +39,9 @@ function AdminDashboardContent() {
     newMessages: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [needsAttention, setNeedsAttention] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStats();
@@ -107,7 +113,39 @@ function AdminDashboardContent() {
       .limit(5);
 
     setRecentActivity(recentProfiles || []);
+
+    // Past sessions still needing completion / grading
+    const nowIso = new Date().toISOString();
+    const { data: pastUnfinished } = await supabase
+      .from('sessions')
+      .select('*, student:profiles!sessions_student_id_fkey(*), instructor:profiles!sessions_instructor_id_fkey(*)')
+      .eq('status', 'scheduled')
+      .lt('ends_at', nowIso)
+      .order('ends_at', { ascending: false });
+
+    const sessionIds = (pastUnfinished || []).map((s: any) => s.id);
+    let rcMap = new Map<string, any>();
+    if (sessionIds.length > 0) {
+      const { data: rcs } = await supabase
+        .from('report_cards')
+        .select('id, session_id, report_card_status')
+        .in('session_id', sessionIds);
+      (rcs || []).forEach((rc: any) => rcMap.set(rc.session_id, rc));
+    }
+    setNeedsAttention((pastUnfinished || []).map((s: any) => ({ ...s, report_card: rcMap.get(s.id) || null })));
+
     setLoading(false);
+  };
+
+  const handleMarkComplete = async (sessionId: string) => {
+    try {
+      const { error } = await supabase.rpc('complete_session', { _session_id: sessionId, _via: 'manual' });
+      if (error) throw error;
+      toast({ title: "Session Completed", description: "Marked complete and hours deducted." });
+      fetchStats();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed", variant: "destructive" });
+    }
   };
 
   const quickLinks = [
@@ -220,6 +258,65 @@ function AdminDashboardContent() {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Needs Attention: past sessions not yet completed or graded */}
+      {needsAttention.length > 0 && (
+        <Card className="border-orange-500/50 portal-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-orange-500">
+              <Clock className="h-5 w-5" />
+              Sessions Needing Completion / Grading ({needsAttention.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 sm:space-y-3">
+              {needsAttention.map((s: any) => {
+                const rc = Array.isArray(s.report_card) ? s.report_card[0] : s.report_card;
+                const reportRoute = rc
+                  ? (rc.report_card_status === 'completed'
+                      ? `/report-cards/open/${rc.id}`
+                      : `/admin/report-cards/edit/${rc.id}`)
+                  : `/admin/report-cards/new?session_id=${s.id}`;
+                const reportLabel = rc
+                  ? (rc.report_card_status === 'completed' ? 'View Report' : 'Continue Report')
+                  : (s.session_type === 'testing' ? 'Grade Road Test' : 'Start Report');
+                return (
+                  <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 border rounded-xl">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-sm sm:text-base truncate">
+                          {getDisplayName(s.student, 'Student')}
+                        </p>
+                        <SessionTypeBadge sessionType={s.session_type} />
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {format(parseISO(s.starts_at), 'MMM d, yyyy h:mm a')} • {getDisplayName(s.instructor, 'Instructor')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+                      <Link to={reportRoute} className="flex-1 sm:flex-initial">
+                        <Button size="sm" className="gap-2 w-full min-h-[40px]">
+                          {rc ? <FileText className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                          {reportLabel}
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+                        onClick={() => handleMarkComplete(s.id)}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Mark Complete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
