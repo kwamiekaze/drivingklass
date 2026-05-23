@@ -5,13 +5,17 @@ import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset, Clock, Plus } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
-import { isAfter, parseISO, startOfDay, subDays } from "date-fns";
+import { isAfter, parseISO, startOfDay, subDays, format } from "date-fns";
 import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
+import { getDisplayName } from "@/lib/profileUtils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   return (
