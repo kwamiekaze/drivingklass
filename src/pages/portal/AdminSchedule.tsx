@@ -293,7 +293,7 @@ function AdminScheduleContent() {
             onClick={() => { resetBlockForm(); setBlockDialogOpen(true); }}
           >
             <Ban className="h-4 w-4" />
-            <span className="hidden sm:inline">Block Time</span>
+            Block Time
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingSession(null); resetForm(); } }}>
             <DialogTrigger asChild>
