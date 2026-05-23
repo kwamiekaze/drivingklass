@@ -386,7 +386,7 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
             {format(parseISO(session.starts_at), 'MMM d, yyyy h:mm a')}
           </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
           <Link to={reportBtn.route} className="flex-1 sm:flex-initial">
             <Button size="sm" className="gap-2 w-full min-h-[40px]">
               {reportBtn.icon}
@@ -394,15 +394,37 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
             </Button>
           </Link>
           {session.status === 'scheduled' && (
-            <Button
-              size="sm"
-              variant="destructive"
-              className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
-              onClick={() => setCancelOpen(true)}
-            >
-              <XCircle className="h-4 w-4" />
-              Cancel
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+                disabled={isLoading}
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const { error } = await supabase.rpc('complete_session', { _session_id: session.id, _via: 'manual' });
+                    if (error) throw error;
+                    toast({ title: "Session Completed", description: "Marked as completed and hours deducted." });
+                    onUpdate();
+                  } catch (e: any) {
+                    toast({ title: "Error", description: e.message || "Failed to complete", variant: "destructive" });
+                  } finally { setIsLoading(false); }
+                }}
+              >
+                <CheckCircle className="h-4 w-4" />
+                Mark Complete
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+                onClick={() => setCancelOpen(true)}
+              >
+                <XCircle className="h-4 w-4" />
+                Cancel
+              </Button>
+            </>
           )}
         </div>
       </div>
