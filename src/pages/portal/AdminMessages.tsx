@@ -27,6 +27,11 @@ interface ContactSubmission {
   attachment_url: string | null;
   attachment_name: string | null;
   created_at: string;
+  pickup_address?: string | null;
+  dropoff_address?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  converted_profile_id?: string | null;
 }
 
 export default function AdminMessages() {
