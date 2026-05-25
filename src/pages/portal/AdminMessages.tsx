@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle, Download } from "lucide-react";
+import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle, Download, UserPlus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/ThemeProvider";
