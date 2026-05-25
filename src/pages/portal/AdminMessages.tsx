@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle, Download } from "lucide-react";
+import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Check, CheckCircle, XCircle, Download, UserPlus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/ThemeProvider";
@@ -27,6 +27,11 @@ interface ContactSubmission {
   attachment_url: string | null;
   attachment_name: string | null;
   created_at: string;
+  pickup_address?: string | null;
+  dropoff_address?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  converted_profile_id?: string | null;
 }
 
 export default function AdminMessages() {
@@ -51,6 +56,8 @@ function AdminMessagesContent() {
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     fetchMessages();
@@ -448,7 +455,37 @@ function AdminMessagesContent() {
               {/* Actions */}
               <div className="space-y-2 pt-4 border-t">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Actions</h4>
-                <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  className="w-full gap-2"
+                  disabled={converting || !!selectedMessage.converted_profile_id}
+                  onClick={async () => {
+                    if (!selectedMessage) return;
+                    setConverting(true);
+                    const { data, error } = await supabase.functions.invoke('convert-message-to-intake', {
+                      body: { submission_id: selectedMessage.id },
+                    });
+                    setConverting(false);
+                    if (error || (data as any)?.error) {
+                      toast({
+                        title: "Conversion failed",
+                        description: (data as any)?.error || error?.message || "Unknown error",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    toast({ title: "Converted to intake", description: "Student's intake is now pre-filled." });
+                    await fetchMessages();
+                    setSheetOpen(false);
+                  }}
+                >
+                  {converting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                  {selectedMessage.converted_profile_id ? "Already Converted" : "Convert to Intake"}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Pre-fills the matching student account (by email) with this message's data and permit attachment.
+                </p>
+                <div className="flex gap-2 pt-2">
                   <Button
                     variant={selectedMessage.status === 'reviewed' ? 'secondary' : 'outline'}
                     className="flex-1 gap-2"

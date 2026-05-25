@@ -169,36 +169,63 @@ export type Database = {
           attachment_name: string | null
           attachment_url: string | null
           city: string | null
+          converted_at: string | null
+          converted_by: string | null
+          converted_profile_id: string | null
           created_at: string
+          dropoff_address: string | null
           email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           full_name: string
           id: string
           message: string | null
+          permit_attachment_name: string | null
+          permit_attachment_path: string | null
           phone: string
+          pickup_address: string | null
           status: string | null
         }
         Insert: {
           attachment_name?: string | null
           attachment_url?: string | null
           city?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_profile_id?: string | null
           created_at?: string
+          dropoff_address?: string | null
           email: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name: string
           id?: string
           message?: string | null
+          permit_attachment_name?: string | null
+          permit_attachment_path?: string | null
           phone: string
+          pickup_address?: string | null
           status?: string | null
         }
         Update: {
           attachment_name?: string | null
           attachment_url?: string | null
           city?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_profile_id?: string | null
           created_at?: string
+          dropoff_address?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name?: string
           id?: string
           message?: string | null
+          permit_attachment_name?: string | null
+          permit_attachment_path?: string | null
           phone?: string
+          pickup_address?: string | null
           status?: string | null
         }
         Relationships: []
@@ -238,6 +265,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      intake_drafts: {
+        Row: {
+          created_at: string
+          current_step: number
+          data: Json
+          permit_file_name: string | null
+          permit_file_path: string | null
+          permit_mime_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_step?: number
+          data?: Json
+          permit_file_name?: string | null
+          permit_file_path?: string | null
+          permit_mime_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_step?: number
+          data?: Json
+          permit_file_name?: string | null
+          permit_file_path?: string | null
+          permit_mime_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       intake_form_revisions: {
         Row: {
