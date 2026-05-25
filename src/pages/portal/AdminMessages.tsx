@@ -57,6 +57,8 @@ function AdminMessagesContent() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const [converting, setConverting] = useState(false);
+
   useEffect(() => {
     fetchMessages();
   }, []);
