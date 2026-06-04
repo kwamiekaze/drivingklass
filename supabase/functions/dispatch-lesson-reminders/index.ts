@@ -45,7 +45,7 @@ Deno.serve(async (_req) => {
 
       const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-transactional-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}` },
         body: JSON.stringify({
           templateName: 'lesson-reminder',
           recipientEmail: stu.email,
