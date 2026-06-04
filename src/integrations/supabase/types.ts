@@ -1777,6 +1777,67 @@ export type Database = {
           },
         ]
       }
+      student_schedule_shares: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_public: boolean
+          public_access_code: string | null
+          public_enabled_at: string | null
+          public_share_slug: string | null
+          student_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_public?: boolean
+          public_access_code?: string | null
+          public_enabled_at?: string | null
+          public_share_slug?: string | null
+          student_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_public?: boolean
+          public_access_code?: string | null
+          public_enabled_at?: string | null
+          public_share_slug?: string | null
+          student_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_schedule_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_schedule_shares_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_schedule_shares_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1806,6 +1867,10 @@ export type Database = {
       }
       can_read_report_card: {
         Args: { p_report_card_id: string }
+        Returns: boolean
+      }
+      can_view_student_full_schedule: {
+        Args: { _student_id: string; _viewer_id: string }
         Returns: boolean
       }
       can_write_report_card_audio: {

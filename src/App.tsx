@@ -29,6 +29,7 @@ import Profile from "./pages/portal/Profile";
 import ProfileRedirect from "./pages/portal/ProfileRedirect";
 import IntakeForm, { AdminIntakeEdit } from "./pages/portal/IntakeForm";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
+import InstructorSchedule from "./pages/portal/InstructorSchedule";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import InstructorStudents from "./pages/portal/InstructorStudents";
 import ReportCardForm from "./pages/portal/ReportCardForm";
@@ -52,6 +53,7 @@ import AdminProposals from "./pages/portal/AdminProposals";
 import InstructorMap from "./pages/portal/InstructorMap";
 import StudentProposals from "./pages/portal/StudentProposals";
 import PublicReportCard from "./pages/portal/PublicReportCard";
+import PublicStudentSchedule from "./pages/portal/PublicStudentSchedule";
 import AdminFeedback from "./pages/portal/AdminFeedback";
 import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
@@ -69,6 +71,7 @@ const App = () => (
           <Routes>
             {/* Fully public route — NO auth providers, no analytics */}
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
+            <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
 
             {/* All other routes wrapped in auth + analytics providers */}
             <Route path="/*" element={
@@ -113,6 +116,7 @@ const App = () => (
                       
                       {/* Instructor Portal */}
                       <Route path="/instructor" element={<InstructorDashboard />} />
+                      <Route path="/instructor/schedule" element={<InstructorSchedule />} />
                       <Route path="/instructor/students" element={<InstructorStudents />} />
                       <Route path="/instructor/students/:id" element={<InstructorStudentView />} />
                       <Route path="/instructor/report-cards/new" element={<ReportCardForm />} />

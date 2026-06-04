@@ -21,6 +21,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { useToast } from "@/hooks/use-toast";
+import { StudentFullScheduleSection } from "@/components/portal/StudentFullScheduleSection";
 
 export default function InstructorDashboard() {
   return (
@@ -125,6 +126,14 @@ function InstructorDashboardContent() {
   });
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
+  const fullScheduleStudents = Array.from(
+    new Map(
+      sessions
+        .map((session) => session.student)
+        .filter((student): student is Profile => Boolean(student))
+        .map((student) => [student.id, student] as const)
+    ).values()
+  );
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -259,7 +268,7 @@ function InstructorDashboardContent() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+        <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
           <TabsTrigger value="calendar" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <Calendar className="h-4 w-4" />
             <span className="hidden xs:inline">Calendar</span>
@@ -271,6 +280,10 @@ function InstructorDashboardContent() {
           <TabsTrigger value="students" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
             <Users className="h-4 w-4" />
             <span className="hidden xs:inline">Students</span>
+          </TabsTrigger>
+          <TabsTrigger value="full-schedule" className="gap-1.5 text-xs sm:text-sm min-h-[40px]">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden xs:inline">Full Schedule</span>
           </TabsTrigger>
         </TabsList>
 
@@ -312,6 +325,13 @@ function InstructorDashboardContent() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="full-schedule">
+          <StudentFullScheduleSection
+            students={fullScheduleStudents}
+            currentUserId={user?.id}
+          />
         </TabsContent>
       </Tabs>
 

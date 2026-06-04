@@ -61,7 +61,7 @@ export default function ResetPassword() {
         setError(updateError.message || "Failed to update password.");
       } else {
         setSuccess(true);
-        setTimeout(() => navigate("/login"), 3000);
+        setTimeout(() => navigate("/student"), 1200);
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -103,11 +103,11 @@ export default function ResetPassword() {
               <div className="text-center space-y-4">
                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
                 <p className="text-sm text-muted-foreground">
-                  Your password has been updated successfully. Redirecting to sign in...
+                  Your password has been updated successfully. Taking you to your student portal...
                 </p>
-                <Link to="/login">
+                <Link to="/student">
                   <Button variant="outline" className="w-full mt-2">
-                    Go to Sign In
+                    Go to Student Portal
                   </Button>
                 </Link>
               </div>
