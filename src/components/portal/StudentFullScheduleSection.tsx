@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { ArrowUpDown, Calendar, Check, Copy, Loader2, Lock, Search, Share2, User } from "lucide-react";
+import { ArrowUpDown, Calendar, Check, Copy, Loader2, Lock, Search, Share2, User, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, Session } from "@/types/portal";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -41,21 +41,6 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name-asc" | "name-desc">("name-asc");
 
-  useEffect(() => {
-    if (filteredStudents.length > 0) {
-      const stillVisible = filteredStudents.some((s) => s.id === selectedStudentId);
-      if (!selectedStudentId || !stillVisible) {
-        setSelectedStudentId(filteredStudents[0].id);
-      }
-    }
-  }, [filteredStudents, selectedStudentId]);
-
-  useEffect(() => {
-    if (selectedStudentId) fetchSchedule(selectedStudentId);
-  }, [selectedStudentId]);
-
-  const selectedStudent = students.find((student) => student.id === selectedStudentId) || null;
-
   const filteredStudents = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     let list = students.filter((s) => {
@@ -80,6 +65,21 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
     });
     return list;
   }, [students, searchQuery, sortBy]);
+
+  useEffect(() => {
+    if (filteredStudents.length > 0) {
+      const stillVisible = filteredStudents.some((s) => s.id === selectedStudentId);
+      if (!selectedStudentId || !stillVisible) {
+        setSelectedStudentId(filteredStudents[0].id);
+      }
+    }
+  }, [filteredStudents, selectedStudentId]);
+
+  useEffect(() => {
+    if (selectedStudentId) fetchSchedule(selectedStudentId);
+  }, [selectedStudentId]);
+
+  const selectedStudent = students.find((student) => student.id === selectedStudentId) || null;
 
   const fetchSchedule = async (studentId: string) => {
     setLoading(true);
@@ -110,7 +110,7 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
   const events: CalendarEvent[] = useMemo(() => sessions.map((session) => ({
     id: session.id,
     title: session.session_type === "testing" ? "Road Test" : "Driving Lesson",
-    subtitle: `${getDisplayName(session.instructor, "Instructor")} · ${session.status}`,
+    subtitle: `${getDisplayName(session.instructor, "Instructor")} \u00b7 ${session.status}`,
     start: session.starts_at,
     end: session.ends_at,
     color: session.status === "cancelled" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary border-l-4 border-primary",
@@ -188,15 +188,27 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
           <div className="space-y-2">
             <Label>Student</Label>
             <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
               <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select student" /></SelectTrigger>
               <SelectContent className="bg-popover border z-50">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <SelectItem key={student.id} value={student.id}>{getDisplayName(student, "Student")}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1"><ArrowUpDown className="h-3 w-3" /> Sort</Label>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="min-h-[44px] w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+              <SelectContent className="bg-popover border z-50">
+                <SelectItem value="name-asc">Name A \u2192 Z</SelectItem>
+                <SelectItem value="name-desc">Name Z \u2192 A</SelectItem>
+                <SelectItem value="newest">Newest first</SelectItem>
+                <SelectItem value="oldest">Oldest first</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -207,6 +219,29 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
             </div>
           )}
         </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search students by name or email"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 min-h-[44px]"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {filteredStudents.length === 0 && (
+          <div className="py-4 text-center text-sm text-muted-foreground">No students match your search.</div>
+        )}
 
         {error && <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
