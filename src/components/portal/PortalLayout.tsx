@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { resolveNotificationRoute, buildNotificationUrl } from "@/lib/notificationRouter";
 import { Notification, UserRole } from "@/types/portal";
+import { LanguageSwitcherInline } from "@/components/LanguageSwitcher";
 
 interface PortalLayoutProps {
   children: ReactNode;
@@ -182,6 +183,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   <Home className="mr-2 h-4 w-4" />
                   Main Site
                 </DropdownMenuItem>
+                <LanguageSwitcherInline />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />

@@ -1,0 +1,48 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "signOut": "Cerrar sesión",
+    "profile": "Perfil",
+    "mainSite": "Sitio principal",
+    "language": "Idioma",
+    "english": "Inglés",
+    "spanish": "Español",
+    "notifications": "Notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "noNotifications": "Sin notificaciones"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "schedule": "Horario",
+    "proposals": "Propuestas",
+    "profile": "Perfil",
+    "reportCards": "Reportes"
+  },
+  "student": {
+    "welcome": "Bienvenido de nuevo",
+    "upcomingLessons": "Próximas lecciones",
+    "hoursRemaining": "Horas restantes",
+    "recentReportCards": "Reportes recientes",
+    "noUpcomingLessons": "No hay lecciones programadas.",
+    "viewSchedule": "Ver horario",
+    "updateAddressesTitle": "Confirma tu dirección de recogida y entrega",
+    "updateAddressesBody": "Por favor actualiza tus direcciones de recogida y entrega en tu perfil para poder programar tu primera lección.",
+    "goToProfile": "Ir al perfil"
+  },
+  "profile": {
+    "title": "Mi perfil",
+    "fullName": "Nombre completo",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "pickupAddress": "Dirección de recogida",
+    "dropoffAddress": "Dirección de entrega",
+    "guardianName": "Nombre del tutor",
+    "guardianPhone": "Teléfono del tutor",
+    "saveChanges": "Guardar cambios",
+    "saved": "Perfil guardado"
+  }
+}
