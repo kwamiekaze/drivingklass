@@ -269,6 +269,7 @@ function getNavItems(role: string | null) {
     case 'instructor':
       items.push(
         { href: '/instructor', label: 'Dashboard', icon: Home },
+        { href: '/instructor/schedule', label: 'Schedule', icon: Calendar },
         { href: '/instructor/students', label: 'Students', icon: Users },
         { href: '/instructor/feedback', label: 'Feedback', icon: Star },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
