@@ -15,6 +15,7 @@ import { Loader2, Save, Upload, Camera, Lock } from "lucide-react";
 import { z } from "zod";
 import { useFormDraft, FileRestoreNotice } from "@/hooks/useFormDraft";
 import { saveWithRetry } from "@/lib/saveWithRetry";
+import { NotificationPreferences } from "@/components/portal/NotificationPreferences";
 
 // Schema for profile editing (non-admin users)
 const profileSchema = z.object({
@@ -514,6 +515,11 @@ function ProfileContent() {
             </CardContent>
           </Card>
         )}
+
+        {user?.id && (
+          <NotificationPreferences userId={user.id} role={role as any} />
+        )}
+
 
         {/* Submit Button */}
         <Button type="submit" className="w-full gap-2 min-h-[48px]" disabled={isLoading}>
