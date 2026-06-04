@@ -38,6 +38,8 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
   const [savingShare, setSavingShare] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name-asc" | "name-desc">("name-asc");
 
   useEffect(() => {
     if (!selectedStudentId && students.length > 0) setSelectedStudentId(students[0].id);
