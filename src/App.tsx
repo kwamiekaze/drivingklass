@@ -58,6 +58,7 @@ import AdminFeedback from "./pages/portal/AdminFeedback";
 import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
 import DrivingGamePage from "./pages/DrivingGame";
+import Unsubscribe from "./pages/Unsubscribe";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -72,6 +73,8 @@ const App = () => (
             {/* Fully public route — NO auth providers, no analytics */}
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
             <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
+
 
             {/* All other routes wrapped in auth + analytics providers */}
             <Route path="/*" element={
