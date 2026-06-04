@@ -19,3 +19,24 @@ project_id = "wfuadudqtcmpdbgtgazh"
     verify_jwt = false
   [functions.verify-schedule-access]
     verify_jwt = false
+
+[functions.send-transactional-email]
+verify_jwt = true
+
+[functions.preview-transactional-email]
+verify_jwt = false
+
+[functions.handle-email-unsubscribe]
+verify_jwt = false
+
+[functions.handle-email-suppression]
+verify_jwt = false
+
+[functions.dispatch-notification-email]
+verify_jwt = false
+
+[functions.dispatch-lesson-reminders]
+verify_jwt = false
+
+[functions.send-intake-email]
+verify_jwt = true
