@@ -157,21 +157,23 @@ serve(async (req: Request): Promise<Response> => {
           .upload(newPath, buf, { contentType: file.type || "image/jpeg", upsert: false });
         if (!upErr) {
           permitPath = newPath;
-          await admin.from("permit_documents").upsert(
-            {
-              student_id: profile.id,
-              uploaded_by: caller.id,
-              bucket: "permits",
-              file_path: newPath,
-              file_name: srcName,
-              mime_type: file.type || "image/jpeg",
-              size_bytes: buf.byteLength,
-              source: "intake_form",
-              status: "pending_review",
-              is_current: true,
-            },
-            { onConflict: "student_id,source", ignoreDuplicates: false }
-          );
+          await admin
+            .from("permit_documents")
+            .update({ is_current: false })
+            .eq("student_id", profile.id)
+            .eq("source", "intake_form");
+          await admin.from("permit_documents").insert({
+            student_id: profile.id,
+            uploaded_by: caller.id,
+            bucket: "permits",
+            file_path: newPath,
+            file_name: srcName,
+            mime_type: file.type || "image/jpeg",
+            size_bytes: buf.byteLength,
+            source: "intake_form",
+            status: "pending_review",
+            is_current: true,
+          });
         }
       }
     }
