@@ -466,15 +466,22 @@ function AdminMessagesContent() {
                       body: { submission_id: selectedMessage.id },
                     });
                     setConverting(false);
+                    let errorMessage = (data as any)?.error || error?.message || "Unknown error";
+                    if (error && (error as any).context?.json) {
+                      try {
+                        const body = await (error as any).context.json();
+                        errorMessage = body?.error || errorMessage;
+                      } catch {}
+                    }
                     if (error || (data as any)?.error) {
                       toast({
                         title: "Conversion failed",
-                        description: (data as any)?.error || error?.message || "Unknown error",
+                        description: errorMessage,
                         variant: "destructive",
                       });
                       return;
                     }
-                    toast({ title: "Converted to intake", description: "Student's intake is now pre-filled." });
+                    toast({ title: "Converted to intake", description: "Student intake is pre-filled and a password update link was emailed." });
                     await fetchMessages();
                     setSheetOpen(false);
                   }}
