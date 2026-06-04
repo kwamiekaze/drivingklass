@@ -126,6 +126,14 @@ function InstructorDashboardContent() {
   });
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
+  const fullScheduleStudents = Array.from(
+    new Map(
+      sessions
+        .map((session) => session.student)
+        .filter((student): student is Profile => Boolean(student))
+        .map((student) => [student.id, student] as const)
+    ).values()
+  );
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -321,14 +329,7 @@ function InstructorDashboardContent() {
 
         <TabsContent value="full-schedule">
           <StudentFullScheduleSection
-            students={Array.from(
-              new Map(
-                sessions
-                  .map((session) => session.student)
-                  .filter(Boolean)
-                  .map((student) => [student!.id, student!])
-              ).values()
-            ) as Profile[]}
+            students={fullScheduleStudents}
             currentUserId={user?.id}
           />
         </TabsContent>

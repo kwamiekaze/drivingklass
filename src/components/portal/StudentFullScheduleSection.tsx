@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, parseISO, isSameDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Calendar, Check, Copy, Loader2, Lock, Share2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, Session } from "@/types/portal";
