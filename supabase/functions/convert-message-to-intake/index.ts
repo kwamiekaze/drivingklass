@@ -224,9 +224,8 @@ serve(async (req: Request): Promise<Response> => {
       type: "system",
     });
 
-    const origin = req.headers.get("origin") || "https://drivingklass.com";
     const { error: resetErr } = await admin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/reset-password?from=conversion`,
+      redirectTo: "https://drivingklass.com/reset-password?from=conversion",
     });
     if (resetErr) {
       return json({ error: `Intake converted, but password email failed: ${resetErr.message}` }, 500);
