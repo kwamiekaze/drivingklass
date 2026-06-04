@@ -463,7 +463,7 @@ function AdminMessagesContent() {
                     if (!selectedMessage) return;
                     setConverting(true);
                     const { data, error } = await supabase.functions.invoke('convert-message-to-intake', {
-                      body: { submission_id: selectedMessage.id },
+                      body: { submission_id: selectedMessage.id, redirect_origin: window.location.origin },
                     });
                     setConverting(false);
                     let errorMessage = (data as any)?.error || error?.message || "Unknown error";
