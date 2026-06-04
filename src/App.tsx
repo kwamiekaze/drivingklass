@@ -52,6 +52,7 @@ import AdminProposals from "./pages/portal/AdminProposals";
 import InstructorMap from "./pages/portal/InstructorMap";
 import StudentProposals from "./pages/portal/StudentProposals";
 import PublicReportCard from "./pages/portal/PublicReportCard";
+import PublicStudentSchedule from "./pages/portal/PublicStudentSchedule";
 import AdminFeedback from "./pages/portal/AdminFeedback";
 import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
@@ -69,6 +70,7 @@ const App = () => (
           <Routes>
             {/* Fully public route — NO auth providers, no analytics */}
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
+            <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
 
             {/* All other routes wrapped in auth + analytics providers */}
             <Route path="/*" element={
