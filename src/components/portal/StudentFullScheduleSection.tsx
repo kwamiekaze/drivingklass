@@ -51,6 +51,31 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
 
   const selectedStudent = students.find((student) => student.id === selectedStudentId) || null;
 
+  const filteredStudents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    let list = students.filter((s) => {
+      if (!query) return true;
+      const name = getDisplayName(s, "").toLowerCase();
+      const email = (s.email || "").toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+    list = [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "name-asc":
+          return getDisplayName(a, "").localeCompare(getDisplayName(b, ""));
+        case "name-desc":
+          return getDisplayName(b, "").localeCompare(getDisplayName(a, ""));
+        case "newest":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+    return list;
+  }, [students, searchQuery, sortBy]);
+
   const fetchSchedule = async (studentId: string) => {
     setLoading(true);
     setError("");
