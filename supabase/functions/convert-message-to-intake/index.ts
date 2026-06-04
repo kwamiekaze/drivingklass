@@ -6,20 +6,48 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+const splitName = (fullName: string | null | undefined) => {
+  const parts = (fullName || "").trim().split(/\s+/).filter(Boolean);
+  return { first_name: parts[0] || "", last_name: parts.slice(1).join(" ") || "" };
+};
+
+const temporaryPassword = () =>
+  `${crypto.randomUUID()}-${crypto.randomUUID()}-DrivingKlass!9`;
+
+async function findAuthUserByEmail(admin: any, email: string) {
+  const target = email.trim().toLowerCase();
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const found = data?.users?.find((u: any) => (u.email || "").toLowerCase() === target);
+    if (found) return found;
+    if (!data?.users || data.users.length < 1000) break;
+  }
+  return null;
+}
+
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+
+    if (!supabaseUrl || !serviceKey || !anonKey) {
+      return json({ error: "Backend auth configuration is missing. Please retry after deployment finishes." }, 500);
+    }
 
     // Validate caller is staff/admin via their JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Unauthorized" }, 401);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -28,9 +56,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: userData } = await userClient.auth.getUser();
     const caller = userData?.user;
     if (!caller) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Unauthorized" }, 401);
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
@@ -42,16 +68,12 @@ serve(async (req: Request): Promise<Response> => {
       .in("role", ["admin", "staff"])
       .maybeSingle();
     if (!roleRow) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Forbidden" }, 403);
     }
 
-    const { submission_id } = await req.json();
+    const { submission_id } = await req.json().catch(() => ({}));
     if (!submission_id) {
-      return new Response(JSON.stringify({ error: "submission_id required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "submission_id required" }, 400);
     }
 
     // Load submission
@@ -61,37 +83,62 @@ serve(async (req: Request): Promise<Response> => {
       .eq("id", submission_id)
       .maybeSingle();
     if (subErr || !sub) {
-      return new Response(JSON.stringify({ error: "Submission not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Submission not found" }, 404);
     }
 
     if (!sub.email) {
-      return new Response(JSON.stringify({ error: "Submission has no email" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({ error: "Submission has no email" }, 400);
+    }
+
+    const email = String(sub.email).trim().toLowerCase();
+    const { first_name, last_name } = splitName(sub.full_name);
+
+    let createdAuthUser = false;
+    let authUser = await findAuthUserByEmail(admin, email);
+
+    if (!authUser) {
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password: temporaryPassword(),
+        email_confirm: true,
+        user_metadata: { full_name: sub.full_name || email },
       });
+      if (createErr || !created?.user) {
+        return json({ error: createErr?.message || "Could not create the student account." }, 500);
+      }
+      authUser = created.user;
+      createdAuthUser = true;
     }
 
     // Find matching student profile by email (case-insensitive)
-    const { data: profile } = await admin
+    const { data: existingProfile } = await admin
       .from("profiles")
       .select("id, email, intake_submitted")
-      .ilike("email", sub.email)
+      .ilike("email", email)
       .maybeSingle();
 
-    if (!profile) {
-      return new Response(
-        JSON.stringify({
-          error: "No registered user found with this email. Ask them to sign up first.",
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    if (!existingProfile) {
+      const { error: profileErr } = await admin.from("profiles").upsert(
+        {
+          id: authUser.id,
+          email,
+          full_name: sub.full_name || null,
+          first_name: first_name || null,
+          last_name: last_name || null,
+          intake_submitted: false,
+          approval_status: "pending",
+        },
+        { onConflict: "id" }
       );
+      if (profileErr) return json({ error: profileErr.message }, 500);
     }
 
-    // Split name
-    const parts = (sub.full_name || "").trim().split(/\s+/);
-    const first_name = parts[0] || "";
-    const last_name = parts.slice(1).join(" ") || "";
+    const profile = existingProfile || { id: authUser.id, email, intake_submitted: false };
+
+    const { error: roleErr } = await admin
+      .from("user_roles")
+      .upsert({ user_id: profile.id, role: "student" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    if (roleErr) return json({ error: roleErr.message }, 500);
 
     // Copy permit attachment from id-uploads -> permits bucket
     let permitPath: string | null = null;
@@ -140,7 +187,7 @@ serve(async (req: Request): Promise<Response> => {
       guardian_name: sub.emergency_contact_name || undefined,
       guardian_phone: sub.emergency_contact_phone || undefined,
       intake_submitted: true,
-      approval_status: profile.intake_submitted ? undefined : "pending",
+      approval_status: "pending",
       intake_updated_at: new Date().toISOString(),
       intake_updated_by: caller.id,
       intake_last_edit_role: "admin",
@@ -150,9 +197,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const { error: updErr } = await admin.from("profiles").update(update).eq("id", profile.id);
     if (updErr) {
-      return new Response(JSON.stringify({ error: updErr.message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: updErr.message }, 500);
     }
 
     // Clear any existing draft
@@ -173,18 +218,26 @@ serve(async (req: Request): Promise<Response> => {
     await admin.from("notifications").insert({
       user_id: profile.id,
       title: "Intake Pre-filled",
-      message: "We've used your message to set up your intake. Sign in to review.",
+      message: "We've used your message to set up your intake. Use the password update link sent to your email to sign in.",
       type: "system",
     });
 
-    return new Response(
-      JSON.stringify({ success: true, profile_id: profile.id, permit_copied: !!permitPath }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const origin = req.headers.get("origin") || "https://drivingklass.com";
+    const { error: resetErr } = await admin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/reset-password?from=conversion`,
+    });
+    if (resetErr) {
+      return json({ error: `Intake converted, but password email failed: ${resetErr.message}` }, 500);
+    }
+
+    return json({
+      success: true,
+      profile_id: profile.id,
+      account_created: createdAuthUser,
+      permit_copied: !!permitPath,
+      password_email_sent: true,
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
