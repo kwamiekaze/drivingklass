@@ -31,7 +31,13 @@ Deno.serve(async (req) => {
     }
 
     // Create client with user's token to get their identity
-    const supabaseAnonKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')
+    if (!supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Backend auth configuration is missing' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     })
