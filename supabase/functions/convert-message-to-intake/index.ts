@@ -79,7 +79,7 @@ serve(async (req: Request): Promise<Response> => {
       return fail("Forbidden", 403);
     }
 
-    const { submission_id } = await req.json().catch(() => ({}));
+    const { submission_id, redirect_origin } = await req.json().catch(() => ({}));
     if (!submission_id) {
       return fail("submission_id required", 400);
     }
@@ -233,10 +233,17 @@ serve(async (req: Request): Promise<Response> => {
       type: "system",
     });
 
-    const resetRedirects = [
-      "https://drivingklass.com/reset-password?from=conversion",
-      "https://drivingklass.lovable.app/reset-password?from=conversion",
+    const allowedRedirectOrigins = [
+      "https://drivingklass.com",
+      "https://www.drivingklass.com",
+      "https://drivingklass.lovable.app",
+      "https://id-preview--d9554c7f-6bfa-4824-8d60-0836bb30b872.lovable.app",
     ];
+    const requestedOrigin = typeof redirect_origin === "string" ? redirect_origin.replace(/\/$/, "") : "";
+    const baseRedirects = [requestedOrigin, ...allowedRedirectOrigins].filter(
+      (origin, index, origins) => origin && allowedRedirectOrigins.includes(origin) && origins.indexOf(origin) === index
+    );
+    const resetRedirects = baseRedirects.map((origin) => `${origin}/reset-password?from=conversion`);
     let resetErr: any = null;
     for (const redirectTo of resetRedirects) {
       const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
