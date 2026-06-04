@@ -29,6 +29,7 @@ import Profile from "./pages/portal/Profile";
 import ProfileRedirect from "./pages/portal/ProfileRedirect";
 import IntakeForm, { AdminIntakeEdit } from "./pages/portal/IntakeForm";
 import InstructorDashboard from "./pages/portal/InstructorDashboard";
+import InstructorSchedule from "./pages/portal/InstructorSchedule";
 import InstructorStudentView from "./pages/portal/InstructorStudentView";
 import InstructorStudents from "./pages/portal/InstructorStudents";
 import ReportCardForm from "./pages/portal/ReportCardForm";
@@ -115,6 +116,7 @@ const App = () => (
                       
                       {/* Instructor Portal */}
                       <Route path="/instructor" element={<InstructorDashboard />} />
+                      <Route path="/instructor/schedule" element={<InstructorSchedule />} />
                       <Route path="/instructor/students" element={<InstructorStudents />} />
                       <Route path="/instructor/students/:id" element={<InstructorStudentView />} />
                       <Route path="/instructor/report-cards/new" element={<ReportCardForm />} />
