@@ -186,7 +186,17 @@ function AdminApprovalsContent() {
       }
       
       await sendApprovalNotification(profile.id);
-      toast({ title: "Approved", description: "User has been approved and notified." });
+
+      // Send branded intake-accepted email
+      try {
+        await supabase.functions.invoke('send-intake-email', {
+          body: { kind: 'intake-accepted', profile_id: profile.id },
+        });
+      } catch (e) {
+        console.warn('intake-accepted email failed', e);
+      }
+
+      toast({ title: "Approved", description: "User has been approved and notified by email." });
       fetchProfiles();
     }
     

@@ -254,6 +254,22 @@ serve(async (req: Request): Promise<Response> => {
       return fail(`Intake converted, but password email failed: ${resetErr.message}`, 500, resetErr);
     }
 
+    // Send branded "intake converted" email (best-effort)
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({
+          templateName: "intake-converted",
+          recipientEmail: email,
+          idempotencyKey: `intake-converted-${profile.id}`,
+          templateData: { recipientName: first_name || sub.full_name || "" },
+        }),
+      });
+    } catch (e) {
+      console.warn("intake-converted email failed", e);
+    }
+
     return json({
       success: true,
       profile_id: profile.id,
