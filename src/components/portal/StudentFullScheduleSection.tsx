@@ -42,8 +42,13 @@ export function StudentFullScheduleSection({ students, currentUserId, heading = 
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name-asc" | "name-desc">("name-asc");
 
   useEffect(() => {
-    if (!selectedStudentId && students.length > 0) setSelectedStudentId(students[0].id);
-  }, [students, selectedStudentId]);
+    if (filteredStudents.length > 0) {
+      const stillVisible = filteredStudents.some((s) => s.id === selectedStudentId);
+      if (!selectedStudentId || !stillVisible) {
+        setSelectedStudentId(filteredStudents[0].id);
+      }
+    }
+  }, [filteredStudents, selectedStudentId]);
 
   useEffect(() => {
     if (selectedStudentId) fetchSchedule(selectedStudentId);
