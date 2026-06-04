@@ -1,0 +1,25 @@
+/// <reference types="npm:@types/react@18.3.1" />
+import * as React from 'npm:react@18.3.1'
+import { template as lessonScheduled } from './lesson-scheduled.tsx'
+import { template as lessonCancelled } from './lesson-cancelled.tsx'
+import { template as lessonReminder } from './lesson-reminder.tsx'
+import { template as reportCardSubmitted } from './report-card-submitted.tsx'
+import { template as intakeConverted } from './intake-converted.tsx'
+import { template as intakeAccepted } from './intake-accepted.tsx'
+
+export interface TemplateEntry {
+  component: React.ComponentType<any>
+  subject: string | ((data: any) => string)
+  displayName?: string
+  previewData?: Record<string, any>
+  to?: string
+}
+
+export const TEMPLATES: Record<string, TemplateEntry> = {
+  'lesson-scheduled': lessonScheduled,
+  'lesson-cancelled': lessonCancelled,
+  'lesson-reminder': lessonReminder,
+  'report-card-submitted': reportCardSubmitted,
+  'intake-converted': intakeConverted,
+  'intake-accepted': intakeAccepted,
+}
