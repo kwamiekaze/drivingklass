@@ -18,6 +18,8 @@ import { getDisplayName } from "@/lib/profileUtils";
 import { SessionCalendar } from "@/components/portal/SessionCalendar";
 import { StudentPickerModal } from "@/components/portal/StudentPickerModal";
 import type { CalendarEvent } from "@/components/portal/FullCalendarView";
+import { StudentFullScheduleSection } from "@/components/portal/StudentFullScheduleSection";
+import { usePortalAuth } from "@/hooks/usePortalAuth";
 
 export default function AdminSchedule() {
   return (
@@ -30,6 +32,7 @@ export default function AdminSchedule() {
 }
 
 function AdminScheduleContent() {
+  const { user } = usePortalAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
@@ -497,6 +500,8 @@ function AdminScheduleContent() {
         extraEvents={blockEvents}
         onExtraEventClick={handleBlockEventClick}
       />
+
+      <StudentFullScheduleSection students={students} currentUserId={user?.id} />
 
       {/* Unavailable Block Dialog */}
       <Dialog open={blockDialogOpen} onOpenChange={(open) => { setBlockDialogOpen(open); if (!open) resetBlockForm(); }}>
