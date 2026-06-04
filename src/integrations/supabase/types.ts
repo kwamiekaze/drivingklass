@@ -1869,6 +1869,10 @@ export type Database = {
         Args: { p_report_card_id: string }
         Returns: boolean
       }
+      can_view_student_full_schedule: {
+        Args: { _student_id: string; _viewer_id: string }
+        Returns: boolean
+      }
       can_write_report_card_audio: {
         Args: { p_report_card_id: string }
         Returns: boolean
