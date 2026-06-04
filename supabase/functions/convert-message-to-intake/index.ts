@@ -17,8 +17,16 @@ const splitName = (fullName: string | null | undefined) => {
   return { first_name: parts[0] || "", last_name: parts.slice(1).join(" ") || "" };
 };
 
-const temporaryPassword = () =>
-  `${crypto.randomUUID()}-${crypto.randomUUID()}-DrivingKlass!9`;
+const temporaryPassword = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  const token = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `DrivingKlass!9-${token}`;
+};
+
+const fail = (message: string, status = 500, details?: unknown) => {
+  console.error("[convert-message-to-intake]", message, details || "");
+  return json({ error: message }, status);
+};
 
 async function findAuthUserByEmail(admin: any, email: string) {
   const target = email.trim().toLowerCase();
@@ -41,13 +49,13 @@ serve(async (req: Request): Promise<Response> => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
 
     if (!supabaseUrl || !serviceKey || !anonKey) {
-      return json({ error: "Backend auth configuration is missing. Please retry after deployment finishes." }, 500);
+      return fail("Backend auth configuration is missing. Please retry after deployment finishes.");
     }
 
     // Validate caller is staff/admin via their JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return json({ error: "Unauthorized" }, 401);
+      return fail("Unauthorized", 401);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -56,7 +64,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: userData } = await userClient.auth.getUser();
     const caller = userData?.user;
     if (!caller) {
-      return json({ error: "Unauthorized" }, 401);
+      return fail("Unauthorized", 401);
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
@@ -68,12 +76,12 @@ serve(async (req: Request): Promise<Response> => {
       .in("role", ["admin", "staff"])
       .maybeSingle();
     if (!roleRow) {
-      return json({ error: "Forbidden" }, 403);
+      return fail("Forbidden", 403);
     }
 
-    const { submission_id } = await req.json().catch(() => ({}));
+    const { submission_id, redirect_origin } = await req.json().catch(() => ({}));
     if (!submission_id) {
-      return json({ error: "submission_id required" }, 400);
+      return fail("submission_id required", 400);
     }
 
     // Load submission
@@ -83,11 +91,11 @@ serve(async (req: Request): Promise<Response> => {
       .eq("id", submission_id)
       .maybeSingle();
     if (subErr || !sub) {
-      return json({ error: "Submission not found" }, 404);
+      return fail("Submission not found", 404, subErr);
     }
 
     if (!sub.email) {
-      return json({ error: "Submission has no email" }, 400);
+      return fail("Submission has no email", 400);
     }
 
     const email = String(sub.email).trim().toLowerCase();
@@ -104,7 +112,7 @@ serve(async (req: Request): Promise<Response> => {
         user_metadata: { full_name: sub.full_name || email },
       });
       if (createErr || !created?.user) {
-        return json({ error: createErr?.message || "Could not create the student account." }, 500);
+        return fail(createErr?.message || "Could not create the student account.", 500, createErr);
       }
       authUser = created.user;
       createdAuthUser = true;
@@ -130,7 +138,7 @@ serve(async (req: Request): Promise<Response> => {
         },
         { onConflict: "id" }
       );
-      if (profileErr) return json({ error: profileErr.message }, 500);
+      if (profileErr) return fail(profileErr.message, 500, profileErr);
     }
 
     const profile = existingProfile || { id: authUser.id, email, intake_submitted: false };
@@ -138,7 +146,7 @@ serve(async (req: Request): Promise<Response> => {
     const { error: roleErr } = await admin
       .from("user_roles")
       .upsert({ user_id: profile.id, role: "student" }, { onConflict: "user_id,role", ignoreDuplicates: true });
-    if (roleErr) return json({ error: roleErr.message }, 500);
+    if (roleErr) return fail(roleErr.message, 500, roleErr);
 
     // Copy permit attachment from id-uploads -> permits bucket
     let permitPath: string | null = null;
@@ -171,6 +179,7 @@ serve(async (req: Request): Promise<Response> => {
             mime_type: file.type || "image/jpeg",
             size_bytes: buf.byteLength,
             source: "intake_form",
+            document_type: "permit",
             status: "pending_review",
             is_current: true,
           });
@@ -199,7 +208,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const { error: updErr } = await admin.from("profiles").update(update).eq("id", profile.id);
     if (updErr) {
-      return json({ error: updErr.message }, 500);
+      return fail(updErr.message, 500, updErr);
     }
 
     // Clear any existing draft
@@ -224,11 +233,25 @@ serve(async (req: Request): Promise<Response> => {
       type: "system",
     });
 
-    const { error: resetErr } = await admin.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://drivingklass.com/reset-password?from=conversion",
-    });
+    const allowedRedirectOrigins = [
+      "https://drivingklass.com",
+      "https://www.drivingklass.com",
+      "https://drivingklass.lovable.app",
+      "https://id-preview--d9554c7f-6bfa-4824-8d60-0836bb30b872.lovable.app",
+    ];
+    const requestedOrigin = typeof redirect_origin === "string" ? redirect_origin.replace(/\/$/, "") : "";
+    const baseRedirects = [requestedOrigin, ...allowedRedirectOrigins].filter(
+      (origin, index, origins) => origin && allowedRedirectOrigins.includes(origin) && origins.indexOf(origin) === index
+    );
+    const resetRedirects = baseRedirects.map((origin) => `${origin}/reset-password?from=conversion`);
+    let resetErr: any = null;
+    for (const redirectTo of resetRedirects) {
+      const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+      resetErr = error;
+      if (!error) break;
+    }
     if (resetErr) {
-      return json({ error: `Intake converted, but password email failed: ${resetErr.message}` }, 500);
+      return fail(`Intake converted, but password email failed: ${resetErr.message}`, 500, resetErr);
     }
 
     return json({
@@ -239,6 +262,6 @@ serve(async (req: Request): Promise<Response> => {
       password_email_sent: true,
     });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
+    return fail(error instanceof Error ? error.message : "Unknown error", 500, error);
   }
 });
