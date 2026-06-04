@@ -225,13 +225,24 @@ serve(async (req: Request): Promise<Response> => {
       })
       .eq("id", submission_id);
 
-    // Notify the student
-    await admin.from("notifications").insert({
-      user_id: profile.id,
-      title: "Intake Pre-filled",
-      message: "We've used your message to set up your intake. Use the password update link sent to your email to sign in.",
-      type: "system",
-    });
+    // Notify the student — show as soon as they log in
+    await admin.from("notifications").insert([
+      {
+        user_id: profile.id,
+        title: "Intake Pre-filled",
+        message: "We've used your message to set up your intake. Use the password update link sent to your email to sign in.",
+        type: "system",
+        link: "/profile",
+      },
+      {
+        user_id: profile.id,
+        title: "Action needed: confirm your pickup & drop-off",
+        message: "Please open your profile and confirm or update your pickup and drop-off addresses so we can schedule your first lesson.",
+        type: "address_update_required",
+        severity: "warning",
+        link: "/profile",
+      },
+    ]);
 
     const allowedRedirectOrigins = [
       "https://drivingklass.com",
@@ -268,6 +279,23 @@ serve(async (req: Request): Promise<Response> => {
       });
     } catch (e) {
       console.warn("intake-converted email failed", e);
+    }
+
+    // Send "update your addresses" email (best-effort)
+    try {
+      const profileUrl = `${baseRedirects[0] || "https://drivingklass.com"}/profile`;
+      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmdWFkdWRxdGNtcGRiZ3RnYXpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxOTI0MzMsImV4cCI6MjA4Mjc2ODQzM30.5aVbC2cnmJqVmiuO9wiJU3zQyLByWKhT2z8UHBp6_-Y` },
+        body: JSON.stringify({
+          templateName: "update-addresses",
+          recipientEmail: email,
+          idempotencyKey: `update-addresses-${profile.id}`,
+          templateData: { recipientName: first_name || sub.full_name || "", profileUrl },
+        }),
+      });
+    } catch (e) {
+      console.warn("update-addresses email failed", e);
     }
 
     return json({

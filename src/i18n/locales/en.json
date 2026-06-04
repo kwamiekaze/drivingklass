@@ -1,0 +1,48 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "signOut": "Sign Out",
+    "profile": "Profile",
+    "mainSite": "Main Site",
+    "language": "Language",
+    "english": "English",
+    "spanish": "Spanish",
+    "notifications": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "schedule": "Schedule",
+    "proposals": "Proposals",
+    "profile": "Profile",
+    "reportCards": "Report Cards"
+  },
+  "student": {
+    "welcome": "Welcome back",
+    "upcomingLessons": "Upcoming Lessons",
+    "hoursRemaining": "Hours Remaining",
+    "recentReportCards": "Recent Report Cards",
+    "noUpcomingLessons": "No upcoming lessons scheduled.",
+    "viewSchedule": "View Schedule",
+    "updateAddressesTitle": "Confirm your pickup & drop-off",
+    "updateAddressesBody": "Please update your pickup and drop-off addresses on your profile so we can schedule your first lesson.",
+    "goToProfile": "Go to Profile"
+  },
+  "profile": {
+    "title": "My Profile",
+    "fullName": "Full Name",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "pickupAddress": "Pickup Address",
+    "dropoffAddress": "Drop-off Address",
+    "guardianName": "Guardian Name",
+    "guardianPhone": "Guardian Phone",
+    "saveChanges": "Save Changes",
+    "saved": "Profile saved"
+  }
+}
