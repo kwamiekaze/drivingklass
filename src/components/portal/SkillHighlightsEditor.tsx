@@ -220,13 +220,33 @@ export function SkillHighlightsEditor({ strongest, mostImproved, focusAreas, onC
           strongest,
           "border-l-2 border-l-green-500/40",
         )}
-        {renderGroup(
-          "mostImproved",
-          "Most Improved",
-          <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
-          mostImproved,
-          "border-l-2 border-l-blue-500/40",
-        )}
+        <div className="space-y-2">
+          <label className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 cursor-pointer">
+            <Checkbox
+              checked={excludeMostImproved}
+              onCheckedChange={(v) => setExcludeMostImproved(!!v)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                Exclude "Most Improved" from this report
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {isFirstLesson
+                  ? "Recommended for a student's first lesson — there's no prior report to compare against. Rate after Lesson #2."
+                  : "Hide the Most Improved section on this report card."}
+              </p>
+            </div>
+          </label>
+          {!excludeMostImproved && renderGroup(
+            "mostImproved",
+            "Most Improved",
+            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+            mostImproved,
+            "border-l-2 border-l-blue-500/40",
+          )}
+        </div>
         {renderGroup(
           "focusAreas",
           "Focus Areas",
