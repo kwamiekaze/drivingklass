@@ -84,8 +84,10 @@ function computeAutoSuggestions(
   return { strongest, mostImproved, focusAreas };
 }
 
-export function SkillHighlightsEditor({ strongest, mostImproved, focusAreas, onChange, currentRatings, priorReports }: Props) {
+export function SkillHighlightsEditor({ strongest, mostImproved, focusAreas, onChange, currentRatings, priorReports, isFirstLesson }: Props) {
   const [initialized, setInitialized] = useState(false);
+  // Default: exclude Most Improved on first lesson (nothing to compare against yet)
+  const [excludeMostImproved, setExcludeMostImproved] = useState<boolean>(!!isFirstLesson);
 
   // Auto-populate defaults on first render if all groups are empty
   useEffect(() => {
@@ -94,12 +96,19 @@ export function SkillHighlightsEditor({ strongest, mostImproved, focusAreas, onC
       const suggestions = computeAutoSuggestions(currentRatings, priorReports);
       if (suggestions.strongest.length > 0 || suggestions.focusAreas.length > 0) {
         onChange("strongest", suggestions.strongest);
-        onChange("mostImproved", suggestions.mostImproved);
+        if (!isFirstLesson) onChange("mostImproved", suggestions.mostImproved);
         onChange("focusAreas", suggestions.focusAreas);
       }
     }
     setInitialized(true);
-  }, [initialized, strongest, mostImproved, focusAreas, currentRatings, priorReports, onChange]);
+  }, [initialized, strongest, mostImproved, focusAreas, currentRatings, priorReports, onChange, isFirstLesson]);
+
+  // When user toggles exclusion on, clear out any items so they don't get saved
+  useEffect(() => {
+    if (excludeMostImproved && mostImproved.length > 0) {
+      onChange("mostImproved", []);
+    }
+  }, [excludeMostImproved, mostImproved.length, onChange]);
 
   const handleReset = useCallback((field: "strongest" | "mostImproved" | "focusAreas") => {
     const suggestions = computeAutoSuggestions(currentRatings, priorReports);
