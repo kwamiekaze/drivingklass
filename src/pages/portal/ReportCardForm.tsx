@@ -628,6 +628,7 @@ function ReportCardFormContent() {
             }}
             currentRatings={formData as unknown as Record<string, number>}
             priorReports={priorReports}
+            isFirstLesson={priorReports.length === 0}
           />
         )}
 
