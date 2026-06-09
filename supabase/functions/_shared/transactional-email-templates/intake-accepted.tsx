@@ -21,10 +21,15 @@ const Email = ({ recipientName, portalUrl = `${SITE_URL}/login` }: Props) => (
           Great news — your intake has been reviewed and approved. You’re officially set up as a {SITE} student.
         </Text>
         <Text style={brand.text}>
+          To sign in, head to our homepage and <strong>tap the gold car in the center of the packages</strong> —
+          that’s your login. If you aren’t logged in automatically after updating your password,
+          just tap the gold car again to sign in.
+        </Text>
+        <Text style={brand.text}>
           To coordinate your schedule and get your first lesson on the calendar, please give us a call at{' '}
           <strong>{SUPPORT_PHONE}</strong>. Our team will help you pick the times that work best for you.
         </Text>
-        <Button style={brand.button} href={portalUrl}>Open your student portal</Button>
+        <Button style={brand.button} href={portalUrl}>Go to DrivingKlass</Button>
         <Text style={brand.muted}>We’re looking forward to driving with you.</Text>
         <Text style={brand.footer}>{SITE} • {SITE_URL}</Text>
       </Container>
