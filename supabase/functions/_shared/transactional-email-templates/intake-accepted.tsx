@@ -9,7 +9,7 @@ interface Props {
   portalUrl?: string
 }
 
-const Email = ({ recipientName, portalUrl = `${SITE_URL}/login` }: Props) => (
+const Email = ({ recipientName, portalUrl = SITE_URL }: Props) => (
   <Html>
     <Head />
     <Preview>Your DrivingKlass intake is approved — let’s schedule your lessons</Preview>
