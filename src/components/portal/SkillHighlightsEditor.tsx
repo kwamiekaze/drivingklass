@@ -23,6 +23,8 @@ interface Props {
   currentRatings: Record<string, number>;
   /** Historical reports for computing most improved */
   priorReports?: Array<Record<string, number | string | null | undefined>>;
+  /** True when this is the student's first lesson (no prior completed reports) */
+  isFirstLesson?: boolean;
 }
 
 const MAX_ITEMS = 5;
