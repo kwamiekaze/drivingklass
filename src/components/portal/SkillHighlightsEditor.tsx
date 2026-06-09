@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, RotateCcw, Star, TrendingUp, Target, AlertTriangle } from "lucide-react";
+import { Plus, X, RotateCcw, Star, TrendingUp, AlertTriangle, Info } from "lucide-react";
 import { RATING_CATEGORIES } from "@/types/portal";
 import { SKILL_LABELS, SKILL_KEYS } from "@/lib/reportCardGraphData";
 
