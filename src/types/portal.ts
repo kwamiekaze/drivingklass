@@ -208,7 +208,7 @@ export const RATING_CATEGORIES = [
   { key: 'right_turns', label: 'Right Turns' },
   { key: 'speed_maintenance', label: 'Speed Maintenance' },
   { key: 'lane_maintenance', label: 'Lane Maintenance' },
-  { key: 'blind_spots', label: 'Blind Spots' },
+  { key: 'blind_spots', label: 'Blind Spots & Mirrors' },
   { key: 'signal_usage', label: 'Signal Usage' },
   { key: 'changing_lanes', label: 'Changing Lanes' },
   { key: 'following_distance', label: 'Following Distance' },
