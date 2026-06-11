@@ -488,10 +488,10 @@ export function LessonRating({
                 )}
               >
                 {submittingFeedback ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Save Changes
+                {t('rating.saveChanges')}
               </Button>
               <Button variant="outline" onClick={cancelEditing} className="min-h-[44px] gap-1">
-                <X className="h-4 w-4" /> Cancel
+                <X className="h-4 w-4" /> {t('common.cancel')}
               </Button>
             </div>
           </div>
