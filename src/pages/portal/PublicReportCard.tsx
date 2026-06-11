@@ -67,6 +67,8 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   const [viewState, setViewState] = useState<ViewState>("code_entry");
   const [accessCode, setAccessCode] = useState("");
   const [verifiedAccessCode, setVerifiedAccessCode] = useState("");
