@@ -284,9 +284,9 @@ function getNavItems(role: string | null, t: (k: string) => string) {
     case 'student':
     default:
       items.push(
-        { href: '/student', label: 'Dashboard', icon: Home },
-        { href: '/student/proposals', label: 'Proposals', icon: Send },
-        { href: '/profile', label: 'Profile', icon: User },
+        { href: '/student', label: t('nav.dashboard'), icon: Home },
+        { href: '/student/proposals', label: t('nav.proposals'), icon: Send },
+        { href: '/profile', label: t('nav.profile'), icon: User },
       );
       break;
   }
