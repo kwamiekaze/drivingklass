@@ -141,7 +141,7 @@ export default function PublicReportCard() {
         if (!videoLoaded) handleSplashComplete();
       }, 4000);
     } catch {
-      setError("Unable to verify. Please try again.");
+      setError(t("public.unableVerify"));
     } finally {
       setLoading(false);
     }
