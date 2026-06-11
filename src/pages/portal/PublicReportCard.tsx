@@ -568,7 +568,7 @@ export default function PublicReportCard() {
 
           {/* Footer */}
           <p className="text-center text-xs text-muted-foreground py-4">
-            Shared securely by DrivingKlass
+            {t("public.sharedSecurely")}
           </p>
         </div>
       </div>
