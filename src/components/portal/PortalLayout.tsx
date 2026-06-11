@@ -112,17 +112,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72 sm:w-80 bg-popover border z-50">
                 <DropdownMenuLabel className="flex justify-between items-center">
-                  <span className="text-sm">Notifications</span>
+                  <span className="text-sm">{t('common.notifications')}</span>
                   {unreadCount > 0 && (
                     <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
-                      Mark all read
+                      {t('common.markAllRead')}
                     </Button>
                   )}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {notifications.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
-                    No notifications
+                    {t('common.noNotifications')}
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notif) => {
