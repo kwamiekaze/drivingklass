@@ -585,6 +585,7 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
   currentReportId: string;
   accessCode: string;
 }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Array<{
     id: string;
     public_share_slug: string | null;
