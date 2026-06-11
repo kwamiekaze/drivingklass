@@ -297,13 +297,13 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
 
                   {/* Rating Categories */}
                   <div>
-                    <h4 className="font-medium mb-3 text-sm sm:text-base">Skill Ratings</h4>
+                    <h4 className="font-medium mb-3 text-sm sm:text-base">{t('report.skillRatings')}</h4>
                     <div className="grid gap-2">
                       {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
                         const rating = selectedCard[category.key as keyof ReportCard] as number | null;
                         return (
                           <div key={category.key} className="flex items-center gap-2 sm:gap-3">
-                            <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                            <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{skillLabel(category.key, category.label)}</span>
                             <div className="flex-1">
                               <Progress 
                                 value={rating ? rating * 10 : 0} 
