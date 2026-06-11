@@ -224,7 +224,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.date')}</p>
                   <p className="font-medium text-sm sm:text-base">
                     {selectedCard.session?.starts_at 
                       ? format(parseISO(selectedCard.session.starts_at), 'MMMM d, yyyy')
@@ -233,24 +233,24 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.time')}</p>
                   <p className="font-medium text-sm sm:text-base">
                     {selectedCard.session?.starts_at 
                       ? `${format(parseISO(selectedCard.session.starts_at), 'h:mm a')} - ${format(parseISO(selectedCard.session.ends_at), 'h:mm a')}`
-                      : 'N/A'
+                      : t('common.na')
                     }
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.instructor, 'N/A')}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.instructor')}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.instructor, t('common.na'))}</p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.student, 'N/A')}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.student')}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.student, t('common.na'))}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.submitted')}</p>
                   <p className="font-medium text-sm sm:text-base">{format(parseISO(selectedCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                 </div>
               </div>
