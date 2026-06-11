@@ -149,16 +149,16 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     <div className="flex items-center gap-2 mt-1">
                       <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground">
-                        Submitted: {format(parseISO(card.created_at), 'MMM d, yyyy h:mm a')}
+                        {t('common.submitted')}: {format(parseISO(card.created_at), 'MMM d, yyyy h:mm a')}
                       </span>
                     </div>
                   </div>
                 {isRoadTest(card) ? (
                     <Badge className={`${roadTestResultMap[card.session_id] === 'passed' ? 'bg-green-500' : 'bg-orange-500'} text-xs shrink-0 text-white`}>
                       {roadTestResultMap[card.session_id] === 'passed' ? (
-                        <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                        <><CheckCircle className="h-3 w-3 mr-1" />{t('report.passed').replace(' 🚀', '')}</>
                       ) : (
-                        <><XCircle className="h-3 w-3 mr-1" />Must Retry</>
+                        <><XCircle className="h-3 w-3 mr-1" />{t('report.mustRetry')}</>
                       )}
                     </Badge>
                   ) : (
