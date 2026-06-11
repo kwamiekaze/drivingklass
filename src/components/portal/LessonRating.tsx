@@ -464,7 +464,7 @@ export function LessonRating({
             {/* Feedback textarea for edits */}
             <div>
               <Label htmlFor="edit-feedback" className="text-xs text-muted-foreground">
-                Your feedback {editRating <= 4 ? "(required)" : "(optional)"}
+                {t('rating.yourFeedback')} {editRating <= 4 ? t('rating.required14') : t('rating.optional5')}
               </Label>
               <Textarea
                 id="edit-feedback"
