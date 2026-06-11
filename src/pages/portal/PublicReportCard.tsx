@@ -208,15 +208,16 @@ export default function PublicReportCard() {
   if (viewState === "not_found") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <LanguageSwitcherButton />
           <ThemeToggle />
         </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="py-12 text-center">
             <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold mb-2 text-foreground">Not Available</h2>
+            <h2 className="text-xl font-semibold mb-2 text-foreground">{t("public.notAvailable")}</h2>
             <p className="text-muted-foreground">
-              This report card is no longer available for public viewing.
+              {t("public.notAvailableBody")}
             </p>
           </CardContent>
         </Card>
