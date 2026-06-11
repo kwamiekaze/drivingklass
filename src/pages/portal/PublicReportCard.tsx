@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
+import { LanguageSwitcherButton } from "@/components/LanguageSwitcherButton";
 
 interface PublicReportData {
   id: string;
