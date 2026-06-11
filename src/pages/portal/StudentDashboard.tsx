@@ -19,6 +19,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { getDisplayName } from "@/lib/profileUtils";
+import { useTranslation } from "react-i18next";
 
 export default function StudentDashboard() {
   return (
