@@ -322,7 +322,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                   {/* Transcription */}
                   {selectedCard.transcription_summary && (
                     <div>
-                      <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                      <h4 className="font-medium mb-2 text-sm sm:text-base">{t('report.lessonSummary')}</h4>
                       <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
                         {selectedCard.transcription_summary}
                       </p>
