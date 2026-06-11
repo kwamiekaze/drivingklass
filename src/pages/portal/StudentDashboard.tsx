@@ -164,7 +164,7 @@ function StudentDashboardContent() {
               <p className="text-muted-foreground text-center">{error}</p>
               <Button onClick={fetchData} variant="outline" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Retry
+                {t('common.retry')}
               </Button>
             </div>
           </CardContent>
