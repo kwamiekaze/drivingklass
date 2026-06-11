@@ -468,7 +468,7 @@ export function LessonRating({
               </Label>
               <Textarea
                 id="edit-feedback"
-                placeholder="Tell us what went well or what could have been better…"
+                placeholder={t('rating.feedbackPlaceholder')}
                 value={editFeedback}
                 onChange={(e) => setEditFeedback(e.target.value)}
                 rows={3}
