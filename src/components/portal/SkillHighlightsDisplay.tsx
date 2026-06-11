@@ -1,4 +1,6 @@
 import { Star, TrendingUp, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
 
 interface SkillHighlightItem {
   skill_key: string;
@@ -14,6 +16,8 @@ interface Props {
 }
 
 export function SkillHighlightsDisplay({ strongest, mostImproved, focusAreas, className }: Props) {
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   const hasData = (strongest && strongest.length > 0) ||
     (mostImproved && mostImproved.length > 0) ||
     (focusAreas && focusAreas.length > 0);
@@ -37,7 +41,7 @@ export function SkillHighlightsDisplay({ strongest, mostImproved, focusAreas, cl
         <div className="space-y-1">
           {items.map((item) => (
             <p key={item.skill_key} className={`text-xs font-semibold ${colorClass}`}>
-              {item.skill_label}
+              {skillLabel(item.skill_key, item.skill_label)}
             </p>
           ))}
         </div>
@@ -48,21 +52,21 @@ export function SkillHighlightsDisplay({ strongest, mostImproved, focusAreas, cl
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 ${className || ""}`}>
       {renderGroup(
-        "Strongest",
+        t("report.strongest"),
         <Star className="h-4 w-4 text-green-600 dark:text-green-500" />,
         strongest,
         "text-green-700 dark:text-green-400",
         "border-l-2 border-l-green-500/50",
       )}
       {renderGroup(
-        "Most Improved",
+        t("report.mostImproved"),
         <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
         mostImproved,
         "text-blue-700 dark:text-blue-400",
         "border-l-2 border-l-blue-500/50",
       )}
       {renderGroup(
-        "Focus Areas",
+        t("report.focusAreas"),
         <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />,
         focusAreas,
         "text-orange-700 dark:text-orange-400",

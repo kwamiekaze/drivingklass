@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { resolveNotificationRoute, buildNotificationUrl } from "@/lib/notificationRouter";
 import { Notification, UserRole } from "@/types/portal";
 import { LanguageSwitcherInline } from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 interface PortalLayoutProps {
   children: ReactNode;
@@ -35,6 +36,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     try {
@@ -53,7 +55,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
     }
   };
 
-  const navItems = getNavItems(role);
+  const navItems = getNavItems(role, t);
 
   return (
     <div className="min-h-screen">
@@ -110,17 +112,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72 sm:w-80 bg-popover border z-50">
                 <DropdownMenuLabel className="flex justify-between items-center">
-                  <span className="text-sm">Notifications</span>
+                  <span className="text-sm">{t('common.notifications')}</span>
                   {unreadCount > 0 && (
                     <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
-                      Mark all read
+                      {t('common.markAllRead')}
                     </Button>
                   )}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {notifications.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
-                    No notifications
+                    {t('common.noNotifications')}
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notif) => {
@@ -177,17 +179,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  {t('common.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
                   <Home className="mr-2 h-4 w-4" />
-                  Main Site
+                  {t('common.mainSite')}
                 </DropdownMenuItem>
                 <LanguageSwitcherInline />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  {t('common.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -236,7 +238,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   );
 }
 
-function getNavItems(role: string | null) {
+function getNavItems(role: string | null, t: (k: string) => string) {
   const items: { href: string; label: string; icon: any }[] = [];
 
   switch (role) {
@@ -282,9 +284,9 @@ function getNavItems(role: string | null) {
     case 'student':
     default:
       items.push(
-        { href: '/student', label: 'Dashboard', icon: Home },
-        { href: '/student/proposals', label: 'Proposals', icon: Send },
-        { href: '/profile', label: 'Profile', icon: User },
+        { href: '/student', label: t('nav.dashboard'), icon: Home },
+        { href: '/student/proposals', label: t('nav.proposals'), icon: Send },
+        { href: '/profile', label: t('nav.profile'), icon: User },
       );
       break;
   }

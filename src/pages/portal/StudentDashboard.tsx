@@ -19,6 +19,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { getDisplayName } from "@/lib/profileUtils";
+import { useTranslation } from "react-i18next";
 
 export default function StudentDashboard() {
   return (
@@ -32,6 +33,7 @@ export default function StudentDashboard() {
 
 function StudentDashboardContent() {
   const { profile, user } = usePortalAuth();
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [instructor, setInstructor] = useState<Profile | null>(null);
@@ -162,7 +164,7 @@ function StudentDashboardContent() {
               <p className="text-muted-foreground text-center">{error}</p>
               <Button onClick={fetchData} variant="outline" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Retry
+                {t('common.retry')}
               </Button>
             </div>
           </CardContent>
@@ -173,7 +175,7 @@ function StudentDashboardContent() {
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-            Klassroom Dashboard
+            {t('student.klassroomDashboard')}
           </h1>
           {profile?.public_id && (
             <p className="text-sm text-muted-foreground mt-1">
@@ -190,8 +192,8 @@ function StudentDashboardContent() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground">Your Instructor</p>
-                <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, 'Not assigned')}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('student.yourInstructor')}</p>
+                <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, t('student.notAssigned'))}</p>
               </div>
             </CardContent>
           </Card>
@@ -214,7 +216,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{upcomingSessions.length}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Upcoming</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.upcoming')}</p>
               </div>
             </div>
           </CardContent>
@@ -231,7 +233,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{completedSessions.length}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.completed')}</p>
               </div>
             </div>
           </CardContent>
@@ -248,7 +250,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{reportCards.length}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Reports</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.reports')}</p>
               </div>
             </div>
           </CardContent>
@@ -265,7 +267,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{averageRating ?? '-'}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Rating</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.avgRating')}</p>
               </div>
             </div>
           </CardContent>
@@ -280,14 +282,14 @@ function StudentDashboardContent() {
             className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Calendar className="h-4 w-4" />
-            <span>Calendar</span>
+            <span>{t('student.calendar')}</span>
           </TabsTrigger>
           <TabsTrigger 
             value="report-cards" 
             className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <FileText className="h-4 w-4" />
-            <span>Reports</span>
+            <span>{t('student.reports')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -296,7 +298,7 @@ function StudentDashboardContent() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Calendar className="h-5 w-5 text-primary" />
-                All Sessions
+                {t('student.allSessions')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -314,7 +316,7 @@ function StudentDashboardContent() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-primary" />
-                Report Cards ({reportCards.length})
+                {t('report.reportCardCount')} ({reportCards.length})
               </CardTitle>
             </CardHeader>
             <CardContent>

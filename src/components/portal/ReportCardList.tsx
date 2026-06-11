@@ -12,6 +12,8 @@ import { getDisplayName } from "@/lib/profileUtils";
 import { useToast } from "@/hooks/use-toast";
 import { ReportCardStatusBadge } from "@/pages/portal/ReportCardForm";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
 
 interface ReportCardListProps {
   reportCards: ReportCard[];
@@ -22,6 +24,8 @@ interface ReportCardListProps {
 export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardListProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   const [selectedCard, setSelectedCard] = useState<ReportCard | null>(null);
   const [copied, setCopied] = useState(false);
   const [sessionTypeMap, setSessionTypeMap] = useState<Record<string, string>>({});
@@ -110,7 +114,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
         <Card className="portal-card">
           <CardContent className="py-8 sm:py-12 text-center text-muted-foreground">
             <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm sm:text-base">No report cards yet</p>
+            <p className="text-sm sm:text-base">{t('report.noReports')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -137,24 +141,24 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm text-muted-foreground truncate">
                         {userRole === 'student' 
-                          ? getDisplayName(card.instructor, 'Instructor')
-                          : getDisplayName(card.student, 'Student')}
+                          ? getDisplayName(card.instructor, t('common.instructor'))
+                          : getDisplayName(card.student, t('common.student'))}
                       </span>
                     </div>
                     {/* Show submitted timestamp */}
                     <div className="flex items-center gap-2 mt-1">
                       <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground">
-                        Submitted: {format(parseISO(card.created_at), 'MMM d, yyyy h:mm a')}
+                        {t('common.submitted')}: {format(parseISO(card.created_at), 'MMM d, yyyy h:mm a')}
                       </span>
                     </div>
                   </div>
                 {isRoadTest(card) ? (
                     <Badge className={`${roadTestResultMap[card.session_id] === 'passed' ? 'bg-green-500' : 'bg-orange-500'} text-xs shrink-0 text-white`}>
                       {roadTestResultMap[card.session_id] === 'passed' ? (
-                        <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                        <><CheckCircle className="h-3 w-3 mr-1" />{t('report.passed').replace(' 🚀', '')}</>
                       ) : (
-                        <><XCircle className="h-3 w-3 mr-1" />Must Retry</>
+                        <><XCircle className="h-3 w-3 mr-1" />{t('report.mustRetry')}</>
                       )}
                     </Badge>
                   ) : (
@@ -186,7 +190,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     }}
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Open
+                    {t('common.open')}
                   </Button>
                   {canCopyLink && (
                     <Button 
@@ -211,7 +215,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileText className="h-5 w-5" />
-              {selectedCard && isRoadTest(selectedCard) ? "Road Test Details" : "Report Card Details"}
+              {selectedCard && isRoadTest(selectedCard) ? t('report.roadTestDetails') : t('report.details')}
             </DialogTitle>
           </DialogHeader>
           
@@ -220,7 +224,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.date')}</p>
                   <p className="font-medium text-sm sm:text-base">
                     {selectedCard.session?.starts_at 
                       ? format(parseISO(selectedCard.session.starts_at), 'MMMM d, yyyy')
@@ -229,24 +233,24 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.time')}</p>
                   <p className="font-medium text-sm sm:text-base">
                     {selectedCard.session?.starts_at 
                       ? `${format(parseISO(selectedCard.session.starts_at), 'h:mm a')} - ${format(parseISO(selectedCard.session.ends_at), 'h:mm a')}`
-                      : 'N/A'
+                      : t('common.na')
                     }
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.instructor, 'N/A')}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.instructor')}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.instructor, t('common.na'))}</p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.student, 'N/A')}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.student')}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(selectedCard.student, t('common.na'))}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t('common.submitted')}</p>
                   <p className="font-medium text-sm sm:text-base">{format(parseISO(selectedCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                 </div>
               </div>
@@ -258,12 +262,12 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     {roadTestResultMap[selectedCard.session_id] === 'passed' ? (
                       <>
                         <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600 dark:text-green-400" />
-                        <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">Passed 🚀</h2>
+                        <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">{t('report.passed')}</h2>
                       </>
                     ) : (
                       <>
                         <XCircle className="h-12 w-12 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
-                        <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400">Must Retry</h2>
+                        <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400">{t('report.mustRetry')}</h2>
                       </>
                     )}
                   </div>
@@ -273,7 +277,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <MessageSquare className="h-4 w-4" />
-                        <span className="font-medium text-sm">Road Test Notes</span>
+                        <span className="font-medium text-sm">{t('report.roadTestNotes')}</span>
                       </div>
                       <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
                     </div>
@@ -283,7 +287,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                 <>
                   {/* Overall Rating */}
                   <div className="text-center p-4 bg-primary/10 rounded-lg">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">{t('report.overallRating')}</p>
                     <div className="flex items-center justify-center gap-2">
                       <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                       <span className="text-3xl sm:text-4xl font-bold">{selectedCard.overall || '-'}</span>
@@ -293,13 +297,13 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
 
                   {/* Rating Categories */}
                   <div>
-                    <h4 className="font-medium mb-3 text-sm sm:text-base">Skill Ratings</h4>
+                    <h4 className="font-medium mb-3 text-sm sm:text-base">{t('report.skillRatings')}</h4>
                     <div className="grid gap-2">
                       {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
                         const rating = selectedCard[category.key as keyof ReportCard] as number | null;
                         return (
                           <div key={category.key} className="flex items-center gap-2 sm:gap-3">
-                            <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{category.label}</span>
+                            <span className="text-xs sm:text-sm w-28 sm:w-40 truncate">{skillLabel(category.key, category.label)}</span>
                             <div className="flex-1">
                               <Progress 
                                 value={rating ? rating * 10 : 0} 
@@ -318,7 +322,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                   {/* Transcription */}
                   {selectedCard.transcription_summary && (
                     <div>
-                      <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                      <h4 className="font-medium mb-2 text-sm sm:text-base">{t('report.lessonSummary')}</h4>
                       <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">
                         {selectedCard.transcription_summary}
                       </p>
@@ -330,7 +334,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <MessageSquare className="h-4 w-4" />
-                        <span className="font-medium text-sm">Instructor's Message</span>
+                        <span className="font-medium text-sm">{t('report.instructorsMessage')}</span>
                       </div>
                       <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
                     </div>

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface LessonRatingProps {
   reportCardId: string;
@@ -47,6 +48,7 @@ export function LessonRating({
 }: LessonRatingProps) {
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
   const isDark = resolvedTheme === "dark";
 
   const [hoveredStar, setHoveredStar] = useState(0);
@@ -352,7 +354,7 @@ export function LessonRating({
         <CardContent className="p-4 sm:p-6">
           <h4 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
             <Star className="h-4 w-4 text-primary" />
-            Student / Viewer Feedback
+            {t('rating.viewerFeedback')}
           </h4>
           <div className="space-y-4">
             {allRatings.map((entry) => (
@@ -378,7 +380,7 @@ export function LessonRating({
                     ))}
                     <span className="ml-2 text-sm font-medium text-foreground">{entry.rating_value}/5</span>
                     {entry.is_edited && (
-                      <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5">Edited</Badge>
+                      <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5">{t('rating.edited')}</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -388,11 +390,11 @@ export function LessonRating({
                 {entry.feedback_text ? (
                   <p className="text-sm text-foreground/80 mt-2 whitespace-pre-wrap">{entry.feedback_text}</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground/60 mt-2 italic">No written feedback</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2 italic">{t('rating.noWrittenFeedback')}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
                   {entry.submitted_by_name ? `${entry.submitted_by_name} · ` : ""}
-                  {entry.is_public_view ? "Public viewer" : entry.submitted_by_role === "student" ? "Student" : "Viewer"}
+                  {entry.is_public_view ? t('rating.publicViewer') : entry.submitted_by_role === "student" ? t('common.student') : t('rating.viewer')}
                 </p>
               </div>
             ))}
@@ -414,10 +416,10 @@ export function LessonRating({
         {/* Title */}
         <div className="text-center mb-6">
           <h3 className="text-lg sm:text-xl font-bold mb-1 tracking-wide report-text-sweep">
-            Rate Your Experience
+            {t('rating.title')}
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Share your experience with this lesson or instructor.
+            {t('rating.subtitle')}
           </p>
         </div>
 
@@ -462,11 +464,11 @@ export function LessonRating({
             {/* Feedback textarea for edits */}
             <div>
               <Label htmlFor="edit-feedback" className="text-xs text-muted-foreground">
-                Your feedback {editRating <= 4 ? "(required)" : "(optional)"}
+                {t('rating.yourFeedback')} {editRating <= 4 ? t('rating.required14') : t('rating.optional5')}
               </Label>
               <Textarea
                 id="edit-feedback"
-                placeholder="Tell us what went well or what could have been better…"
+                placeholder={t('rating.feedbackPlaceholder')}
                 value={editFeedback}
                 onChange={(e) => setEditFeedback(e.target.value)}
                 rows={3}
@@ -486,10 +488,10 @@ export function LessonRating({
                 )}
               >
                 {submittingFeedback ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Save Changes
+                {t('rating.saveChanges')}
               </Button>
               <Button variant="outline" onClick={cancelEditing} className="min-h-[44px] gap-1">
-                <X className="h-4 w-4" /> Cancel
+                <X className="h-4 w-4" /> {t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -536,7 +538,7 @@ export function LessonRating({
             {submitting && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Submitting...</span>
+                <span>{t('common.submitting')}</span>
               </div>
             )}
 
@@ -549,17 +551,13 @@ export function LessonRating({
                 )}
               >
                 <p className="text-sm sm:text-base font-semibold text-foreground mb-3 report-text-sweep">
-                  Thank you for your 5-star rating!
+                  {t('rating.thanks5')}
                 </p>
                 <p className={cn("text-xs sm:text-sm leading-relaxed mb-5", isDark ? "text-muted-foreground" : "report-text-sweep")}>
-                  Driving Klass is locally owned and focuses on quality service rather than paid
-                  sponsorships or advertising. Our growth comes directly from the experiences our
-                  students share.
+                  {t('rating.thanks5Body1')}
                 </p>
                 <p className={cn("text-xs sm:text-sm leading-relaxed mb-6", isDark ? "text-muted-foreground" : "report-text-sweep")}>
-                  If you'd like, we would greatly appreciate you taking a moment to share your
-                  experience with a Google review. Your feedback helps future students and parents
-                  feel confident in choosing Driving Klass.
+                  {t('rating.thanks5Body2')}
                 </p>
                 <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer" className="block">
                   <Button
@@ -573,7 +571,7 @@ export function LessonRating({
                     )}
                   >
                     <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-                    Leave a Google Review
+                    {t('rating.leaveGoogleReview')}
                     <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Button>
                 </a>
@@ -581,7 +579,7 @@ export function LessonRating({
                 {/* Edit button for 5-star */}
                 <div className="mt-4 text-center">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
-                    <Pencil className="h-3 w-3" /> Edit Rating
+                    <Pencil className="h-3 w-3" /> {t('rating.editRating')}
                   </Button>
                 </div>
               </div>
@@ -595,28 +593,28 @@ export function LessonRating({
                   isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
                 )}
               >
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-1">Tell us more</p>
+                <p className="text-sm sm:text-base font-semibold text-foreground mb-1">{t('rating.tellUsMore')}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">
-                  We appreciate your feedback and would love to know more about your experience.
+                  {t('rating.tellUsMoreBody')}
                 </p>
 
                 <div className="space-y-3">
                   {isPublicView && !studentId && (
                     <>
                       <div>
-                        <Label htmlFor="rating-name" className="text-xs text-muted-foreground">Name (optional)</Label>
-                        <Input id="rating-name" placeholder="Your name" value={publicName} onChange={(e) => setPublicName(e.target.value)} maxLength={100} className="mt-1 text-sm" />
+                        <Label htmlFor="rating-name" className="text-xs text-muted-foreground">{t('rating.nameOptional')}</Label>
+                        <Input id="rating-name" placeholder={t('rating.yourName')} value={publicName} onChange={(e) => setPublicName(e.target.value)} maxLength={100} className="mt-1 text-sm" />
                       </div>
                       <div>
-                        <Label htmlFor="rating-email" className="text-xs text-muted-foreground">Email (optional)</Label>
+                        <Label htmlFor="rating-email" className="text-xs text-muted-foreground">{t('rating.emailOptional')}</Label>
                         <Input id="rating-email" type="email" placeholder="your@email.com" value={publicEmail} onChange={(e) => setPublicEmail(e.target.value)} maxLength={255} className="mt-1 text-sm" />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label htmlFor="rating-feedback" className="text-xs text-muted-foreground">Your feedback</Label>
-                    <Textarea id="rating-feedback" placeholder="Tell us what went well or what could have been better…" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} rows={3} maxLength={1000} className="mt-1 resize-none text-sm" />
+                    <Label htmlFor="rating-feedback" className="text-xs text-muted-foreground">{t('rating.yourFeedback')}</Label>
+                    <Textarea id="rating-feedback" placeholder={t('rating.feedbackPlaceholder')} value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} rows={3} maxLength={1000} className="mt-1 resize-none text-sm" />
                   </div>
 
                   <Button
@@ -630,7 +628,7 @@ export function LessonRating({
                     )}
                   >
                     {submitting || submittingFeedback ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    Submit Feedback
+                    {t('rating.submitFeedback')}
                   </Button>
                 </div>
               </div>
@@ -646,17 +644,17 @@ export function LessonRating({
               >
                 <Star className="h-8 w-8 text-primary mx-auto mb-3 fill-primary" />
                 <p className="text-sm sm:text-base font-semibold text-foreground mb-2 report-text-sweep">
-                  Thank you for your feedback.
+                  {t('rating.thanksFeedback')}
                 </p>
                 <p className={cn("text-xs sm:text-sm leading-relaxed", isDark ? "text-muted-foreground" : "report-text-sweep")}>
-                  It helps us improve our quality of service. We appreciate you taking the time to share your experience.
+                  {t('rating.thanksFeedbackBody')}
                 </p>
                 {existingFeedback && (
                   <p className={cn("mt-3 text-xs sm:text-sm italic", isDark ? "text-foreground/70" : "report-text-sweep")}>"{existingFeedback}"</p>
                 )}
                 <div className="mt-4">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
-                    <Pencil className="h-3 w-3" /> Edit Feedback
+                    <Pencil className="h-3 w-3" /> {t('rating.editFeedback')}
                   </Button>
                 </div>
               </div>

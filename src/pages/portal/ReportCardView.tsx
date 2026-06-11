@@ -21,6 +21,8 @@ import { StudentProgressSection } from "@/components/portal/StudentProgressSecti
 import { LessonRating } from "@/components/portal/LessonRating";
 import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
 import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
 
 interface ReportCardDetails {
   id: string;
@@ -66,6 +68,8 @@ type StaffViewMode = "normal" | "student" | "accessed";
 export default function ReportCardView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   
   const { user, role, isLoading: authLoading } = usePortalAuth();
   const { toast } = useToast();
@@ -405,7 +409,7 @@ export default function ReportCardView() {
           <div className="flex-1">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold theme-heading flex items-center gap-2">
               <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
-              {sessionNumber ? `Session ${sessionNumber} — Report Card` : 'Report Card'}
+              {sessionNumber ? t('report.sessionLabel', { n: sessionNumber }) : t('report.reportCard')}
             </h1>
           </div>
         </div>
@@ -418,16 +422,16 @@ export default function ReportCardView() {
           <Card className="portal-card">
             <CardContent className="py-12 text-center">
               <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Unable to Load</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('report.unableToLoad')}</h2>
               <p className="text-muted-foreground mb-6">
-                There was an issue loading this report card. Please try again.
+                {t('report.unableToLoadBody')}
               </p>
               <div className="flex gap-2 justify-center">
                 <Button onClick={fetchReportCard} variant="outline">
-                  Retry
+                  {t('common.retry')}
                 </Button>
                 <Button onClick={handleGoBack} className="cta-button">
-                  Go to Dashboard
+                  {t('report.goToDashboard')}
                 </Button>
               </div>
             </CardContent>
@@ -436,12 +440,12 @@ export default function ReportCardView() {
           <Card className="portal-card">
             <CardContent className="py-12 text-center">
               <ShieldX className="h-16 w-16 mx-auto mb-4 text-destructive opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('report.accessDenied')}</h2>
               <p className="text-muted-foreground mb-6">
-                You don't have access to this report card.
+                {t('report.accessDeniedBody')}
               </p>
               <Button onClick={handleGoBack} className="cta-button">
-                Go to Dashboard
+                {t('report.goToDashboard')}
               </Button>
             </CardContent>
           </Card>
@@ -534,7 +538,7 @@ export default function ReportCardView() {
                   <div className="flex items-start gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Date</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('common.date')}</p>
                       <p className="font-medium text-sm sm:text-base report-text-sweep">
                         {reportCard.session_starts_at 
                           ? format(parseISO(reportCard.session_starts_at), 'MMMM d, yyyy')
@@ -544,32 +548,32 @@ export default function ReportCardView() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t('common.time')}</p>
                     <p className="font-medium text-sm sm:text-base report-text-sweep">
                       {reportCard.session_starts_at && reportCard.session_ends_at
                         ? `${format(parseISO(reportCard.session_starts_at), 'h:mm a')} - ${format(parseISO(reportCard.session_ends_at), 'h:mm a')}`
-                        : 'N/A'
+                        : t('common.na')
                       }
                     </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Instructor</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('common.instructor')}</p>
                       <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('common.student')}</p>
                       <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.student_name}</p>
                     </div>
                   </div>
                   <div className="col-span-2 flex items-start gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Submitted</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('common.submitted')}</p>
                       <p className="font-medium text-sm sm:text-base report-text-sweep">{format(parseISO(reportCard.created_at), 'MMMM d, yyyy h:mm a')}</p>
                     </div>
                   </div>
@@ -581,7 +585,7 @@ export default function ReportCardView() {
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
                 <div className="text-center p-4 bg-primary/10 rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">{t('report.overallRating')}</p>
                   <div className="flex items-center justify-center gap-2">
                     <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                     <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{reportCard.overall || '-'}</span>
@@ -615,13 +619,13 @@ export default function ReportCardView() {
             {/* Rating Categories */}
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
-                <h4 className="font-medium mb-4 text-sm sm:text-base">Skill Ratings</h4>
+                <h4 className="font-medium mb-4 text-sm sm:text-base">{t('report.skillRatings')}</h4>
                 <div className="grid gap-2">
                   {RATING_CATEGORIES.filter(cat => cat.key !== 'overall').map(category => {
                     const rating = reportCard[category.key as keyof ReportCardDetails] as number | null;
                     return (
                       <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
+                        <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{skillLabel(category.key, category.label)}</span>
                         <div className="flex-1">
                           <Progress 
                             value={rating ? rating * 10 : 0} 
@@ -642,7 +646,7 @@ export default function ReportCardView() {
             {reportCard.transcription_summary && (
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
-                  <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                  <h4 className="font-medium mb-2 text-sm sm:text-base">{t('report.lessonSummary')}</h4>
                   <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                     {reportCard.transcription_summary}
                   </p>
@@ -656,7 +660,7 @@ export default function ReportCardView() {
                 <CardContent className="p-4 sm:p-6 bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
                     <MessageSquare className="h-4 w-4" />
-                    <span className="font-medium text-sm">Instructor's Message</span>
+                    <span className="font-medium text-sm">{t('report.instructorsMessage')}</span>
                   </div>
                   <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{reportCard.message_to_student}</p>
                 </CardContent>

@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
+import { LanguageSwitcherButton } from "@/components/LanguageSwitcherButton";
 
 interface PublicReportData {
   id: string;
@@ -64,6 +67,8 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   const [viewState, setViewState] = useState<ViewState>("code_entry");
   const [accessCode, setAccessCode] = useState("");
   const [verifiedAccessCode, setVerifiedAccessCode] = useState("");
@@ -119,11 +124,11 @@ export default function PublicReportCard() {
 
       if (!res.ok) {
         if (res.status === 403) {
-          setError("Incorrect access code. Please try again.");
+          setError(t("public.incorrectCode"));
         } else if (res.status === 404) {
           setViewState("not_found");
         } else {
-          setError("Something went wrong. Please try again.");
+          setError(t("public.somethingWrong"));
         }
         return;
       }
@@ -136,7 +141,7 @@ export default function PublicReportCard() {
         if (!videoLoaded) handleSplashComplete();
       }, 4000);
     } catch {
-      setError("Unable to verify. Please try again.");
+      setError(t("public.unableVerify"));
     } finally {
       setLoading(false);
     }
@@ -192,7 +197,7 @@ export default function PublicReportCard() {
               pointerEvents: "none", zIndex: 10,
             }}
           >
-            Tap to continue
+            {t("public.tapToContinue")}
           </div>
         )}
       </div>
@@ -203,15 +208,16 @@ export default function PublicReportCard() {
   if (viewState === "not_found") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <LanguageSwitcherButton />
           <ThemeToggle />
         </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
           <CardContent className="py-12 text-center">
             <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold mb-2 text-foreground">Not Available</h2>
+            <h2 className="text-xl font-semibold mb-2 text-foreground">{t("public.notAvailable")}</h2>
             <p className="text-muted-foreground">
-              This report card is no longer available for public viewing.
+              {t("public.notAvailableBody")}
             </p>
           </CardContent>
         </Card>
@@ -223,7 +229,8 @@ export default function PublicReportCard() {
   if (viewState === "code_entry") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <LanguageSwitcherButton />
           <ThemeToggle />
         </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
@@ -232,16 +239,16 @@ export default function PublicReportCard() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Lock className="h-8 w-8 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Report Card</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{t("public.title")}</h1>
               <p className="text-sm text-muted-foreground">
-                This report card has been shared securely. Enter the access code provided to view it.
+                {t("public.secureIntro")}
               </p>
             </div>
 
             <form onSubmit={handleVerify} className="space-y-4">
               <div>
                 <Input
-                  placeholder="Enter access code"
+                  placeholder={t("public.enterCode")}
                   value={accessCode}
                   onChange={(e) => { setAccessCode(e.target.value); setError(""); }}
                   className="text-center text-lg tracking-widest h-12"
@@ -254,12 +261,12 @@ export default function PublicReportCard() {
               )}
               <Button type="submit" className="w-full cta-button h-12" disabled={loading || !accessCode.trim()}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
-                Unlock Report Card
+                {t("public.unlock")}
               </Button>
             </form>
 
             <p className="text-[10px] text-muted-foreground text-center mt-6">
-              Powered by DrivingKlass
+              {t("public.powered")}
             </p>
           </CardContent>
         </Card>
@@ -295,6 +302,7 @@ export default function PublicReportCard() {
             </h1>
           </Link>
           <div className="flex items-center gap-2">
+            <LanguageSwitcherButton />
             <ThemeToggle />
             <Button
               variant="ghost"
@@ -314,7 +322,7 @@ export default function PublicReportCard() {
                 className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Home
+                {t("public.home")}
               </Link>
               <Link
                 to="/login"
@@ -322,7 +330,7 @@ export default function PublicReportCard() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <LogIn className="h-4 w-4" />
-                Sign In
+                {t("public.signIn")}
               </Link>
             </nav>
           </div>
@@ -337,12 +345,12 @@ export default function PublicReportCard() {
               {report.session_type === 'testing' ? (
                 <>
                   <ClipboardCheck className="h-6 w-6" />
-                  {report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result'}
+                  {report.session_number ? t('report.sessionRoadTest', { n: report.session_number }) : t('report.roadTestResult')}
                 </>
               ) : (
                 <>
                   <FileText className="h-6 w-6" />
-                  {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
+                  {report.session_number ? t('report.sessionLabel', { n: report.session_number }) : t('report.reportCard')}
                 </>
               )}
             </h1>
@@ -355,7 +363,7 @@ export default function PublicReportCard() {
                 <div className="flex items-start gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-xs text-muted-foreground">{t('common.date')}</p>
                     <p className="font-medium text-sm report-text-sweep">
                       {report.session_starts_at
                         ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
@@ -364,31 +372,31 @@ export default function PublicReportCard() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="text-xs text-muted-foreground">{t('common.time')}</p>
                   <p className="font-medium text-sm report-text-sweep">
                     {report.session_starts_at && report.session_ends_at
                       ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
-                      : "N/A"}
+                      : t('common.na')}
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Instructor</p>
+                    <p className="text-xs text-muted-foreground">{t('common.instructor')}</p>
                     <p className="font-medium text-sm truncate report-text-sweep">{report.instructor_name}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Student</p>
+                    <p className="text-xs text-muted-foreground">{t('common.student')}</p>
                     <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
                   </div>
                 </div>
                 <div className="col-span-2 flex items-start gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Submitted</p>
+                    <p className="text-xs text-muted-foreground">{t('common.submitted')}</p>
                     <p className="font-medium text-sm report-text-sweep">
                       {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
                     </p>
@@ -412,10 +420,10 @@ export default function PublicReportCard() {
                       )}
                     </div>
                     <h2 className={`text-2xl sm:text-3xl font-bold mb-1 ${report.road_test_result === 'passed' ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}>
-                      {report.road_test_result === 'passed' ? "Passed 🚀" : "Must Retry"}
+                      {report.road_test_result === 'passed' ? t('report.passed') : t('report.mustRetry')}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {report.road_test_result === 'passed' ? "Congratulations on passing the road test!" : "Keep practicing — you'll get there!"}
+                      {report.road_test_result === 'passed' ? t('report.passedSubtitle') : t('report.retrySubtitle')}
                     </p>
                   </div>
                 </CardContent>
@@ -427,7 +435,7 @@ export default function PublicReportCard() {
                   <CardContent className="p-4 sm:p-6 bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="h-4 w-4" />
-                      <span className="font-medium text-sm text-foreground">Road Test Notes</span>
+                      <span className="font-medium text-sm text-foreground">{t('report.roadTestNotes')}</span>
                     </div>
                     <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                       {report.road_test_notes || report.message_to_student}
@@ -458,7 +466,7 @@ export default function PublicReportCard() {
               <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                 <CardContent className="p-4 sm:p-6">
                   <div className="text-center p-4 bg-primary/10 rounded-lg">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">{t('report.overallRating')}</p>
                     <div className="flex items-center justify-center gap-2">
                       <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                       <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{report.overall || "-"}</span>
@@ -495,13 +503,13 @@ export default function PublicReportCard() {
               {/* Skill Ratings */}
               <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                 <CardContent className="p-4 sm:p-6">
-                  <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
+                  <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">{t('report.skillRatings')}</h4>
                   <div className="grid gap-2">
                     {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
                       const rating = report[category.key as keyof PublicReportData] as number | null;
                       return (
                         <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                          <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
+                          <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{skillLabel(category.key, category.label)}</span>
                           <div className="flex-1">
                             <Progress value={rating ? rating * 10 : 0} className="h-2" />
                           </div>
@@ -519,7 +527,7 @@ export default function PublicReportCard() {
               {report.transcription_summary && (
                 <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                   <CardContent className="p-4 sm:p-6">
-                    <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
+                    <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">{t('report.lessonSummary')}</h4>
                     <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                       {report.transcription_summary}
                     </p>
@@ -533,7 +541,7 @@ export default function PublicReportCard() {
                   <CardContent className="p-4 sm:p-6 bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="h-4 w-4" />
-                      <span className="font-medium text-sm text-foreground">Instructor's Message</span>
+                      <span className="font-medium text-sm text-foreground">{t('report.instructorsMessage')}</span>
                     </div>
                     <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">{report.message_to_student}</p>
                   </CardContent>
@@ -560,7 +568,7 @@ export default function PublicReportCard() {
 
           {/* Footer */}
           <p className="text-center text-xs text-muted-foreground py-4">
-            Shared securely by DrivingKlass
+            {t("public.sharedSecurely")}
           </p>
         </div>
       </div>
@@ -577,6 +585,7 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
   currentReportId: string;
   accessCode: string;
 }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Array<{
     id: string;
     public_share_slug: string | null;
@@ -693,8 +702,8 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2 text-foreground">
           <FileText className="h-4 w-4" />
-          Session History
-          <Badge variant="secondary" className="text-xs ml-auto">{items.length} total</Badge>
+          {t('report.sessionHistory')}
+          <Badge variant="secondary" className="text-xs ml-auto">{t('report.totalCount', { n: items.length })}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -715,17 +724,17 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {item.sessionNumber > 0 && (
-                    <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{t('report.sessionShort', { defaultValue: 'Session' })} {item.sessionNumber}</Badge>
                   )}
                   <span className="text-sm font-medium text-foreground">
                     {format(parseISO(item.created_at), 'MMM d, yyyy')}
                   </span>
                   {isRoadTest ? (
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      <ClipboardCheck className="h-2.5 w-2.5" />Road Test
+                      <ClipboardCheck className="h-2.5 w-2.5" />{t('report.roadTest')}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] capitalize">Driving</Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">{t('report.driving')}</Badge>
                   )}
                   {isRoadTest && item.road_test_outcome && (
                     <Badge className={`text-[10px] gap-1 border-0 ${
@@ -734,15 +743,15 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
                         : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
                     }`}>
                       {item.road_test_outcome === 'passed' ? (
-                        <><CheckCircle className="h-2.5 w-2.5" />Passed</>
+                        <><CheckCircle className="h-2.5 w-2.5" />{t('report.passed').replace(' 🚀', '').replace('¡', '').replace('!', '')}</>
                       ) : (
-                        <><XCircle className="h-2.5 w-2.5" />Must Retry</>
+                        <><XCircle className="h-2.5 w-2.5" />{t('report.mustRetry')}</>
                       )}
                     </Badge>
                   )}
                   {isCurrent && (
                     <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
-                      Currently Viewing
+                      {t('report.currentlyViewing')}
                     </Badge>
                   )}
                 </div>
