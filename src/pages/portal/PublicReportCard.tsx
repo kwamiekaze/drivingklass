@@ -229,7 +229,8 @@ export default function PublicReportCard() {
   if (viewState === "code_entry") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <LanguageSwitcherButton />
           <ThemeToggle />
         </div>
         <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
@@ -238,16 +239,16 @@ export default function PublicReportCard() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Lock className="h-8 w-8 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Report Card</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{t("public.title")}</h1>
               <p className="text-sm text-muted-foreground">
-                This report card has been shared securely. Enter the access code provided to view it.
+                {t("public.secureIntro")}
               </p>
             </div>
 
             <form onSubmit={handleVerify} className="space-y-4">
               <div>
                 <Input
-                  placeholder="Enter access code"
+                  placeholder={t("public.enterCode")}
                   value={accessCode}
                   onChange={(e) => { setAccessCode(e.target.value); setError(""); }}
                   className="text-center text-lg tracking-widest h-12"
@@ -260,12 +261,12 @@ export default function PublicReportCard() {
               )}
               <Button type="submit" className="w-full cta-button h-12" disabled={loading || !accessCode.trim()}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
-                Unlock Report Card
+                {t("public.unlock")}
               </Button>
             </form>
 
             <p className="text-[10px] text-muted-foreground text-center mt-6">
-              Powered by DrivingKlass
+              {t("public.powered")}
             </p>
           </CardContent>
         </Card>
