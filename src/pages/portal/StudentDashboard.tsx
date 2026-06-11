@@ -267,7 +267,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{averageRating ?? '-'}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Rating</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.avgRating')}</p>
               </div>
             </div>
           </CardContent>
