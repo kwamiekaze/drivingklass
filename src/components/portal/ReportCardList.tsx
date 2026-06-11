@@ -190,7 +190,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     }}
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Open
+                    {t('common.open')}
                   </Button>
                   {canCopyLink && (
                     <Button 
