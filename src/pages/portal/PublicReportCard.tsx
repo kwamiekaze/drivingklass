@@ -724,7 +724,7 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {item.sessionNumber > 0 && (
-                    <Badge variant="outline" className="text-[10px]">{`${t('common.submitted') === 'Enviado' ? 'Sesión' : 'Session'} ${item.sessionNumber}`}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{t('report.sessionShort', { defaultValue: 'Session' })} {item.sessionNumber}</Badge>
                   )}
                   <span className="text-sm font-medium text-foreground">
                     {format(parseISO(item.created_at), 'MMM d, yyyy')}
