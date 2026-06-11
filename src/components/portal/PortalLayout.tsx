@@ -179,17 +179,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  {t('common.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
                   <Home className="mr-2 h-4 w-4" />
-                  Main Site
+                  {t('common.mainSite')}
                 </DropdownMenuItem>
                 <LanguageSwitcherInline />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  {t('common.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
