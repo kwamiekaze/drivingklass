@@ -55,7 +55,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
     }
   };
 
-  const navItems = getNavItems(role);
+  const navItems = getNavItems(role, t);
 
   return (
     <div className="min-h-screen">
