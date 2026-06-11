@@ -48,6 +48,7 @@ export function LessonRating({
 }: LessonRatingProps) {
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
   const isDark = resolvedTheme === "dark";
 
   const [hoveredStar, setHoveredStar] = useState(0);
