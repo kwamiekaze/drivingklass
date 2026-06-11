@@ -416,10 +416,10 @@ export function LessonRating({
         {/* Title */}
         <div className="text-center mb-6">
           <h3 className="text-lg sm:text-xl font-bold mb-1 tracking-wide report-text-sweep">
-            Rate Your Experience
+            {t('rating.title')}
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Share your experience with this lesson or instructor.
+            {t('rating.subtitle')}
           </p>
         </div>
 
