@@ -33,6 +33,7 @@ export default function StudentDashboard() {
 
 function StudentDashboardContent() {
   const { profile, user } = usePortalAuth();
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [instructor, setInstructor] = useState<Profile | null>(null);
