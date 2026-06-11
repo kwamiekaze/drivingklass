@@ -527,7 +527,7 @@ export default function PublicReportCard() {
               {report.transcription_summary && (
                 <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                   <CardContent className="p-4 sm:p-6">
-                    <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">Lesson Summary</h4>
+                    <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">{t('report.lessonSummary')}</h4>
                     <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                       {report.transcription_summary}
                     </p>
