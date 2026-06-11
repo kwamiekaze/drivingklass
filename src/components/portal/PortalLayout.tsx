@@ -238,7 +238,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   );
 }
 
-function getNavItems(role: string | null) {
+function getNavItems(role: string | null, t: (k: string) => string) {
   const items: { href: string; label: string; icon: any }[] = [];
 
   switch (role) {
