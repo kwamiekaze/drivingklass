@@ -334,7 +334,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <MessageSquare className="h-4 w-4" />
-                        <span className="font-medium text-sm">Instructor's Message</span>
+                        <span className="font-medium text-sm">{t('report.instructorsMessage')}</span>
                       </div>
                       <p className="text-xs sm:text-sm whitespace-pre-wrap">{selectedCard.message_to_student}</p>
                     </div>
