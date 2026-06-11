@@ -585,7 +585,7 @@ export default function ReportCardView() {
             <Card className="portal-card">
               <CardContent className="p-4 sm:p-6">
                 <div className="text-center p-4 bg-primary/10 rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Overall Rating</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">{t('report.overallRating')}</p>
                   <div className="flex items-center justify-center gap-2">
                     <Star className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                     <span className="text-3xl sm:text-4xl font-bold report-text-sweep">{reportCard.overall || '-'}</span>
