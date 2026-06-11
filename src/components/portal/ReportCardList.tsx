@@ -141,8 +141,8 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                       <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
                       <span className="text-xs sm:text-sm text-muted-foreground truncate">
                         {userRole === 'student' 
-                          ? getDisplayName(card.instructor, 'Instructor')
-                          : getDisplayName(card.student, 'Student')}
+                          ? getDisplayName(card.instructor, t('common.instructor'))
+                          : getDisplayName(card.student, t('common.student'))}
                       </span>
                     </div>
                     {/* Show submitted timestamp */}
