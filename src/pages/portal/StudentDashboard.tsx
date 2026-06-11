@@ -175,7 +175,7 @@ function StudentDashboardContent() {
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold theme-heading">
-            Klassroom Dashboard
+            {t('student.klassroomDashboard')}
           </h1>
           {profile?.public_id && (
             <p className="text-sm text-muted-foreground mt-1">
