@@ -262,12 +262,12 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
                     {roadTestResultMap[selectedCard.session_id] === 'passed' ? (
                       <>
                         <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600 dark:text-green-400" />
-                        <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">Passed 🚀</h2>
+                        <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">{t('report.passed')}</h2>
                       </>
                     ) : (
                       <>
                         <XCircle className="h-12 w-12 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
-                        <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400">Must Retry</h2>
+                        <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400">{t('report.mustRetry')}</h2>
                       </>
                     )}
                   </div>
