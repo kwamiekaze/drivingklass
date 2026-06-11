@@ -420,10 +420,10 @@ export default function PublicReportCard() {
                       )}
                     </div>
                     <h2 className={`text-2xl sm:text-3xl font-bold mb-1 ${report.road_test_result === 'passed' ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}>
-                      {report.road_test_result === 'passed' ? "Passed 🚀" : "Must Retry"}
+                      {report.road_test_result === 'passed' ? t('report.passed') : t('report.mustRetry')}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {report.road_test_result === 'passed' ? "Congratulations on passing the road test!" : "Keep practicing — you'll get there!"}
+                      {report.road_test_result === 'passed' ? t('report.passedSubtitle') : t('report.retrySubtitle')}
                     </p>
                   </div>
                 </CardContent>
