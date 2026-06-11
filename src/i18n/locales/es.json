@@ -99,7 +99,8 @@
     "totalCount": "{{n}} en total",
     "driving": "Manejo",
     "roadTest": "Examen",
-    "previousReport": "Reporte anterior"
+    "previousReport": "Reporte anterior",
+    "sessionShort": "Sesión"
   },
   "public": {
     "title": "Reporte",

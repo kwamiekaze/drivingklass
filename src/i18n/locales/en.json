@@ -99,7 +99,8 @@
     "totalCount": "{{n}} total",
     "driving": "Driving",
     "roadTest": "Road Test",
-    "previousReport": "Previous Report"
+    "previousReport": "Previous Report",
+    "sessionShort": "Session"
   },
   "public": {
     "title": "Report Card",
