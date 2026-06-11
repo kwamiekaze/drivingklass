@@ -114,7 +114,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
         <Card className="portal-card">
           <CardContent className="py-8 sm:py-12 text-center text-muted-foreground">
             <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm sm:text-base">No report cards yet</p>
+            <p className="text-sm sm:text-base">{t('report.noReports')}</p>
           </CardContent>
         </Card>
       ) : (
