@@ -593,28 +593,28 @@ export function LessonRating({
                   isDark ? "bg-primary/5 border border-primary/10" : "bg-primary/5 border border-primary/15"
                 )}
               >
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-1">Tell us more</p>
+                <p className="text-sm sm:text-base font-semibold text-foreground mb-1">{t('rating.tellUsMore')}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">
-                  We appreciate your feedback and would love to know more about your experience.
+                  {t('rating.tellUsMoreBody')}
                 </p>
 
                 <div className="space-y-3">
                   {isPublicView && !studentId && (
                     <>
                       <div>
-                        <Label htmlFor="rating-name" className="text-xs text-muted-foreground">Name (optional)</Label>
-                        <Input id="rating-name" placeholder="Your name" value={publicName} onChange={(e) => setPublicName(e.target.value)} maxLength={100} className="mt-1 text-sm" />
+                        <Label htmlFor="rating-name" className="text-xs text-muted-foreground">{t('rating.nameOptional')}</Label>
+                        <Input id="rating-name" placeholder={t('rating.yourName')} value={publicName} onChange={(e) => setPublicName(e.target.value)} maxLength={100} className="mt-1 text-sm" />
                       </div>
                       <div>
-                        <Label htmlFor="rating-email" className="text-xs text-muted-foreground">Email (optional)</Label>
+                        <Label htmlFor="rating-email" className="text-xs text-muted-foreground">{t('rating.emailOptional')}</Label>
                         <Input id="rating-email" type="email" placeholder="your@email.com" value={publicEmail} onChange={(e) => setPublicEmail(e.target.value)} maxLength={255} className="mt-1 text-sm" />
                       </div>
                     </>
                   )}
 
                   <div>
-                    <Label htmlFor="rating-feedback" className="text-xs text-muted-foreground">Your feedback</Label>
-                    <Textarea id="rating-feedback" placeholder="Tell us what went well or what could have been better…" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} rows={3} maxLength={1000} className="mt-1 resize-none text-sm" />
+                    <Label htmlFor="rating-feedback" className="text-xs text-muted-foreground">{t('rating.yourFeedback')}</Label>
+                    <Textarea id="rating-feedback" placeholder={t('rating.feedbackPlaceholder')} value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} rows={3} maxLength={1000} className="mt-1 resize-none text-sm" />
                   </div>
 
                   <Button
@@ -628,7 +628,7 @@ export function LessonRating({
                     )}
                   >
                     {submitting || submittingFeedback ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    Submit Feedback
+                    {t('rating.submitFeedback')}
                   </Button>
                 </div>
               </div>
