@@ -743,15 +743,15 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
                         : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
                     }`}>
                       {item.road_test_outcome === 'passed' ? (
-                        <><CheckCircle className="h-2.5 w-2.5" />Passed</>
+                        <><CheckCircle className="h-2.5 w-2.5" />{t('report.passed').replace(' 🚀', '').replace('¡', '').replace('!', '')}</>
                       ) : (
-                        <><XCircle className="h-2.5 w-2.5" />Must Retry</>
+                        <><XCircle className="h-2.5 w-2.5" />{t('report.mustRetry')}</>
                       )}
                     </Badge>
                   )}
                   {isCurrent && (
                     <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
-                      Currently Viewing
+                      {t('report.currentlyViewing')}
                     </Badge>
                   )}
                 </div>
