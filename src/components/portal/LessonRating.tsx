@@ -354,7 +354,7 @@ export function LessonRating({
         <CardContent className="p-4 sm:p-6">
           <h4 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
             <Star className="h-4 w-4 text-primary" />
-            Student / Viewer Feedback
+            {t('rating.viewerFeedback')}
           </h4>
           <div className="space-y-4">
             {allRatings.map((entry) => (
