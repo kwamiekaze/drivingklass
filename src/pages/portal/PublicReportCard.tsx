@@ -197,7 +197,7 @@ export default function PublicReportCard() {
               pointerEvents: "none", zIndex: 10,
             }}
           >
-            Tap to continue
+            {t("public.tapToContinue")}
           </div>
         )}
       </div>
