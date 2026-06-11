@@ -21,6 +21,8 @@ import { StudentProgressSection } from "@/components/portal/StudentProgressSecti
 import { LessonRating } from "@/components/portal/LessonRating";
 import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
 import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
+import { useTranslation } from "react-i18next";
+import { useSkillLabel } from "@/i18n/skills";
 
 interface ReportCardDetails {
   id: string;
