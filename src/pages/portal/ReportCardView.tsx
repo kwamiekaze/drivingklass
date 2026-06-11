@@ -422,16 +422,16 @@ export default function ReportCardView() {
           <Card className="portal-card">
             <CardContent className="py-12 text-center">
               <ShieldX className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Unable to Load</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('report.unableToLoad')}</h2>
               <p className="text-muted-foreground mb-6">
-                There was an issue loading this report card. Please try again.
+                {t('report.unableToLoadBody')}
               </p>
               <div className="flex gap-2 justify-center">
                 <Button onClick={fetchReportCard} variant="outline">
-                  Retry
+                  {t('common.retry')}
                 </Button>
                 <Button onClick={handleGoBack} className="cta-button">
-                  Go to Dashboard
+                  {t('report.goToDashboard')}
                 </Button>
               </div>
             </CardContent>
