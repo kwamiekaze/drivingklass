@@ -724,17 +724,17 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {item.sessionNumber > 0 && (
-                    <Badge variant="outline" className="text-[10px]">Session {item.sessionNumber}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{`${t('common.submitted') === 'Enviado' ? 'Sesión' : 'Session'} ${item.sessionNumber}`}</Badge>
                   )}
                   <span className="text-sm font-medium text-foreground">
                     {format(parseISO(item.created_at), 'MMM d, yyyy')}
                   </span>
                   {isRoadTest ? (
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      <ClipboardCheck className="h-2.5 w-2.5" />Road Test
+                      <ClipboardCheck className="h-2.5 w-2.5" />{t('report.roadTest')}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] capitalize">Driving</Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">{t('report.driving')}</Badge>
                   )}
                   {isRoadTest && item.road_test_outcome && (
                     <Badge className={`text-[10px] gap-1 border-0 ${
