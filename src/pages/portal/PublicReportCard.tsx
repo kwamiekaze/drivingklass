@@ -702,8 +702,8 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2 text-foreground">
           <FileText className="h-4 w-4" />
-          Session History
-          <Badge variant="secondary" className="text-xs ml-auto">{items.length} total</Badge>
+          {t('report.sessionHistory')}
+          <Badge variant="secondary" className="text-xs ml-auto">{t('report.totalCount', { n: items.length })}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
