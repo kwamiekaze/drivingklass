@@ -316,7 +316,7 @@ function StudentDashboardContent() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-primary" />
-                Report Cards ({reportCards.length})
+                {t('report.reportCardCount')} ({reportCards.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
