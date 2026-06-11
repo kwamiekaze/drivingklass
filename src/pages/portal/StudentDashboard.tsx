@@ -282,14 +282,14 @@ function StudentDashboardContent() {
             className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Calendar className="h-4 w-4" />
-            <span>Calendar</span>
+            <span>{t('student.calendar')}</span>
           </TabsTrigger>
           <TabsTrigger 
             value="report-cards" 
             className="gap-2 text-sm py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <FileText className="h-4 w-4" />
-            <span>Reports</span>
+            <span>{t('student.reports')}</span>
           </TabsTrigger>
         </TabsList>
 
