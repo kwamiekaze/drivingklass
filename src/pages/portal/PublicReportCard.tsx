@@ -302,6 +302,7 @@ export default function PublicReportCard() {
             </h1>
           </Link>
           <div className="flex items-center gap-2">
+            <LanguageSwitcherButton />
             <ThemeToggle />
             <Button
               variant="ghost"
@@ -321,7 +322,7 @@ export default function PublicReportCard() {
                 className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Home
+                {t("public.home")}
               </Link>
               <Link
                 to="/login"
@@ -329,7 +330,7 @@ export default function PublicReportCard() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <LogIn className="h-4 w-4" />
-                Sign In
+                {t("public.signIn")}
               </Link>
             </nav>
           </div>
