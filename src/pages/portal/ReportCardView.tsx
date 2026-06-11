@@ -646,7 +646,7 @@ export default function ReportCardView() {
             {reportCard.transcription_summary && (
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
-                  <h4 className="font-medium mb-2 text-sm sm:text-base">Lesson Summary</h4>
+                  <h4 className="font-medium mb-2 text-sm sm:text-base">{t('report.lessonSummary')}</h4>
                   <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                     {reportCard.transcription_summary}
                   </p>
