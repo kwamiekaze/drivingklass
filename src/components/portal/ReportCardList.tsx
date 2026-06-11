@@ -215,7 +215,7 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileText className="h-5 w-5" />
-              {selectedCard && isRoadTest(selectedCard) ? "Road Test Details" : "Report Card Details"}
+              {selectedCard && isRoadTest(selectedCard) ? t('report.roadTestDetails') : t('report.details')}
             </DialogTitle>
           </DialogHeader>
           
