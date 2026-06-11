@@ -503,13 +503,13 @@ export default function PublicReportCard() {
               {/* Skill Ratings */}
               <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                 <CardContent className="p-4 sm:p-6">
-                  <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">Skill Ratings</h4>
+                  <h4 className="font-medium mb-4 text-sm sm:text-base text-foreground">{t('report.skillRatings')}</h4>
                   <div className="grid gap-2">
                     {RATING_CATEGORIES.filter((cat) => cat.key !== "overall").map((category) => {
                       const rating = report[category.key as keyof PublicReportData] as number | null;
                       return (
                         <div key={category.key} className="flex items-center gap-2 sm:gap-3 report-skill-bar">
-                          <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{category.label}</span>
+                          <span className="text-xs sm:text-sm w-28 sm:w-40 truncate report-text-sweep">{skillLabel(category.key, category.label)}</span>
                           <div className="flex-1">
                             <Progress value={rating ? rating * 10 : 0} className="h-2" />
                           </div>
