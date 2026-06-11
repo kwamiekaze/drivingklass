@@ -192,8 +192,8 @@ function StudentDashboardContent() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground">Your Instructor</p>
-                <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, 'Not assigned')}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t('student.yourInstructor')}</p>
+                <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, t('student.notAssigned'))}</p>
               </div>
             </CardContent>
           </Card>
