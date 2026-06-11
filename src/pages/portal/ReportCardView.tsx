@@ -68,6 +68,8 @@ type StaffViewMode = "normal" | "student" | "accessed";
 export default function ReportCardView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   
   const { user, role, isLoading: authLoading } = usePortalAuth();
   const { toast } = useToast();
