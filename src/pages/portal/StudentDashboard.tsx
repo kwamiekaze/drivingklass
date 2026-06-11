@@ -250,7 +250,7 @@ function StudentDashboardContent() {
                 ) : (
                   <p className="text-xl sm:text-2xl font-bold">{reportCards.length}</p>
                 )}
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Reports</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{t('student.reports')}</p>
               </div>
             </div>
           </CardContent>
