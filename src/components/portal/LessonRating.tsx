@@ -644,17 +644,17 @@ export function LessonRating({
               >
                 <Star className="h-8 w-8 text-primary mx-auto mb-3 fill-primary" />
                 <p className="text-sm sm:text-base font-semibold text-foreground mb-2 report-text-sweep">
-                  Thank you for your feedback.
+                  {t('rating.thanksFeedback')}
                 </p>
                 <p className={cn("text-xs sm:text-sm leading-relaxed", isDark ? "text-muted-foreground" : "report-text-sweep")}>
-                  It helps us improve our quality of service. We appreciate you taking the time to share your experience.
+                  {t('rating.thanksFeedbackBody')}
                 </p>
                 {existingFeedback && (
                   <p className={cn("mt-3 text-xs sm:text-sm italic", isDark ? "text-foreground/70" : "report-text-sweep")}>"{existingFeedback}"</p>
                 )}
                 <div className="mt-4">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
-                    <Pencil className="h-3 w-3" /> Edit Feedback
+                    <Pencil className="h-3 w-3" /> {t('rating.editFeedback')}
                   </Button>
                 </div>
               </div>
