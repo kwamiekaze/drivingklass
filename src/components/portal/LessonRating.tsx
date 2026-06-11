@@ -538,7 +538,7 @@ export function LessonRating({
             {submitting && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Submitting...</span>
+                <span>{t('common.submitting')}</span>
               </div>
             )}
 
