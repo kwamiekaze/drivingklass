@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface LessonRatingProps {
   reportCardId: string;
