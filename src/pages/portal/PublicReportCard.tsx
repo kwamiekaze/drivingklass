@@ -435,7 +435,7 @@ export default function PublicReportCard() {
                   <CardContent className="p-4 sm:p-6 bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="h-4 w-4" />
-                      <span className="font-medium text-sm text-foreground">Road Test Notes</span>
+                      <span className="font-medium text-sm text-foreground">{t('report.roadTestNotes')}</span>
                     </div>
                     <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
                       {report.road_test_notes || report.message_to_student}
