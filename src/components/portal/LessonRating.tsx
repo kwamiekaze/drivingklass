@@ -380,7 +380,7 @@ export function LessonRating({
                     ))}
                     <span className="ml-2 text-sm font-medium text-foreground">{entry.rating_value}/5</span>
                     {entry.is_edited && (
-                      <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5">Edited</Badge>
+                      <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5">{t('rating.edited')}</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -390,11 +390,11 @@ export function LessonRating({
                 {entry.feedback_text ? (
                   <p className="text-sm text-foreground/80 mt-2 whitespace-pre-wrap">{entry.feedback_text}</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground/60 mt-2 italic">No written feedback</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2 italic">{t('rating.noWrittenFeedback')}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
                   {entry.submitted_by_name ? `${entry.submitted_by_name} · ` : ""}
-                  {entry.is_public_view ? "Public viewer" : entry.submitted_by_role === "student" ? "Student" : "Viewer"}
+                  {entry.is_public_view ? t('rating.publicViewer') : entry.submitted_by_role === "student" ? t('common.student') : t('rating.viewer')}
                 </p>
               </div>
             ))}
