@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { resolveNotificationRoute, buildNotificationUrl } from "@/lib/notificationRouter";
 import { Notification, UserRole } from "@/types/portal";
 import { LanguageSwitcherInline } from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 interface PortalLayoutProps {
   children: ReactNode;
