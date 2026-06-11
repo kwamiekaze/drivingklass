@@ -363,7 +363,7 @@ export default function PublicReportCard() {
                 <div className="flex items-start gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-xs text-muted-foreground">{t('common.date')}</p>
                     <p className="font-medium text-sm report-text-sweep">
                       {report.session_starts_at
                         ? format(parseISO(report.session_starts_at), "MMMM d, yyyy")
@@ -372,31 +372,31 @@ export default function PublicReportCard() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="text-xs text-muted-foreground">{t('common.time')}</p>
                   <p className="font-medium text-sm report-text-sweep">
                     {report.session_starts_at && report.session_ends_at
                       ? `${format(parseISO(report.session_starts_at), "h:mm a")} - ${format(parseISO(report.session_ends_at), "h:mm a")}`
-                      : "N/A"}
+                      : t('common.na')}
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Instructor</p>
+                    <p className="text-xs text-muted-foreground">{t('common.instructor')}</p>
                     <p className="font-medium text-sm truncate report-text-sweep">{report.instructor_name}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Student</p>
+                    <p className="text-xs text-muted-foreground">{t('common.student')}</p>
                     <p className="font-medium text-sm truncate report-text-sweep">{report.student_name}</p>
                   </div>
                 </div>
                 <div className="col-span-2 flex items-start gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Submitted</p>
+                    <p className="text-xs text-muted-foreground">{t('common.submitted')}</p>
                     <p className="font-medium text-sm report-text-sweep">
                       {format(parseISO(report.created_at), "MMMM d, yyyy h:mm a")}
                     </p>
