@@ -24,6 +24,8 @@ interface ReportCardListProps {
 export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardListProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
+  const skillLabel = useSkillLabel();
   const [selectedCard, setSelectedCard] = useState<ReportCard | null>(null);
   const [copied, setCopied] = useState(false);
   const [sessionTypeMap, setSessionTypeMap] = useState<Record<string, string>>({});
