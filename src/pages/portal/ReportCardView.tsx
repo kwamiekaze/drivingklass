@@ -440,12 +440,12 @@ export default function ReportCardView() {
           <Card className="portal-card">
             <CardContent className="py-12 text-center">
               <ShieldX className="h-16 w-16 mx-auto mb-4 text-destructive opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('report.accessDenied')}</h2>
               <p className="text-muted-foreground mb-6">
-                You don't have access to this report card.
+                {t('report.accessDeniedBody')}
               </p>
               <Button onClick={handleGoBack} className="cta-button">
-                Go to Dashboard
+                {t('report.goToDashboard')}
               </Button>
             </CardContent>
           </Card>
