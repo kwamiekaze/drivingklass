@@ -571,7 +571,7 @@ export function LessonRating({
                     )}
                   >
                     <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-                    Leave a Google Review
+                    {t('rating.leaveGoogleReview')}
                     <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Button>
                 </a>
@@ -579,7 +579,7 @@ export function LessonRating({
                 {/* Edit button for 5-star */}
                 <div className="mt-4 text-center">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
-                    <Pencil className="h-3 w-3" /> Edit Rating
+                    <Pencil className="h-3 w-3" /> {t('rating.editRating')}
                   </Button>
                 </div>
               </div>
