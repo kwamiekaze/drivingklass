@@ -345,12 +345,12 @@ export default function PublicReportCard() {
               {report.session_type === 'testing' ? (
                 <>
                   <ClipboardCheck className="h-6 w-6" />
-                  {report.session_number ? `Session ${report.session_number} — Road Test Result` : 'Road Test Result'}
+                  {report.session_number ? t('report.sessionRoadTest', { n: report.session_number }) : t('report.roadTestResult')}
                 </>
               ) : (
                 <>
                   <FileText className="h-6 w-6" />
-                  {report.session_number ? `Session ${report.session_number} — Report Card` : 'Report Card'}
+                  {report.session_number ? t('report.sessionLabel', { n: report.session_number }) : t('report.reportCard')}
                 </>
               )}
             </h1>
