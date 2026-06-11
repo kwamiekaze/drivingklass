@@ -124,11 +124,11 @@ export default function PublicReportCard() {
 
       if (!res.ok) {
         if (res.status === 403) {
-          setError("Incorrect access code. Please try again.");
+          setError(t("public.incorrectCode"));
         } else if (res.status === 404) {
           setViewState("not_found");
         } else {
-          setError("Something went wrong. Please try again.");
+          setError(t("public.somethingWrong"));
         }
         return;
       }
