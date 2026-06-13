@@ -31,10 +31,6 @@ const formSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   phone: z.string().min(10, "Please enter a valid phone number").max(20),
   email: z.string().email("Please enter a valid email address").max(255),
-  pickup_address: z.string().min(3, "Pickup address is required").max(500),
-  dropoff_address: z.string().min(3, "Drop-off address is required").max(500),
-  emergency_contact_name: z.string().min(2, "Emergency contact name is required").max(100),
-  emergency_contact_phone: z.string().min(10, "Emergency contact phone is required").max(20),
   message: z.string().max(1000).optional(),
 });
 
