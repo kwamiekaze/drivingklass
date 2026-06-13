@@ -54,8 +54,6 @@ export function ContactForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       full_name: "", phone: "", email: "",
-      pickup_address: "", dropoff_address: "",
-      emergency_contact_name: "", emergency_contact_phone: "",
       message: "",
     },
   });
@@ -127,10 +125,6 @@ export function ContactForm() {
           full_name: data.full_name,
           phone: data.phone,
           email: data.email,
-          pickup_address: data.pickup_address,
-          dropoff_address: data.dropoff_address,
-          emergency_contact_name: data.emergency_contact_name,
-          emergency_contact_phone: data.emergency_contact_phone,
           message: data.message || undefined,
           file_data: fileData,
           file_name: fileName,
@@ -364,10 +358,6 @@ export function ContactForm() {
             {fileError && <p className="text-sm text-red-400">{fileError}</p>}
           </div>
 
-          {renderText("pickup_address", "Pickup Address *", "text", "Street, City, State")}
-          {renderText("dropoff_address", "Drop-off Address *", "text", "Street, City, State")}
-          {renderText("emergency_contact_name", "Emergency Contact Name *", "text", "Parent / guardian")}
-          {renderText("emergency_contact_phone", "Emergency Contact Phone *", "tel", "(404) 555-1234")}
 
           <FormField
             control={form.control}
