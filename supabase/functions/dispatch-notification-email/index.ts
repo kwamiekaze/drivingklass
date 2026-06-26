@@ -75,10 +75,21 @@ Deno.serve(async (req) => {
     } else if (prefKey === 'report_card') {
       templateName = 'report-card-submitted'
       if (notif.report_card_id) {
-        const { data: rc } = await supabase.from('report_cards').select('session_id,instructor_id').eq('id', notif.report_card_id).maybeSingle()
+        const { data: rc } = await supabase.from('report_cards')
+          .select('session_id,instructor_id,public_share_slug,public_access_code,is_public')
+          .eq('id', notif.report_card_id).maybeSingle()
         if (rc) {
           const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', rc.instructor_id).maybeSingle()
           templateData.instructorName = inst?.first_name || inst?.full_name || ''
+          if (rc.is_public && rc.public_share_slug) {
+            const siteUrl = Deno.env.get('SITE_URL') || 'https://drivingklass.com'
+            templateData.publicUrl = `${siteUrl}/report/public/${rc.public_share_slug}`
+          }
+          if (rc.public_access_code) templateData.accessCode = rc.public_access_code
+          if (rc.session_id) {
+            const { data: s } = await supabase.from('sessions').select('starts_at').eq('id', rc.session_id).maybeSingle()
+            if (s?.starts_at) templateData.dateLabel = fmtDateTime(s.starts_at).date
+          }
         }
       }
     }

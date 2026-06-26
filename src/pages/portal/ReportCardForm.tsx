@@ -11,10 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock, FileText, Star } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock, FileText, Star, Share2, Lock, BarChart3, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
 import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
 import { SKILL_KEYS } from "@/lib/reportCardGraphData";
+import { TIME_SPLIT_CATEGORIES, TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
@@ -84,6 +88,16 @@ function ReportCardFormContent() {
   const [priorReports, setPriorReports] = useState<Array<Record<string, number | string | null | undefined>>>([]);
   const [previousReport, setPreviousReport] = useState<Record<string, any> | null>(null);
 
+  // Sharing & delivery
+  const [shareAccessCode, setShareAccessCode] = useState<string>("");
+  const [shareShowGraph, setShareShowGraph] = useState<boolean>(false);
+  const [shareSendToGuardian, setShareSendToGuardian] = useState<boolean>(false);
+  const [guardianEmail, setGuardianEmail] = useState<string>("");
+
+  // Time spent during lesson (minutes per category)
+  const [timeSplitEnabled, setTimeSplitEnabled] = useState<Record<string, boolean>>({});
+  const [timeSplitMinutes, setTimeSplitMinutes] = useState<Record<string, number>>({});
+
   useEffect(() => {
     if (isEditing && id) {
       fetchExistingCard();
@@ -129,6 +143,26 @@ function ReportCardFormContent() {
     setHighlightFocusAreas(parse(record.focus_areas));
   };
 
+  const loadSharingFromRecord = (record: any) => {
+    setShareAccessCode(record.public_access_code || "");
+    setShareShowGraph(!!record.show_graph_publicly);
+    setShareSendToGuardian(!!record.public_send_to_guardian);
+    if (record.time_split && Array.isArray(record.time_split)) {
+      const enabled: Record<string, boolean> = {};
+      const minutes: Record<string, number> = {};
+      (record.time_split as TimeSplitEntry[]).forEach(e => {
+        if (e?.key) { enabled[e.key] = true; minutes[e.key] = e.minutes || 0; }
+      });
+      setTimeSplitEnabled(enabled);
+      setTimeSplitMinutes(minutes);
+    }
+  };
+
+  const loadGuardianEmail = async (studentId: string) => {
+    const { data } = await supabase.from('profiles').select('guardian_email').eq('id', studentId).maybeSingle();
+    if (data?.guardian_email) setGuardianEmail(data.guardian_email);
+  };
+
   const fetchSession = async () => {
     const { data } = await supabase
       .from('sessions')
@@ -145,6 +179,7 @@ function ReportCardFormContent() {
       }
       setSession(data as Session);
       fetchPriorReports(data.student_id);
+      loadGuardianEmail(data.student_id);
       // Check if there's already a draft for this session
       const { data: existingDraft } = await supabase
         .from('report_cards')
@@ -157,6 +192,7 @@ function ReportCardFormContent() {
         setDraftId(existingDraft.id);
         setExistingCard(existingDraft as ReportCard);
         loadHighlightsFromRecord(existingDraft);
+        loadSharingFromRecord(existingDraft);
         setFormData({
           transcription_summary: existingDraft.transcription_summary || '',
           message_to_student: existingDraft.message_to_student || '',
@@ -204,6 +240,8 @@ function ReportCardFormContent() {
       setSession(data.session as Session);
       setDraftId(data.id);
       loadHighlightsFromRecord(data);
+      loadSharingFromRecord(data);
+      loadGuardianEmail(data.student_id);
       fetchPriorReports(data.student_id, data.created_at);
       setFormData({
         transcription_summary: data.transcription_summary || '',
@@ -313,15 +351,42 @@ function ReportCardFormContent() {
     });
   };
 
+  const generateSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    return result;
+  };
+
   // Submit report card (mark as completed)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !user) return;
 
+    // Validate access code if user wants to enable sharing
+    const trimmedCode = shareAccessCode.trim();
+    const enablingPublic = !!trimmedCode;
+    if (enablingPublic && trimmedCode.length < 4) {
+      toast({ title: "Access code too short", description: "Use at least 4 characters or leave it blank.", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
 
+    const timeSplit: TimeSplitEntry[] = TIME_SPLIT_CATEGORIES
+      .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
+      .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }));
+
     try {
-      const reportDataBase = {
+      // Reuse existing share slug from the draft if present, otherwise mint one when enabling
+      let existingSlug: string | null = null;
+      if (draftId) {
+        const { data: rcRow } = await supabase.from('report_cards').select('public_share_slug').eq('id', draftId).maybeSingle();
+        existingSlug = (rcRow as any)?.public_share_slug || null;
+      }
+      const publicSlug = enablingPublic ? (existingSlug || generateSlug()) : null;
+
+      const reportDataBase: Record<string, any> = {
         ...formData,
         session_id: session.id,
         student_id: session.student_id,
@@ -331,33 +396,56 @@ function ReportCardFormContent() {
         strongest_skills: JSON.parse(JSON.stringify(highlightStrongest)),
         most_improved_skills: JSON.parse(JSON.stringify(highlightMostImproved)),
         focus_areas: JSON.parse(JSON.stringify(highlightFocusAreas)),
+        time_split: timeSplit.length ? timeSplit : null,
+        show_graph_publicly: shareShowGraph,
+        public_send_to_guardian: shareSendToGuardian,
+        is_public: enablingPublic,
+        public_share_slug: publicSlug,
+        public_access_code: enablingPublic ? trimmedCode : null,
+        public_enabled_at: enablingPublic ? new Date().toISOString() : null,
+        public_enabled_by: enablingPublic ? user.id : null,
       };
 
+      let savedId = draftId;
       if (draftId) {
-        const { error } = await supabase
-          .from('report_cards')
-          .update(reportDataBase)
-          .eq('id', draftId);
+        const { error } = await supabase.from('report_cards').update(reportDataBase as any).eq('id', draftId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('report_cards')
-          .insert(reportDataBase);
+        const { data: inserted, error } = await supabase.from('report_cards').insert(reportDataBase as any).select('id').single();
         if (error) throw error;
+        savedId = inserted?.id || null;
       }
 
-      toast({
-        title: "Report Card Submitted",
-        description: "The report card is now visible to the student.",
-      });
+      // Send to guardian email explicitly (student notification handled by the existing notification trigger)
+      if (shareSendToGuardian && guardianEmail && savedId) {
+        try {
+          const sessionDate = format(parseISO(session.starts_at), 'MMM d, yyyy');
+          const publicUrl = publicSlug ? `${window.location.origin}/report/public/${publicSlug}` : `${window.location.origin}/report-cards/${savedId}`;
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'report-card-submitted',
+              recipientEmail: guardianEmail,
+              idempotencyKey: `report-${savedId}-guardian`,
+              templateData: {
+                recipientName: 'Guardian',
+                instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
+                reportUrl: publicUrl,
+                publicUrl: publicSlug ? publicUrl : undefined,
+                accessCode: enablingPublic ? trimmedCode : undefined,
+                dateLabel: sessionDate,
+                isGuardian: true,
+              },
+            },
+          });
+        } catch (err) {
+          console.error('Guardian email failed:', err);
+        }
+      }
 
+      toast({ title: "Report Card Submitted", description: "The report card is now visible to the student." });
       navigate(-1);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit report card",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to submit report card", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -682,6 +770,115 @@ function ReportCardFormContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Time Spent During Lesson */}
+        <Card className="luxury-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="h-4 w-4" />
+              Time Spent During Lesson
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Pick the environments you covered and how many minutes were spent in each. Leave blank to skip.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {TIME_SPLIT_CATEGORIES.map(c => {
+              const enabled = !!timeSplitEnabled[c.key];
+              return (
+                <div key={c.key} className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                    <Checkbox
+                      checked={enabled}
+                      onCheckedChange={(v) => setTimeSplitEnabled(s => ({ ...s, [c.key]: !!v }))}
+                    />
+                    <span className="text-sm">{c.label}</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={600}
+                    disabled={!enabled}
+                    placeholder="min"
+                    className="h-9 w-24"
+                    value={timeSplitMinutes[c.key] ?? ''}
+                    onChange={(e) => setTimeSplitMinutes(s => ({ ...s, [c.key]: parseInt(e.target.value || '0') || 0 }))}
+                  />
+                </div>
+              );
+            })}
+            {TIME_SPLIT_CATEGORIES.some(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0) && (
+              <div className="pt-2">
+                <p className="text-xs font-medium mb-1.5">Preview</p>
+                <TimeSplitChart
+                  entries={TIME_SPLIT_CATEGORIES
+                    .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
+                    .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }))
+                  }
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sharing & Delivery */}
+        <Card className="luxury-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Share2 className="h-4 w-4" />
+              Sharing & Delivery
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Set an access code and visibility before submitting. The code is included in the email so the student/guardian can open the public link.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                Public access code (optional)
+              </Label>
+              <Input
+                value={shareAccessCode}
+                onChange={(e) => setShareAccessCode(e.target.value)}
+                placeholder="e.g. 4827 (min 4 chars). Leave blank to keep private."
+                className="h-10"
+              />
+              {shareAccessCode.trim().length > 0 && shareAccessCode.trim().length < 4 && (
+                <p className="text-[11px] text-red-500">Must be at least 4 characters.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Show progress graph on public link</p>
+                  <p className="text-[11px] text-muted-foreground">Visible to anyone with the link + access code.</p>
+                </div>
+              </div>
+              <Switch checked={shareShowGraph} onCheckedChange={setShareShowGraph} />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Also email the parent/guardian</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {guardianEmail ? `Will send to ${guardianEmail}` : 'No guardian email on file — set one in the student profile.'}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={shareSendToGuardian}
+                onCheckedChange={setShareSendToGuardian}
+                disabled={!guardianEmail}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3">

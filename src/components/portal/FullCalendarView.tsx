@@ -132,6 +132,10 @@ function MonthView({ events, currentDate, onEventClick, onDayClick }: {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     });
+    // Sort each day's events chronologically so month view matches day view order.
+    for (const [, list] of map) {
+      list.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    }
     return map;
   }, [events]);
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
+import { TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ interface PublicReportData {
   strongest_skills?: any[];
   most_improved_skills?: any[];
   focus_areas?: any[];
+  time_split?: TimeSplitEntry[] | null;
   session_number?: number | null;
   road_test_result?: string | null;
   road_test_notes?: string | null;
@@ -499,6 +501,17 @@ export default function PublicReportCard() {
                 mostImproved={report.most_improved_skills}
                 focusAreas={report.focus_areas}
               />
+
+              {/* Time Spent During Lesson */}
+              {Array.isArray(report.time_split) && report.time_split.length > 0 && (
+                <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
+                  <CardContent className="p-4 sm:p-6">
+                    <h4 className="font-medium mb-3 text-sm sm:text-base text-foreground">Time spent during this lesson</h4>
+                    <TimeSplitChart entries={report.time_split} />
+                  </CardContent>
+                </Card>
+              )}
+
 
               {/* Skill Ratings */}
               <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">

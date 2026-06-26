@@ -1,65 +1,47 @@
+# Implementation Plan
 
-This is a large, cross-cutting change. Before I implement, here is the plan so you can confirm scope and so nothing else gets touched.
+## 1. Scheduling: blocked time for instructors
+- Loosen the `schedule_blocks` SELECT RLS to allow `authenticated` users with the `instructor` role to read all blocks (admins already covered). Students remain excluded.
+- Update the schedule queries used by the instructor calendar to fetch `schedule_blocks` and merge them into the day view alongside sessions.
+- In the "all dates" calendar list view, sort the merged session+block list for each day by start time (currently blocks render after sessions). Fix the comparator so `starts_at` is the single sort key.
 
-## 1. Shared report card: splash after access code
+## 2. Report card form upgrades (instructor-facing)
+On `ReportCardForm.tsx` add a new "Sharing & Delivery" card with:
+- **Access code**: text input (4–10 chars) pre-filled with current auto-generated code. Saved to `report_cards.access_code` on submit.
+- **Show graph in public view**: checkbox writing `report_cards.show_graph_public`.
+- **Send to parent/guardian**: checkbox, disabled with tooltip when the student profile has no `guardian_email`. Saved to `report_cards.send_to_guardian` so the submit hook can fan out.
+- **Time-spent chart (optional)**: multi-select for `parking_lot | subdivision | city | backroads | interstate`. For each selected category, render a slider/number input; values auto-normalize to 100% on submit. Persist as JSON in new column `report_cards.time_split` (`{parking_lot: 25, city: 50, ...}`).
 
-`PublicReportCard.tsx` already moves to a `splash` state right after the code is verified and plays `report-card-splash.mov` before revealing the report. I will verify and harden the flow (autoplay, 4s fallback, fade) but no major rewrite is needed unless QA shows it skipping the splash.
+Add a "Time spent during lesson" visual to `ReportCardView.tsx` and `PublicReportCard.tsx` that renders a horizontal stacked bar (i18n labels) when `time_split` has values.
 
-## 2. Intake form — exactly 5 sequential steps
+## 3. Custom entries for highlights
+`SkillHighlightsEditor.tsx`: add a "+ Add custom note" option to each of strongest / most improved / focus area pickers. Custom notes are stored with `{ custom: true, label: "..." }` in `report_cards.highlights` so the radar chart and skill averaging exclude any item where `custom === true`. Update `SkillProgressRadar` to filter custom entries.
 
-Replace the current single-page intake with a 5-step wizard. **Only** these fields:
+## 4. Emails
+- Update the `report-card-submitted` email template to include the access code and a "View report card" button using the public link.
+- When `send_to_guardian` is true, the report-card submit handler additionally enqueues the same template to `profiles.guardian_email` with the same `idempotencyKey` suffix `:guardian`.
+- All sends already log to `email_send_log`; no infra changes needed.
 
-1. **Full Name** (single field — split into `first_name` / `last_name` on save)
-2. **Phone Number**
-3. **Permit** — attach OR take a picture (camera on mobile). Uploads to existing `permits` storage bucket and writes to `permit_documents` like today.
-4. **Pickup & Dropoff Location(s)** — two address fields on one step
-5. **Emergency Contact** — name + phone on one step
+## 5. Email log viewer
+New page `/portal/emails` reachable from PortalLayout for `admin`, `staff`, and `instructor` roles:
+- Admin/staff: full dashboard with the required six features (time range, template filter, status filter, summary stats, table, dedup by `message_id`).
+- Instructor: same UI, but server query filters `email_send_log` rows where `metadata->>'instructor_id' = auth.uid()` OR `metadata->>'student_id' IN (their assigned students)`. To make this safe, add a SECURITY DEFINER RPC `get_visible_email_log(_from, _to, _template, _status)` that applies the role-based filter server-side. Admins skip the filter.
+- We will backfill `instructor_id` / `student_id` into the `metadata` JSON for the report-card, lesson-reminder, and session-notification templates that already send today.
 
-Removed from the visible flow: permit number, permit issue/expiration dates, guardian email, availability days/windows/notes, avatar upload. (DB columns stay — we just stop requiring them. Existing admin views keep working.)
+## 6. Database migration
+Single migration adds:
+- `report_cards.access_code TEXT` (if not already), `show_graph_public BOOLEAN DEFAULT true`, `send_to_guardian BOOLEAN DEFAULT false`, `time_split JSONB`.
+- `schedule_blocks` SELECT policy update for instructors.
+- `get_visible_email_log` RPC + GRANT EXECUTE to authenticated.
 
-Emergency contact maps to the existing `guardian_name` / `guardian_phone` columns so admin tools, notifications, and approvals keep functioning unchanged.
+## 7. End-to-end verification
+After deploying edge functions and running the migration:
+- Use psql to confirm a sample row writes `time_split`, `access_code`, `send_to_guardian`.
+- Use `supabase--curl_edge_functions` to invoke `send-transactional-email` with `templateName: report-card-submitted` and confirm the rendered subject/body includes the access code.
+- Drive Playwright through: instructor login → create a report card → set custom passcode, toggle parent send, add a custom focus area, set time split → submit. Then load `/portal/emails` as instructor and as admin to confirm visibility scopes.
 
-Submit at end of step 5 marks `intake_submitted = true` (same as today) and clears the draft.
-
-## 3. Draft autosave across all steps
-
-Each step autosaves on field change via the existing `useFormDraft` localStorage hook **plus** a new server-side draft so it survives device changes:
-
-- New table `public.intake_drafts` keyed by `user_id` with `data jsonb`, `current_step int`, `updated_at`. RLS: owner read/write, staff/admin read.
-- Permit file: upload immediately to `permits` bucket as a draft on step 3 (status `pending_review`, source `intake_form_draft`). If the user abandons, the file is still preserved and admins see it in the Permit Queue as an in-progress upload.
-- On returning to `/intake`, hydrate from the server draft and resume on the saved step.
-
-## 4. Public contact form (homepage)
-
-`ContactForm.tsx` will be reduced to the same fields as the intake (Full Name, Phone, Permit attachment optional, Pickup, Dropoff, Emergency Contact name + phone, plus the existing email + optional message). Other fields are removed from the UI. The `contact_submissions` row stores everything in existing columns; new fields (pickup/dropoff/permit/emergency contact) are saved into the existing `message` column as a structured block **and** mirrored into new nullable columns on `contact_submissions` so admins can convert cleanly:
-
-```
-pickup_address, dropoff_address, permit_attachment_path,
-emergency_contact_name, emergency_contact_phone
-```
-
-## 5. Admin: convert message → intake
-
-On `AdminMessages.tsx` (and `AdminLeads.tsx` where relevant), add a **"Convert to Intake"** button visible when the submission's `email` matches a `profiles.email` for a student that has not yet submitted intake. It:
-
-1. Copies name/phone/pickup/dropoff/emergency contact into that student's `profiles` row.
-2. Copies permit attachment (if present) into `permits` bucket under the student's id and inserts `permit_documents` row.
-3. Sets `intake_submitted = true`, `approval_status = 'pending'`.
-4. Marks the submission `status = 'converted'` and links it via a new `converted_profile_id` column.
-
-After this, when that student signs up and logs in, they bypass `/intake` (gate already checks `intake_submitted`).
-
-## 6. Verification
-
-After implementation I will:
-
-- Build the project (auto-run by harness).
-- Manually walk the 5 intake steps in the preview, refresh mid-flow to confirm server draft hydration, and confirm submission gates correctly.
-- Submit a public message with all fields and convert it from the admin Messages page; confirm the target student's profile is populated and they skip intake on next login.
-- Enter an access code on a shared report and confirm the splash video plays before the report appears.
-
-## What I will NOT change
-
-- Authentication, role system, scheduling, report cards, ratings, hours, calendar, permit queue review UI, dashboards, theme. Existing DB columns and policies stay; new columns/tables are additive only.
-
-If this matches what you want, approve and I will implement end-to-end in one pass.
+## Technical notes
+- Schema columns are nullable / have safe defaults so existing rows continue to render.
+- The `time_split` chart on the public view uses semantic tokens already in `index.css`; no new colors.
+- The custom-entry flag lives in the JSON payload so no enum changes are needed.
+- Instructor email visibility relies on `metadata` JSON, which is already populated by the send function — we only need to ensure callers include `instructor_id`/`student_id` going forward.

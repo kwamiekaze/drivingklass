@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
+import { TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -98,6 +99,7 @@ export default function ReportCardView() {
     most_improved_skills?: any[];
     focus_areas?: any[];
   }>({});
+  const [timeSplit, setTimeSplit] = useState<TimeSplitEntry[] | null>(null);
 
   const canCopyLink = isStaff;
   const canManagePublic = isStaff;
@@ -157,7 +159,7 @@ export default function ReportCardView() {
         // Load skill highlights + public sharing state
         const { data: rcRow } = await supabase
           .from('report_cards')
-          .select('is_public, public_share_slug, show_graph_publicly, strongest_skills, most_improved_skills, focus_areas')
+          .select('is_public, public_share_slug, show_graph_publicly, strongest_skills, most_improved_skills, focus_areas, time_split')
           .eq('id', id)
           .single();
         if (rcRow) {
@@ -171,6 +173,9 @@ export default function ReportCardView() {
             most_improved_skills: Array.isArray((rcRow as any).most_improved_skills) ? (rcRow as any).most_improved_skills : [],
             focus_areas: Array.isArray((rcRow as any).focus_areas) ? (rcRow as any).focus_areas : [],
           });
+          if (Array.isArray((rcRow as any).time_split)) {
+            setTimeSplit((rcRow as any).time_split as TimeSplitEntry[]);
+          }
         }
       }
     } catch (err: any) {
@@ -615,6 +620,17 @@ export default function ReportCardView() {
                 focusAreas={skillHighlights.focus_areas}
               />
             )}
+
+            {/* Time Spent During Lesson */}
+            {timeSplit && timeSplit.length > 0 && (
+              <Card className="portal-card">
+                <CardContent className="p-4 sm:p-6">
+                  <h4 className="font-medium mb-3 text-sm sm:text-base">Time spent during this lesson</h4>
+                  <TimeSplitChart entries={timeSplit} />
+                </CardContent>
+              </Card>
+            )}
+
 
             {/* Rating Categories */}
             <Card className="portal-card">
