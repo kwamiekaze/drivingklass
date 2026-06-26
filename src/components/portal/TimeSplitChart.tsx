@@ -44,13 +44,19 @@ export function TimeSplitChart({ entries, className }: Props) {
   const pctByKey: Record<string, number> = {};
   floored.forEach(e => { pctByKey[e.key] = e.pct; });
 
+  const lastIdx = valid.length - 1;
   return (
     <div className={className}>
       <div className="flex w-full h-6 rounded-full overflow-hidden border border-border/60">
-        {valid.map(e => (
+        {valid.map((e, i) => (
           <div
             key={e.key}
-            style={{ width: `${pctByKey[e.key]}%`, background: COLORS[e.key] || '#888' }}
+            className={i === lastIdx ? 'flex-1' : 'shrink-0'}
+            style={
+              i === lastIdx
+                ? { background: COLORS[e.key] || '#888' }
+                : { width: `${pctByKey[e.key]}%`, background: COLORS[e.key] || '#888' }
+            }
             title={`${e.label}: ${e.minutes} min (${pctByKey[e.key]}%)`}
           />
         ))}
