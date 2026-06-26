@@ -103,7 +103,17 @@ Deno.serve(async (req) => {
   // Resolve effective recipient: template-level `to` takes precedence over
   // the caller-provided recipientEmail. This allows notification templates
   // to always send to a fixed address (e.g., site owner from env var).
-  const effectiveRecipient = template.to || recipientEmail
+  let effectiveRecipient = template.to || recipientEmail
+
+  // Redirect rule: all mail for instructor@drivingklass.com is routed to drivingklass@gmail.com
+  const EMAIL_REDIRECTS: Record<string, string> = {
+    'instructor@drivingklass.com': 'drivingklass@gmail.com',
+  }
+  if (effectiveRecipient && EMAIL_REDIRECTS[effectiveRecipient.toLowerCase()]) {
+    const redirected = EMAIL_REDIRECTS[effectiveRecipient.toLowerCase()]
+    console.log(`Redirecting email from ${effectiveRecipient} to ${redirected}`)
+    effectiveRecipient = redirected
+  }
 
   if (!effectiveRecipient) {
     return new Response(
