@@ -55,6 +55,7 @@ import StudentProposals from "./pages/portal/StudentProposals";
 import PublicReportCard from "./pages/portal/PublicReportCard";
 import PublicStudentSchedule from "./pages/portal/PublicStudentSchedule";
 import AdminFeedback from "./pages/portal/AdminFeedback";
+import AdminEmails from "./pages/portal/AdminEmails";
 import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
 import DrivingGamePage from "./pages/DrivingGame";
@@ -150,6 +151,8 @@ const App = () => (
                       <Route path="/admin/practice-test" element={<PracticeTest />} />
                       <Route path="/instructor/feedback" element={<AdminFeedback />} />
                       <Route path="/instructor/practice-test" element={<PracticeTest />} />
+                      <Route path="/admin/emails" element={<AdminEmails />} />
+                      <Route path="/instructor/emails" element={<AdminEmails />} />
                       
                       {/* Instructor Map */}
                       <Route path="/instructor/map" element={<InstructorMap />} />
