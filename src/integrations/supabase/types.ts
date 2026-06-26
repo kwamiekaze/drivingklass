@@ -1326,6 +1326,7 @@ export type Database = {
           public_access_code: string | null
           public_enabled_at: string | null
           public_enabled_by: string | null
+          public_send_to_guardian: boolean
           public_share_slug: string | null
           report_card_status: string
           reverse_parking: number | null
@@ -1339,6 +1340,7 @@ export type Database = {
           strongest_skills: Json | null
           student_id: string
           submitted_at: string | null
+          time_split: Json | null
           transcription_summary: string | null
           turn_about: number | null
         }
@@ -1374,6 +1376,7 @@ export type Database = {
           public_access_code?: string | null
           public_enabled_at?: string | null
           public_enabled_by?: string | null
+          public_send_to_guardian?: boolean
           public_share_slug?: string | null
           report_card_status?: string
           reverse_parking?: number | null
@@ -1387,6 +1390,7 @@ export type Database = {
           strongest_skills?: Json | null
           student_id: string
           submitted_at?: string | null
+          time_split?: Json | null
           transcription_summary?: string | null
           turn_about?: number | null
         }
@@ -1422,6 +1426,7 @@ export type Database = {
           public_access_code?: string | null
           public_enabled_at?: string | null
           public_enabled_by?: string | null
+          public_send_to_guardian?: boolean
           public_share_slug?: string | null
           report_card_status?: string
           reverse_parking?: number | null
@@ -1435,6 +1440,7 @@ export type Database = {
           strongest_skills?: Json | null
           student_id?: string
           submitted_at?: string | null
+          time_split?: Json | null
           transcription_summary?: string | null
           turn_about?: number | null
         }
@@ -2320,6 +2326,18 @@ export type Database = {
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_visible_emails: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          created_at: string
+          error_message: string
+          id: string
+          message_id: string
+          recipient_email: string
+          status: string
+          template_name: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
