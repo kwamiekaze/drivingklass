@@ -179,6 +179,7 @@ function ReportCardFormContent() {
       }
       setSession(data as Session);
       fetchPriorReports(data.student_id);
+      loadGuardianEmail(data.student_id);
       // Check if there's already a draft for this session
       const { data: existingDraft } = await supabase
         .from('report_cards')
