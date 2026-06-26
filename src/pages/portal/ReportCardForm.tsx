@@ -408,10 +408,10 @@ function ReportCardFormContent() {
 
       let savedId = draftId;
       if (draftId) {
-        const { error } = await supabase.from('report_cards').update(reportDataBase).eq('id', draftId);
+        const { error } = await supabase.from('report_cards').update(reportDataBase as any).eq('id', draftId);
         if (error) throw error;
       } else {
-        const { data: inserted, error } = await supabase.from('report_cards').insert(reportDataBase).select('id').single();
+        const { data: inserted, error } = await supabase.from('report_cards').insert(reportDataBase as any).select('id').single();
         if (error) throw error;
         savedId = inserted?.id || null;
       }
