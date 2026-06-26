@@ -95,8 +95,9 @@ function ReportCardFormContent() {
   const [guardianEmail, setGuardianEmail] = useState<string>("");
 
   // Time spent during lesson (minutes per category)
+  const [includeTimeSpent, setIncludeTimeSpent] = useState<boolean>(false);
   const [timeSplitEnabled, setTimeSplitEnabled] = useState<Record<string, boolean>>({});
-  const [timeSplitMinutes, setTimeSplitMinutes] = useState<Record<string, number>>({});
+  const [timeSplitMinutes, setTimeSplitMinutes] = useState<Record<string, number | ''>>({});
 
   useEffect(() => {
     if (isEditing && id) {
@@ -147,14 +148,15 @@ function ReportCardFormContent() {
     setShareAccessCode(record.public_access_code || "");
     setShareShowGraph(!!record.show_graph_publicly);
     setShareSendToGuardian(!!record.public_send_to_guardian);
-    if (record.time_split && Array.isArray(record.time_split)) {
+    if (record.time_split && Array.isArray(record.time_split) && record.time_split.length > 0) {
       const enabled: Record<string, boolean> = {};
-      const minutes: Record<string, number> = {};
+      const minutes: Record<string, number | ''> = {};
       (record.time_split as TimeSplitEntry[]).forEach(e => {
-        if (e?.key) { enabled[e.key] = true; minutes[e.key] = e.minutes || 0; }
+        if (e?.key) { enabled[e.key] = true; minutes[e.key] = e.minutes || ''; }
       });
       setTimeSplitEnabled(enabled);
       setTimeSplitMinutes(minutes);
+      setIncludeTimeSpent(true);
     }
   };
 
@@ -373,9 +375,11 @@ function ReportCardFormContent() {
 
     setSubmitting(true);
 
-    const timeSplit: TimeSplitEntry[] = TIME_SPLIT_CATEGORIES
-      .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
-      .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }));
+    const timeSplit: TimeSplitEntry[] = includeTimeSpent
+      ? TIME_SPLIT_CATEGORIES
+          .filter(c => timeSplitEnabled[c.key] && Number(timeSplitMinutes[c.key]) > 0)
+          .map(c => ({ key: c.key, label: c.label, minutes: Number(timeSplitMinutes[c.key]) || 0 }))
+      : [];
 
     try {
       // Reuse existing share slug from the draft if present, otherwise mint one when enabling
@@ -774,51 +778,74 @@ function ReportCardFormContent() {
         {/* Time Spent During Lesson */}
         <Card className="luxury-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4" />
-              Time Spent During Lesson
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Pick the environments you covered and how many minutes were spent in each. Leave blank to skip.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BarChart3 className="h-4 w-4" />
+                  Time Spent During Lesson
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Optional. Toggle on to include a time-spent breakdown in this report.
+                </p>
+              </div>
+              <Switch checked={includeTimeSpent} onCheckedChange={setIncludeTimeSpent} />
+            </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {TIME_SPLIT_CATEGORIES.map(c => {
-              const enabled = !!timeSplitEnabled[c.key];
-              return (
-                <div key={c.key} className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
-                    <Checkbox
-                      checked={enabled}
-                      onCheckedChange={(v) => setTimeSplitEnabled(s => ({ ...s, [c.key]: !!v }))}
+          {includeTimeSpent && (
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Pick the environments you covered and how many minutes were spent in each.
+              </p>
+              {TIME_SPLIT_CATEGORIES.map(c => {
+                const enabled = !!timeSplitEnabled[c.key];
+                const val = timeSplitMinutes[c.key];
+                return (
+                  <div key={c.key} className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                      <Checkbox
+                        checked={enabled}
+                        onCheckedChange={(v) => {
+                          const on = !!v;
+                          setTimeSplitEnabled(s => ({ ...s, [c.key]: on }));
+                          if (!on) setTimeSplitMinutes(s => ({ ...s, [c.key]: '' }));
+                        }}
+                      />
+                      <span className="text-sm">{c.label}</span>
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={600}
+                      disabled={!enabled}
+                      placeholder="min"
+                      className="h-9 w-24"
+                      value={val === '' || val === 0 || val == null ? '' : val}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setTimeSplitMinutes(s => ({ ...s, [c.key]: '' }));
+                        } else {
+                          const n = parseInt(raw, 10);
+                          setTimeSplitMinutes(s => ({ ...s, [c.key]: Number.isFinite(n) ? n : '' }));
+                        }
+                      }}
                     />
-                    <span className="text-sm">{c.label}</span>
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={600}
-                    disabled={!enabled}
-                    placeholder="min"
-                    className="h-9 w-24"
-                    value={timeSplitMinutes[c.key] ?? ''}
-                    onChange={(e) => setTimeSplitMinutes(s => ({ ...s, [c.key]: parseInt(e.target.value || '0') || 0 }))}
+                  </div>
+                );
+              })}
+              {TIME_SPLIT_CATEGORIES.some(c => timeSplitEnabled[c.key] && Number(timeSplitMinutes[c.key]) > 0) && (
+                <div className="pt-2">
+                  <p className="text-xs font-medium mb-1.5">Preview</p>
+                  <TimeSplitChart
+                    entries={TIME_SPLIT_CATEGORIES
+                      .filter(c => timeSplitEnabled[c.key] && Number(timeSplitMinutes[c.key]) > 0)
+                      .map(c => ({ key: c.key, label: c.label, minutes: Number(timeSplitMinutes[c.key]) || 0 }))
+                    }
                   />
                 </div>
-              );
-            })}
-            {TIME_SPLIT_CATEGORIES.some(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0) && (
-              <div className="pt-2">
-                <p className="text-xs font-medium mb-1.5">Preview</p>
-                <TimeSplitChart
-                  entries={TIME_SPLIT_CATEGORIES
-                    .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
-                    .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }))
-                  }
-                />
-              </div>
-            )}
-          </CardContent>
+              )}
+            </CardContent>
+          )}
         </Card>
 
         {/* Sharing & Delivery */}
