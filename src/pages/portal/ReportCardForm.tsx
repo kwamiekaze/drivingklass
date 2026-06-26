@@ -191,6 +191,7 @@ function ReportCardFormContent() {
         setDraftId(existingDraft.id);
         setExistingCard(existingDraft as ReportCard);
         loadHighlightsFromRecord(existingDraft);
+        loadSharingFromRecord(existingDraft);
         setFormData({
           transcription_summary: existingDraft.transcription_summary || '',
           message_to_student: existingDraft.message_to_student || '',
@@ -238,6 +239,8 @@ function ReportCardFormContent() {
       setSession(data.session as Session);
       setDraftId(data.id);
       loadHighlightsFromRecord(data);
+      loadSharingFromRecord(data);
+      loadGuardianEmail(data.student_id);
       fetchPriorReports(data.student_id, data.created_at);
       setFormData({
         transcription_summary: data.transcription_summary || '',
