@@ -771,6 +771,115 @@ function ReportCardFormContent() {
           </CardContent>
         </Card>
 
+        {/* Time Spent During Lesson */}
+        <Card className="luxury-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="h-4 w-4" />
+              Time Spent During Lesson
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Pick the environments you covered and how many minutes were spent in each. Leave blank to skip.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {TIME_SPLIT_CATEGORIES.map(c => {
+              const enabled = !!timeSplitEnabled[c.key];
+              return (
+                <div key={c.key} className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                    <Checkbox
+                      checked={enabled}
+                      onCheckedChange={(v) => setTimeSplitEnabled(s => ({ ...s, [c.key]: !!v }))}
+                    />
+                    <span className="text-sm">{c.label}</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={600}
+                    disabled={!enabled}
+                    placeholder="min"
+                    className="h-9 w-24"
+                    value={timeSplitMinutes[c.key] ?? ''}
+                    onChange={(e) => setTimeSplitMinutes(s => ({ ...s, [c.key]: parseInt(e.target.value || '0') || 0 }))}
+                  />
+                </div>
+              );
+            })}
+            {TIME_SPLIT_CATEGORIES.some(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0) && (
+              <div className="pt-2">
+                <p className="text-xs font-medium mb-1.5">Preview</p>
+                <TimeSplitChart
+                  entries={TIME_SPLIT_CATEGORIES
+                    .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
+                    .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }))
+                  }
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sharing & Delivery */}
+        <Card className="luxury-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Share2 className="h-4 w-4" />
+              Sharing & Delivery
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Set an access code and visibility before submitting. The code is included in the email so the student/guardian can open the public link.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                Public access code (optional)
+              </Label>
+              <Input
+                value={shareAccessCode}
+                onChange={(e) => setShareAccessCode(e.target.value)}
+                placeholder="e.g. 4827 (min 4 chars). Leave blank to keep private."
+                className="h-10"
+              />
+              {shareAccessCode.trim().length > 0 && shareAccessCode.trim().length < 4 && (
+                <p className="text-[11px] text-red-500">Must be at least 4 characters.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Show progress graph on public link</p>
+                  <p className="text-[11px] text-muted-foreground">Visible to anyone with the link + access code.</p>
+                </div>
+              </div>
+              <Switch checked={shareShowGraph} onCheckedChange={setShareShowGraph} />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Also email the parent/guardian</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {guardianEmail ? `Will send to ${guardianEmail}` : 'No guardian email on file — set one in the student profile.'}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={shareSendToGuardian}
+                onCheckedChange={setShareSendToGuardian}
+                disabled={!guardianEmail}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           {!isCompleted && (
