@@ -351,15 +351,42 @@ function ReportCardFormContent() {
     });
   };
 
+  const generateSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    return result;
+  };
+
   // Submit report card (mark as completed)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !user) return;
 
+    // Validate access code if user wants to enable sharing
+    const trimmedCode = shareAccessCode.trim();
+    const enablingPublic = !!trimmedCode;
+    if (enablingPublic && trimmedCode.length < 4) {
+      toast({ title: "Access code too short", description: "Use at least 4 characters or leave it blank.", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
 
+    const timeSplit: TimeSplitEntry[] = TIME_SPLIT_CATEGORIES
+      .filter(c => timeSplitEnabled[c.key] && (timeSplitMinutes[c.key] || 0) > 0)
+      .map(c => ({ key: c.key, label: c.label, minutes: timeSplitMinutes[c.key] || 0 }));
+
     try {
-      const reportDataBase = {
+      // Reuse existing share slug from the draft if present, otherwise mint one when enabling
+      let existingSlug: string | null = null;
+      if (draftId) {
+        const { data: rcRow } = await supabase.from('report_cards').select('public_share_slug').eq('id', draftId).maybeSingle();
+        existingSlug = (rcRow as any)?.public_share_slug || null;
+      }
+      const publicSlug = enablingPublic ? (existingSlug || generateSlug()) : null;
+
+      const reportDataBase: Record<string, any> = {
         ...formData,
         session_id: session.id,
         student_id: session.student_id,
@@ -369,33 +396,56 @@ function ReportCardFormContent() {
         strongest_skills: JSON.parse(JSON.stringify(highlightStrongest)),
         most_improved_skills: JSON.parse(JSON.stringify(highlightMostImproved)),
         focus_areas: JSON.parse(JSON.stringify(highlightFocusAreas)),
+        time_split: timeSplit.length ? timeSplit : null,
+        show_graph_publicly: shareShowGraph,
+        public_send_to_guardian: shareSendToGuardian,
+        is_public: enablingPublic,
+        public_share_slug: publicSlug,
+        public_access_code: enablingPublic ? trimmedCode : null,
+        public_enabled_at: enablingPublic ? new Date().toISOString() : null,
+        public_enabled_by: enablingPublic ? user.id : null,
       };
 
+      let savedId = draftId;
       if (draftId) {
-        const { error } = await supabase
-          .from('report_cards')
-          .update(reportDataBase)
-          .eq('id', draftId);
+        const { error } = await supabase.from('report_cards').update(reportDataBase).eq('id', draftId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('report_cards')
-          .insert(reportDataBase);
+        const { data: inserted, error } = await supabase.from('report_cards').insert(reportDataBase).select('id').single();
         if (error) throw error;
+        savedId = inserted?.id || null;
       }
 
-      toast({
-        title: "Report Card Submitted",
-        description: "The report card is now visible to the student.",
-      });
+      // Send to guardian email explicitly (student notification handled by the existing notification trigger)
+      if (shareSendToGuardian && guardianEmail && savedId) {
+        try {
+          const sessionDate = format(parseISO(session.starts_at), 'MMM d, yyyy');
+          const publicUrl = publicSlug ? `${window.location.origin}/report/public/${publicSlug}` : `${window.location.origin}/report-cards/${savedId}`;
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'report-card-submitted',
+              recipientEmail: guardianEmail,
+              idempotencyKey: `report-${savedId}-guardian`,
+              templateData: {
+                recipientName: 'Guardian',
+                instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
+                reportUrl: publicUrl,
+                publicUrl: publicSlug ? publicUrl : undefined,
+                accessCode: enablingPublic ? trimmedCode : undefined,
+                dateLabel: sessionDate,
+                isGuardian: true,
+              },
+            },
+          });
+        } catch (err) {
+          console.error('Guardian email failed:', err);
+        }
+      }
 
+      toast({ title: "Report Card Submitted", description: "The report card is now visible to the student." });
       navigate(-1);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit report card",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to submit report card", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
