@@ -11,10 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock, FileText, Star } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calendar, User, Send, Clock, FileText, Star, Share2, Lock, BarChart3, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
 import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
 import { SKILL_KEYS } from "@/lib/reportCardGraphData";
+import { TIME_SPLIT_CATEGORIES, TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
@@ -83,6 +87,16 @@ function ReportCardFormContent() {
   const [highlightFocusAreas, setHighlightFocusAreas] = useState<SkillHighlightItem[]>([]);
   const [priorReports, setPriorReports] = useState<Array<Record<string, number | string | null | undefined>>>([]);
   const [previousReport, setPreviousReport] = useState<Record<string, any> | null>(null);
+
+  // Sharing & delivery
+  const [shareAccessCode, setShareAccessCode] = useState<string>("");
+  const [shareShowGraph, setShareShowGraph] = useState<boolean>(false);
+  const [shareSendToGuardian, setShareSendToGuardian] = useState<boolean>(false);
+  const [guardianEmail, setGuardianEmail] = useState<string>("");
+
+  // Time spent during lesson (minutes per category)
+  const [timeSplitEnabled, setTimeSplitEnabled] = useState<Record<string, boolean>>({});
+  const [timeSplitMinutes, setTimeSplitMinutes] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (isEditing && id) {
