@@ -143,6 +143,26 @@ function ReportCardFormContent() {
     setHighlightFocusAreas(parse(record.focus_areas));
   };
 
+  const loadSharingFromRecord = (record: any) => {
+    setShareAccessCode(record.public_access_code || "");
+    setShareShowGraph(!!record.show_graph_publicly);
+    setShareSendToGuardian(!!record.public_send_to_guardian);
+    if (record.time_split && Array.isArray(record.time_split)) {
+      const enabled: Record<string, boolean> = {};
+      const minutes: Record<string, number> = {};
+      (record.time_split as TimeSplitEntry[]).forEach(e => {
+        if (e?.key) { enabled[e.key] = true; minutes[e.key] = e.minutes || 0; }
+      });
+      setTimeSplitEnabled(enabled);
+      setTimeSplitMinutes(minutes);
+    }
+  };
+
+  const loadGuardianEmail = async (studentId: string) => {
+    const { data } = await supabase.from('profiles').select('guardian_email').eq('id', studentId).maybeSingle();
+    if (data?.guardian_email) setGuardianEmail(data.guardian_email);
+  };
+
   const fetchSession = async () => {
     const { data } = await supabase
       .from('sessions')
