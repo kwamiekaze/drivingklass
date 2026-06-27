@@ -2231,6 +2231,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_email_render: {
+        Args: { p_log_id: string }
+        Returns: {
+          created_at: string
+          error_message: string
+          html: string
+          id: string
+          message_id: string
+          recipient_email: string
+          status: string
+          subject: string
+          template_name: string
+        }[]
+      }
       get_my_sessions: {
         Args: never
         Returns: {
