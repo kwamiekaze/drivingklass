@@ -495,6 +495,32 @@ export default function ReportCardView() {
               </div>
             )}
 
+            {/* View status (staff/instructor in normal mode) */}
+            {isStaff && viewMode === "normal" && (
+              <div className={`p-3 rounded-lg border text-sm ${
+                reportCard.first_viewed_at
+                  ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300"
+                  : "bg-muted/40 border-border text-muted-foreground"
+              }`}>
+                {reportCard.first_viewed_at ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="font-medium">
+                      ✅ Viewed by {reportCard.student_name}
+                      {reportCard.first_viewed_via === 'public' ? ' (via access code)' : ''}
+                    </span>
+                    <span className="text-xs">
+                      First viewed {format(parseISO(reportCard.first_viewed_at), 'MMM d, yyyy h:mm a')}
+                      {reportCard.view_count && reportCard.view_count > 1 && reportCard.last_viewed_at
+                        ? ` · Last viewed ${format(parseISO(reportCard.last_viewed_at), 'MMM d, yyyy h:mm a')} · ${reportCard.view_count} views`
+                        : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <span>👀 Not yet viewed by the student.</span>
+                )}
+              </div>
+
+
             {/* View Mode Banner */}
             {isStaff && viewMode !== "normal" && (
               <div className={`p-3 rounded-lg border text-sm font-medium text-center ${
