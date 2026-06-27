@@ -1307,6 +1307,8 @@ export type Database = {
           changing_lanes: number | null
           created_at: string | null
           distractions: number | null
+          first_viewed_at: string | null
+          first_viewed_via: string | null
           focus_areas: Json | null
           following_distance: number | null
           general_parking: number | null
@@ -1316,6 +1318,8 @@ export type Database = {
           interstate: number | null
           is_public: boolean
           lane_maintenance: number | null
+          last_viewed_at: string | null
+          last_viewed_via: string | null
           left_turns: number | null
           lesson_audio_url: string | null
           merging: number | null
@@ -1343,6 +1347,7 @@ export type Database = {
           time_split: Json | null
           transcription_summary: string | null
           turn_about: number | null
+          view_count: number
         }
         Insert: {
           acceleration?: number | null
@@ -1357,6 +1362,8 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          first_viewed_at?: string | null
+          first_viewed_via?: string | null
           focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
@@ -1366,6 +1373,8 @@ export type Database = {
           interstate?: number | null
           is_public?: boolean
           lane_maintenance?: number | null
+          last_viewed_at?: string | null
+          last_viewed_via?: string | null
           left_turns?: number | null
           lesson_audio_url?: string | null
           merging?: number | null
@@ -1393,6 +1402,7 @@ export type Database = {
           time_split?: Json | null
           transcription_summary?: string | null
           turn_about?: number | null
+          view_count?: number
         }
         Update: {
           acceleration?: number | null
@@ -1407,6 +1417,8 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          first_viewed_at?: string | null
+          first_viewed_via?: string | null
           focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
@@ -1416,6 +1428,8 @@ export type Database = {
           interstate?: number | null
           is_public?: boolean
           lane_maintenance?: number | null
+          last_viewed_at?: string | null
+          last_viewed_via?: string | null
           left_turns?: number | null
           lesson_audio_url?: string | null
           merging?: number | null
@@ -1443,6 +1457,7 @@ export type Database = {
           time_split?: Json | null
           transcription_summary?: string | null
           turn_about?: number | null
+          view_count?: number
         }
         Relationships: [
           {
@@ -2255,6 +2270,8 @@ export type Database = {
           changing_lanes: number
           created_at: string
           distractions: number
+          first_viewed_at: string
+          first_viewed_via: string
           following_distance: number
           general_parking: number
           id: string
@@ -2264,6 +2281,8 @@ export type Database = {
           internal_message: string
           interstate: number
           lane_maintenance: number
+          last_viewed_at: string
+          last_viewed_via: string
           left_turns: number
           lesson_audio_url: string
           merging: number
@@ -2285,6 +2304,7 @@ export type Database = {
           student_name: string
           transcription_summary: string
           turn_about: number
+          view_count: number
         }[]
       }
       get_session_details: {
@@ -2337,6 +2357,10 @@ export type Database = {
           status: string
           template_name: string
         }[]
+      }
+      mark_report_card_viewed: {
+        Args: { p_report_card_id: string; p_via?: string }
+        Returns: undefined
       }
       move_to_dlq: {
         Args: {
