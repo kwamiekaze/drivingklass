@@ -156,6 +156,14 @@ export default function ReportCardView() {
         }
 
         setReportCard(rc);
+        // Mark as viewed when the owning student opens it (fire-and-forget)
+        if (role === 'student' && user?.id && rc.student_id === user.id) {
+          supabase.rpc('mark_report_card_viewed', {
+            p_report_card_id: rc.id,
+            p_via: 'student',
+          }).then(() => {}, () => {});
+        }
+
         // Fetch session number
         if (rc.session_id && rc.student_id) {
           fetchSessionNumberForStudent(supabase, rc.student_id, rc.session_id).then(num => {
