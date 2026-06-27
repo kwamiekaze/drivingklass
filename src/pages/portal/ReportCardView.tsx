@@ -519,6 +519,9 @@ export default function ReportCardView() {
                   <span>👀 Not yet viewed by the student.</span>
                 )}
               </div>
+            )}
+
+
 
 
             {/* View Mode Banner */}
