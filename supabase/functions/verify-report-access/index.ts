@@ -117,8 +117,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Record this view (first-view triggers an instructor notification)
+    try {
+      await supabaseAdmin.rpc("mark_report_card_viewed", {
+        p_report_card_id: report.id,
+        p_via: "public",
+      });
+    } catch (_e) {
+      // non-fatal
+    }
+
     // Remove sensitive fields
     const { public_access_code: _code, ...safeReport } = report;
+
+
 
     return new Response(
       JSON.stringify({
