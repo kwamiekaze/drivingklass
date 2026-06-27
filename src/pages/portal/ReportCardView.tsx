@@ -62,7 +62,13 @@ interface ReportCardDetails {
   student_email: string | null;
   instructor_email: string | null;
   can_see_internal: boolean;
+  first_viewed_at?: string | null;
+  last_viewed_at?: string | null;
+  view_count?: number | null;
+  first_viewed_via?: string | null;
+  last_viewed_via?: string | null;
 }
+
 
 type StaffViewMode = "normal" | "student" | "accessed";
 
