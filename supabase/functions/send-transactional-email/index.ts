@@ -305,12 +305,20 @@ Deno.serve(async (req) => {
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
 
-  // Log pending BEFORE enqueue so we have a record even if enqueue crashes
+  // Log pending BEFORE enqueue so we have a record even if enqueue crashes.
+  // Persist the rendered subject/html so admins/instructors can view the
+  // exact email that was sent from the portal.
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: templateName,
     recipient_email: effectiveRecipient,
     status: 'pending',
+    metadata: {
+      subject: resolvedSubject,
+      html,
+      text: plainText,
+      template_data: templateData,
+    },
   })
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
