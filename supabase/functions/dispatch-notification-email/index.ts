@@ -4,13 +4,15 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
+// Only notification types that should produce an outbound email map here.
+// session_completed and session_rescheduled intentionally do NOT trigger
+// the "lesson-scheduled" template — that caused stale "New lesson scheduled"
+// emails to be sent for past lessons when they were marked complete.
 const TYPE_TO_PREF: Record<string, string> = {
   session_created: 'lesson_scheduled',
   session_assigned: 'lesson_scheduled',
   schedule: 'lesson_scheduled',
   session_cancelled: 'lesson_cancelled',
-  session_completed: 'lesson_scheduled',
-  session_rescheduled: 'lesson_scheduled',
   report_card: 'report_card',
   report_card_posted: 'report_card',
 }
