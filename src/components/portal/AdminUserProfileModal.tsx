@@ -437,6 +437,49 @@ export function AdminUserProfileModal({
                 </div>
               </div>
 
+              {/* Parent / Guardian / Emergency Contact (editable) */}
+              <div className="space-y-3 p-4 rounded-xl bg-muted/30">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Parent / Guardian / Emergency Contact
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Guardian Name</Label>
+                    <Input
+                      value={guardianName}
+                      onChange={(e) => setGuardianName(e.target.value)}
+                      placeholder="Full name"
+                      className="min-h-[44px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Guardian Phone</Label>
+                    <Input
+                      type="tel"
+                      value={guardianPhone}
+                      onChange={(e) => setGuardianPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                      className="min-h-[44px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Guardian Email</Label>
+                    <Input
+                      type="email"
+                      value={guardianEmail}
+                      onChange={(e) => setGuardianEmail(e.target.value)}
+                      placeholder="guardian@example.com"
+                      className="min-h-[44px]"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Adding or changing this email sends a notification to the guardian and the student's assigned instructor.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+
               {/* Permit Section */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
                 <div>
