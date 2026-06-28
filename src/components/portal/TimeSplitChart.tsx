@@ -15,11 +15,11 @@ export const TIME_SPLIT_CATEGORIES: { key: string; label: string }[] = [
 ];
 
 const COLORS: Record<string, string> = {
-  parking_lot: '#a78bfa',
-  subdivision: '#60a5fa',
-  city: '#fbbf24',
-  backroads: '#34d399',
-  interstate: '#f97316',
+  parking_lot: '#8b5cf6', // deep violet
+  subdivision: '#0ea5e9', // sky blue (clearly different from violet)
+  city: '#fbbf24',        // amber
+  backroads: '#10b981',   // emerald
+  interstate: '#ef4444',  // red
 };
 
 interface Props {
