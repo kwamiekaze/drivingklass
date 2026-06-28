@@ -162,12 +162,16 @@ export default function ReportCardView() {
         }
 
         setReportCard(rc);
-        // Mark as viewed when the owning student opens it (fire-and-forget)
-        if (role === 'student' && user?.id && rc.student_id === user.id) {
+        // Mark as viewed when the owning student opens it (fire-and-forget).
+        // Guard only on student_id === user.id — role may not be hydrated yet,
+        // and the RPC enforces the same constraint server-side.
+        if (user?.id && rc.student_id === user.id) {
           supabase.rpc('mark_report_card_viewed', {
             p_report_card_id: rc.id,
             p_via: 'student',
-          }).then(() => {}, () => {});
+          }).then(({ error: rpcErr }) => {
+            if (rpcErr) console.warn('mark_report_card_viewed failed', rpcErr);
+          }, () => {});
         }
 
         // Fetch session number
