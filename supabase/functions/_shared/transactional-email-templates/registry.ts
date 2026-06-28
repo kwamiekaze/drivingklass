@@ -7,6 +7,7 @@ import { template as reportCardSubmitted } from './report-card-submitted.tsx'
 import { template as intakeConverted } from './intake-converted.tsx'
 import { template as intakeAccepted } from './intake-accepted.tsx'
 import { template as updateAddresses } from './update-addresses.tsx'
+import { template as guardianAdded } from './guardian-added.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -24,4 +25,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'intake-converted': intakeConverted,
   'intake-accepted': intakeAccepted,
   'update-addresses': updateAddresses,
+  'guardian-added': guardianAdded,
 }
