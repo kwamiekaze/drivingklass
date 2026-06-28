@@ -67,6 +67,12 @@ interface ReportCardDetails {
   view_count?: number | null;
   first_viewed_via?: string | null;
   last_viewed_via?: string | null;
+  student_view_count?: number | null;
+  public_view_count?: number | null;
+  student_first_viewed_at?: string | null;
+  student_last_viewed_at?: string | null;
+  public_first_viewed_at?: string | null;
+  public_last_viewed_at?: string | null;
 }
 
 
