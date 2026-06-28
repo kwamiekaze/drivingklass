@@ -420,27 +420,37 @@ function ReportCardFormContent() {
         savedId = inserted?.id || null;
       }
 
-      // Send to guardian email explicitly (student notification handled by the existing notification trigger)
+      // Send to guardian email explicitly (student notification handled by the existing notification trigger).
+      // Guard against duplicate sends on edit/resubmit by checking guardian_email_sent_at.
       if (shareSendToGuardian && guardianEmail && savedId) {
         try {
-          const sessionDate = format(parseISO(session.starts_at), 'MMM d, yyyy');
-          const publicUrl = publicSlug ? `${window.location.origin}/report/public/${publicSlug}` : `${window.location.origin}/report-cards/${savedId}`;
-          await supabase.functions.invoke('send-transactional-email', {
-            body: {
-              templateName: 'report-card-submitted',
-              recipientEmail: guardianEmail,
-              idempotencyKey: `report-${savedId}-guardian`,
-              templateData: {
-                recipientName: 'Guardian',
-                instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
-                reportUrl: publicUrl,
-                publicUrl: publicSlug ? publicUrl : undefined,
-                accessCode: enablingPublic ? trimmedCode : undefined,
-                dateLabel: sessionDate,
-                isGuardian: true,
+          const { data: sentRow } = await supabase
+            .from('report_cards')
+            .select('guardian_email_sent_at')
+            .eq('id', savedId)
+            .maybeSingle();
+          const alreadySent = !!(sentRow as any)?.guardian_email_sent_at;
+          if (!alreadySent) {
+            const sessionDate = format(parseISO(session.starts_at), 'MMM d, yyyy');
+            const publicUrl = publicSlug ? `${window.location.origin}/report/public/${publicSlug}` : `${window.location.origin}/report-cards/${savedId}`;
+            await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'report-card-submitted',
+                recipientEmail: guardianEmail,
+                idempotencyKey: `report-${savedId}-guardian`,
+                templateData: {
+                  recipientName: 'Guardian',
+                  instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
+                  reportUrl: publicUrl,
+                  publicUrl: publicSlug ? publicUrl : undefined,
+                  accessCode: enablingPublic ? trimmedCode : undefined,
+                  dateLabel: sessionDate,
+                  isGuardian: true,
+                },
               },
-            },
-          });
+            });
+            await supabase.from('report_cards').update({ guardian_email_sent_at: new Date().toISOString() } as any).eq('id', savedId);
+          }
         } catch (err) {
           console.error('Guardian email failed:', err);
         }
