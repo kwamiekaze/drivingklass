@@ -56,6 +56,18 @@ Deno.serve(async (req) => {
       if (!notif.session_id) return new Response(JSON.stringify({ skip: 'no session' }), { status: 200 })
       const { data: s } = await supabase.from('sessions').select('*').eq('id', notif.session_id).maybeSingle()
       if (!s) return new Response(JSON.stringify({ skip: 'session missing' }), { status: 200 })
+      // Defense-in-depth: never send a "lesson scheduled" reminder for a lesson
+      // whose start time is already in the past, or for a session that is no
+      // longer in the 'scheduled' state (completed/cancelled/etc).
+      if (prefKey === 'lesson_scheduled') {
+        const startsAt = s.starts_at ? new Date(s.starts_at).getTime() : 0
+        if (!startsAt || startsAt < Date.now()) {
+          return new Response(JSON.stringify({ skip: 'starts_at in past' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        if (s.status && s.status !== 'scheduled') {
+          return new Response(JSON.stringify({ skip: `session status ${s.status}` }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+      }
       const { date, time } = fmtDateTime(s.starts_at)
       const { data: stud } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.student_id).maybeSingle()
       const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.instructor_id).maybeSingle()
