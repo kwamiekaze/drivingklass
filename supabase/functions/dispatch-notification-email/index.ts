@@ -4,13 +4,15 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
+// Only notification types that should produce an outbound email map here.
+// session_completed and session_rescheduled intentionally do NOT trigger
+// the "lesson-scheduled" template — that caused stale "New lesson scheduled"
+// emails to be sent for past lessons when they were marked complete.
 const TYPE_TO_PREF: Record<string, string> = {
   session_created: 'lesson_scheduled',
   session_assigned: 'lesson_scheduled',
   schedule: 'lesson_scheduled',
   session_cancelled: 'lesson_cancelled',
-  session_completed: 'lesson_scheduled',
-  session_rescheduled: 'lesson_scheduled',
   report_card: 'report_card',
   report_card_posted: 'report_card',
 }
@@ -54,6 +56,18 @@ Deno.serve(async (req) => {
       if (!notif.session_id) return new Response(JSON.stringify({ skip: 'no session' }), { status: 200 })
       const { data: s } = await supabase.from('sessions').select('*').eq('id', notif.session_id).maybeSingle()
       if (!s) return new Response(JSON.stringify({ skip: 'session missing' }), { status: 200 })
+      // Defense-in-depth: never send a "lesson scheduled" reminder for a lesson
+      // whose start time is already in the past, or for a session that is no
+      // longer in the 'scheduled' state (completed/cancelled/etc).
+      if (prefKey === 'lesson_scheduled') {
+        const startsAt = s.starts_at ? new Date(s.starts_at).getTime() : 0
+        if (!startsAt || startsAt < Date.now()) {
+          return new Response(JSON.stringify({ skip: 'starts_at in past' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        if (s.status && s.status !== 'scheduled') {
+          return new Response(JSON.stringify({ skip: `session status ${s.status}` }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+      }
       const { date, time } = fmtDateTime(s.starts_at)
       const { data: stud } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.student_id).maybeSingle()
       const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.instructor_id).maybeSingle()
