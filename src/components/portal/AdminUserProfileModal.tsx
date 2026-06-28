@@ -76,6 +76,10 @@ export function AdminUserProfileModal({
   const [hoursRemaining, setHoursRemaining] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [initialGuardianEmail, setInitialGuardianEmail] = useState("");
 
   useEffect(() => {
     if (open && userId) {
@@ -117,6 +121,10 @@ export function AdminUserProfileModal({
       setHoursRemaining((fullProfile.hours_remaining ?? 0).toString());
       setPickupAddress(fullProfile.pickup_address || "");
       setDropoffAddress(fullProfile.dropoff_address || "");
+      setGuardianName(fullProfile.guardian_name || "");
+      setGuardianPhone(fullProfile.guardian_phone || "");
+      setGuardianEmail(fullProfile.guardian_email || "");
+      setInitialGuardianEmail(fullProfile.guardian_email || "");
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
@@ -179,10 +187,55 @@ export function AdminUserProfileModal({
           hours_remaining: numericHours,
           pickup_address: pickupAddress.trim() || null,
           dropoff_address: dropoffAddress.trim() || null,
+          guardian_name: guardianName.trim() || null,
+          guardian_phone: guardianPhone.trim() || null,
+          guardian_email: guardianEmail.trim() || null,
         })
         .eq('id', profile.id);
 
       if (error) throw error;
+
+      // Notify guardian + instructor when guardian email is added/changed
+      const newGuardianEmail = guardianEmail.trim().toLowerCase();
+      const oldGuardianEmail = (initialGuardianEmail || '').trim().toLowerCase();
+      if (newGuardianEmail && newGuardianEmail !== oldGuardianEmail) {
+        const studentDisplay = fullName.trim() || profile.email || 'a student';
+        const ts = Date.now();
+        // Guardian email
+        supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'guardian-added',
+            recipientEmail: newGuardianEmail,
+            idempotencyKey: `guardian-added-${profile.id}-${ts}`,
+            templateData: {
+              guardianName: guardianName.trim() || undefined,
+              studentName: studentDisplay,
+              studentEmail: profile.email || undefined,
+              audience: 'guardian',
+            },
+          },
+        }).catch((e) => console.warn('guardian email failed', e));
+
+        // Notify assigned instructor(s)
+        assignedInstructors.forEach((inst) => {
+          if (!inst.email) return;
+          const instName = inst.full_name || `${inst.first_name || ''} ${inst.last_name || ''}`.trim() || undefined;
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'guardian-added',
+              recipientEmail: inst.email,
+              idempotencyKey: `guardian-updated-instr-${profile.id}-${inst.id}-${ts}`,
+              templateData: {
+                instructorName: instName,
+                studentName: studentDisplay,
+                studentEmail: profile.email || undefined,
+                audience: 'instructor',
+              },
+            },
+          }).catch((e) => console.warn('instructor guardian email failed', e));
+        });
+        setInitialGuardianEmail(newGuardianEmail);
+      }
 
       toast({ title: "Profile Updated", description: "Changes saved successfully" });
       onProfileUpdated?.();
