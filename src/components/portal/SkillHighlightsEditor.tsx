@@ -77,7 +77,7 @@ export function SkillHighlightsEditor({ strongest, mostImproved, focusAreas, onC
       const s = computeAutoSuggestions(currentRatings, priorReports);
       if (s.strongest.length > 0 || s.focusAreas.length > 0) {
         onChange("strongest", s.strongest);
-        if (!isFirstLesson) onChange("mostImproved", s.mostImproved);
+        onChange("mostImproved", s.mostImproved);
         onChange("focusAreas", s.focusAreas);
       }
     }
