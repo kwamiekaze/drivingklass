@@ -1312,6 +1312,7 @@ export type Database = {
           focus_areas: Json | null
           following_distance: number | null
           general_parking: number | null
+          guardian_email_sent_at: string | null
           id: string
           instructor_id: string
           internal_message: string | null
@@ -1345,6 +1346,7 @@ export type Database = {
           speed_maintenance: number | null
           straight_line_backing: number | null
           strongest_skills: Json | null
+          student_email_sent_at: string | null
           student_first_viewed_at: string | null
           student_id: string
           student_last_viewed_at: string | null
@@ -1373,6 +1375,7 @@ export type Database = {
           focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
+          guardian_email_sent_at?: string | null
           id?: string
           instructor_id: string
           internal_message?: string | null
@@ -1406,6 +1409,7 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           strongest_skills?: Json | null
+          student_email_sent_at?: string | null
           student_first_viewed_at?: string | null
           student_id: string
           student_last_viewed_at?: string | null
@@ -1434,6 +1438,7 @@ export type Database = {
           focus_areas?: Json | null
           following_distance?: number | null
           general_parking?: number | null
+          guardian_email_sent_at?: string | null
           id?: string
           instructor_id?: string
           internal_message?: string | null
@@ -1467,6 +1472,7 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           strongest_skills?: Json | null
+          student_email_sent_at?: string | null
           student_first_viewed_at?: string | null
           student_id?: string
           student_last_viewed_at?: string | null
