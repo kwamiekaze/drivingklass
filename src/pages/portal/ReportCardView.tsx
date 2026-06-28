@@ -67,6 +67,12 @@ interface ReportCardDetails {
   view_count?: number | null;
   first_viewed_via?: string | null;
   last_viewed_via?: string | null;
+  student_view_count?: number | null;
+  public_view_count?: number | null;
+  student_first_viewed_at?: string | null;
+  student_last_viewed_at?: string | null;
+  public_first_viewed_at?: string | null;
+  public_last_viewed_at?: string | null;
 }
 
 
@@ -504,30 +510,55 @@ export default function ReportCardView() {
             )}
 
             {/* View status (staff/instructor in normal mode) */}
-            {isStaff && viewMode === "normal" && (
-              <div className={`p-3 rounded-lg border text-sm ${
-                reportCard.first_viewed_at
-                  ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300"
-                  : "bg-muted/40 border-border text-muted-foreground"
-              }`}>
-                {reportCard.first_viewed_at ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                    <span className="font-medium">
-                      ✅ Viewed by {reportCard.student_name}
-                      {reportCard.first_viewed_via === 'public' ? ' (via access code)' : ''}
-                    </span>
-                    <span className="text-xs">
-                      First viewed {format(parseISO(reportCard.first_viewed_at), 'MMM d, yyyy h:mm a')}
-                      {reportCard.view_count && reportCard.view_count > 1 && reportCard.last_viewed_at
-                        ? ` · Last viewed ${format(parseISO(reportCard.last_viewed_at), 'MMM d, yyyy h:mm a')} · ${reportCard.view_count} views`
-                        : ''}
-                    </span>
-                  </div>
-                ) : (
-                  <span>👀 Not yet viewed by the student.</span>
-                )}
-              </div>
-            )}
+            {isStaff && viewMode === "normal" && (() => {
+              const studentViews = reportCard.student_view_count || 0;
+              const publicViews = reportCard.public_view_count || 0;
+              const totalViews = studentViews + publicViews;
+              const anyViewed = totalViews > 0 || !!reportCard.first_viewed_at;
+              const fmt = (d?: string | null) => d ? format(parseISO(d), 'MMM d, yyyy h:mm a') : null;
+              return (
+                <div className={`p-3 rounded-lg border text-sm space-y-2 ${
+                  anyViewed
+                    ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300"
+                    : "bg-muted/40 border-border text-muted-foreground"
+                }`}>
+                  {!anyViewed && <span>👀 Not yet viewed.</span>}
+                  {studentViews > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <span className="font-medium">✅ Viewed by {reportCard.student_name} (student login)</span>
+                      <span className="text-xs">
+                        {studentViews} view{studentViews === 1 ? '' : 's'}
+                        {reportCard.student_first_viewed_at && ` · First ${fmt(reportCard.student_first_viewed_at)}`}
+                        {studentViews > 1 && reportCard.student_last_viewed_at && ` · Last ${fmt(reportCard.student_last_viewed_at)}`}
+                      </span>
+                    </div>
+                  )}
+                  {publicViews > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <span className="font-medium">🔗 Viewed via access code</span>
+                      <span className="text-xs">
+                        {publicViews} view{publicViews === 1 ? '' : 's'}
+                        {reportCard.public_first_viewed_at && ` · First ${fmt(reportCard.public_first_viewed_at)}`}
+                        {publicViews > 1 && reportCard.public_last_viewed_at && ` · Last ${fmt(reportCard.public_last_viewed_at)}`}
+                      </span>
+                    </div>
+                  )}
+                  {/* Legacy fallback if old views exist before per-channel tracking */}
+                  {totalViews === 0 && reportCard.first_viewed_at && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <span className="font-medium">
+                        ✅ Viewed{reportCard.first_viewed_via === 'public' ? ' via access code' : ` by ${reportCard.student_name}`}
+                      </span>
+                      <span className="text-xs">
+                        First {fmt(reportCard.first_viewed_at)}
+                        {reportCard.view_count && reportCard.view_count > 1 && reportCard.last_viewed_at
+                          ? ` · Last ${fmt(reportCard.last_viewed_at)} · ${reportCard.view_count} views` : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
 
 

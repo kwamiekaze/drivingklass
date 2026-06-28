@@ -46,6 +46,7 @@ function InstructorScheduleContent() {
       (supabase as any)
         .from("schedule_blocks")
         .select("*")
+        .or(`instructor_id.is.null,instructor_id.eq.${user.id}`)
         .order("starts_at", { ascending: true }),
     ]);
 

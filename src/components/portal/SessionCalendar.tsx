@@ -144,7 +144,9 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   }, [sessions, userRole, sessionNumberMap]);
 
   const mergedEvents = useMemo(
-    () => [...calendarEvents, ...(extraEvents || [])],
+    () => [...calendarEvents, ...(extraEvents || [])].sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+    ),
     [calendarEvents, extraEvents]
   );
 
