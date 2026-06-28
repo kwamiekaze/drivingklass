@@ -1330,8 +1330,11 @@ export type Database = {
           public_access_code: string | null
           public_enabled_at: string | null
           public_enabled_by: string | null
+          public_first_viewed_at: string | null
+          public_last_viewed_at: string | null
           public_send_to_guardian: boolean
           public_share_slug: string | null
+          public_view_count: number
           report_card_status: string
           reverse_parking: number | null
           right_turns: number | null
@@ -1342,7 +1345,10 @@ export type Database = {
           speed_maintenance: number | null
           straight_line_backing: number | null
           strongest_skills: Json | null
+          student_first_viewed_at: string | null
           student_id: string
+          student_last_viewed_at: string | null
+          student_view_count: number
           submitted_at: string | null
           time_split: Json | null
           transcription_summary: string | null
@@ -1385,8 +1391,11 @@ export type Database = {
           public_access_code?: string | null
           public_enabled_at?: string | null
           public_enabled_by?: string | null
+          public_first_viewed_at?: string | null
+          public_last_viewed_at?: string | null
           public_send_to_guardian?: boolean
           public_share_slug?: string | null
+          public_view_count?: number
           report_card_status?: string
           reverse_parking?: number | null
           right_turns?: number | null
@@ -1397,7 +1406,10 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           strongest_skills?: Json | null
+          student_first_viewed_at?: string | null
           student_id: string
+          student_last_viewed_at?: string | null
+          student_view_count?: number
           submitted_at?: string | null
           time_split?: Json | null
           transcription_summary?: string | null
@@ -1440,8 +1452,11 @@ export type Database = {
           public_access_code?: string | null
           public_enabled_at?: string | null
           public_enabled_by?: string | null
+          public_first_viewed_at?: string | null
+          public_last_viewed_at?: string | null
           public_send_to_guardian?: boolean
           public_share_slug?: string | null
+          public_view_count?: number
           report_card_status?: string
           reverse_parking?: number | null
           right_turns?: number | null
@@ -1452,7 +1467,10 @@ export type Database = {
           speed_maintenance?: number | null
           straight_line_backing?: number | null
           strongest_skills?: Json | null
+          student_first_viewed_at?: string | null
           student_id?: string
+          student_last_viewed_at?: string | null
+          student_view_count?: number
           submitted_at?: string | null
           time_split?: Json | null
           transcription_summary?: string | null
@@ -2303,6 +2321,9 @@ export type Database = {
           message_to_student: string
           overall: number
           parallel_parking: number
+          public_first_viewed_at: string
+          public_last_viewed_at: string
+          public_view_count: number
           reverse_parking: number
           right_turns: number
           road_sign_awareness: number
@@ -2314,8 +2335,11 @@ export type Database = {
           speed_maintenance: number
           straight_line_backing: number
           student_email: string
+          student_first_viewed_at: string
           student_id: string
+          student_last_viewed_at: string
           student_name: string
+          student_view_count: number
           transcription_summary: string
           turn_about: number
           view_count: number
