@@ -68,6 +68,8 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetRef = searchParams.get("ref") || "";
   const { resolvedTheme } = useTheme();
   const { t } = useTranslation();
   const skillLabel = useSkillLabel();
@@ -99,55 +101,69 @@ export default function PublicReportCard() {
     if (fallbackRef.current) clearTimeout(fallbackRef.current);
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessCode.trim() || !slug) return;
-
+  const fetchReport = async (code: string, ref: string, opts: { splash: boolean }) => {
+    if (!slug) return;
     setLoading(true);
     setError("");
-
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/verify-report-access`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": anonKey,
-            "Authorization": `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({ slug, access_code: accessCode.trim() }),
-        }
-      );
-
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-report-access`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({ slug, access_code: code, target_report_id: ref || undefined }),
+      });
       const data = await res.json();
-
       if (!res.ok) {
-        if (res.status === 403) {
-          setError(t("public.incorrectCode"));
-        } else if (res.status === 404) {
-          setViewState("not_found");
-        } else {
-          setError(t("public.somethingWrong"));
-        }
-        return;
+        if (res.status === 403) setError(t("public.incorrectCode"));
+        else if (res.status === 404) setViewState("not_found");
+        else setError(t("public.somethingWrong"));
+        return false;
       }
-
       setReport(data.report);
-      setVerifiedAccessCode(accessCode.trim());
-      setViewState("splash");
-
-      fallbackRef.current = setTimeout(() => {
-        if (!videoLoaded) handleSplashComplete();
-      }, 4000);
+      setVerifiedAccessCode(code);
+      if (opts.splash) {
+        setViewState("splash");
+        fallbackRef.current = setTimeout(() => {
+          if (!videoLoaded) handleSplashComplete();
+        }, 4000);
+      } else {
+        setViewState("viewing");
+        // Scroll to top so viewer sees the newly loaded sibling report
+        try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+      }
+      return true;
     } catch {
       setError(t("public.unableVerify"));
+      return false;
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessCode.trim() || !slug) return;
+    await fetchReport(accessCode.trim(), targetRef, { splash: true });
+  };
+
+  // If a sibling is requested via ?ref= while already authenticated, fetch it inline (no splash)
+  useEffect(() => {
+    if (!verifiedAccessCode) return;
+    if (!report) return;
+    if (targetRef && report.id !== targetRef) {
+      fetchReport(verifiedAccessCode, targetRef, { splash: false });
+    } else if (!targetRef && report && searchParams.get("ref") === null) {
+      // no-op
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetRef, verifiedAccessCode]);
+
+
 
   const getRatingColor = (rating: number | null) => {
     if (!rating) return "bg-muted";
