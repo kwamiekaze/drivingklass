@@ -349,19 +349,27 @@ export default function ReportCardView() {
   };
 
   const handleCopyLink = async () => {
-    const url = window.location.href;
+    if (!isPublic || !publicSlug) {
+      toast({
+        title: "Enable public access first",
+        description: "Set an access code in Sharing & Delivery below, then copy the public link.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const url = `${window.location.origin}/n/${publicSlug}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       toast({
-        title: "Link Copied",
-        description: "Report card link copied to clipboard. Recipient must sign in to view.",
+        title: "Public Link Copied",
+        description: "Share this link along with the access code you set.",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast({
         title: "Copy Failed",
-        description: "Please copy the URL from the address bar.",
+        description: "Please copy the URL manually.",
         variant: "destructive",
       });
     }
@@ -609,7 +617,7 @@ export default function ReportCardView() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-right -mt-2">
-                  Recipient must sign in to view.
+                  Recipient enters the access code — no sign-in required.
                 </p>
               </>
             )}
