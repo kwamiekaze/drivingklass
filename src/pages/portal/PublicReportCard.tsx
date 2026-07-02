@@ -749,6 +749,3 @@ function PublicSessionHistory({ parentSlug, currentReportId, accessCode }: {
     </Card>
   );
 }
-
-  );
-}
