@@ -4,6 +4,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
+import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 
 /**
  * ReportCardOpen - Splash screen route for opening report cards
