@@ -218,6 +218,47 @@ export default function PublicReportCard() {
             {t("public.tapToContinue")}
           </div>
         )}
+        {videoLoaded && report && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "max(9rem, calc(env(safe-area-inset-bottom, 2rem) + 7rem))",
+              left: 0, right: 0, textAlign: "center",
+              pointerEvents: "none", zIndex: 10, padding: "0 1.5rem",
+            }}
+          >
+            {report.student_name && (
+              <div
+                style={{
+                  fontFamily: '"Playfair Display", Georgia, serif',
+                  fontSize: "clamp(1.5rem, 5vw, 2.25rem)",
+                  fontWeight: 700, lineHeight: 1.1,
+                  color: "#000",
+                  textShadow:
+                    "0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)",
+                }}
+              >
+                {report.student_name.split(" ")[0]}
+                {report.session_number ? ` — Lesson ${report.session_number}` : ""}
+              </div>
+            )}
+            {report.instructor_name && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  fontFamily: '"Playfair Display", Georgia, serif',
+                  fontSize: "clamp(0.75rem, 2.5vw, 0.95rem)",
+                  letterSpacing: "0.18em", textTransform: "uppercase",
+                  color: "#000",
+                  textShadow:
+                    "0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)",
+                }}
+              >
+                Submitted by: {report.instructor_name.split(" ")[0]}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
