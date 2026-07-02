@@ -148,8 +148,8 @@ export default function RoadTestResultOpen() {
               fontFamily: '"Playfair Display", Georgia, serif',
               fontSize: 'clamp(0.75rem, 2.5vw, 0.95rem)',
               letterSpacing: '0.18em', textTransform: 'uppercase',
-              color: 'rgba(212, 165, 116, 0.9)',
-              textShadow: '0 0 12px rgba(0,0,0,0.7)',
+              color: '#000',
+              textShadow: '0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)',
             }}>
               Submitted by: {instructorFirstName}
             </div>
