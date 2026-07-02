@@ -617,7 +617,7 @@ export default function ReportCardView() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-right -mt-2">
-                  Recipient must sign in to view.
+                  Recipient enters the access code — no sign-in required.
                 </p>
               </>
             )}
