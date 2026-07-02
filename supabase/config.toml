@@ -17,6 +17,8 @@ project_id = "wfuadudqtcmpdbgtgazh"
     verify_jwt = false
   [functions.verify-report-access]
     verify_jwt = false
+  [functions.list-report-history]
+    verify_jwt = false
   [functions.verify-schedule-access]
     verify_jwt = false
 
