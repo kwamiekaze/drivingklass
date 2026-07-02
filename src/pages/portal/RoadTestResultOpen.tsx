@@ -135,10 +135,8 @@ export default function RoadTestResultOpen() {
               fontFamily: '"Playfair Display", Georgia, serif',
               fontSize: 'clamp(1.5rem, 5vw, 2.25rem)',
               fontWeight: 700, lineHeight: 1.1,
-              background: 'linear-gradient(135deg, #f5d78a 0%, #d4a574 50%, #b8863f 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))',
+              color: '#000',
+              textShadow: '0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)',
             }}>
               {studentFirstName}
               {lessonNumber ? ` — Road Test ${lessonNumber}` : ' — Road Test'}
