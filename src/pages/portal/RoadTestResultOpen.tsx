@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 
 /**
  * RoadTestResultOpen - Splash screen route for opening road test results
