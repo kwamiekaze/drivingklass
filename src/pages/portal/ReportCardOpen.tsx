@@ -19,6 +19,9 @@ export default function ReportCardOpen() {
   
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [studentFirstName, setStudentFirstName] = useState<string>("");
+  const [instructorFirstName, setInstructorFirstName] = useState<string>("");
+  const [lessonNumber, setLessonNumber] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
