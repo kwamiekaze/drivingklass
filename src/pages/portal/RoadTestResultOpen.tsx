@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 
 /**
  * RoadTestResultOpen - Splash screen route for opening road test results
@@ -15,8 +17,34 @@ export default function RoadTestResultOpen() {
 
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [studentFirstName, setStudentFirstName] = useState<string>("");
+  const [instructorFirstName, setInstructorFirstName] = useState<string>("");
+  const [lessonNumber, setLessonNumber] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    (async () => {
+      const { data: s } = await supabase
+        .from('sessions')
+        .select('student_id, instructor_id')
+        .eq('id', sessionId)
+        .single();
+      if (!s) return;
+      const [stu, ins] = await Promise.all([
+        s.student_id ? supabase.from('profiles').select('first_name, full_name').eq('id', s.student_id).single() : Promise.resolve({ data: null } as any),
+        s.instructor_id ? supabase.from('profiles').select('first_name, full_name').eq('id', s.instructor_id).single() : Promise.resolve({ data: null } as any),
+      ]);
+      const pickFirst = (p: any) => p?.first_name?.trim() || p?.full_name?.trim()?.split(' ')?.[0] || '';
+      setStudentFirstName(pickFirst(stu?.data));
+      setInstructorFirstName(pickFirst(ins?.data));
+      if (s.student_id) {
+        const num = await fetchSessionNumberForStudent(supabase, s.student_id, sessionId);
+        setLessonNumber(num);
+      }
+    })();
+  }, [user, sessionId]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,6 +120,42 @@ export default function RoadTestResultOpen() {
           pointerEvents: "none", zIndex: 10,
         }}>
           Tap to continue
+        </div>
+      )}
+
+      {videoLoaded && (studentFirstName || instructorFirstName) && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'max(9rem, calc(env(safe-area-inset-bottom, 2rem) + 7rem))',
+          left: 0, right: 0, textAlign: 'center',
+          pointerEvents: 'none', zIndex: 10, padding: '0 1.5rem',
+        }}>
+          {studentFirstName && (
+            <div style={{
+              fontFamily: '"Playfair Display", Georgia, serif',
+              fontSize: 'clamp(1.5rem, 5vw, 2.25rem)',
+              fontWeight: 700, lineHeight: 1.1,
+              background: 'linear-gradient(135deg, #f5d78a 0%, #d4a574 50%, #b8863f 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))',
+            }}>
+              {studentFirstName}
+              {lessonNumber ? ` — Road Test ${lessonNumber}` : ' — Road Test'}
+            </div>
+          )}
+          {instructorFirstName && (
+            <div style={{
+              marginTop: '0.5rem',
+              fontFamily: '"Playfair Display", Georgia, serif',
+              fontSize: 'clamp(0.75rem, 2.5vw, 0.95rem)',
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+              color: 'rgba(212, 165, 116, 0.9)',
+              textShadow: '0 0 12px rgba(0,0,0,0.7)',
+            }}>
+              Submitted by: {instructorFirstName}
+            </div>
+          )}
         </div>
       )}
     </div>

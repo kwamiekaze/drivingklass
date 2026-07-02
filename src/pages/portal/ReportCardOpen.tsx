@@ -4,6 +4,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import reportCardSplashVideo from "@/assets/report-card-splash.mov";
+import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 
 /**
  * ReportCardOpen - Splash screen route for opening report cards
@@ -18,6 +19,9 @@ export default function ReportCardOpen() {
   
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [studentFirstName, setStudentFirstName] = useState<string>("");
+  const [instructorFirstName, setInstructorFirstName] = useState<string>("");
+  const [lessonNumber, setLessonNumber] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -51,6 +55,35 @@ export default function ReportCardOpen() {
     };
     checkSessionType();
   }, [user, id, navigate]);
+
+  // Fetch overlay data: student first name, instructor first name, lesson number
+  useEffect(() => {
+    if (!user || !id) return;
+    (async () => {
+      const { data: rc } = await supabase
+        .from('report_cards')
+        .select('student_id, instructor_id, session_id')
+        .eq('id', id)
+        .single();
+      if (!rc) return;
+      const [studentRes, instrRes] = await Promise.all([
+        rc.student_id
+          ? supabase.from('profiles').select('first_name, full_name').eq('id', rc.student_id).single()
+          : Promise.resolve({ data: null } as any),
+        rc.instructor_id
+          ? supabase.from('profiles').select('first_name, full_name').eq('id', rc.instructor_id).single()
+          : Promise.resolve({ data: null } as any),
+      ]);
+      const pickFirst = (p: any) =>
+        p?.first_name?.trim() || p?.full_name?.trim()?.split(' ')?.[0] || '';
+      setStudentFirstName(pickFirst(studentRes?.data));
+      setInstructorFirstName(pickFirst(instrRes?.data));
+      if (rc.student_id && rc.session_id) {
+        const num = await fetchSessionNumberForStudent(supabase, rc.student_id, rc.session_id);
+        setLessonNumber(num);
+      }
+    })();
+  }, [user, id]);
 
   // Set fallback timer in case video fails to load
   useEffect(() => {
@@ -210,6 +243,57 @@ export default function ReportCardOpen() {
           }}
         >
           Tap to continue
+        </div>
+      )}
+
+      {/* Personalized overlay: student name + lesson # + submitted by */}
+      {videoLoaded && (studentFirstName || instructorFirstName) && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'max(9rem, calc(env(safe-area-inset-bottom, 2rem) + 7rem))',
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            pointerEvents: 'none',
+            zIndex: 10,
+            padding: '0 1.5rem',
+          }}
+        >
+          {studentFirstName && (
+            <div
+              style={{
+                fontFamily: '"Playfair Display", Georgia, serif',
+                fontSize: 'clamp(1.5rem, 5vw, 2.25rem)',
+                fontWeight: 700,
+                lineHeight: 1.1,
+                background: 'linear-gradient(135deg, #f5d78a 0%, #d4a574 50%, #b8863f 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                textShadow: '0 0 30px rgba(212, 165, 116, 0.5)',
+                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))',
+              }}
+            >
+              {studentFirstName}
+              {lessonNumber ? ` — Lesson ${lessonNumber}` : ''}
+            </div>
+          )}
+          {instructorFirstName && (
+            <div
+              style={{
+                marginTop: '0.5rem',
+                fontFamily: '"Playfair Display", Georgia, serif',
+                fontSize: 'clamp(0.75rem, 2.5vw, 0.95rem)',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'rgba(212, 165, 116, 0.9)',
+                textShadow: '0 0 12px rgba(0,0,0,0.7)',
+              }}
+            >
+              Submitted by: {instructorFirstName}
+            </div>
+          )}
         </div>
       )}
     </div>
