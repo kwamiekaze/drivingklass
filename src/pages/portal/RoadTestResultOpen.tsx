@@ -17,8 +17,34 @@ export default function RoadTestResultOpen() {
 
   const [isFading, setIsFading] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [studentFirstName, setStudentFirstName] = useState<string>("");
+  const [instructorFirstName, setInstructorFirstName] = useState<string>("");
+  const [lessonNumber, setLessonNumber] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    (async () => {
+      const { data: s } = await supabase
+        .from('sessions')
+        .select('student_id, instructor_id')
+        .eq('id', sessionId)
+        .single();
+      if (!s) return;
+      const [stu, ins] = await Promise.all([
+        s.student_id ? supabase.from('profiles').select('first_name, full_name').eq('id', s.student_id).single() : Promise.resolve({ data: null } as any),
+        s.instructor_id ? supabase.from('profiles').select('first_name, full_name').eq('id', s.instructor_id).single() : Promise.resolve({ data: null } as any),
+      ]);
+      const pickFirst = (p: any) => p?.first_name?.trim() || p?.full_name?.trim()?.split(' ')?.[0] || '';
+      setStudentFirstName(pickFirst(stu?.data));
+      setInstructorFirstName(pickFirst(ins?.data));
+      if (s.student_id) {
+        const num = await fetchSessionNumberForStudent(supabase, s.student_id, sessionId);
+        setLessonNumber(num);
+      }
+    })();
+  }, [user, sessionId]);
 
   useEffect(() => {
     if (!authLoading && !user) {
