@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { slug, access_code } = await req.json();
+    const { slug, access_code, target_report_id } = await req.json();
 
     if (!slug || !access_code) {
       return new Response(
@@ -26,31 +26,60 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch report card by slug
-    const { data: report, error } = await supabaseAdmin
+    const REPORT_COLS = `
+      id, created_at, session_id, student_id, instructor_id,
+      is_public, public_access_code, public_share_slug,
+      show_graph_publicly,
+      acceleration, braking, left_turns, right_turns,
+      speed_maintenance, lane_maintenance, blind_spots, signal_usage,
+      changing_lanes, following_distance, road_sign_awareness, distractions,
+      general_parking, reverse_parking, parallel_parking, straight_line_backing,
+      turn_about, merging, interstate, overall,
+      transcription_summary, message_to_student,
+      strongest_skills, most_improved_skills, focus_areas,
+      time_split
+    `;
+
+    // Fetch parent report card by slug — this is what the shared access code belongs to
+    const { data: parentReport, error: parentErr } = await supabaseAdmin
       .from("report_cards")
-      .select(`
-        id, created_at, session_id, student_id, instructor_id,
-        is_public, public_access_code, public_share_slug,
-        show_graph_publicly,
-        acceleration, braking, left_turns, right_turns,
-        speed_maintenance, lane_maintenance, blind_spots, signal_usage,
-        changing_lanes, following_distance, road_sign_awareness, distractions,
-        general_parking, reverse_parking, parallel_parking, straight_line_backing,
-        turn_about, merging, interstate, overall,
-        transcription_summary, message_to_student,
-        strongest_skills, most_improved_skills, focus_areas,
-        time_split
-      `)
+      .select(REPORT_COLS)
       .eq("public_share_slug", slug)
       .eq("is_public", true)
       .single();
 
-    if (error || !report) {
+    if (parentErr || !parentReport) {
       return new Response(
         JSON.stringify({ error: "Report not found or not public" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Verify access code against the parent (shared) report
+    if (parentReport.public_access_code !== access_code) {
+      return new Response(
+        JSON.stringify({ error: "Incorrect access code" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If a target sibling was requested, fetch it and ensure it belongs to the same student
+    let report: any = parentReport;
+    if (target_report_id && target_report_id !== parentReport.id) {
+      const { data: sibling, error: siblingErr } = await supabaseAdmin
+        .from("report_cards")
+        .select(REPORT_COLS)
+        .eq("id", target_report_id)
+        .eq("student_id", parentReport.student_id)
+        .eq("report_card_status", "completed")
+        .single();
+      if (siblingErr || !sibling) {
+        return new Response(
+          JSON.stringify({ error: "Sibling report not accessible" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      report = sibling;
     }
 
     // Verify access code

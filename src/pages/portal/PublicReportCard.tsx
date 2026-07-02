@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
 import { TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,8 @@ type ViewState = "code_entry" | "splash" | "viewing" | "not_found";
 
 export default function PublicReportCard() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetRef = searchParams.get("ref") || "";
   const { resolvedTheme } = useTheme();
   const { t } = useTranslation();
   const skillLabel = useSkillLabel();
@@ -99,55 +101,69 @@ export default function PublicReportCard() {
     if (fallbackRef.current) clearTimeout(fallbackRef.current);
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessCode.trim() || !slug) return;
-
+  const fetchReport = async (code: string, ref: string, opts: { splash: boolean }) => {
+    if (!slug) return;
     setLoading(true);
     setError("");
-
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/verify-report-access`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": anonKey,
-            "Authorization": `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({ slug, access_code: accessCode.trim() }),
-        }
-      );
-
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-report-access`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({ slug, access_code: code, target_report_id: ref || undefined }),
+      });
       const data = await res.json();
-
       if (!res.ok) {
-        if (res.status === 403) {
-          setError(t("public.incorrectCode"));
-        } else if (res.status === 404) {
-          setViewState("not_found");
-        } else {
-          setError(t("public.somethingWrong"));
-        }
-        return;
+        if (res.status === 403) setError(t("public.incorrectCode"));
+        else if (res.status === 404) setViewState("not_found");
+        else setError(t("public.somethingWrong"));
+        return false;
       }
-
       setReport(data.report);
-      setVerifiedAccessCode(accessCode.trim());
-      setViewState("splash");
-
-      fallbackRef.current = setTimeout(() => {
-        if (!videoLoaded) handleSplashComplete();
-      }, 4000);
+      setVerifiedAccessCode(code);
+      if (opts.splash) {
+        setViewState("splash");
+        fallbackRef.current = setTimeout(() => {
+          if (!videoLoaded) handleSplashComplete();
+        }, 4000);
+      } else {
+        setViewState("viewing");
+        // Scroll to top so viewer sees the newly loaded sibling report
+        try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+      }
+      return true;
     } catch {
       setError(t("public.unableVerify"));
+      return false;
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessCode.trim() || !slug) return;
+    await fetchReport(accessCode.trim(), targetRef, { splash: true });
+  };
+
+  // If a sibling is requested via ?ref= while already authenticated, fetch it inline (no splash)
+  useEffect(() => {
+    if (!verifiedAccessCode) return;
+    if (!report) return;
+    if (targetRef && report.id !== targetRef) {
+      fetchReport(verifiedAccessCode, targetRef, { splash: false });
+    } else if (!targetRef && report && searchParams.get("ref") === null) {
+      // no-op
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetRef, verifiedAccessCode]);
+
+
 
   const getRatingColor = (rating: number | null) => {
     if (!rating) return "bg-muted";
@@ -200,6 +216,47 @@ export default function PublicReportCard() {
             }}
           >
             {t("public.tapToContinue")}
+          </div>
+        )}
+        {videoLoaded && report && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "max(9rem, calc(env(safe-area-inset-bottom, 2rem) + 7rem))",
+              left: 0, right: 0, textAlign: "center",
+              pointerEvents: "none", zIndex: 10, padding: "0 1.5rem",
+            }}
+          >
+            {report.student_name && (
+              <div
+                style={{
+                  fontFamily: '"Playfair Display", Georgia, serif',
+                  fontSize: "clamp(1.5rem, 5vw, 2.25rem)",
+                  fontWeight: 700, lineHeight: 1.1,
+                  color: "#000",
+                  textShadow:
+                    "0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)",
+                }}
+              >
+                {report.student_name.split(" ")[0]}
+                {report.session_number ? ` — Lesson ${report.session_number}` : ""}
+              </div>
+            )}
+            {report.instructor_name && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  fontFamily: '"Playfair Display", Georgia, serif',
+                  fontSize: "clamp(0.75rem, 2.5vw, 0.95rem)",
+                  letterSpacing: "0.18em", textTransform: "uppercase",
+                  color: "#000",
+                  textShadow:
+                    "0 0 20px rgba(255,255,255,0.7), 0 2px 4px rgba(255,255,255,0.5)",
+                }}
+              >
+                Submitted by: {report.instructor_name.split(" ")[0]}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -448,10 +505,11 @@ export default function PublicReportCard() {
 
               {/* Session History for authorized viewer */}
               <PublicSessionHistory
-                studentId={report.student_id}
+                parentSlug={slug!}
                 currentReportId={report.id}
                 accessCode={verifiedAccessCode}
               />
+
 
               {/* Lesson Rating — always at the very bottom */}
               <div className="pb-8">
@@ -563,10 +621,11 @@ export default function PublicReportCard() {
 
               {/* Session History for authorized viewer */}
               <PublicSessionHistory
-                studentId={report.student_id}
+                parentSlug={slug!}
                 currentReportId={report.id}
                 accessCode={verifiedAccessCode}
               />
+
 
               {/* Lesson Rating — always at the very bottom */}
               <div className="pb-8">
@@ -593,24 +652,24 @@ export default function PublicReportCard() {
  * PublicSessionHistory — shows all public completed results for authorized viewers
  * Includes both driving reports and road test results
  */
-function PublicSessionHistory({ studentId, currentReportId, accessCode }: { 
-  studentId: string; 
+function PublicSessionHistory({ parentSlug, currentReportId, accessCode }: {
+  parentSlug: string;
   currentReportId: string;
   accessCode: string;
 }) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<Array<{
-    id: string;
-    public_share_slug: string | null;
+  type Item = {
     session_id: string;
-    created_at: string;
-    overall: number | null;
-    instructor_id: string;
-    instructor_name: string;
     session_type: string;
+    session_starts_at: string;
+    session_number: number;
+    instructor_name: string;
+    report_card_id: string | null;
+    overall: number | null;
     road_test_outcome: string | null;
-    sessionNumber: number;
-  }>>([]);
+    created_at: string;
+  };
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -618,94 +677,32 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
     const load = async () => {
       setLoading(true);
       try {
-        // Get all public completed report cards for this student
-        const { data: reports } = await supabase
-          .from('report_cards')
-          .select('id, created_at, overall, instructor_id, public_share_slug, session_id')
-          .eq('student_id', studentId)
-          .eq('is_public', true)
-          .eq('report_card_status', 'completed')
-          .not('public_share_slug', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (cancelled || !reports || reports.length === 0) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const res = await fetch(`${supabaseUrl}/functions/v1/list-report-history`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({ slug: parentSlug, access_code: accessCode }),
+        });
+        if (!res.ok) {
           if (!cancelled) setItems([]);
           return;
         }
-
-        // Get session info for all reports
-        const sessionIds = reports.map(r => r.session_id).filter(Boolean);
-        const [sessionsRes, roadTestsRes] = await Promise.all([
-          supabase
-            .from('sessions')
-            .select('id, starts_at, session_type')
-            .in('id', sessionIds)
-            .neq('status', 'cancelled')
-            .order('starts_at', { ascending: true }),
-          supabase
-            .from('road_test_results')
-            .select('session_id, result')
-            .eq('student_id', studentId)
-            .in('session_id', sessionIds),
-        ]);
-
-        const sessionMap: Record<string, { starts_at: string; session_type: string }> = {};
-        (sessionsRes.data || []).forEach(s => { sessionMap[s.id] = { starts_at: s.starts_at, session_type: s.session_type }; });
-
-        const roadTestMap: Record<string, string> = {};
-        (roadTestsRes.data || []).forEach(rt => { roadTestMap[rt.session_id] = rt.result; });
-
-        // Build session number map from ALL non-cancelled sessions for the student
-        const { data: allSessions } = await supabase
-          .from('sessions')
-          .select('id, starts_at')
-          .eq('student_id', studentId)
-          .neq('status', 'cancelled')
-          .order('starts_at', { ascending: true });
-
-        const sessionNumMap: Record<string, number> = {};
-        (allSessions || []).forEach((s, i) => { sessionNumMap[s.id] = i + 1; });
-
-        // Instructor names
-        const instrIds = [...new Set(reports.map(r => r.instructor_id))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, first_name, last_name')
-          .in('id', instrIds);
-
-        const instrMap: Record<string, string> = {};
-        (profiles || []).forEach(p => {
-          instrMap[p.id] = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Instructor';
-        });
-
-        if (!cancelled) {
-          setItems(reports.map(r => {
-            const sess = sessionMap[r.session_id] || null;
-            const isRoadTest = sess?.session_type === 'testing';
-            return {
-              id: r.id,
-              public_share_slug: r.public_share_slug,
-              session_id: r.session_id,
-              created_at: r.created_at!,
-              overall: isRoadTest ? null : r.overall,
-              instructor_id: r.instructor_id,
-              instructor_name: instrMap[r.instructor_id] || 'Instructor',
-              session_type: sess?.session_type || 'driving',
-              road_test_outcome: isRoadTest ? (roadTestMap[r.session_id] || null) : null,
-              sessionNumber: sessionNumMap[r.session_id] || 0,
-            };
-          }));
-        }
+        const data = await res.json();
+        if (!cancelled) setItems(data.items || []);
       } catch (e) {
-        console.error('Failed to load public session history', e);
+        console.error("Failed to load public session history", e);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    load();
+    if (parentSlug && accessCode) load();
     return () => { cancelled = true; };
-  }, [studentId]);
+  }, [parentSlug, accessCode]);
 
   if (loading) return null;
   if (items.length <= 1) return null;
@@ -721,26 +718,33 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
       </CardHeader>
       <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
         {items.map(item => {
-          const isCurrent = item.id === currentReportId;
+          const isCurrent = item.report_card_id
+            ? item.report_card_id === currentReportId
+            : false;
           const isRoadTest = item.session_type === 'testing';
+          // Road tests aren't openable via public route; only driving reports link out
+          const canOpen = !isCurrent && !isRoadTest && !!item.report_card_id;
+          const href = canOpen ? `/report/public/${parentSlug}?ref=${item.report_card_id}` : undefined;
           return (
             <a
-              key={item.id}
-              href={isCurrent ? undefined : `/report/public/${item.public_share_slug}`}
+              key={item.session_id}
+              href={href}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                 isCurrent
                   ? 'bg-primary/10 border-primary/30 cursor-default'
-                  : 'bg-card hover:bg-accent/50 border-border cursor-pointer'
+                  : canOpen
+                    ? 'bg-card hover:bg-accent/50 border-border cursor-pointer'
+                    : 'bg-card border-border cursor-default opacity-90'
               }`}
-              onClick={isCurrent ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+              onClick={!canOpen ? (e: React.MouseEvent) => e.preventDefault() : undefined}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {item.sessionNumber > 0 && (
-                    <Badge variant="outline" className="text-[10px]">{t('report.sessionShort', { defaultValue: 'Session' })} {item.sessionNumber}</Badge>
+                  {item.session_number > 0 && (
+                    <Badge variant="outline" className="text-[10px]">{t('report.sessionShort', { defaultValue: 'Session' })} {item.session_number}</Badge>
                   )}
                   <span className="text-sm font-medium text-foreground">
-                    {format(parseISO(item.created_at), 'MMM d, yyyy')}
+                    {format(parseISO(item.session_starts_at), 'MMM d, yyyy')}
                   </span>
                   {isRoadTest ? (
                     <Badge variant="outline" className="text-[10px] gap-1">
@@ -778,7 +782,7 @@ function PublicSessionHistory({ studentId, currentReportId, accessCode }: {
                   {item.overall}/10
                 </div>
               )}
-              {!isCurrent && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+              {canOpen && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
             </a>
           );
         })}
