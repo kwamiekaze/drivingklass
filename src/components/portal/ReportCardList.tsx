@@ -77,13 +77,27 @@ export function ReportCardList({ reportCards, userRole, onEdit }: ReportCardList
 
   const handleCopyLink = async (reportCardId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/report-cards/${reportCardId}`;
     try {
+      const { data, error } = await supabase
+        .from('report_cards')
+        .select('is_public, public_share_slug')
+        .eq('id', reportCardId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.is_public || !data?.public_share_slug) {
+        toast({
+          title: "Enable public access first",
+          description: "Open the report card and set an access code under Sharing & Delivery, then copy the link.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const url = `${window.location.origin}/n/${data.public_share_slug}`;
       await navigator.clipboard.writeText(url);
       setCopied(true);
       toast({
-        title: "Link Copied",
-        description: "Report card link copied. Recipient must sign in to view.",
+        title: "Public Link Copied",
+        description: "Recipient enters the access code — no sign-in required.",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
