@@ -580,10 +580,11 @@ export default function PublicReportCard() {
 
               {/* Session History for authorized viewer */}
               <PublicSessionHistory
-                studentId={report.student_id}
+                parentSlug={slug!}
                 currentReportId={report.id}
                 accessCode={verifiedAccessCode}
               />
+
 
               {/* Lesson Rating — always at the very bottom */}
               <div className="pb-8">
