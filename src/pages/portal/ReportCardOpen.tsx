@@ -56,6 +56,35 @@ export default function ReportCardOpen() {
     checkSessionType();
   }, [user, id, navigate]);
 
+  // Fetch overlay data: student first name, instructor first name, lesson number
+  useEffect(() => {
+    if (!user || !id) return;
+    (async () => {
+      const { data: rc } = await supabase
+        .from('report_cards')
+        .select('student_id, instructor_id, session_id')
+        .eq('id', id)
+        .single();
+      if (!rc) return;
+      const [studentRes, instrRes] = await Promise.all([
+        rc.student_id
+          ? supabase.from('profiles').select('first_name, full_name').eq('id', rc.student_id).single()
+          : Promise.resolve({ data: null } as any),
+        rc.instructor_id
+          ? supabase.from('profiles').select('first_name, full_name').eq('id', rc.instructor_id).single()
+          : Promise.resolve({ data: null } as any),
+      ]);
+      const pickFirst = (p: any) =>
+        p?.first_name?.trim() || p?.full_name?.trim()?.split(' ')?.[0] || '';
+      setStudentFirstName(pickFirst(studentRes?.data));
+      setInstructorFirstName(pickFirst(instrRes?.data));
+      if (rc.student_id && rc.session_id) {
+        const num = await fetchSessionNumberForStudent(supabase, rc.student_id, rc.session_id);
+        setLessonNumber(num);
+      }
+    })();
+  }, [user, id]);
+
   // Set fallback timer in case video fails to load
   useEffect(() => {
     fallbackTimerRef.current = setTimeout(() => {
