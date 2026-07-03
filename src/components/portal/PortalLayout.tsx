@@ -257,6 +257,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/admin/emails', label: 'Emails', icon: Mail },
         { href: '/admin/qa', label: 'QA', icon: Shield },
         { href: '/admin/practice-test', label: 'Practice Test', icon: BookOpen },
+        { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;
     case 'staff':
@@ -270,6 +271,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/emails', label: 'Emails', icon: Mail },
+        { href: '/game', label: 'Simulator', icon: Gamepad2 },
       );
       break;
     case 'instructor':
