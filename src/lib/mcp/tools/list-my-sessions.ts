@@ -2,6 +2,8 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+declare const process: { env: Record<string, string | undefined> };
+
 export default defineTool({
   name: "list_my_sessions",
   title: "List my sessions",
