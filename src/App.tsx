@@ -58,7 +58,8 @@ import AdminFeedback from "./pages/portal/AdminFeedback";
 import AdminEmails from "./pages/portal/AdminEmails";
 import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
-import DrivingGamePage from "./pages/DrivingGame";
+import RoadTestGame from "./games/roadtest/RoadTestGame";
+import { ProtectedRoute } from "./components/portal/ProtectedRoute";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 const queryClient = new QueryClient();
@@ -163,9 +164,12 @@ const App = () => (
                       {/* Legacy Admin */}
                       <Route path="/old-admin" element={<Admin />} />
                       
-                      {/* Driving Game */}
-                      <Route path="/game" element={<DrivingGamePage />} />
-                      <Route path="/driving-game" element={<DrivingGamePage />} />
+                      {/* Driving Simulator (admin + instructor only) */}
+                      <Route path="/simulator" element={
+                        <ProtectedRoute allowedRoles={['admin', 'instructor']} requireApproval={false}>
+                          <RoadTestGame />
+                        </ProtectedRoute>
+                      } />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
