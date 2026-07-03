@@ -26,8 +26,9 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  // Get redirect URL from query params
-  const redirectUrl = searchParams.get('redirect');
+  // Get redirect URL from query params. `next` is used by OAuth consent flow
+  // (e.g. /.lovable/oauth/consent) so approvals return to the consent page.
+  const redirectUrl = searchParams.get('redirect') ?? searchParams.get('next');
 
   // Redirect if already logged in
   useEffect(() => {
