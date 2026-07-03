@@ -271,7 +271,6 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/admin/leads', label: 'Leads', icon: FileUser },
         { href: '/admin/messages', label: 'Messages', icon: Headset },
         { href: '/admin/emails', label: 'Emails', icon: Mail },
-        { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
       );
       break;
     case 'instructor':
