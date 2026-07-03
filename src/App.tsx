@@ -60,6 +60,7 @@ import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
 import DrivingGamePage from "./pages/DrivingGame";
 import Unsubscribe from "./pages/Unsubscribe";
+import OAuthConsent from "./pages/OAuthConsent";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
             <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
 
             {/* All other routes wrapped in auth + analytics providers */}
