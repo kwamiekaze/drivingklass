@@ -1,111 +1,47 @@
-# Homepage 3D Hero — Award-Winning Rebuild
+# Implementation Plan
 
-Presentation-only overhaul of `/` (Index.tsx). Every price, package, Square link, contact form, nav item, footer, SEO meta, and light/dark logic is preserved verbatim. No changes to `/simulator`, portal routes, or `src/data/packages.ts`.
+## 1. Scheduling: blocked time for instructors
+- Loosen the `schedule_blocks` SELECT RLS to allow `authenticated` users with the `instructor` role to read all blocks (admins already covered). Students remain excluded.
+- Update the schedule queries used by the instructor calendar to fetch `schedule_blocks` and merge them into the day view alongside sessions.
+- In the "all dates" calendar list view, sort the merged session+block list for each day by start time (currently blocks render after sessions). Fix the comparator so `starts_at` is the single sort key.
 
-## What survives, exactly
+## 2. Report card form upgrades (instructor-facing)
+On `ReportCardForm.tsx` add a new "Sharing & Delivery" card with:
+- **Access code**: text input (4–10 chars) pre-filled with current auto-generated code. Saved to `report_cards.access_code` on submit.
+- **Show graph in public view**: checkbox writing `report_cards.show_graph_public`.
+- **Send to parent/guardian**: checkbox, disabled with tooltip when the student profile has no `guardian_email`. Saved to `report_cards.send_to_guardian` so the submit hook can fan out.
+- **Time-spent chart (optional)**: multi-select for `parking_lot | subdivision | city | backroads | interstate`. For each selected category, render a slider/number input; values auto-normalize to 100% on submit. Persist as JSON in new column `report_cards.time_split` (`{parking_lot: 25, city: 50, ...}`).
 
-Pulled from the current `src/pages/Index.tsx` chain:
+Add a "Time spent during lesson" visual to `ReportCardView.tsx` and `PublicReportCard.tsx` that renders a horizontal stacked bar (i18n labels) when `time_split` has values.
 
-- **11 packages** from `src/data/packages.ts` (1 HR $69 → 40 HR $2,199, plus 1 HR + RD TEST $160 and 2 HR + RD TEST $200) — same titles, prices, descriptions, `squareUrl`s, and `positionIndex` order.
-- **`PackageModal`** — same "Book Now" Square flow, same analytics `trackClick("open_info", …)` and `("package_select", …)`.
-- **Car center → auth/dashboard link** with the existing role-based routing (auth → student/instructor/admin/staff) as the click target on the 3D car.
-- **`HeaderBrand`** (DRIVINGKLASS + 5 gold stars), `ThemeToggle` top-left, portal car icon top-right → `/auth`.
-- **`NavigationButtons`** (opens `ReviewsModal` + `AboutModal`), **`ContactSection`** (contact form + Supabase submit), both `ReviewsModal` and `AboutModal` — mounted below the hero, untouched.
-- **Backgrounds**: `GalaxyStars` (dark) and `LightModeBackground` (light) continue to render outside the 3D canvas.
-- **Splash screen** flow (`SplashScreen`, `splashComplete` state, desktop-skip rule) preserved.
-- **SEO / head metadata** in `index.html` — untouched.
-- **Reduced motion**: existing `prefers-reduced-motion` behavior extended to the 3D scene (serves static poster).
+## 3. Custom entries for highlights
+`SkillHighlightsEditor.tsx`: add a "+ Add custom note" option to each of strongest / most improved / focus area pickers. Custom notes are stored with `{ custom: true, label: "..." }` in `report_cards.highlights` so the radar chart and skill averaging exclude any item where `custom === true`. Update `SkillProgressRadar` to filter custom entries.
 
-Anything not called out above is untouched.
+## 4. Emails
+- Update the `report-card-submitted` email template to include the access code and a "View report card" button using the public link.
+- When `send_to_guardian` is true, the report-card submit handler additionally enqueues the same template to `profiles.guardian_email` with the same `idempotencyKey` suffix `:guardian`.
+- All sends already log to `email_send_log`; no infra changes needed.
 
-## New structure
+## 5. Email log viewer
+New page `/portal/emails` reachable from PortalLayout for `admin`, `staff`, and `instructor` roles:
+- Admin/staff: full dashboard with the required six features (time range, template filter, status filter, summary stats, table, dedup by `message_id`).
+- Instructor: same UI, but server query filters `email_send_log` rows where `metadata->>'instructor_id' = auth.uid()` OR `metadata->>'student_id' IN (their assigned students)`. To make this safe, add a SECURITY DEFINER RPC `get_visible_email_log(_from, _to, _template, _status)` that applies the role-based filter server-side. Admins skip the filter.
+- We will backfill `instructor_id` / `student_id` into the `metadata` JSON for the report-card, lesson-reminder, and session-notification templates that already send today.
 
-```text
-src/components/home3d/
-  Hero3DScene.tsx      Canvas host, lights, environment, camera rig, intro tween
-  DkCar.tsx            GLB attempt (/assets/dk-car-gold.glb) with image-plane fallback
-  PriceRing.tsx        Orbiting cards anchored to car, drei <Html> DOM cards
-  PriceCard.tsx        Single glassy dark card (gold border, gold price)
-  SoundManager.tsx     WebAudio synth: engine start, ambient pad, tick, whoosh
-  MuteToggle.tsx       Floating gold mute/unmute button
-  PosterFallback.tsx   Static hero + normal DOM grid of price cards
-  useCapabilityTier.ts prefers-reduced-motion + GPU/mobile heuristic → 'full' | 'lite' | 'poster'
-  useGlbAvailable.ts   HEAD /assets/dk-car-gold.glb, cache result
-```
+## 6. Database migration
+Single migration adds:
+- `report_cards.access_code TEXT` (if not already), `show_graph_public BOOLEAN DEFAULT true`, `send_to_guardian BOOLEAN DEFAULT false`, `time_split JSONB`.
+- `schedule_blocks` SELECT policy update for instructors.
+- `get_visible_email_log` RPC + GRANT EXECUTE to authenticated.
 
-`Hero3DScene` is lazy-loaded (`React.lazy` + `Suspense`) so the initial bundle stays small and the poster paints instantly for LCP.
+## 7. End-to-end verification
+After deploying edge functions and running the migration:
+- Use psql to confirm a sample row writes `time_split`, `access_code`, `send_to_guardian`.
+- Use `supabase--curl_edge_functions` to invoke `send-transactional-email` with `templateName: report-card-submitted` and confirm the rendered subject/body includes the access code.
+- Drive Playwright through: instructor login → create a report card → set custom passcode, toggle parent send, add a custom focus area, set time split → submit. Then load `/portal/emails` as instructor and as admin to confirm visibility scopes.
 
-## Behavior
-
-**Hero layout**
-- Full-viewport `<section>` replacing the current `HeroSection` body.
-- Overlaid DOM: `ThemeToggle`, portal link, `HeaderBrand`, tagline **"Where 5-Star Drivers Are Made"** in Bebas Neue display type, staggered letter-in on load, `MuteToggle` bottom-right.
-- Under the hero: existing `NavigationButtons` → `ContactSection` chain, unchanged.
-
-**3D scene**
-- Dark reflective asphalt plane, single gold lane line receding to horizon, warm golden-hour key + rim lights, `Environment` preset for reflections, thin floating dust particles (instanced points, capped).
-- Camera: idle drift + mouse parallax on desktop, touch-drag orbit on mobile via `OrbitControls` (pan/zoom disabled, polar-locked so ring stays visible), optional device-tilt parallax when `DeviceOrientationEvent.requestPermission` is granted.
-- Intro: 2.5s camera glide from low-front to hero framing; ring blooms outward from behind the car; title letters stagger in. Any pointer/keydown skips the tween.
-
-**Car (`DkCar`)**
-- `useGlbAvailable` HEADs `/assets/dk-car-gold.glb` once and caches. If present → `useGLTF` inside `<Suspense>` with error boundary. If missing or failed → tilted image plane using the existing gold car asset with layered parallax shadow, gentle float, same auto-rotate and drag-to-rotate.
-- Component swaps to the GLB automatically on next mount once file lands — no other code change.
-- Whole car is a click target reusing `CarCenterLink`'s role-based destination logic.
-
-**Price ring (`PriceRing`)**
-- 11 cards arranged on a circle in the car's local space (anchored group) so they always orbit the car regardless of camera.
-- Cards rendered via drei `<Html transform occlude>` so they are real DOM: keyboard-focusable, screen-reader visible, crawlable, and clicking calls the same `handlePackageClick` → opens `PackageModal` (identical Square flow).
-- Slow constant Y-rotation (~6° per second). Hover (desktop) / tap (mobile) pauses rotation, scales the target ~1.08 with a gold-glow ring, reveals its "Book Now" CTA inline.
-- Cards on the far side dim (`opacity` driven by dot(cameraForward, cardNormal)).
-
-**Sound**
-- Off by default. Toggle persists in `localStorage`.
-- All sounds synthesized via WebAudio (small oscillator + noise buffer) so zero binary assets: engine-start note on first unmute, low pad loop, hover tick, drag whoosh. Volume ≤ 0.25, respects autoplay policy (only starts after user gesture).
-
-**Performance tiers (`useCapabilityTier`)**
-- `full`: postprocessing bloom on gold trim + subtle vignette, dust particles, GLB when available.
-- `lite`: no postprocessing, fewer particles, capped DPR 1.25 (mid mobile).
-- `poster`: `prefers-reduced-motion` OR `deviceMemory <= 2` OR failed WebGL context. Renders `PosterFallback`: static hero image + full DOM grid of the 11 price cards, all wired to `PackageModal`. Fully functional, zero motion.
-
-**Theme integration**
-- Dark = primary showroom look.
-- Light = same scene but with a lighter fog color and reduced bloom so it blends into `LightModeBackground` below.
-
-## Files touched vs new
-
-New:
-- `src/components/home3d/*` (8 files above)
-- `.env`-free — no new keys or endpoints.
-
-Edited:
-- `src/components/HeroSection.tsx` — body swapped for `<Hero3DScene />` (still receives `splashComplete`); header row and `HeaderBrand` kept.
-- `src/pages/Index.tsx` — unchanged wiring; only import unchanged.
-
-Untouched:
-- `src/data/packages.ts`, `PackageModal`, `NavigationButtons`, `ContactSection`, `ReviewsModal`, `AboutModal`, `SplashScreen`, `ThemeToggle`, `HeaderBrand`, `GalaxyStars`, `LightModeBackground`, `index.html`, all portal routes, `/simulator`, `src/games/**`.
-
-## Dependencies
-
-Install pinned per project's React 18 constraints:
-
-```bash
-bun add @react-three/fiber@^8.18 @react-three/drei@^9.122.0 @react-three/postprocessing@^2.16.0 three@^0.160.0
-```
-
-## Accessibility & SEO
-
-- Every price card is a native `<button>` with `aria-label="{label} — {price} — Book"`, focus ring, keyboard-activatable.
-- Tagline is a real `<h1>` inside the canvas overlay so crawlers see it.
-- Price list is fully present in DOM via drei `<Html>` (not baked into textures).
-
-## Out of scope
-
-- No GLB is created or uploaded here — the fallback image ships; the GLB slots in automatically when the user drops it at `/public/assets/dk-car-gold.glb`.
-- No changes to pricing, wording, links, Square URLs, contact form fields, or portal.
-- No modifications to `/simulator` or any portal page.
-
-## Verification
-
-- `tsgo --noEmit` clean.
-- Playwright at 390px viewport: no horizontal scroll, all 11 cards keyboard-reachable, `PackageModal` opens with correct Square URL for a sampled card, `ContactSection` still renders below.
-- Manual toggle of `prefers-reduced-motion` renders `PosterFallback` with all 11 prices.
+## Technical notes
+- Schema columns are nullable / have safe defaults so existing rows continue to render.
+- The `time_split` chart on the public view uses semantic tokens already in `index.css`; no new colors.
+- The custom-entry flag lives in the JSON payload so no enum changes are needed.
+- Instructor email visibility relies on `metadata` JSON, which is already populated by the send function — we only need to ensure callers include `instructor_id`/`student_id` going forward.
