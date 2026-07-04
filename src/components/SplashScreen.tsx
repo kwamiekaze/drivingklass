@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import splashVideo from '@/assets/splash-video.mov';
+import splashVideoAsset from '@/assets/splash-video.mov.asset.json';
+
+const splashVideo = splashVideoAsset.url;
 
 interface SplashScreenProps {
   onComplete: () => void;
