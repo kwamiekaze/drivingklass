@@ -329,57 +329,30 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
         }}
       >
         
-        {/* HERO CENTER LAYER - Car with headlight switching - CLICKABLE */}
-        <CarCenterLink>
-          <div className="relative w-[58%] flex items-center justify-center">
-            {/* Static radial glow behind car - never changes */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                background: 'radial-gradient(ellipse 80% 60% at center, hsl(43 60% 40% / 0.15) 0%, hsl(40 50% 35% / 0.08) 35%, transparent 70%)',
-                filter: 'blur(20px)',
-                transform: 'scale(1.3)',
-                pointerEvents: 'none',
-              }}
-            />
-            
-            {/* Static cinematic shadow/reflection under car */}
-            <div 
-              className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-10"
-              style={{
-                background: 'radial-gradient(ellipse at center, hsl(0 0% 0% / 0.65) 0%, hsl(0 0% 0% / 0.35) 45%, transparent 75%)',
-                filter: 'blur(14px)',
-                pointerEvents: 'none',
-              }}
-            />
-            
-            {/* Car images container - crossfade between off and on */}
-            <div className="relative w-full h-auto">
-              {/* Headlights OFF image */}
-              <img 
-                src={carHeadlightsOff} 
-                alt="DrivingKlass sports car" 
-                className="w-full h-auto object-contain relative z-10 transition-opacity duration-150"
-                style={{
-                  filter: 'contrast(1.08) saturate(1.05)',
-                  pointerEvents: 'none',
-                  opacity: headlightsOn ? 0 : 1,
-                }}
-              />
-              {/* Headlights ON image - overlaid */}
-              <img 
-                src={carHeadlightsOn} 
-                alt="DrivingKlass sports car illuminated" 
-                className="absolute inset-0 w-full h-auto object-contain z-10 transition-opacity duration-150"
-                style={{
-                  filter: 'contrast(1.08) saturate(1.05)',
-                  pointerEvents: 'none',
-                  opacity: headlightsOn ? 1 : 0,
-                }}
-              />
-            </div>
-          </div>
-        </CarCenterLink>
+        {/* HERO CENTER LAYER - 3D gold car showcase (museum turntable) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-10"
+          style={{
+            width: '58%',
+            height: '58%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <Suspense
+            fallback={
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img
+                  src={carHeadlightsOff}
+                  alt="DrivingKlass sports car"
+                  className="w-full h-auto object-contain"
+                  style={{ filter: 'contrast(1.08) saturate(1.05)', pointerEvents: 'none' }}
+                />
+              </div>
+            }
+          >
+            <CarShowcase />
+          </Suspense>
+        </div>
 
         {/* Price chip layer - shows during glow animation, hover (desktop), or selection */}
         {chipIndexToShow && (
