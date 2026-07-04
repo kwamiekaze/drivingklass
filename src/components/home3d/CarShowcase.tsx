@@ -231,7 +231,8 @@ export default function CarShowcase() {
           />
           <directionalLight position={[3, 2, -2]} intensity={0.4} color={"#ffffff"} />
           <Environment preset="city" />
-          <CarModel />
+          <CarModel onPlacement={setPlacement} />
+          {placement && <RoofSign placement={placement} />}
           <ContactShadows position={[0, 0, 0]} opacity={0.45} blur={2.4} far={3} scale={6} />
           <OrbitControls
             enableZoom={false}
