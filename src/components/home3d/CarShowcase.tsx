@@ -7,16 +7,16 @@ import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
-// Measured from opt.glb, band f=0.03 (see STEP 2 output):
-// x=[0.0953,0.1696], y=[0.8407,0.8667], z=[-0.223,0.2326]
+// Measured from new opt.glb, band f=0.03 (see STEP 2 output):
+// x=[0.1097,0.1808] (span 0.0712), y=[0.8456,0.8754], z=[-0.2282,0.2413] (span 0.4695)
 // Padded slightly to fully hide original sign face.
 const SIGN = {
-  cx: 0.132,
-  cy: 0.854,
-  cz: 0.005,
-  width: 0.462,  // long span along Z
-  height: 0.032, // topY - y[0] + pad
-  depth: 0.080,  // short span along X
+  cx: 0.145,
+  cy: 0.861,
+  cz: 0.007,
+  width: 0.478,  // long span along Z + ~0.008 pad
+  height: 0.036, // topY - y[0] + ~0.006 pad
+  depth: 0.079,  // short span along X + ~0.008 pad
 };
 const LONG_AXIS: "x" | "z" = "z";
 
