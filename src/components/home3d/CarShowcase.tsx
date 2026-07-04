@@ -34,121 +34,122 @@ function CarModel() {
       }
     });
 
-    // World bbox after normalization
     const worldBox = new THREE.Box3().setFromObject(cloned);
     const worldSize = new THREE.Vector3();
     worldBox.getSize(worldSize);
     const L = Math.max(worldSize.x, worldSize.z);
+    const H = worldSize.y;
+    const topY = worldBox.max.y;
     const lengthAxis: "x" | "z" = worldSize.x >= worldSize.z ? "x" : "z";
 
-    // Roof height at the car's center (raycast straight down)
-    const raycaster = new THREE.Raycaster();
-    raycaster.set(new THREE.Vector3(0, worldBox.max.y + 5, 0), new THREE.Vector3(0, -1, 0));
-    const hits = raycaster.intersectObject(cloned, true);
-    const roofYCenter = hits.length > 0 ? hits[0].point.y : worldBox.max.y - 0.2;
+    // Structural roof band: the original roof sign is the highest part of the
+    // model, so its vertices live in the top slice of the model's height.
+    // NO raycasting — this cannot return a bogus floor height.
+    const signBand = topY - 0.16 * H;
 
-    // ---- MEASURE the model's ORIGINAL roof sign ----
-    // Collect every vertex that sits above the roofline; percentile-trim to
-    // ignore thin outliers like the antenna.
-    const thresh = roofYCenter + 0.012;
-    const xs: number[] = [];
-    const ys: number[] = [];
-    const zs: number[] = [];
-    const v = new THREE.Vector3();
-    cloned.updateMatrixWorld(true);
-    cloned.traverse((o: any) => {
-      if (o.isMesh && o.geometry?.attributes?.position) {
-        const pos = o.geometry.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-          v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
-          if (v.y > thresh) {
-            xs.push(v.x);
-            ys.push(v.y);
-            zs.push(v.z);
-          }
-        }
-      }
-    });
-
-    const pct = (arr: number[], p: number) => {
-      const s = [...arr].sort((a, b) => a - b);
-      return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))];
-    };
-
+    // Defaults (used if measurement fails): spec-proportion sign near the top,
+    // and NO flattening (a leftover sign is better than a crushed car).
     let cx = 0;
     let cz = 0;
-    let baseY = roofYCenter;
-    let mSizeX = 0;
-    let mSizeY = 0;
-    let mSizeZ = 0;
-    let measured = false;
-
-    if (xs.length > 50) {
-      const x1 = pct(xs, 0.02), x2 = pct(xs, 0.98);
-      const z1 = pct(zs, 0.02), z2 = pct(zs, 0.98);
-      const y1 = pct(ys, 0.02), y2 = pct(ys, 0.98);
-      cx = (x1 + x2) / 2;
-      cz = (z1 + z2) / 2;
-      baseY = y1;
-      mSizeX = x2 - x1;
-      mSizeY = y2 - y1;
-      mSizeZ = z2 - z1;
-      measured = mSizeX > 0.02 && mSizeZ > 0.02 && mSizeY > 0.01;
+    let baseY = topY - 0.12 * H;
+    let sizeX: number;
+    let sizeZ: number;
+    let sizeY = 0.05 * L;
+    if (lengthAxis === "x") {
+      sizeX = 0.035 * L;
+      sizeZ = 0.2 * L;
+    } else {
+      sizeX = 0.2 * L;
+      sizeZ = 0.035 * L;
     }
+    let doFlatten = false;
+    let flattenTo = topY;
 
-    if (!measured) {
-      // Fallback: taxi-sign proportions at the roof center
-      cx = 0;
-      cz = 0;
-      baseY = roofYCenter;
-      const across = 0.2 * L;
-      const alongLen = 0.035 * L;
-      mSizeY = 0.05 * L;
-      if (lengthAxis === "x") {
-        mSizeX = alongLen;
-        mSizeZ = across;
-      } else {
-        mSizeX = across;
-        mSizeZ = alongLen;
-      }
-    }
-
-    const clamp = (val: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, val));
-    const sizeX = clamp(mSizeX * 1.04, 0.02 * L, 0.45 * L);
-    const sizeZ = clamp(mSizeZ * 1.04, 0.02 * L, 0.45 * L);
-    const sizeY = clamp(mSizeY * 1.02, 0.03 * L, 0.09 * L);
-
-    // ---- FLATTEN the original sign into the roof ----
-    // Everything above both the roof apex and the sign's base gets pressed
-    // down; the sliver that remains is hidden inside our replacement box.
-    const flattenTo = Math.max(roofYCenter, baseY) + 0.006;
-    const cutoff = flattenTo + 0.006;
-    cloned.traverse((o: any) => {
-      if (o.isMesh && o.geometry?.attributes?.position) {
-        const pos = o.geometry.attributes.position;
-        const inv = new THREE.Matrix4().copy(o.matrixWorld).invert();
-        let changed = false;
-        const w = new THREE.Vector3();
-        for (let i = 0; i < pos.count; i++) {
-          w.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
-          if (w.y > cutoff) {
-            w.y = flattenTo;
-            w.applyMatrix4(inv);
-            pos.setXYZ(i, w.x, w.y, w.z);
-            changed = true;
+    try {
+      // ---- MEASURE the original roof sign (vertices in the top band) ----
+      const xs: number[] = [];
+      const ys: number[] = [];
+      const zs: number[] = [];
+      const v = new THREE.Vector3();
+      cloned.traverse((o: any) => {
+        if (o.isMesh && o.geometry?.attributes?.position) {
+          const pos = o.geometry.attributes.position;
+          for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+            if (v.y > signBand) {
+              xs.push(v.x);
+              ys.push(v.y);
+              zs.push(v.z);
+            }
           }
         }
-        if (changed) {
-          pos.needsUpdate = true;
-          o.geometry.computeVertexNormals();
-          o.geometry.computeBoundingBox();
-          o.geometry.computeBoundingSphere();
+      });
+
+      const pct = (arr: number[], p: number) => {
+        const s = [...arr].sort((a, b) => a - b);
+        return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))];
+      };
+
+      if (xs.length > 50) {
+        const x1 = pct(xs, 0.02), x2 = pct(xs, 0.98);
+        const z1 = pct(zs, 0.02), z2 = pct(zs, 0.98);
+        const y1 = pct(ys, 0.02);
+        const mX = x2 - x1;
+        const mZ = z2 - z1;
+
+        // Sanity guards: a roof sign is small. If the measured blob looks like
+        // the whole roof or the whole car, DO NOT trust it and do not flatten.
+        const plausible =
+          mX > 0.02 * L && mX < 0.5 * L &&
+          mZ > 0.02 * L && mZ < 0.5 * L &&
+          y1 > topY - 0.2 * H;
+
+        if (plausible) {
+          cx = (x1 + x2) / 2;
+          cz = (z1 + z2) / 2;
+          baseY = y1;
+          sizeX = Math.min(mX * 1.04, 0.45 * L);
+          sizeZ = Math.min(mZ * 1.04, 0.45 * L);
+          sizeY = Math.min(Math.max((topY - y1) * 1.02, 0.03 * L), 0.09 * L);
+          flattenTo = baseY + 0.004;
+          // HARD SAFETY RAIL: never allowed to flatten below the roofline.
+          doFlatten = flattenTo > worldBox.min.y + 0.6 * H;
         }
       }
-    });
 
-    // Text sits on the two faces whose normal runs along the sign's SHORT
-    // horizontal axis, so the word runs the length of the sign bar.
+      if (doFlatten) {
+        const cutoff = flattenTo + 0.006;
+        cloned.traverse((o: any) => {
+          if (o.isMesh && o.geometry?.attributes?.position) {
+            // Clone geometry before mutating so the GLTF cache stays pristine.
+            o.geometry = o.geometry.clone();
+            const pos = o.geometry.attributes.position;
+            const inv = new THREE.Matrix4().copy(o.matrixWorld).invert();
+            let changed = false;
+            const w = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+              w.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+              if (w.y > cutoff) {
+                w.y = flattenTo;
+                w.applyMatrix4(inv);
+                pos.setXYZ(i, w.x, w.y, w.z);
+                changed = true;
+              }
+            }
+            if (changed) {
+              pos.needsUpdate = true;
+              o.geometry.computeVertexNormals();
+              o.geometry.computeBoundingBox();
+              o.geometry.computeBoundingSphere();
+            }
+          }
+        });
+      }
+    } catch (e) {
+      // On any failure: leave the model completely untouched.
+      console.error("Roof sign processing failed; rendering unmodified car", e);
+    }
+
     const longDim = Math.max(sizeX, sizeZ);
     const shortDim = Math.min(sizeX, sizeZ);
     const facesAlongX = sizeX < sizeZ;
@@ -181,7 +182,6 @@ function CarModel() {
   return (
     <group>
       <primitive object={prepared} />
-      {/* The one and only roof sign — rebuilt in the original sign's measured spot */}
       <group position={[sign.cx, sign.baseY + sign.sizeY / 2, sign.cz]}>
         <mesh castShadow>
           <boxGeometry args={[sign.sizeX, sign.sizeY, sign.sizeZ]} />
