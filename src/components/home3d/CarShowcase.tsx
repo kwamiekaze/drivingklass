@@ -196,7 +196,7 @@ export default function CarShowcase() {
             autoRotateSpeed={0.7}
             minPolarAngle={Math.PI * 0.36}
             maxPolarAngle={Math.PI * 0.46}
-            target={[0, 0.5, 0]}
+            target={[0, 0.7, 0]}
           />
           <CameraBob enabled={!reducedMotion} />
         </Suspense>
