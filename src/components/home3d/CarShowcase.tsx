@@ -222,9 +222,90 @@ function CameraBob({ enabled }: { enabled: boolean }) {
   return null;
 }
 
+function LoadedSignal({ onLoaded }: { onLoaded: () => void }) {
+  useEffect(() => {
+    onLoaded();
+  }, [onLoaded]);
+  return null;
+}
+
+class CarErrorBoundary extends Component<
+  { onError: () => void; children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: unknown) {
+    console.error("CarShowcase failed to render 3D car:", err);
+    this.props.onError();
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
+
+function LoadingOverlay() {
+  return (
+    <div
+      aria-live="polite"
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.75rem",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          border: "3px solid rgba(242,193,78,0.18)",
+          borderTopColor: "#F2C14E",
+          animation: "dk-car-spin 900ms linear infinite",
+        }}
+      />
+      <div style={{ color: "#F2C14E", fontSize: 12, letterSpacing: 0.5, fontWeight: 500 }}>
+        Loading your ride…
+      </div>
+      <style>{`@keyframes dk-car-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function ErrorFallback() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <img
+        src={goldCarFallback}
+        alt="DrivingKlass gold car"
+        style={{ width: "82%", height: "auto", objectFit: "contain" }}
+      />
+    </div>
+  );
+}
+
 export default function CarShowcase() {
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -233,6 +314,8 @@ export default function CarShowcase() {
     mq.addEventListener("change", listener);
     return () => mq.removeEventListener("change", listener);
   }, []);
+
+  const showCanvas = canvasReady && modelLoaded && !errored;
 
   return (
     <div
@@ -253,44 +336,53 @@ export default function CarShowcase() {
           pointerEvents: "none",
         }}
       />
-      <Canvas
-        gl={{ alpha: true, antialias: true }}
-        dpr={[1, 2]}
-        shadows
-        camera={{ fov: 35, position: [3.2, 1.6, 3.2] }}
-        style={{
-          background: "transparent",
-          opacity: ready ? 1 : 0,
-          transition: "opacity 600ms ease-out",
-        }}
-        onCreated={() => setReady(true)}
-      >
-        <Suspense fallback={null}>
-          <ambientLight intensity={0.35} />
-          <directionalLight
-            position={[-3, 4, 3]}
-            intensity={1.2}
-            color={"#FFE7B0"}
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-          />
-          <directionalLight position={[3, 2, -2]} intensity={0.4} color={"#ffffff"} />
-          <Environment preset="city" />
-          <CarModel />
-          <ContactShadows position={[0, 0, 0]} opacity={0.45} blur={2.4} far={3} scale={6} />
-          <OrbitControls
-            enableZoom={false}
-            enablePan={false}
-            autoRotate={!reducedMotion}
-            autoRotateSpeed={0.7}
-            minPolarAngle={Math.PI * 0.36}
-            maxPolarAngle={Math.PI * 0.46}
-            target={[0, 0.5, 0]}
-          />
-          <CameraBob enabled={!reducedMotion} />
-        </Suspense>
-      </Canvas>
+
+      {!modelLoaded && !errored && <LoadingOverlay />}
+      {errored && <ErrorFallback />}
+
+      {!errored && (
+        <Canvas
+          gl={{ alpha: true, antialias: true }}
+          dpr={[1, 2]}
+          shadows
+          camera={{ fov: 35, position: [3.2, 1.6, 3.2] }}
+          style={{
+            background: "transparent",
+            opacity: showCanvas ? 1 : 0,
+            transition: "opacity 600ms ease-out",
+          }}
+          onCreated={() => setCanvasReady(true)}
+        >
+          <Suspense fallback={null}>
+            <CarErrorBoundary onError={() => setErrored(true)}>
+              <ambientLight intensity={0.35} />
+              <directionalLight
+                position={[-3, 4, 3]}
+                intensity={1.2}
+                color={"#FFE7B0"}
+                castShadow
+                shadow-mapSize-width={1024}
+                shadow-mapSize-height={1024}
+              />
+              <directionalLight position={[3, 2, -2]} intensity={0.4} color={"#ffffff"} />
+              <Environment preset="city" />
+              <CarModel />
+              <LoadedSignal onLoaded={() => setModelLoaded(true)} />
+              <ContactShadows position={[0, 0, 0]} opacity={0.45} blur={2.4} far={3} scale={6} />
+              <OrbitControls
+                enableZoom={false}
+                enablePan={false}
+                autoRotate={!reducedMotion}
+                autoRotateSpeed={0.7}
+                minPolarAngle={Math.PI * 0.36}
+                maxPolarAngle={Math.PI * 0.46}
+                target={[0, 0.5, 0]}
+              />
+              <CameraBob enabled={!reducedMotion} />
+            </CarErrorBoundary>
+          </Suspense>
+        </Canvas>
+      )}
     </div>
   );
 }
