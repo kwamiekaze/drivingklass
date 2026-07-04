@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { CAR_SPRITE_URI } from './carSprite';
+
+
 
 /**
  * All game art is generated at runtime so the MVP ships with zero image files.
@@ -53,10 +56,10 @@ function svgToDataUri(svg: string): string {
   return 'data:image/svg+xml;base64,' + btoa(svg);
 }
 
-/** Queue the player-car SVG in the loader. Call from preload(). */
+/** Queue the player-car sprite in the loader. Call from preload(). */
 export function loadPlayerCarTexture(scene: Phaser.Scene) {
   if (!scene.textures.exists('player-car')) {
-    scene.load.image('player-car', svgToDataUri(playerCarSVG()));
+    scene.load.image('player-car', CAR_SPRITE_URI);
   }
 }
 
