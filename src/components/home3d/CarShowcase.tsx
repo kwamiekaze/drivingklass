@@ -177,6 +177,7 @@ function CameraBob({ enabled }: { enabled: boolean }) {
 export default function CarShowcase() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [ready, setReady] = useState(false);
+  const [placement, setPlacement] = useState<SignPlacement | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
