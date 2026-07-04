@@ -47,7 +47,7 @@ export function Hero3DScene({ tier, isDark }: Props) {
         <Canvas
           dpr={dpr as [number, number]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          camera={{ position: [0, 3.2, 8], fov: 42 }}
+          camera={{ position: [0, 3.6, 10], fov: 44 }}
           onPointerDown={() => {
             play("whoosh");
             setIntroDone(true);
@@ -57,7 +57,7 @@ export function Hero3DScene({ tier, isDark }: Props) {
           <color attach="background" args={[isDark ? "#0a0a10" : "#1a1615"]} />
           <fog attach="fog" args={[isDark ? "#0a0a10" : "#2a2622", 8, 22]} />
 
-          <PerspectiveCamera makeDefault position={[0, 3.2, 8]} fov={42} />
+          <PerspectiveCamera makeDefault position={[0, 3.6, 10]} fov={44} />
           <IntroRig done={introDone} onDone={() => setIntroDone(true)} />
           <ParallaxCamera enabled={introDone} />
 
@@ -159,8 +159,8 @@ export function Hero3DScene({ tier, isDark }: Props) {
 function IntroRig({ done, onDone }: { done: boolean; onDone: () => void }) {
   const { camera } = useThree();
   const t = useRef(0);
-  const start = useMemo(() => new THREE.Vector3(0, 1.4, 5.2), []);
-  const end = useMemo(() => new THREE.Vector3(0, 3.2, 8), []);
+  const start = useMemo(() => new THREE.Vector3(0, 1.6, 6.2), []);
+  const end = useMemo(() => new THREE.Vector3(0, 3.6, 10), []);
 
   useEffect(() => {
     if (done) return;
@@ -214,7 +214,7 @@ function ParallaxCamera({ enabled }: { enabled: boolean }) {
     if (!enabled) return;
     const base = camera.position;
     const desiredX = target.current.x;
-    const desiredY = 3.2 + target.current.y;
+    const desiredY = 3.6 + target.current.y;
     base.x += (desiredX - base.x) * 0.04;
     base.y += (desiredY - base.y) * 0.04;
     camera.lookAt(0, 0.6, 0);
