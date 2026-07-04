@@ -7,18 +7,13 @@ import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
-type SignPlacement = {
-  center: THREE.Vector3; // center of new sign box
-  width: number; // along car length axis (X world)
-  depth: number; // along car short axis (Z world)
-  height: number;
-  lengthAxis: "x" | "z"; // which axis is the car length
-};
-
-function CarModel({ onPlacement }: { onPlacement: (p: SignPlacement) => void }) {
+function CarModel() {
   const { scene } = useGLTF(MODEL_URL) as any;
-  const { prepared, placement } = useMemo(() => {
+
+  const { prepared, sign } = useMemo(() => {
     const cloned = scene.clone(true);
+
+    // Normalize: center at origin, sit on ground, scale so longest horiz dim ~= 2.4
     const box = new THREE.Box3().setFromObject(cloned);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
@@ -32,134 +27,107 @@ function CarModel({ onPlacement }: { onPlacement: (p: SignPlacement) => void }) 
     cloned.position.multiplyScalar(scale);
     cloned.updateMatrixWorld(true);
 
-    // Recompute world bbox after transform
-    const worldBox = new THREE.Box3().setFromObject(cloned);
-    const worldSize = new THREE.Vector3();
-    worldBox.getSize(worldSize);
-    const carLength = Math.max(worldSize.x, worldSize.z);
-    const lengthAxis: "x" | "z" = worldSize.x >= worldSize.z ? "x" : "z";
-
-    // Roofline: top 12% of car height belongs to the old sign region
-    const rooflineY = worldBox.min.y + worldSize.y * 0.88;
-
-    // Sample vertices above roofline in world space to find the old sign footprint
-    const v = new THREE.Vector3();
-    let minX = Infinity, maxX = -Infinity;
-    let minZ = Infinity, maxZ = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    let sampleCount = 0;
     cloned.traverse((o: any) => {
-      if (!o.isMesh || !o.geometry?.attributes?.position) return;
-      const pos = o.geometry.attributes.position;
-      o.updateMatrixWorld(true);
-      const mat = o.matrixWorld;
-      for (let i = 0; i < pos.count; i++) {
-        v.fromBufferAttribute(pos, i).applyMatrix4(mat);
-        if (v.y >= rooflineY) {
-          if (v.x < minX) minX = v.x;
-          if (v.x > maxX) maxX = v.x;
-          if (v.z < minZ) minZ = v.z;
-          if (v.z > maxZ) maxZ = v.z;
-          if (v.y < minY) minY = v.y;
-          if (v.y > maxY) maxY = v.y;
-          sampleCount++;
-        }
-      }
       if (o.isMesh) {
         o.castShadow = true;
         o.receiveShadow = false;
       }
     });
 
-    let placement: SignPlacement;
-    if (sampleCount > 0 && isFinite(minX)) {
-      const rawW = maxX - minX;
-      const rawD = maxZ - minZ;
-      const rawH = maxY - minY;
-      // Cap: sign no wider than 40% of car length along the length axis
-      const maxSignLen = carLength * 0.4;
-      let widthAlongLen = lengthAxis === "x" ? rawW : rawD;
-      let depthAlongShort = lengthAxis === "x" ? rawD : rawW;
-      widthAlongLen = Math.min(widthAlongLen * 1.05, maxSignLen);
-      depthAlongShort = depthAlongShort * 1.05;
-      const height = rawH * 1.05;
-      // Center: use footprint center X/Z, and vertical center so bottom sits at old sign bottom (roof surface)
-      const cx = (minX + maxX) / 2;
-      const cz = (minZ + maxZ) / 2;
-      const bottomY = minY; // roof surface where old sign meets car
-      const cy = bottomY + height / 2;
-      placement = {
-        center: new THREE.Vector3(cx, cy, cz),
-        width: widthAlongLen,
-        depth: depthAlongShort,
-        height,
-        lengthAxis,
-      };
+    // World bbox after normalization
+    const worldBox = new THREE.Box3().setFromObject(cloned);
+    const worldSize = new THREE.Vector3();
+    worldBox.getSize(worldSize);
+    const L = Math.max(worldSize.x, worldSize.z);
+    const lengthAxis: "x" | "z" = worldSize.x >= worldSize.z ? "x" : "z";
+
+    // EXACT SIGN SPEC
+    // width = across the car (text runs this way) = perpendicular to length axis
+    // depth = front-to-back along length axis
+    const signWidthAcross = 0.20 * L; // across (short axis of car)
+    const signHeight = 0.05 * L;
+    const signDepthAlongLen = 0.035 * L;
+
+    // Roof top Y at center of car (raycast down from above through center)
+    const raycaster = new THREE.Raycaster();
+    raycaster.set(new THREE.Vector3(0, worldBox.max.y + 5, 0), new THREE.Vector3(0, -1, 0));
+    const hits = raycaster.intersectObject(cloned, true);
+    const roofY = hits.length > 0 ? hits[0].point.y : worldBox.max.y;
+
+    // Sign local size in [x, y, z]:
+    // In the model's LOCAL frame after our clone, world axes X/Z correspond
+    // (no rotation applied to `cloned`), so map directly.
+    let sizeX: number, sizeZ: number;
+    if (lengthAxis === "x") {
+      // length is X, so depthAlongLen -> X, widthAcross -> Z
+      sizeX = signDepthAlongLen;
+      sizeZ = signWidthAcross;
     } else {
-      // Fallback: modest sign near the top of the car, along length axis
-      const width = carLength * 0.3;
-      const depth = (lengthAxis === "x" ? worldSize.z : worldSize.x) * 0.35;
-      const height = worldSize.y * 0.06;
-      placement = {
-        center: new THREE.Vector3(0, worldBox.max.y - height / 2, 0),
-        width,
-        depth,
-        height,
-        lengthAxis,
-      };
+      sizeX = signWidthAcross;
+      sizeZ = signDepthAlongLen;
     }
-    return { prepared: cloned, placement };
+
+    const sign = {
+      sizeX,
+      sizeY: signHeight,
+      sizeZ,
+      widthAcross: signWidthAcross,
+      centerY: roofY + signHeight / 2,
+      lengthAxis,
+    };
+
+    return { prepared: cloned, sign };
   }, [scene]);
 
-  useEffect(() => {
-    onPlacement(placement);
-  }, [placement, onPlacement]);
+  // Text runs across the car (perpendicular to length axis).
+  // The front/back faces (where text sits) face along the SHORT axis.
+  const textRotY = sign.lengthAxis === "x" ? Math.PI / 2 : 0;
+  const faceOffset = (sign.lengthAxis === "x" ? sign.sizeX : sign.sizeZ) / 2 + 0.002;
+  const textSize = sign.sizeY * 0.58;
+  const textMaxWidth = sign.widthAcross * 0.9;
 
-  return <primitive object={prepared} />;
-}
-
-function RoofSign({ placement }: { placement: SignPlacement }) {
-  const { center, width, depth, height, lengthAxis } = placement;
-  // Box dims: X = along length axis of car, Z = short axis
-  const boxLen = width;
-  const boxShort = depth;
-  const rotY = lengthAxis === "x" ? 0 : Math.PI / 2;
-  // Text sizing: fill the long face with padding
-  const textSize = Math.min(height * 0.6, boxLen / 8);
-  const faceZ = boxShort / 2 + 0.002; // slight offset to avoid z-fighting
   return (
-    <group position={center.toArray()} rotation={[0, rotY, 0]}>
-      <mesh castShadow>
-        <boxGeometry args={[boxLen, height, boxShort]} />
-        <meshStandardMaterial color="#111114" metalness={0.15} roughness={0.55} />
-      </mesh>
-      {/* Front face text */}
-      <Text
-        position={[0, 0, faceZ]}
-        fontSize={textSize}
-        color="#F2C14E"
-        anchorX="center"
-        anchorY="middle"
-        letterSpacing={0.04}
-        fontWeight={800}
-        maxWidth={boxLen * 0.94}
-      >
-        DRIVINGKLASS
-      </Text>
-      {/* Back face text */}
-      <Text
-        position={[0, 0, -faceZ]}
-        rotation={[0, Math.PI, 0]}
-        fontSize={textSize}
-        color="#F2C14E"
-        anchorX="center"
-        anchorY="middle"
-        letterSpacing={0.04}
-        fontWeight={800}
-        maxWidth={boxLen * 0.94}
-      >
-        DRIVINGKLASS
-      </Text>
+    <group>
+      <primitive object={prepared} />
+      {/* Roof sign — child of the car group so it inherits any transform */}
+      <group position={[0, sign.centerY, 0]} rotation={[0, textRotY, 0]}>
+        {/* Note: after rotY, local X aligns with widthAcross */}
+        <mesh castShadow>
+          <boxGeometry
+            args={[
+              sign.widthAcross,
+              sign.sizeY,
+              sign.lengthAxis === "x" ? sign.sizeX : sign.sizeZ,
+            ]}
+          />
+          <meshStandardMaterial color="#0d0d10" roughness={0.55} metalness={0.15} />
+        </mesh>
+        {/* Front face text */}
+        <Text
+          position={[0, 0, (sign.lengthAxis === "x" ? sign.sizeX : sign.sizeZ) / 2 + 0.002]}
+          fontSize={textSize}
+          color="#F2C14E"
+          anchorX="center"
+          anchorY="middle"
+          letterSpacing={0.03}
+          maxWidth={textMaxWidth}
+        >
+          DRIVINGKLASS
+        </Text>
+        {/* Back face text */}
+        <Text
+          position={[0, 0, -((sign.lengthAxis === "x" ? sign.sizeX : sign.sizeZ) / 2 + 0.002)]}
+          rotation={[0, Math.PI, 0]}
+          fontSize={textSize}
+          color="#F2C14E"
+          anchorX="center"
+          anchorY="middle"
+          letterSpacing={0.03}
+          maxWidth={textMaxWidth}
+        >
+          DRIVINGKLASS
+        </Text>
+      </group>
     </group>
   );
 }
@@ -177,7 +145,6 @@ function CameraBob({ enabled }: { enabled: boolean }) {
 export default function CarShowcase() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [ready, setReady] = useState(false);
-  const [placement, setPlacement] = useState<SignPlacement | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -196,7 +163,6 @@ export default function CarShowcase() {
         pointerEvents: "auto",
       }}
     >
-      {/* Soft gold radial glow */}
       <div
         aria-hidden
         style={{
@@ -231,8 +197,7 @@ export default function CarShowcase() {
           />
           <directionalLight position={[3, 2, -2]} intensity={0.4} color={"#ffffff"} />
           <Environment preset="city" />
-          <CarModel onPlacement={setPlacement} />
-          {placement && <RoofSign placement={placement} />}
+          <CarModel />
           <ContactShadows position={[0, 0, 0]} opacity={0.45} blur={2.4} far={3} scale={6} />
           <OrbitControls
             enableZoom={false}
