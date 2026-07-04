@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { PackageButton } from "./PackageButton";
 import { PackageModal } from "./PackageModal";
@@ -11,6 +11,8 @@ import { formatChipPrice } from "@/lib/priceFormatters";
 import { supabase } from "@/integrations/supabase/client";
 import carHeadlightsOff from "@/assets/car-headlights-off.png";
 import carHeadlightsOn from "@/assets/car-headlights-on.png";
+
+const CarShowcase = lazy(() => import("./home3d/CarShowcase"));
 
 // Clickable car center - routes to auth or dashboard based on login state/role
 function CarCenterLink({ children }: { children: React.ReactNode }) {
