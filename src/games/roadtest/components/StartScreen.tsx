@@ -4,9 +4,10 @@ interface Props {
   bestScores: Record<string, number>;
   onStart: (levelId: string) => void;
   onHowToPlay: () => void;
+  onLeaderboard: () => void;
 }
 
-export function StartScreen({ bestScores, onStart, onHowToPlay }: Props) {
+export function StartScreen({ bestScores, onStart, onHowToPlay, onLeaderboard }: Props) {
   return (
     <div className="screen start-screen">
       <header className="brand-header">
@@ -59,6 +60,9 @@ export function StartScreen({ bestScores, onStart, onHowToPlay }: Props) {
         </button>
         <button className="dk-btn dk-btn-outline" onClick={onHowToPlay}>
           How to Play
+        </button>
+        <button className="dk-btn dk-btn-outline" onClick={onLeaderboard}>
+          Leaderboard
         </button>
       </div>
 
