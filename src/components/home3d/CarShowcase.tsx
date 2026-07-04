@@ -1,14 +1,15 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows, useGLTF, Text } from "@react-three/drei";
 import * as THREE from "three";
 import carAsset from "@/assets/dk-car-gold.glb.asset.json";
+import goldCarFallback from "@/assets/gold-car-transparent.png";
 
 const MODEL_URL = carAsset.url;
-useGLTF.preload(MODEL_URL);
+useGLTF.preload(MODEL_URL, true);
 
 function CarModel() {
-  const { scene } = useGLTF(MODEL_URL) as any;
+  const { scene } = useGLTF(MODEL_URL, true) as any;
 
   const { prepared, sign } = useMemo(() => {
     const cloned = scene.clone(true);
