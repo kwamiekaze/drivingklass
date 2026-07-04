@@ -560,3 +560,36 @@
     display: none; /* keyboard hint is meaningless on touch devices */
   }
 }
+
+/* ---------- Leaderboard ---------- */
+.dk-leaderboard { max-width: 480px; }
+.dk-lb-head { display: flex; align-items: center; justify-content: space-between; }
+.dk-lb-head h2 {
+  margin: 0; font-family: var(--display); font-size: 28px;
+  letter-spacing: 1px; color: var(--gold);
+}
+.dk-lb-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px;
+}
+.dk-lb-tab {
+  appearance: none; border: 1px solid var(--road-light);
+  background: var(--ink); color: #c9c9d2;
+  border-radius: 999px; padding: 6px 12px;
+  font-family: var(--display); font-size: 14px; letter-spacing: 1px;
+  cursor: pointer;
+}
+.dk-lb-tab.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
+.dk-lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.dk-lb-list li {
+  display: grid; grid-template-columns: 44px 1fr auto auto;
+  gap: 10px; align-items: center;
+  padding: 8px 12px; border-radius: 10px;
+  background: #1b1b22; border: 1px solid #26262e;
+  font-size: 14px;
+}
+.dk-lb-list li.mine { border-color: var(--gold); background: rgba(242, 193, 78, 0.08); }
+.dk-lb-list .rank { font-family: var(--display); color: var(--gold); font-size: 18px; }
+.dk-lb-list .name { color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dk-lb-list .score { font-family: var(--display); color: var(--gold); font-size: 18px; }
+.dk-lb-list .grade { color: #c9c9d2; font-size: 12px; min-width: 22px; text-align: right; }
+.dk-lb-empty { color: #a9a9b3; font-size: 14px; text-align: center; padding: 20px 0; }

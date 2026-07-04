@@ -3,6 +3,8 @@ import { StartScreen } from './components/StartScreen';
 import { HowToPlay } from './components/HowToPlay';
 import { GameCanvas } from './components/GameCanvas';
 import { ReportCard } from './components/ReportCard';
+import { LeaderboardModal } from './components/LeaderboardModal';
+import { submitScore } from './submitScore';
 import type { LevelResult } from './game/types';
 import './roadtest.css';
 
@@ -13,6 +15,7 @@ export default function RoadTestGame() {
   const [levelId, setLevelId] = useState('parking-lot');
   const [result, setResult] = useState<LevelResult | null>(null);
   const [showHowTo, setShowHowTo] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [bestScores, setBestScores] = useState<Record<string, number>>({});
 
   const start = useCallback((id: string) => {
@@ -26,6 +29,7 @@ export default function RoadTestGame() {
       ...prev,
       [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score)
     }));
+    submitScore(r).catch(console.error);
     setScreen('report');
   }, []);
 
@@ -37,6 +41,7 @@ export default function RoadTestGame() {
           bestScores={bestScores}
           onStart={start}
           onHowToPlay={() => setShowHowTo(true)}
+          onLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
 
@@ -58,6 +63,7 @@ export default function RoadTestGame() {
       )}
 
       {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
+      {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
       </div>
     </div>
   );

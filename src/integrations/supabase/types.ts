@@ -317,6 +317,36 @@ export type Database = {
         }
         Relationships: []
       }
+      game_scores: {
+        Row: {
+          display_name: string | null
+          grade: string
+          id: string
+          level_id: string
+          score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          display_name?: string | null
+          grade: string
+          id?: string
+          level_id: string
+          score: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string | null
+          grade?: string
+          id?: string
+          level_id?: string
+          score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       instructor_students: {
         Row: {
           created_at: string | null

@@ -91,12 +91,19 @@ export class DrivingScene extends Phaser.Scene {
       .tileSprite(ROAD_X, 0, ROAD_W, GAME_H, 'road')
       .setOrigin(0);
 
+    if (lvl.nightAlpha) {
+      this.add
+        .rectangle(0, 0, GAME_W, GAME_H, 0x0a0a18, lvl.nightAlpha)
+        .setOrigin(0)
+        .setDepth(15);
+    }
+
     this.buildCourse(lvl);
 
     // Player car (the gold 5-star DrivingKlass trainer)
     this.player = this.add
       .image(LANE_X[1], PLAYER_Y, 'player-car')
-      .setDisplaySize(48, 84)
+      .setDisplaySize(44, 94)
       .setDepth(10);
 
     // Input
@@ -382,10 +389,10 @@ export class DrivingScene extends Phaser.Scene {
 
   private updateObstacles(time: number, dt: number) {
     const playerRect = new Phaser.Geom.Rectangle(
-      this.player.x - 19,
-      this.player.y - 36,
-      38,
-      72
+      this.player.x - 18,
+      this.player.y - 42,
+      36,
+      84
     );
 
     for (const ob of this.obstacles) {

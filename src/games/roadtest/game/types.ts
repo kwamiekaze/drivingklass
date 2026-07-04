@@ -26,6 +26,8 @@ export interface LevelConfig {
   parScore: number;
   /** Ambient shoulder color: parking-lot concrete vs. neighborhood grass. */
   shoulderColor: number;
+  /** Optional dark overlay alpha for night levels (0 – 0.45). */
+  nightAlpha?: number;
 }
 
 /** One line item on the Instructor Report Card. */
