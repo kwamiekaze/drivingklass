@@ -167,7 +167,7 @@ export default function CarShowcase() {
         gl={{ alpha: true, antialias: true }}
         dpr={[1, 2]}
         shadows
-        camera={{ fov: 35, position: [3.2, 1.6, 3.2] }}
+        camera={{ fov: 35, position: [3.6, 2.2, 5.0] }}
         style={{
           background: "transparent",
           opacity: ready ? 1 : 0,
