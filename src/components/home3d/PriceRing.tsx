@@ -14,8 +14,8 @@ interface Props {
 }
 
 export function PriceRing({
-  radius = 4.6,
-  height = 0.4,
+  radius = 6.5,
+  height = 0.3,
   onSelect,
   onBook,
 }: Props) {
@@ -114,7 +114,7 @@ function RingCard({
 
   return (
     <group ref={attachSetter} position={position}>
-      <Html center distanceFactor={9} zIndexRange={[20, 0]} pointerEvents="auto">
+      <Html center distanceFactor={6} zIndexRange={[20, 0]} pointerEvents="auto">
         <PriceCard
           pkg={pkg}
           hovered={hovered}

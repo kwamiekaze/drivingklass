@@ -41,7 +41,7 @@ export function PriceCard({
         onClick={onOpen}
         aria-label={`${pkg.label.replace("\n", " ")} — ${pkg.price} — view details`}
         className={cn(
-          "block w-[160px] text-left rounded-2xl px-4 py-3 backdrop-blur-md",
+          "block w-[140px] text-left rounded-2xl px-3 py-2.5 backdrop-blur-md",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-0",
         )}
         style={{
