@@ -126,10 +126,13 @@ export class DrivingScene extends Phaser.Scene {
     makeTextures(this);
     const lvl = this.level;
 
-    this.add.rectangle(0, 0, ROAD_X, GAME_H, lvl.shoulderColor).setOrigin(0);
-    this.add
-      .rectangle(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, lvl.shoulderColor)
-      .setOrigin(0);
+    // Far background silhouettes (parallax — scroll at 45% road speed)
+    this.farBgL = this.add.tileSprite(0, 0, ROAD_X, GAME_H, 'far-bg').setOrigin(0);
+    this.farBgR = this.add.tileSprite(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, 'far-bg')
+      .setOrigin(0).setFlipX(true);
+    // Sidewalk + buildings + trees (scroll matched to road)
+    this.shoulderL = this.add.tileSprite(0, 0, ROAD_X, GAME_H, 'shoulder-left').setOrigin(0);
+    this.shoulderR = this.add.tileSprite(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, 'shoulder-right').setOrigin(0);
     this.road = this.add.tileSprite(ROAD_X, 0, ROAD_W, GAME_H, 'road').setOrigin(0);
 
     if (lvl.nightAlpha) {
@@ -138,6 +141,9 @@ export class DrivingScene extends Phaser.Scene {
 
     if (lvl.endless) this.buildEndlessSeed();
     else this.buildCourse();
+
+    this.displayScore = 0;
+
 
     this.player = this.add.image(LANE_X[1], PLAYER_Y, 'player-car').setDisplaySize(44, 94).setDepth(10);
 
