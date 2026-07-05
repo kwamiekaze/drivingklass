@@ -121,9 +121,24 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
   return (
     <group ref={groupRef}>
       <primitive object={prepared} />
+      <group position={[SIGN.cx, SIGN.cy, SIGN.cz]}>
+        <mesh>
+          <boxGeometry args={[SIGN.width, SIGN.height, SIGN.depth]} />
+          <meshBasicMaterial color="#0d0d10" toneMapped={false} />
+        </mesh>
+        <mesh position={[FACE_OFF, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[SIGN.width * 0.95, SIGN.height * 0.85]} />
+          <meshBasicMaterial map={starsTexture} toneMapped={false} />
+        </mesh>
+        <mesh position={[-FACE_OFF, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[SIGN.width * 0.95, SIGN.height * 0.85]} />
+          <meshBasicMaterial map={starsTexture} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
+
 
 // Warm drifting dust particles (max 60, additive)
 function DustField() {
