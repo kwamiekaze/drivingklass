@@ -319,7 +319,9 @@ export type Database = {
       }
       game_scores: {
         Row: {
+          difficulty: string
           display_name: string | null
+          distance: number | null
           grade: string
           id: string
           level_id: string
@@ -328,7 +330,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          difficulty?: string
           display_name?: string | null
+          distance?: number | null
           grade: string
           id?: string
           level_id: string
@@ -337,7 +341,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          difficulty?: string
           display_name?: string | null
+          distance?: number | null
           grade?: string
           id?: string
           level_id?: string
