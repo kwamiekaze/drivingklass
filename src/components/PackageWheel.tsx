@@ -116,7 +116,7 @@ function PriceChip({
       {/* Price pill/badge - theme aware */}
       <span 
         className={cn(
-          "relative block px-2 py-1 rounded-md font-bold whitespace-nowrap",
+          "relative block px-2 py-1 rounded-md font-display font-bold whitespace-nowrap tracking-wide",
           "text-[10px] sm:text-xs md:text-sm",
           "backdrop-blur-sm"
         )}
