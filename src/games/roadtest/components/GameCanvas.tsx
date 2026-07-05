@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { DrivingScene, GAME_W, GAME_H } from '../game/DrivingScene';
 import { GAME_EVENTS, type Difficulty, type LevelResult } from '../game/types';
 import { resetTouchControls } from '../game/controls';
+import { sound } from '../sound';
 import { TouchControls } from './TouchControls';
 
 interface Props {
@@ -12,12 +13,61 @@ interface Props {
   onQuit: () => void;
 }
 
+const FIRST_RUN_TOAST_KEY = 'dk-game-first-run-toast';
+
 export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const wakeLockRef = useRef<any>(null);
   const [showQuitPrompt, setShowQuitPrompt] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showToast, setShowToast] = useState(false);
+
+  // Show a one-time "sound on" toast on the very first run per device.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(FIRST_RUN_TOAST_KEY)) {
+        localStorage.setItem(FIRST_RUN_TOAST_KEY, '1');
+        setShowToast(true);
+        const t = setTimeout(() => setShowToast(false), 3000);
+        return () => clearTimeout(t);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Request a screen wake lock so phones don't dim mid-lesson.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const wl = (navigator as any).wakeLock;
+        if (wl?.request) {
+          const lock = await wl.request('screen');
+          if (cancelled) { try { await lock.release(); } catch { /* ignore */ } return; }
+          wakeLockRef.current = lock;
+        }
+      } catch { /* unsupported — skip */ }
+    })();
+    const onVis = async () => {
+      // Re-acquire on return (browsers auto-release on hide).
+      if (document.visibilityState === 'visible' && !wakeLockRef.current) {
+        try {
+          const wl = (navigator as any).wakeLock;
+          if (wl?.request) wakeLockRef.current = await wl.request('screen');
+        } catch { /* ignore */ }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVis);
+      try { wakeLockRef.current?.release?.(); } catch { /* ignore */ }
+      wakeLockRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -46,10 +96,45 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
     };
   }, [levelId, difficulty]);
 
+  // Auto-pause on tab hide (single-player). Countdown 3-2-1 on resume.
+  useEffect(() => {
+    const onVis = () => {
+      const scene = gameRef.current?.scene.getScene('driving') as Phaser.Scene | undefined;
+      if (!scene) return;
+      if (document.visibilityState === 'hidden') {
+        try { scene.scene.pause(); } catch { /* ignore */ }
+        resetTouchControls();
+        setPaused(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  const resumeFromPause = () => {
+    if (countdown !== null) return;
+    sound.ensureRunning();
+    setCountdown(3);
+  };
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      const scene = gameRef.current?.scene.getScene('driving') as Phaser.Scene | undefined;
+      try { scene?.scene.resume(); } catch { /* ignore */ }
+      setPaused(false);
+      setCountdown(null);
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 800);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
   const saveAndQuit = () => {
     const scene = gameRef.current?.scene.getScene('driving') as DrivingScene | undefined;
     if (scene?.endEarly) {
       setShowQuitPrompt(false);
+      try { scene.scene.resume(); } catch { /* ignore */ }
       scene.endEarly();
     } else {
       onQuit();
@@ -69,6 +154,30 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
       </div>
       <div ref={hostRef} className="game-host" />
       <TouchControls />
+
+      {showToast && (
+        <div className="dk-first-toast" role="status">
+          🔊 Sound on — tap the speaker to mute
+        </div>
+      )}
+
+      {paused && (
+        <div
+          className="dk-pause-overlay"
+          role="dialog"
+          aria-label="Paused"
+          onClick={resumeFromPause}
+        >
+          {countdown === null ? (
+            <div>
+              <h2>PAUSED</h2>
+              <p>Tap anywhere to continue</p>
+            </div>
+          ) : (
+            <div className="dk-pause-count">{countdown === 0 ? 'GO!' : countdown}</div>
+          )}
+        </div>
+      )}
 
       {showQuitPrompt && (
         <div className="dk-modal-backdrop" onClick={() => setShowQuitPrompt(false)}>
