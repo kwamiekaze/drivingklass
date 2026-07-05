@@ -325,13 +325,13 @@ export default function CarShowcase() {
         }}
       >
         <div
+          className="animate-spin"
           style={{
             width: 42,
             height: 42,
             border: "3px solid rgba(242,193,78,0.25)",
             borderTopColor: "rgba(242,193,78,0.9)",
             borderRadius: "50%",
-            animation: "spin 1s linear infinite",
           }}
         />
       </div>
