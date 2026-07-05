@@ -27,6 +27,30 @@ export default function RoadTestGame() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [bestScores, setBestScores] = useState<Record<string, number>>({});
   const [guestPromptResult, setGuestPromptResult] = useState<LevelResult | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Non-passive touchstart guard: block iOS text-selection / callout / double-tap zoom
+  // on game surfaces without breaking scrolling inside menus, lists, and modals.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => {
+      // Any user gesture is a good time to try to (re)unlock audio.
+      sound.ensureRunning();
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest(SCROLLABLE_SELECTOR)) return; // let scroll/typing happen
+      // Prevent default to kill selection, callouts, and double-tap zoom on the game shell.
+      if (e.cancelable) e.preventDefault();
+    };
+    el.addEventListener('touchstart', handler, { passive: false });
+    const pd = () => sound.ensureRunning();
+    el.addEventListener('pointerdown', pd);
+    return () => {
+      el.removeEventListener('touchstart', handler);
+      el.removeEventListener('pointerdown', pd);
+    };
+  }, []);
 
   useEffect(() => {
     try {
