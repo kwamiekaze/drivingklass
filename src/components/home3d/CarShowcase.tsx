@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, useGLTF, Text } from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows, useGLTF, Text } from "@react-three/drei";
 import * as THREE from "three";
 import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 
@@ -125,7 +125,7 @@ export default function CarShowcase() {
             shadow-mapSize-height={1024}
           />
           <directionalLight position={[3, 2, -2]} intensity={0.4} color={"#ffffff"} />
-          <directionalLight position={[0, 5, 0]} intensity={0.3} color={"#ffffff"} />
+          <Environment files="/assets/potsdamer_platz_1k.hdr" />
           <CarModel />
           <ContactShadows position={[0, 0, 0]} opacity={0.45} blur={2.4} far={3} scale={6} />
           <OrbitControls
