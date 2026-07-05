@@ -1,22 +1,12 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, useGLTF, Text } from "@react-three/drei";
+import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 
 const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
-// Roof-sign cover box (measured from opt.glb top band)
-const SIGN = {
-  cx: 0.143,
-  cy: 0.833,
-  cz: 0.002,
-  width: 0.520,
-  height: 0.072,
-  depth: 0.135,
-};
-const FACE_OFF = SIGN.depth / 2 + 0.002;
 
 // Cinematic entrance for the whole car group: fade + rise + rotate settle
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
@@ -75,30 +65,9 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
     }
   });
 
-  const textProps = {
-    fontSize: SIGN.height * 0.56,
-    color: "#F2C14E",
-    anchorX: "center" as const,
-    anchorY: "middle" as const,
-    letterSpacing: 0.1,
-    maxWidth: SIGN.width * 0.95,
-  };
-
   return (
     <group ref={groupRef}>
       <primitive object={prepared} />
-      <group position={[SIGN.cx, SIGN.cy, SIGN.cz]}>
-        <mesh>
-          <boxGeometry args={[SIGN.depth, SIGN.height, SIGN.width]} />
-          <meshStandardMaterial color="#0d0d10" roughness={0.5} metalness={0.2} />
-        </mesh>
-        <Text position={[FACE_OFF, 0, 0]} rotation={[0, Math.PI / 2, 0]} {...textProps}>
-          DRIVINGKLASS
-        </Text>
-        <Text position={[-FACE_OFF, 0, 0]} rotation={[0, -Math.PI / 2, 0]} {...textProps}>
-          DRIVINGKLASS
-        </Text>
-      </group>
     </group>
   );
 }
