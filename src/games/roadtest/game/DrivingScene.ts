@@ -773,6 +773,8 @@ export class DrivingScene extends Phaser.Scene {
     }
   }
 
+  public endEarly() { this.finish(); }
+
   private finish() {
     if (this.finished) return;
     this.finished = true;
