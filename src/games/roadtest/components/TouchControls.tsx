@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { touchControls, type ControlState } from '../game/controls';
+import { sound } from '../sound';
 
 /**
  * On-screen buttons for phones/tablets. They write straight into the shared
