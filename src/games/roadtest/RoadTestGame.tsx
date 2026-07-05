@@ -113,6 +113,9 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
             onHowToPlay={() => setShowHowTo(true)}
             onLeaderboard={() => setShowLeaderboard(true)}
             onMultiplayer={() => setScreen('multiplayer')}
+            onMyStats={() => setShowMyStats(true)}
+            onSignInPrompt={signInWithGoogle}
+            publicMode={publicMode}
           />
         )}
 
@@ -140,6 +143,13 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
 
         {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
         {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+        {showMyStats && <MyStatsModal onClose={() => setShowMyStats(false)} />}
+        {showUsernamePrompt && (
+          <UsernameModal
+            onDone={() => setShowUsernamePrompt(false)}
+            onSkip={() => setShowUsernamePrompt(false)}
+          />
+        )}
         {guestPromptResult && (
           <GuestScoreModal
             result={guestPromptResult}
@@ -147,6 +157,7 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
             onSkip={() => setGuestPromptResult(null)}
           />
         )}
+
       </div>
     </div>
   );
