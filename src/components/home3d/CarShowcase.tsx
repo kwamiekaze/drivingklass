@@ -34,7 +34,7 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
     box.getCenter(center);
     cloned.position.sub(center);
     cloned.position.y += size.y / 2;
-    const scale = 2.75 / Math.max(size.x, size.z);
+    const scale = 2.1 / Math.max(size.x, size.z);
     cloned.scale.setScalar(scale);
     cloned.position.multiplyScalar(scale);
     cloned.traverse((o: any) => {
