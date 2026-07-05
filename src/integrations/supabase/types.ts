@@ -317,6 +317,74 @@ export type Database = {
         }
         Relationships: []
       }
+      game_match_players: {
+        Row: {
+          color: string
+          display_name: string | null
+          joined_at: string
+          match_id: string
+          stars: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          display_name?: string | null
+          joined_at?: string
+          match_id: string
+          stars?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          display_name?: string | null
+          joined_at?: string
+          match_id?: string
+          stars?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_match_players_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "game_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_matches: {
+        Row: {
+          code: string
+          created_at: string
+          duration_s: number
+          host_id: string
+          id: string
+          seed: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          duration_s?: number
+          host_id: string
+          id?: string
+          seed: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          duration_s?: number
+          host_id?: string
+          id?: string
+          seed?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       game_scores: {
         Row: {
           difficulty: string
@@ -2424,6 +2492,10 @@ export type Database = {
       }
       is_assigned_instructor: {
         Args: { _instructor_id: string; _student_id: string }
+        Returns: boolean
+      }
+      is_match_player: {
+        Args: { _match_id: string; _user_id: string }
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }

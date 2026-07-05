@@ -10,6 +10,7 @@ interface Props {
   onStart: (levelId: string) => void;
   onHowToPlay: () => void;
   onLeaderboard: () => void;
+  onMultiplayer: () => void;
 }
 
 const STREAK_KEY = 'dk-game-streak';
@@ -34,7 +35,7 @@ function computeStreak(): number {
   } catch { return 0; }
 }
 
-export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard }: Props) {
+export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer }: Props) {
   const [streak, setStreak] = useState(0);
   useEffect(() => { setStreak(computeStreak()); }, []);
 
@@ -113,6 +114,13 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
       </div>
+
+      <button
+        className="dk-btn dk-btn-gold mp-cta"
+        onClick={() => { clickTick(); onMultiplayer(); }}
+      >
+        Multiplayer: Star Rush
+      </button>
 
       <a className="dk-btn dk-btn-black book-cta" href="https://drivingklass.com" target="_blank" rel="noopener noreferrer">
         Book a Driving Lesson
