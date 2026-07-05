@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
 import { NavigationButtons } from "@/components/NavigationButtons";
@@ -8,6 +7,7 @@ import { AboutModal } from "@/components/AboutModal";
 import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
+import { Hero3D } from "@/components/hero3d/Hero3D";
 import { useTheme } from "@/components/ThemeProvider";
 
 const Index = () => {
@@ -82,17 +82,27 @@ const Index = () => {
 
         {/* Content wrapper */}
         <div className="relative" style={{ zIndex: 10 }}>
-          {/* Hero Section with car and package wheel - pass splashComplete */}
-          <HeroSection splashComplete={splashComplete} />
+          {/* NEW: Premium 3D animated hero (full viewport) */}
+          <Hero3D />
 
-          {/* Navigation Buttons */}
-          <NavigationButtons 
-            onReviewsClick={() => setIsReviewsOpen(true)}
-            onAboutClick={() => setIsAboutOpen(true)}
-          />
+          {/* Packages / existing hero content — anchor target for hero CTA */}
+          <div
+            id="packages"
+            className="relative"
+            style={{
+              background:
+                "linear-gradient(180deg, hsl(28 45% 8%) 0%, hsl(30 40% 6%) 50%, hsl(30 35% 4%) 100%)",
+            }}
+          >
+            <HeroSection splashComplete={splashComplete} />
 
-          {/* Contact Section */}
-          <ContactSection />
+            <NavigationButtons
+              onReviewsClick={() => setIsReviewsOpen(true)}
+              onAboutClick={() => setIsAboutOpen(true)}
+            />
+
+            <ContactSection />
+          </div>
         </div>
 
         {/* Modals */}
