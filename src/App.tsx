@@ -80,6 +80,8 @@ const App = () => (
             <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+            <Route path="/play" element={<RoadTestGame publicMode />} />
+
 
 
             {/* All other routes wrapped in auth + analytics providers */}

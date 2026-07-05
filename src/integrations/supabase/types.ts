@@ -385,6 +385,42 @@ export type Database = {
         }
         Relationships: []
       }
+      game_plays: {
+        Row: {
+          created_at: string
+          difficulty: string
+          distance: number | null
+          grade: string | null
+          id: string
+          level_id: string
+          score: number
+          stars: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty: string
+          distance?: number | null
+          grade?: string | null
+          id?: string
+          level_id: string
+          score?: number
+          stars?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          distance?: number | null
+          grade?: string | null
+          id?: string
+          level_id?: string
+          score?: number
+          stars?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_scores: {
         Row: {
           difficulty: string
@@ -1117,7 +1153,9 @@ export type Database = {
           availability_notes: string | null
           availability_windows: string[] | null
           avatar_url: string | null
+          best_streak: number
           created_at: string
+          current_streak: number
           dropoff_address: string | null
           dropoff_lat: number | null
           dropoff_lng: number | null
@@ -1125,6 +1163,7 @@ export type Database = {
           email_prefs: Json
           first_name: string | null
           full_name: string | null
+          game_username: string | null
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
@@ -1137,6 +1176,7 @@ export type Database = {
           intake_updated_by: string | null
           last_geocoded_at: string | null
           last_name: string | null
+          last_played_on: string | null
           last_sign_in_at: string | null
           needs_review: boolean | null
           permit_expiration_date: string | null
@@ -1163,7 +1203,9 @@ export type Database = {
           availability_notes?: string | null
           availability_windows?: string[] | null
           avatar_url?: string | null
+          best_streak?: number
           created_at?: string
+          current_streak?: number
           dropoff_address?: string | null
           dropoff_lat?: number | null
           dropoff_lng?: number | null
@@ -1171,6 +1213,7 @@ export type Database = {
           email_prefs?: Json
           first_name?: string | null
           full_name?: string | null
+          game_username?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
@@ -1183,6 +1226,7 @@ export type Database = {
           intake_updated_by?: string | null
           last_geocoded_at?: string | null
           last_name?: string | null
+          last_played_on?: string | null
           last_sign_in_at?: string | null
           needs_review?: boolean | null
           permit_expiration_date?: string | null
@@ -1209,7 +1253,9 @@ export type Database = {
           availability_notes?: string | null
           availability_windows?: string[] | null
           avatar_url?: string | null
+          best_streak?: number
           created_at?: string
+          current_streak?: number
           dropoff_address?: string | null
           dropoff_lat?: number | null
           dropoff_lng?: number | null
@@ -1217,6 +1263,7 @@ export type Database = {
           email_prefs?: Json
           first_name?: string | null
           full_name?: string | null
+          game_username?: string | null
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
@@ -1229,6 +1276,7 @@ export type Database = {
           intake_updated_by?: string | null
           last_geocoded_at?: string | null
           last_name?: string | null
+          last_played_on?: string | null
           last_sign_in_at?: string | null
           needs_review?: boolean | null
           permit_expiration_date?: string | null
@@ -2243,6 +2291,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_game_username_available: {
+        Args: { _username: string }
+        Returns: boolean
+      }
       complete_session: {
         Args: { _session_id: string; _via?: string }
         Returns: {
@@ -2371,7 +2423,9 @@ export type Database = {
           availability_notes: string | null
           availability_windows: string[] | null
           avatar_url: string | null
+          best_streak: number
           created_at: string
+          current_streak: number
           dropoff_address: string | null
           dropoff_lat: number | null
           dropoff_lng: number | null
@@ -2379,6 +2433,7 @@ export type Database = {
           email_prefs: Json
           first_name: string | null
           full_name: string | null
+          game_username: string | null
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
@@ -2391,6 +2446,7 @@ export type Database = {
           intake_updated_by: string | null
           last_geocoded_at: string | null
           last_name: string | null
+          last_played_on: string | null
           last_sign_in_at: string | null
           needs_review: boolean | null
           permit_expiration_date: string | null
@@ -2615,6 +2671,14 @@ export type Database = {
           student_id: string
         }[]
       }
+      record_game_streak: {
+        Args: never
+        Returns: {
+          best_streak: number
+          current_streak: number
+          last_played_on: string
+        }[]
+      }
       restart_match: {
         Args: { _match_id: string }
         Returns: {
@@ -2635,6 +2699,7 @@ export type Database = {
         }
       }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
+      set_game_username: { Args: { _username: string }; Returns: string }
       try_uuid: { Args: { p_text: string }; Returns: string }
       update_session_notes: {
         Args: {

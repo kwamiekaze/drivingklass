@@ -6,28 +6,39 @@ import { ReportCard } from './components/ReportCard';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { GuestScoreModal } from './GuestScoreModal';
+import { UsernameModal } from './UsernameModal';
+import { MyStatsModal } from './MyStatsModal';
 import { submitScore } from './submitScore';
 import { sound } from './sound';
+import { lovable } from '@/integrations/lovable';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
 
 type Screen = 'menu' | 'playing' | 'report' | 'multiplayer';
 const DIFF_KEY = 'dk-game-difficulty';
 
+interface RoadTestGameProps {
+  publicMode?: boolean;
+}
+
+
 /** Only game canvas + touch pedals get preventDefault. Everything else (buttons,
  *  menus, modals) keeps native tap → click synthesis on iOS. */
 const GAME_SURFACE_SELECTOR = 'canvas, .game-host, .touch-controls';
 
-export default function RoadTestGame() {
+export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
   const [screen, setScreen] = useState<Screen>('menu');
   const [levelId, setLevelId] = useState('parking-lot');
   const [difficulty, setDifficultyState] = useState<Difficulty>('learner');
   const [result, setResult] = useState<LevelResult | null>(null);
   const [showHowTo, setShowHowTo] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showMyStats, setShowMyStats] = useState(false);
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   const [bestScores, setBestScores] = useState<Record<string, number>>({});
   const [guestPromptResult, setGuestPromptResult] = useState<LevelResult | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
 
   // Non-passive touchstart: only preventDefault on the actual game surfaces so
   // iOS still synthesizes click events for buttons/menus/modals.
@@ -71,9 +82,10 @@ export default function RoadTestGame() {
   const handleComplete = useCallback((r: LevelResult) => {
     setBestScores((prev) => ({ ...prev, [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score) }));
     submitScore(r)
-      .then(({ isNewBest, previousBest, isGuest }) => {
+      .then(({ isNewBest, previousBest, isGuest, needsUsername }) => {
         setResult({ ...r, isNewBest, previousBest: previousBest ?? undefined });
         if (isGuest) setGuestPromptResult(r);
+        else if (needsUsername) setShowUsernamePrompt(true);
       })
       .catch((err) => {
         console.error(err);
@@ -81,6 +93,13 @@ export default function RoadTestGame() {
       });
     setScreen('report');
   }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin + '/play' });
+    } catch (e) { console.error(e); }
+  }, []);
+
 
   return (
     <div className="dk-game" ref={rootRef}>
@@ -94,6 +113,9 @@ export default function RoadTestGame() {
             onHowToPlay={() => setShowHowTo(true)}
             onLeaderboard={() => setShowLeaderboard(true)}
             onMultiplayer={() => setScreen('multiplayer')}
+            onMyStats={() => setShowMyStats(true)}
+            onSignInPrompt={signInWithGoogle}
+            publicMode={publicMode}
           />
         )}
 
@@ -121,6 +143,13 @@ export default function RoadTestGame() {
 
         {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
         {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+        {showMyStats && <MyStatsModal onClose={() => setShowMyStats(false)} />}
+        {showUsernamePrompt && (
+          <UsernameModal
+            onDone={() => setShowUsernamePrompt(false)}
+            onSkip={() => setShowUsernamePrompt(false)}
+          />
+        )}
         {guestPromptResult && (
           <GuestScoreModal
             result={guestPromptResult}
@@ -128,6 +157,7 @@ export default function RoadTestGame() {
             onSkip={() => setGuestPromptResult(null)}
           />
         )}
+
       </div>
     </div>
   );

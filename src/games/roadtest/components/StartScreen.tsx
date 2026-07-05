@@ -13,18 +13,20 @@ interface Props {
   onHowToPlay: () => void;
   onLeaderboard: () => void;
   onMultiplayer: () => void;
+  onMyStats?: () => void;
+  onSignInPrompt?: () => void;
+  publicMode?: boolean; // when true, "back" goes to homepage not dashboard
 }
 
 const STREAK_KEY = 'dk-game-streak';
 const STREAK_DAY_KEY = 'dk-game-streak-day';
 
-function computeStreak(): number {
+function guestStreak(): number {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const lastDay = localStorage.getItem(STREAK_DAY_KEY);
     const raw = parseInt(localStorage.getItem(STREAK_KEY) ?? '0', 10) || 0;
     if (lastDay === today) return raw;
-    // Update streak on first visit today
     let next = 1;
     if (lastDay) {
       const y = new Date(); y.setDate(y.getDate() - 1);
@@ -37,10 +39,31 @@ function computeStreak(): number {
   } catch { return 0; }
 }
 
-export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer }: Props) {
+export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer, onMyStats, onSignInPrompt, publicMode }: Props) {
   const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [signedIn, setSignedIn] = useState(false);
   const navigate = useNavigate();
-  useEffect(() => { setStreak(computeStreak()); }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        setSignedIn(false);
+        setStreak(guestStreak());
+        return;
+      }
+      setSignedIn(true);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('current_streak, best_streak, last_played_on')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      // Server truth. If they haven't played today OR yesterday, current is stale — show it anyway; RPC will reset on next run.
+      setStreak(profile?.current_streak ?? 0);
+      setBestStreak(profile?.best_streak ?? 0);
+    })();
+  }, []);
 
   const clickTick = () => { sound.init(); sound.uiTick(); };
   const endless = LEVELS.find((l) => l.endless);
@@ -49,6 +72,7 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
 
   const goHome = async () => {
     clickTick();
+    if (publicMode) { navigate('/'); return; }
     const { data } = await supabase.auth.getUser();
     if (!data.user) { navigate('/'); return; }
     const { data: roleRow } = await supabase
@@ -66,7 +90,7 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
           type="button"
           onClick={goHome}
           className="brand-mark brand-mark-link"
-          aria-label="Go to dashboard"
+          aria-label={publicMode ? 'Back to homepage' : 'Go to dashboard'}
         >
           DRIVING<span>KLASS</span>
         </button>
@@ -85,10 +109,20 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
           <h1>Road Test Challenge</h1>
           <p>Hold your lane. Stop at the signs. Earn a 5-star report card.</p>
           {streak > 0 && (
-            <div className="streak-badge">🔥 {streak}-day streak</div>
+            <div className="streak-badge">🔥 {streak}-day streak{bestStreak > streak ? ` · best ${bestStreak}` : ''}</div>
           )}
         </div>
       </div>
+
+      {!signedIn && onSignInPrompt && (
+        <button
+          className="dk-btn dk-btn-gold"
+          style={{ width: '100%', marginBottom: 8 }}
+          onClick={() => { clickTick(); onSignInPrompt(); }}
+        >
+          Sign in with Google to save your scores & streak
+        </button>
+      )}
 
       <section className="difficulty-row" aria-label="Choose difficulty">
         {DIFFICULTIES.map((d) => (
@@ -135,13 +169,20 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         <button className="dk-btn dk-btn-gold" onClick={() => startLevel(lessons[0].id)}>Start Lesson</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
+        {signedIn && onMyStats && (
+          <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onMyStats(); }}>My Stats</button>
+        )}
       </div>
 
       <button
         className="dk-btn dk-btn-gold mp-cta"
-        onClick={() => { clickTick(); onMultiplayer(); }}
+        onClick={() => {
+          clickTick();
+          if (!signedIn && onSignInPrompt) { onSignInPrompt(); return; }
+          onMultiplayer();
+        }}
       >
-        Multiplayer: Star Rush
+        Multiplayer: Star Rush {!signedIn && '· Sign in required'}
       </button>
 
       <a className="dk-btn dk-btn-black book-cta" href="https://drivingklass.com" target="_blank" rel="noopener noreferrer">
