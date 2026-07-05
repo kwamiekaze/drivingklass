@@ -1,66 +1,77 @@
-# Star Rush Multiplayer
+# Multiplayer "Star Rush" — Plan
 
-Add a real-time multiplayer mode to the road-test game at `/simulator`. Everything lives under `src/games/roadtest/` plus two new Supabase tables. Route gating and single-player features stay as they are.
+## What already exists (don't rebuild)
 
-## Backend (one migration)
+A working multiplayer scaffold is already in the repo under `src/games/roadtest/multiplayer/` (~1,300 LOC) and `supabase/migrations/20260705053945_*.sql`. It covers most of your spec:
 
-New tables in `public`:
+- **Backend tables**: `game_matches` (code, host_id, status, seed, duration_s) and `game_match_players` (match_id, user_id, display_name, color, stars). RLS policies scoped to auth.uid + match membership. Both tables are in the `supabase_realtime` publication.
+- **Realtime**: Supabase Realtime **Broadcast** at ~10 Hz for `{x, y, angle, speed, stars}` per player, plus **Presence** for join/leave and stale-row detection. `star_taken` events sync pickups.
+- **Deterministic shared world**: `worldGen.ts` builds a 6×6 grid city from the match `seed` using a mulberry32 PRNG so every client renders identical roads, obstacles, and star spawn points.
+- **Lobby**: `MultiplayerLobby.tsx` — host creates a match, gets a 4-char code, picks a duration from **three preset chips (2/3/5 min)**, up to 5 unique-color slots. Others join by code.
+- **Round loop**: shared 3-2-1 countdown, live scoreboard, countdown timer, `star_taken` broadcast, `Podium.tsx` with gold/silver/bronze + rematch.
+- **Star economy** (already in `MultiplayerScene.ts`): pickup +1, crash −3 and scatters, traffic-light violation −2, speeding −1. Star count is floored at 0.
 
-- **game_matches** — `id uuid pk`, `code text unique` (4-char), `host_id uuid`, `status text default 'lobby'` (`lobby`/`playing`/`finished`), `duration_s int`, `seed int`, `started_at timestamptz`, `created_at timestamptz default now()`.
-- **game_match_players** — `match_id uuid fk → game_matches`, `user_id uuid`, `display_name text`, `color text`, `stars int default 0`, `joined_at timestamptz default now()`, `pk (match_id, user_id)`.
+## Real gaps vs. your new spec
 
-Grants + RLS:
+| # | Your requirement | Status | Gap |
+|---|---|---|---|
+| 1 | Public list of open lobbies (not just code) | ❌ | Add a "Join a public match" screen listing `game_matches` where `status='lobby'` and player-count < 5 |
+| 2 | Host sets the time limit | ⚠️ Partial | Currently three preset chips; upgrade to a free-form 1–10 min picker (still stored in `duration_s`) |
+| 3 | Star loss on all traffic violations | ✅ Coded | Verify in a live 2-tab test; adjust penalties if too harsh/soft |
+| 4 | Up to 5 players cap | ✅ | Enforced in lobby; add a server-side guard via `check_join_allowed` RPC to prevent race on the 5-slot cap |
+| 5 | "Open world" feel | ⚠️ | Existing city is a fine 6×6 grid; polish pass (more star density, mini-map, camera smoothing) will make it feel bigger |
+| 6 | Mobile fit | ⚠️ | Test scoreboard + timer at 390px; likely needs 1–2 CSS tweaks |
+| 7 | Broaden access | ⚠️ | Currently gated to admin+instructor at `/simulator`. Confirm you want to open the multiplayer entry to **all logged-in students** (single-player is already opened per prior request) |
 
-- `authenticated` gets full CRUD; `service_role` gets ALL.
-- `game_matches`: anyone authenticated can SELECT (needed to look up by code); INSERT only if `host_id = auth.uid()`; UPDATE only by host.
-- `game_match_players`: SELECT if you're a player in that match (helper `public.is_match_player(uuid, uuid)` security-definer to avoid recursion); INSERT/UPDATE/DELETE only your own row (`user_id = auth.uid()`).
-- Realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE ...` for both tables so lobby joins update live.
+## Stages, in order
 
-## Feature files
+**Stage A — Audit & fix (must-do before opening it up)**
+1. Two-tab live playtest: host + join, confirm world sync, star pickup sync, violation penalties, timer end → podium.
+2. Fix any bugs surfaced (typical: presence race on the countdown, colors not unique, timer drift).
 
-New under `src/games/roadtest/multiplayer/`:
+**Stage B — Public matchmaking**
+3. Add a `PublicMatchList` component that polls (or realtime-subscribes to) open lobbies filtered by `status='lobby'` and current player-count < 5.
+4. Add a `SECURITY DEFINER` RPC `join_open_match(match_code)` that atomically re-checks status+capacity to close the join-race.
 
-- `types.ts` — `PlayerState`, `MatchRow`, `PlayerRow`, `NetMessage` union (`state` / `star_taken` / `star_respawn` / `start` / `end`).
-- `worldGen.ts` — seeded RNG (mulberry32) that builds the 6×6 block city: road grid, intersections with lights/stop signs, cones + parked cars along roads, and ~25 star spawn points. Same seed = identical world on every client.
-- `MultiplayerScene.ts` — Phaser scene: top-down camera follows own car, renders city tiles culled to viewport, updates local car physics, detects collisions/violations locally against seeded obstacles, applies scoring rules, broadcasts state at 10 Hz. Interpolates remote cars toward last known `{x,y,angle}`. Renders name tags + gold boundary.
-- `net.ts` — thin wrapper around `supabase.channel(match_id)` with typed broadcasts + presence for disconnect detection (5s silence → grey scoreboard row). Client-trust model, commented as such.
-- `MultiplayerLobby.tsx` — Host / Join UI: create match (2/3/5 min), 4-char code (`GK7X` style, uppercase alphanum, uniqueness retried), player list with color chips, host START.
-- `MultiplayerGame.tsx` — mounts Phaser scene, HUD overlay: big countdown top-center, own star count, live scoreboard top-right (self highlighted gold), violation flash. Uses existing `TouchControls` and `sound.ts` for effects.
-- `Podium.tsx` — 1st/2nd/3rd gold/silver/bronze cards, full standings, confetti reuse, host-only Rematch (same lobby, new seed → resets scores + status back to `playing`) and Back to Menu.
-- `MultiplayerRoot.tsx` — small state machine: `menu → lobby → playing → podium`.
+**Stage C — Host-configurable time limit**
+5. Replace the three duration chips with a numeric stepper (60s–600s, 30s increments). No schema change — `duration_s` is already int.
 
-Wire-up:
+**Stage D — Feel & polish**
+6. Increase star density and add a corner mini-map showing all 5 players + star clusters.
+7. Camera smoothing / follow lerp; violation flash on the offending player only.
+8. Mobile CSS pass at 390px.
 
-- `RoadTestGame.tsx`: add `'multiplayer'` screen; render `MultiplayerRoot` when active.
-- `StartScreen.tsx`: new button `Multiplayer: Star Rush` under the existing button row.
-- `roadtest.css`: styles for lobby cards, code display, scoreboard, countdown, podium (gold/silver/bronze), color chips.
+**Stage E — Access & release**
+9. If you want students in, remove the `/simulator` role gate specifically for the multiplayer entry point (keep single-player rules per your existing memory).
+10. Add a "Last 10 matches" summary on the student profile so admins/instructors can see who played and the outcomes (uses existing `game_match_players.stars`).
 
-## Scoring rules (local, matches spec)
+## Backend approach (unchanged, already correct)
 
-- Star pickup: +1, sound `starPickup()`.
-- Crash into parked car OR another player: −3, drop 3 scatter stars near crash for anyone; sound `collision()`.
-- Cone: −1. Red light: −2. Stop sign: −2. Speeding >45mph in city: −1 (throttled 5s).
-- Never below 0. `stars` piggybacks on 10 Hz state broadcast.
+- **Supabase Realtime Broadcast** for position/state (cheap, ephemeral, not persisted).
+- **Supabase Realtime Presence** for connect/disconnect + "who's in the lobby."
+- **Postgres tables** only for durable state: the match record, the player roster, and final scores. That is exactly the current design and it's the right one — no need to introduce a separate WebSocket server.
+- **Client-trust** model for now (each client reports its own position and star count). Called out in code; hardening (server-authoritative validation via an edge function) is a separate later stage if cheating becomes a real concern.
 
-## Netcode
+## Credit / message estimate
 
-- Channel: `supabase.channel('match:' + matchId, { config: { broadcast: { self: false }, presence: { key: userId } } })`.
-- 10 Hz state broadcasts (throttled in scene update loop). Remote cars lerp toward latest target each frame.
-- Star pickup: broadcast `{starId}`. First seen wins locally via a `Set<takenIds>` guard; duplicates ignored. Each taken star schedules a deterministic 12s respawn at the next seeded position in a round-robin queue (identical on every client — no coordinator needed).
-- Round end: 5s after START, timer decrements. When it hits zero, host broadcasts `end`; all clients freeze, each persists their own final `stars` to `game_match_players`, host flips match `status = 'finished'`.
+These are rough; multiplayer testing usually needs a couple of iteration rounds because bugs only surface with two live tabs.
 
-## Acceptance test (two browsers)
+| Stage | Realistic message range |
+|---|---|
+| A — Audit & bug-fix pass (2-tab test + likely 2 fixes) | 6 – 12 |
+| B — Public lobby list + atomic-join RPC (1 migration + 1 component) | 5 – 8 |
+| C — Free-form time picker | 1 – 2 |
+| D — Star density + mini-map + camera + mobile polish | 8 – 14 |
+| E — Access change + player history summary | 4 – 7 |
+| **Total** | **~24 – 43 messages** |
 
-1. Browser A (host, admin/instructor): open `/simulator` → Multiplayer: Star Rush → Host, pick 2 min → gets code `GK7X`, sees self in lobby.
-2. Browser B (second admin/instructor): Multiplayer: Star Rush → Join → enter `GK7X` → both lobbies show two players with distinct colors.
-3. Host presses START → both clients count down 3-2-1 → both cars appear in the same city (verify identical building layout).
-4. Drive A into a star → both scoreboards +1 for A; star vanishes on both screens; respawns 12s later.
-5. A collides with B → both see −3, scatter stars appear; violation flashes.
-6. Timer reaches 0 → podium shows correct winner + full standings on both clients.
-7. Row visible in `game_matches` with `status = 'finished'`; two rows in `game_match_players` with final stars.
+Two things swing it:
+- If Stage A turns up a Realtime desync bug (e.g. seed drift, presence flapping), add ~5 messages.
+- If you want server-authoritative anti-cheat later, that's another ~10–15 on top (edge function + score reconciliation).
 
-## Scope guardrails
+## Assumptions worth confirming before I build
 
-- Only new files under `src/games/roadtest/multiplayer/`, small edits to `RoadTestGame.tsx` / `StartScreen.tsx` / `roadtest.css`, and one migration.
-- Route protection unchanged (`admin`, `instructor`, `student` on `/simulator` — per current App.tsx).
-- Client-trust model documented in a header comment in `net.ts` for future hardening.
+1. Multiplayer entry stays at `/simulator` under the existing role gate, OR opens to all logged-in students (please pick).
+2. Time limit range: **60s–600s in 30s steps** is fine, or do you want different bounds?
+3. Public lobby list should be visible to any logged-in player who can enter the game — no separate "friends only" mode.
+4. Rematch reuses the same seed, or generates a new one? (Current code resets scores but keeps the seed.)
