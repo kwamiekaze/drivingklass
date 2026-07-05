@@ -1,12 +1,13 @@
-import type { LevelConfig, LevelResult, ScoreEvent } from './types';
+import type { LevelConfig, LevelResult, ScoreEvent, Difficulty, DifficultyConfig } from './types';
 
-/** Central table of every scoring rule in the game. */
 export const POINTS = {
   CHECKPOINT: 100,
   FULL_STOP: 75,
   GREEN_LIGHT: 25,
-  SMOOTH_DRIVING: 25, // awarded every few seconds of clean lane-keeping
+  SMOOTH_DRIVING: 25,
   FINISH_BONUS: 200,
+  STAR: 25,
+  NEAR_MISS: 15,
 
   HIT_CONE: -50,
   LANE_CROSS: -30,
@@ -23,6 +24,8 @@ const LABELS: Record<string, string> = {
   GREEN_LIGHT: 'Passed on green',
   SMOOTH_DRIVING: 'Smooth lane-keeping',
   FINISH_BONUS: 'Completed the course',
+  STAR: 'Gold star collected',
+  NEAR_MISS: 'Close call — nice reflexes',
   HIT_CONE: 'Hit a cone',
   LANE_CROSS: 'Drifted over lane line',
   SPEEDING: 'Exceeded speed limit',
@@ -34,25 +37,50 @@ const LABELS: Record<string, string> = {
 
 export type PointKey = keyof typeof POINTS;
 
-/** Tracks score + every event during a level run. */
+/** Positive events that build the combo meter. */
+const POSITIVE_COMBO: PointKey[] = ['STAR', 'CHECKPOINT', 'FULL_STOP', 'GREEN_LIGHT', 'SMOOTH_DRIVING', 'NEAR_MISS'];
+
 export class ScoreTracker {
   private counts = new Map<PointKey, number>();
+  private extras = 0; // e.g. distance bonus
   score = 0;
+  combo = 1;
+  starsCollected = 0;
+  maxCombo = 1;
 
+  /** Adds an event; returns actual points awarded (after combo multiplier). */
   add(key: PointKey): number {
     this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
-    this.score = Math.max(0, this.score + POINTS[key]);
-    return POINTS[key];
+    const base = POINTS[key];
+    let pts = base;
+    if (base > 0) {
+      pts = Math.round(base * this.combo);
+      if (POSITIVE_COMBO.includes(key)) {
+        this.combo = Math.min(5, this.combo + 1);
+        this.maxCombo = Math.max(this.maxCombo, this.combo);
+      }
+    } else {
+      this.combo = 1; // any fault resets
+    }
+    if (key === 'STAR') this.starsCollected++;
+    this.score = Math.max(0, this.score + pts);
+    return pts;
+  }
+
+  addDistanceBonus(pts: number) {
+    this.extras += pts;
+    this.score += pts;
   }
 
   get events(): ScoreEvent[] {
-    return [...this.counts.entries()]
+    const arr = [...this.counts.entries()]
       .map(([key, count]) => ({
         label: LABELS[key],
         points: POINTS[key] * count,
         count
-      }))
-      .sort((a, b) => b.points - a.points);
+      }));
+    if (this.extras > 0) arr.push({ label: 'Distance bonus', points: this.extras, count: 1 });
+    return arr.sort((a, b) => b.points - a.points);
   }
 
   countOf(key: PointKey): number {
@@ -70,9 +98,15 @@ function gradeFor(score: number, par: number): { grade: string; passed: boolean 
   return { grade: 'F', passed: false };
 }
 
-/** Builds the Instructor Report Card content from a finished run. */
-export function buildResult(level: LevelConfig, tracker: ScoreTracker): LevelResult {
-  const { grade, passed } = gradeFor(tracker.score, level.parScore);
+export function buildResult(
+  level: LevelConfig,
+  tracker: ScoreTracker,
+  difficulty: DifficultyConfig,
+  extras?: { distance?: number }
+): LevelResult {
+  const rawScore = tracker.score;
+  const finalScore = Math.round(rawScore * difficulty.scoreMul);
+  const { grade, passed } = gradeFor(finalScore, level.parScore);
   const feedback: string[] = [];
 
   const faults =
@@ -96,25 +130,29 @@ export function buildResult(level: LevelConfig, tracker: ScoreTracker): LevelRes
     feedback.push(`Watch the speedometer — the limit here is ${level.speedLimit} mph.`);
   }
 
-  if (tracker.countOf('LANE_CROSS') <= 1) {
-    feedback.push('Strong lane discipline.');
-  } else {
-    feedback.push('Keep the car centered — you crossed lane lines several times.');
-  }
+  if (tracker.countOf('LANE_CROSS') <= 1) feedback.push('Strong lane discipline.');
+  else feedback.push('Keep the car centered — you crossed lane lines several times.');
 
-  if (passed) {
-    feedback.push('Instructor verdict: PASS. Ready for the next lesson!');
-  } else {
-    feedback.push('Instructor verdict: NEEDS PRACTICE. Book a lesson and try again!');
+  if (tracker.starsCollected > 0) {
+    feedback.push(`Collected ${tracker.starsCollected} gold star${tracker.starsCollected === 1 ? '' : 's'}. Bonus points!`);
   }
+  if (tracker.maxCombo >= 3) feedback.push(`Best combo streak: ×${tracker.maxCombo}. Momentum matters!`);
+
+  feedback.push(passed
+    ? 'Instructor verdict: PASS. Ready for the next lesson!'
+    : 'Instructor verdict: NEEDS PRACTICE. Book a lesson and try again!');
 
   return {
     levelId: level.id,
     levelName: level.name,
-    score: tracker.score,
+    difficulty: difficulty.id,
+    score: finalScore,
+    rawScore,
+    multiplier: difficulty.scoreMul,
     grade,
     events: tracker.events,
     feedback,
-    passed
+    passed,
+    distance: extras?.distance,
   };
 }
