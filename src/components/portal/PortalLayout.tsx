@@ -290,6 +290,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
       items.push(
         { href: '/student', label: t('nav.dashboard'), icon: Home },
         { href: '/student/proposals', label: t('nav.proposals'), icon: Send },
+        { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
         { href: '/profile', label: t('nav.profile'), icon: User },
       );
       break;
