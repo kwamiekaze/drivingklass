@@ -158,6 +158,7 @@ function revive() {
   if (!isRunning()) return;
   if (engineRunning && !engineOsc) buildEngineNodes();
   if (musicWanted && musicTimer === null && !muted) buildMusicLoop();
+  tryPlayMediaEl();
 }
 
 // Visibility handler — pause engine when hidden; revive on return.
@@ -176,6 +177,7 @@ if (typeof document !== 'undefined') {
     } else {
       sound.ensureRunning();
       revive();
+      tryPlayMediaEl();
     }
   });
 }
@@ -187,7 +189,9 @@ export const sound = {
   /** Call from a user gesture to unlock audio. */
   init() {
     if (!ctx) buildContext();
+    ensureMediaElement();
     this.ensureRunning();
+    tryPlayMediaEl();
   },
 
   /** Resume the audio context if it's in any non-running state. Safe to call often. */
@@ -196,12 +200,13 @@ export const sound = {
     if (!ctx) return;
     if ((ctx.state as string) === 'running') {
       revive();
+      tryPlayMediaEl();
       return;
     }
     try {
       const p = ctx.resume();
       if (p && typeof p.then === 'function') {
-        p.then(() => revive()).catch(() => {
+        p.then(() => { revive(); tryPlayMediaEl(); }).catch(() => {
           try { ctx?.close(); } catch { /* ignore */ }
           ctx = null; masterGain = null;
         });
@@ -211,6 +216,7 @@ export const sound = {
       ctx = null; masterGain = null;
     }
   },
+
 
   setMuted(v: boolean) {
     muted = v;
