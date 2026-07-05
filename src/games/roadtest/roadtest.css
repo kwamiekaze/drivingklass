@@ -936,3 +936,16 @@
   font-size: 18px;
   pointer-events: none;
 }
+
+/* ---------- My Stats chips ---------- */
+.stat-chip {
+  background: rgba(242, 193, 78, 0.08);
+  border: 1px solid rgba(242, 193, 78, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-chip small { opacity: 0.75; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+.stat-chip strong { color: var(--gold); font-size: 20px; font-family: var(--display); }
