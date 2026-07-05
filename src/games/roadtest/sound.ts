@@ -1,11 +1,11 @@
 /**
  * WebAudio sound system — 100% synthesized, no audio files.
- * Procedurally generated using oscillators + noise buffers.
  * AudioContext is lazily created on the first user gesture (browser autoplay rules).
+ * Self-recovering: engine + music intents are remembered and re-attached whenever
+ * the context finally reaches 'running' (first tap, tab refocus, etc.).
  *
  * NOTE: The iOS hardware silent switch mutes WebAudio at the OS level regardless
- * of what we do here. Nothing to fix in code — advise users to check the ring/silent
- * toggle if they hear no sound on iPhone despite the in-app 🔊 toggle being on.
+ * of what we do here. Nothing to fix in code.
  */
 
 const MUTE_KEY = 'dk-game-muted';
@@ -22,7 +22,7 @@ let muted = false;
 let musicGain: GainNode | null = null;
 let musicTimer: number | null = null;
 let musicStep = 0;
-let musicRunning = false;
+let musicWanted = false;
 // Tire screech state (throttled)
 let lastScreechAt = 0;
 
@@ -41,7 +41,6 @@ function buildContext() {
   } catch { /* ignore */ }
 }
 
-/** Treat any non-"running" state (suspended, interrupted [iOS], closed) as needing revival. */
 function isRunning() {
   return !!ctx && (ctx.state as string) === 'running';
 }
@@ -50,18 +49,83 @@ function rebuildIfClosed() {
   if (!ctx || (ctx.state as string) === 'closed') {
     ctx = null;
     masterGain = null;
-    engineOsc = null; engineGain = null; engineFilter = null; engineRunning = false;
-    musicGain = null; musicRunning = false;
+    engineOsc = null; engineGain = null; engineFilter = null;
+    musicGain = null;
     if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
     buildContext();
   }
 }
 
-// Visibility handler — pause engine when hidden, resume + revive when visible.
+function buildEngineNodes() {
+  if (!ctx || !masterGain || engineOsc) return;
+  try {
+    engineOsc = ctx.createOscillator();
+    engineOsc.type = 'sawtooth';
+    engineOsc.frequency.value = 60;
+    engineFilter = ctx.createBiquadFilter();
+    engineFilter.type = 'lowpass';
+    engineFilter.frequency.value = 400;
+    engineGain = ctx.createGain();
+    engineGain.gain.value = 0;
+    engineOsc.connect(engineFilter).connect(engineGain).connect(masterGain);
+    engineOsc.start();
+  } catch { /* ignore */ }
+}
+
+function buildMusicLoop() {
+  if (!ctx || !masterGain || musicTimer !== null || muted) return;
+  try {
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0.09;
+    musicGain.connect(masterGain);
+  } catch { return; }
+  const bass = [55, 55, 73.4, 65.4];
+  const pad = [220, 261.6, 329.6];
+  musicStep = 0;
+  const tick = () => {
+    if (!isRunning() || !musicGain) return;
+    try {
+      const t = ctx!.currentTime;
+      const bo = ctx!.createOscillator();
+      const bg = ctx!.createGain();
+      bo.type = 'triangle';
+      bo.frequency.value = bass[musicStep % bass.length];
+      bg.gain.setValueAtTime(0.0001, t);
+      bg.gain.linearRampToValueAtTime(0.55, t + 0.02);
+      bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      bo.connect(bg).connect(musicGain);
+      bo.start(t); bo.stop(t + 0.6);
+      if (musicStep % 4 === 0) {
+        pad.forEach((f) => {
+          const o = ctx!.createOscillator();
+          const g = ctx!.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.11, t + 0.4);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+          o.connect(g).connect(musicGain!);
+          o.start(t); o.stop(t + 2.3);
+        });
+      }
+      musicStep++;
+    } catch { /* ignore */ }
+  };
+  tick();
+  musicTimer = window.setInterval(tick, 620);
+}
+
+/** Re-attach any intended-but-missing audio nodes now that ctx is running. */
+function revive() {
+  if (!isRunning()) return;
+  if (engineRunning && !engineOsc) buildEngineNodes();
+  if (musicWanted && musicTimer === null && !muted) buildMusicLoop();
+}
+
+// Visibility handler — pause engine when hidden; revive on return.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      // Stop the humming engine so it can't get stuck droning on some devices.
       if (engineOsc) {
         try { engineOsc.stop(); } catch { /* ignore */ }
         try { engineOsc.disconnect(); } catch { /* ignore */ }
@@ -69,24 +133,11 @@ if (typeof document !== 'undefined') {
       }
       if (engineGain) { try { engineGain.disconnect(); } catch { /* ignore */ } engineGain = null; }
       if (engineFilter) { try { engineFilter.disconnect(); } catch { /* ignore */ } engineFilter = null; }
-      // engineRunning stays true so we know to restart it on resume.
+      if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
+      if (musicGain) { try { musicGain.disconnect(); } catch { /* ignore */ } musicGain = null; }
     } else {
       sound.ensureRunning();
-      if (engineRunning && ctx && masterGain) {
-        // Recreate engine nodes
-        try {
-          engineOsc = ctx.createOscillator();
-          engineOsc.type = 'sawtooth';
-          engineOsc.frequency.value = 60;
-          engineFilter = ctx.createBiquadFilter();
-          engineFilter.type = 'lowpass';
-          engineFilter.frequency.value = 400;
-          engineGain = ctx.createGain();
-          engineGain.gain.value = 0;
-          engineOsc.connect(engineFilter).connect(engineGain).connect(masterGain);
-          engineOsc.start();
-        } catch { /* ignore */ }
-      }
+      revive();
     }
   });
 }
@@ -95,7 +146,7 @@ export const sound = {
   get muted() { return muted; },
   isReady() { return ctx !== null; },
 
-  /** Call from a user gesture (button/tap/keydown) to unlock audio. */
+  /** Call from a user gesture to unlock audio. */
   init() {
     if (!ctx) buildContext();
     this.ensureRunning();
@@ -105,20 +156,21 @@ export const sound = {
   ensureRunning() {
     rebuildIfClosed();
     if (!ctx) return;
-    if ((ctx.state as string) !== 'running') {
-      try {
-        const p = ctx.resume();
-        if (p && typeof p.catch === 'function') {
-          p.catch(() => {
-            // Resume failed — rebuild fresh context on next gesture.
-            try { ctx?.close(); } catch { /* ignore */ }
-            ctx = null; masterGain = null;
-          });
-        }
-      } catch {
-        try { ctx?.close(); } catch { /* ignore */ }
-        ctx = null; masterGain = null;
+    if ((ctx.state as string) === 'running') {
+      revive();
+      return;
+    }
+    try {
+      const p = ctx.resume();
+      if (p && typeof p.then === 'function') {
+        p.then(() => revive()).catch(() => {
+          try { ctx?.close(); } catch { /* ignore */ }
+          ctx = null; masterGain = null;
+        });
       }
+    } catch {
+      try { ctx?.close(); } catch { /* ignore */ }
+      ctx = null; masterGain = null;
     }
   },
 
@@ -139,19 +191,7 @@ export const sound = {
 
   startEngine() {
     engineRunning = true;
-    if (!ctx || !masterGain || engineOsc) return;
-    try {
-      engineOsc = ctx.createOscillator();
-      engineOsc.type = 'sawtooth';
-      engineOsc.frequency.value = 60;
-      engineFilter = ctx.createBiquadFilter();
-      engineFilter.type = 'lowpass';
-      engineFilter.frequency.value = 400;
-      engineGain = ctx.createGain();
-      engineGain.gain.value = 0;
-      engineOsc.connect(engineFilter).connect(engineGain).connect(masterGain);
-      engineOsc.start();
-    } catch { /* ignore */ }
+    if (isRunning()) buildEngineNodes();
   },
 
   /** speed 0..1 (mph / maxSpeed) */
@@ -187,11 +227,10 @@ export const sound = {
   fanfare() { playArp([523, 659, 784, 1047, 1319], 0.11, 'triangle', 0.2); },
   uiTick() { playTone(880, 0.04, 'square', 0.06); },
 
-  /** Filtered noise burst — tire screech on a sharp turn at speed. */
   tireScreech(intensity01 = 0.7) {
     if (!isRunning() || !masterGain) return;
     const now = performance.now();
-    if (now - lastScreechAt < 180) return; // throttle
+    if (now - lastScreechAt < 180) return;
     lastScreechAt = now;
     try {
       const t = ctx!.currentTime;
@@ -215,53 +254,14 @@ export const sound = {
     } catch { /* ignore */ }
   },
 
-  /** Light background music loop — sparse bassline + soft pad chord. */
   startMusic() {
-    if (!isRunning() || !masterGain || musicTimer !== null || muted) return;
-    try {
-      musicGain = ctx!.createGain();
-      musicGain.gain.value = 0.09;
-      musicGain.connect(masterGain);
-    } catch { return; }
-    musicRunning = true;
-    const bass = [55, 55, 73.4, 65.4];
-    const pad = [220, 261.6, 329.6];
-    musicStep = 0;
-    const tick = () => {
-      if (!isRunning() || !musicGain) return;
-      try {
-        const t = ctx!.currentTime;
-        const bo = ctx!.createOscillator();
-        const bg = ctx!.createGain();
-        bo.type = 'triangle';
-        bo.frequency.value = bass[musicStep % bass.length];
-        bg.gain.setValueAtTime(0.0001, t);
-        bg.gain.linearRampToValueAtTime(0.55, t + 0.02);
-        bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
-        bo.connect(bg).connect(musicGain);
-        bo.start(t); bo.stop(t + 0.6);
-        if (musicStep % 4 === 0) {
-          pad.forEach((f) => {
-            const o = ctx!.createOscillator();
-            const g = ctx!.createGain();
-            o.type = 'sine';
-            o.frequency.value = f;
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.linearRampToValueAtTime(0.11, t + 0.4);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
-            o.connect(g).connect(musicGain!);
-            o.start(t); o.stop(t + 2.3);
-          });
-        }
-        musicStep++;
-      } catch { /* ignore */ }
-    };
-    tick();
-    musicTimer = window.setInterval(tick, 620);
+    musicWanted = true;
+    if (!isRunning() || muted) return;
+    buildMusicLoop();
   },
 
   stopMusic() {
-    musicRunning = false;
+    musicWanted = false;
     if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
     if (musicGain) { try { musicGain.disconnect(); } catch { /* ignore */ } musicGain = null; }
   },
@@ -289,6 +289,8 @@ function playArp(freqs: number[], step: number, type: OscillatorType, vol: numbe
     setTimeout(() => playTone(f, step * 1.6, type, vol), i * step * 1000);
   });
 }
+
+
 
 function playThud() {
   if (!isRunning() || !masterGain) return;
