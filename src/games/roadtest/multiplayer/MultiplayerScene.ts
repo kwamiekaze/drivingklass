@@ -160,14 +160,14 @@ export class MultiplayerScene extends Phaser.Scene {
       const spawn = spawnList[i % spawnList.length];
       if (p.uid === this.cfg.uid) {
         this.car = this.add.image(spawn.x, spawn.y, 'player-car')
-          .setDisplaySize(28, 52).setDepth(6).setTint(CAR_TINTS[this.cfg.color]);
+          .setDisplaySize(28, 58).setDepth(6).setTint(CAR_TINTS[this.cfg.color]);
         this.px = spawn.x; this.py = spawn.y;
         this.add.text(spawn.x, spawn.y - 36, this.cfg.displayName, this.labelStyle('#ffffff'))
           .setOrigin(0.5).setDepth(7);
         this.cameras.main.startFollow(this.car, true, 0.15, 0.15);
       } else {
         const spr = this.add.image(spawn.x, spawn.y, 'player-car')
-          .setDisplaySize(28, 52).setDepth(6).setTint(CAR_TINTS[p.color]).setAlpha(0.95);
+          .setDisplaySize(28, 58).setDepth(6).setTint(CAR_TINTS[p.color]).setAlpha(0.95);
         const label = this.add.text(spawn.x, spawn.y - 36, p.displayName, this.labelStyle('#ffe89a'))
           .setOrigin(0.5).setDepth(7);
         this.remotes.set(p.uid, {

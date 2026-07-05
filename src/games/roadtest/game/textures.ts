@@ -1,69 +1,13 @@
 import Phaser from 'phaser';
-import playerCarAsset from '../assets/player-car.png.asset.json';
-
-const PLAYER_CAR_URL = playerCarAsset.url;
-
-
-
-/**
- * All game art is generated at runtime so the MVP ships with zero image files.
- *
- * REPLACING ASSETS LATER:
- * - The player car is the SVG below (gold, 5 stars, DRIVINGKLASS roof sign,
- *   matching the brand photo). To use a real top-down PNG of your car instead,
- *   delete makePlayerCarTexture() and load your image in DrivingScene.preload():
- *       this.load.image('player-car', 'assets/your-car-topdown.png')
- *   Keep roughly a 48x84 on-screen footprint (portrait, nose pointing up).
- */
-
-const STAR =
-  '0,-10 2.9,-3.1 10,-3.1 4.2,1.2 6.9,8.1 0,3.8 -6.9,8.1 -4.2,1.2 -10,-3.1 -2.9,-3.1';
-
-function star(x: number, y: number, scale: number, fill: string): string {
-  return `<polygon points="${STAR}" fill="${fill}" transform="translate(${x},${y}) scale(${scale})"/>`;
-}
-
-/** Top-down gold DrivingKlass training car with 5 stars + roof sign. */
-function playerCarSVG(): string {
-  const stars = [0, 1, 2, 3, 4]
-    .map((i) => star(20 + i * 14, 128, 0.55, '#7a5c00'))
-    .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="168" viewBox="0 0 96 168">
-  <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#c9971f"/>
-      <stop offset="0.5" stop-color="#f2c14e"/>
-      <stop offset="1" stop-color="#c9971f"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="26" width="10" height="30" rx="4" fill="#15151a"/>
-  <rect x="84" y="26" width="10" height="30" rx="4" fill="#15151a"/>
-  <rect x="2" y="118" width="10" height="30" rx="4" fill="#15151a"/>
-  <rect x="84" y="118" width="10" height="30" rx="4" fill="#15151a"/>
-  <rect x="8" y="8" width="80" height="152" rx="26" fill="url(#gold)" stroke="#8a6a10" stroke-width="3"/>
-  <rect x="16" y="34" width="64" height="24" rx="10" fill="#1b1b22"/>
-  <rect x="16" y="112" width="64" height="20" rx="9" fill="#1b1b22"/>
-  <rect x="14" y="62" width="68" height="46" rx="10" fill="#e2ae2e" stroke="#8a6a10" stroke-width="2"/>
-  <rect x="20" y="70" width="56" height="16" rx="6" fill="#101014"/>
-  <text x="48" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#f2c14e" letter-spacing="0.5">DRIVINGKLASS</text>
-  ${stars}
-  <rect x="16" y="12" width="14" height="6" rx="3" fill="#fff8dc"/>
-  <rect x="66" y="12" width="14" height="6" rx="3" fill="#fff8dc"/>
-  <rect x="16" y="150" width="14" height="6" rx="3" fill="#b03a2e"/>
-  <rect x="66" y="150" width="14" height="6" rx="3" fill="#b03a2e"/>
-</svg>`;
-}
-
-function svgToDataUri(svg: string): string {
-  return 'data:image/svg+xml;base64,' + btoa(svg);
-}
+import { CAR_SPRITE_URI } from './carSprite';
 
 /** Queue the player-car sprite in the loader. Call from preload(). */
 export function loadPlayerCarTexture(scene: Phaser.Scene) {
   if (!scene.textures.exists('player-car')) {
-    scene.load.image('player-car', PLAYER_CAR_URL);
+    scene.load.image('player-car', CAR_SPRITE_URI);
   }
 }
+
 
 /** Build every other sprite with Graphics. Call from create(). */
 export function makeTextures(scene: Phaser.Scene) {

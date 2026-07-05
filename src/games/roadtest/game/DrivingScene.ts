@@ -147,7 +147,7 @@ export class DrivingScene extends Phaser.Scene {
     this.displayScore = 0;
 
 
-    this.player = this.add.image(LANE_X[1], PLAYER_Y, 'player-car').setDisplaySize(44, 94).setDepth(10);
+    this.player = this.add.image(LANE_X[1], PLAYER_Y, 'player-car').setDisplaySize(44, 92).setDepth(10);
 
     // Night headlight glow (rendered BELOW player)
     if (lvl.nightAlpha) {
