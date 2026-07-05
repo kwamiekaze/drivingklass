@@ -110,7 +110,7 @@ export function PackageButton({
       {/* Button content - label ALWAYS visible above all effects */}
       <span 
         className={cn(
-          "relative text-center leading-tight font-bold pointer-events-none",
+          "relative text-center leading-tight font-bold pointer-events-none font-display tracking-wide",
           "text-[10px] sm:text-xs md:text-sm lg:text-base",
           "px-1 whitespace-pre-line"
         )}
