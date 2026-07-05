@@ -12,11 +12,11 @@ useGLTF.preload(MODEL_URL);
 // Long horizontal axis is Z; padded to fully hide the model's original sign face.
 const SIGN = {
   cx: 0.145,
-  cy: 0.843,
+  cy: 0.831,
   cz: 0.003,
-  width: 0.483,  // long span along Z + pad
-  height: 0.048, // vertical + pad
-  depth: 0.077,  // short span along X + pad
+  width: 0.520,  // long span along Z + pad
+  height: 0.062, // vertical + pad
+  depth: 0.095,  // short span along X + pad
 };
 const FACE_OFF = SIGN.depth / 2 + 0.002;
 
