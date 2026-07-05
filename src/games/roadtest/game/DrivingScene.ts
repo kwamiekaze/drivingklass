@@ -396,7 +396,8 @@ export class DrivingScene extends Phaser.Scene {
       this.player.setTint(0xff6b5e);
       this.time.delayedCall(200, () => this.player.clearTint());
     }
-    this.scoreText.setText(`SCORE ${this.tracker.score}`);
+    // score display is lerped by animateScore()
+
     this.updateComboHud();
     return pts;
   }
