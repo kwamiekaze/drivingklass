@@ -539,7 +539,7 @@ export class DrivingScene extends Phaser.Scene {
     if (gas) this.mph += 32 * dt;
     else if (brake) this.mph -= 70 * dt;
     else this.mph -= 9 * dt;
-    this.mph = Phaser.Math.Clamp(this.mph, 0, this.level.maxSpeed);
+    this.mph = Phaser.Math.Clamp(this.mph, 0, this.level.maxSpeed * this.difficulty.speedMul);
 
     this.traveled += this.mph * MPH_TO_PX * dt;
 
