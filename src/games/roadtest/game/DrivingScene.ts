@@ -161,18 +161,23 @@ export class DrivingScene extends Phaser.Scene {
     this.buildHud();
     this.showBanner(lvl.name, `${this.difficulty.label} · ${lvl.subtitle}`);
 
-    // Sound: initialize on first input, start engine.
+    // Sound: initialize on first input, start engine and background music.
     const unlockAudio = () => {
       sound.init();
-      if (sound.isReady()) sound.startEngine();
+      if (sound.isReady()) {
+        sound.startEngine();
+        if (!sound.muted) sound.startMusic();
+      }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
     this.input.on('pointerdown', unlockAudio);
 
     this.events.once('shutdown', () => {
       sound.stopEngine();
+      sound.stopMusic();
     });
   }
+
 
   // ------------------------------------------------------------- course ---
   private buildCourse() {
