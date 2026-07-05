@@ -7,6 +7,59 @@ import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
+const SIGN = {
+  cx: 0.143,
+  cy: 0.833,
+  cz: 0.002,
+  width: 0.520,
+  height: 0.072,
+  depth: 0.135,
+};
+const FACE_OFF = SIGN.depth / 2 + 0.0005;
+
+function makeStarsTexture() {
+  const w = 1024;
+  const h = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#0d0d10";
+  ctx.fillRect(0, 0, w, h);
+
+  const drawStar = (cx: number, cy: number, r: number) => {
+    const spikes = 5;
+    const inner = r * 0.42;
+    let rot = -Math.PI / 2;
+    const step = Math.PI / spikes;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(rot) * r, cy + Math.sin(rot) * r);
+    for (let i = 0; i < spikes; i++) {
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * inner, cy + Math.sin(rot) * inner);
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * r, cy + Math.sin(rot) * r);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "#F2C14E";
+    ctx.fill();
+  };
+
+  const count = 5;
+  const r = h * 0.32;
+  const slot = w / count;
+  for (let i = 0; i < count; i++) {
+    drawStar(slot * (i + 0.5), h / 2, r);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+
 
 // Cinematic entrance for the whole car group: fade + rise + rotate settle
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
