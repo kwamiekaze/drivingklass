@@ -418,6 +418,25 @@ function AdminScheduleContent() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="text-sm">Note for Student & Parent</Label>
+                  <textarea
+                    placeholder="Visible to the student and their parent/guardian"
+                    value={formData.note_for_student}
+                    onChange={e => setFormData(f => ({ ...f, note_for_student: e.target.value }))}
+                    className="w-full min-h-[72px] rounded-md border bg-background p-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Note for Instructor</Label>
+                  <textarea
+                    placeholder="Visible only to the assigned instructor"
+                    value={formData.note_for_instructor}
+                    onChange={e => setFormData(f => ({ ...f, note_for_instructor: e.target.value }))}
+                    className="w-full min-h-[72px] rounded-md border bg-background p-2 text-sm"
+                  />
+                </div>
+
                 <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
                   Create Session
                 </Button>
