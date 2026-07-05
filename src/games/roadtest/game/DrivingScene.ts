@@ -518,7 +518,9 @@ export class DrivingScene extends Phaser.Scene {
       if (ob.type === 'traffic' && ob.mph) ob.d += ob.mph * MPH_TO_PX * dt;
 
       const y = this.screenY(ob.d);
-      const visible = y > -140 && y < GAME_H + 140;
+      // Collected stars stay hidden even when back on screen.
+      const collectedStar = ob.type === 'star' && ob.resolved;
+      const visible = !collectedStar && y > -140 && y < GAME_H + 140;
       ob.sprite.setVisible(visible);
       ob.line?.setVisible(visible);
       if (!visible) continue;
