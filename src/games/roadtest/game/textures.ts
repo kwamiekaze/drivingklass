@@ -165,16 +165,175 @@ export function makeTextures(scene: Phaser.Scene) {
   });
 
   // --- One tileable road strip (3 lanes, dashed dividers, edge lines) -----
-  make('road', 360, 80, () => {
-    g.fillStyle(0x2e2e33);
-    g.fillRect(0, 0, 360, 80);
-    g.fillStyle(0xffffff, 0.8); // dashed lane dividers
-    g.fillRect(118, 8, 5, 44);
-    g.fillRect(238, 8, 5, 44);
-    g.fillStyle(0xf2c14e); // solid gold edge lines (on brand)
-    g.fillRect(2, 0, 4, 80);
+  //     Now with asphalt grain, curb strips, and periodic crosswalk stripes
+  //     baked in for a denser, more polished MVP look.
+  make('road', 360, 240, () => {
+    // base asphalt
+    g.fillStyle(0x2b2b30);
+    g.fillRect(0, 0, 360, 240);
+    // asphalt grain — dense speckle in two tones
+    for (let i = 0; i < 340; i++) {
+      const x = Math.random() * 360;
+      const y = Math.random() * 240;
+      g.fillStyle(Math.random() < 0.5 ? 0x353539 : 0x232327, 0.55);
+      g.fillRect(x, y, 1, 1);
+    }
+    for (let i = 0; i < 90; i++) {
+      const x = Math.random() * 360;
+      const y = Math.random() * 240;
+      g.fillStyle(0x3f3f45, 0.35);
+      g.fillRect(x, y, 2, 1);
+    }
+    // curb strips inside road edges (dark then light concrete)
+    g.fillStyle(0x1a1a1e);
+    g.fillRect(0, 0, 8, 240);
+    g.fillRect(352, 0, 8, 240);
+    g.fillStyle(0xbfbfc4);
+    g.fillRect(8, 0, 2, 240);
+    g.fillRect(350, 0, 2, 240);
+    // dashed lane dividers (repeat every 40px)
+    g.fillStyle(0xf0f0f0, 0.9);
+    for (let y = 0; y < 240; y += 40) {
+      g.fillRect(118, y + 6, 5, 24);
+      g.fillRect(238, y + 6, 5, 24);
+    }
+    // solid outer edge lines
+    g.fillStyle(0xf2c14e); // gold left edge (on brand)
+    g.fillRect(12, 0, 3, 240);
     g.fillStyle(0xffffff);
-    g.fillRect(354, 0, 4, 80);
+    g.fillRect(345, 0, 3, 240);
+    // occasional crosswalk band (once per 240 tile)
+    g.fillStyle(0xf5f5f5, 0.9);
+    const cwY = 200;
+    for (let x = 16; x < 344; x += 14) g.fillRect(x, cwY, 9, 14);
+  });
+
+  // --- Sidewalk / shoulder scenery (left side, 60x240 tileable) -----------
+  make('shoulder-left', 60, 240, () => {
+    // dirt/grass base near road
+    g.fillStyle(0x2e3a2a);
+    g.fillRect(0, 0, 60, 240);
+    // sidewalk slab
+    g.fillStyle(0x8a8a90);
+    g.fillRect(6, 0, 30, 240);
+    g.fillStyle(0x6c6c72);
+    g.fillRect(6, 0, 2, 240);
+    g.fillRect(34, 0, 2, 240);
+    // slab lines
+    g.fillStyle(0x5f5f66, 0.7);
+    for (let y = 0; y < 240; y += 32) g.fillRect(8, y, 26, 1);
+
+    // building facades (tall block against the outer edge)
+    const drawBuilding = (y: number, h: number, color: number, winColor: number) => {
+      g.fillStyle(color);
+      g.fillRect(38, y, 22, h);
+      // roof stripe
+      g.fillStyle(0x101014);
+      g.fillRect(38, y, 22, 3);
+      // windows grid
+      g.fillStyle(winColor);
+      for (let wy = y + 8; wy < y + h - 6; wy += 12) {
+        g.fillRect(42, wy, 5, 6);
+        g.fillRect(52, wy, 5, 6);
+      }
+      // ground shadow
+      g.fillStyle(0x000000, 0.25);
+      g.fillRect(36, y + h - 2, 24, 2);
+    };
+    drawBuilding(6,   80, 0xa66a3d, 0xf4d97a);
+    drawBuilding(94,  66, 0x6d7a8a, 0xffe89a);
+    drawBuilding(168, 66, 0xb85a4c, 0xffe89a);
+
+    // tree between buildings (top of tile) — canopy + trunk
+    g.fillStyle(0x2f1a0a);
+    g.fillRect(20, 84, 3, 8);
+    g.fillStyle(0x3a6b32);
+    g.fillCircle(21, 82, 8);
+    g.fillStyle(0x4d8a42, 0.9);
+    g.fillCircle(24, 80, 5);
+
+    // streetlight (pole + head) around mid-tile
+    g.fillStyle(0x1a1a1e);
+    g.fillRect(15, 160, 2, 22);
+    g.fillRect(11, 160, 10, 2);
+    g.fillStyle(0xffe89a);
+    g.fillRect(10, 158, 4, 3);
+    // faint lamp glow
+    g.fillStyle(0xffe89a, 0.15);
+    g.fillCircle(12, 160, 7);
+  });
+
+  // --- Sidewalk / shoulder scenery (right side, 60x240 tileable, mirrored) --
+  make('shoulder-right', 60, 240, () => {
+    g.fillStyle(0x2e3a2a);
+    g.fillRect(0, 0, 60, 240);
+    g.fillStyle(0x8a8a90);
+    g.fillRect(24, 0, 30, 240);
+    g.fillStyle(0x6c6c72);
+    g.fillRect(24, 0, 2, 240);
+    g.fillRect(52, 0, 2, 240);
+    g.fillStyle(0x5f5f66, 0.7);
+    for (let y = 16; y < 240; y += 32) g.fillRect(26, y, 26, 1);
+
+    const drawBuilding = (y: number, h: number, color: number, winColor: number) => {
+      g.fillStyle(color);
+      g.fillRect(0, y, 22, h);
+      g.fillStyle(0x101014);
+      g.fillRect(0, y, 22, 3);
+      g.fillStyle(winColor);
+      for (let wy = y + 8; wy < y + h - 6; wy += 12) {
+        g.fillRect(4,  wy, 5, 6);
+        g.fillRect(14, wy, 5, 6);
+      }
+      g.fillStyle(0x000000, 0.25);
+      g.fillRect(0, y + h - 2, 24, 2);
+    };
+    drawBuilding(6,   70, 0x4d5f7a, 0xffe89a);
+    drawBuilding(84,  80, 0x8c6a3d, 0xf4d97a);
+    drawBuilding(172, 62, 0x5f8a5a, 0xffe89a);
+
+    // parked car silhouette on the shoulder
+    g.fillStyle(0x2a2a30);
+    g.fillRoundedRect(38, 40, 14, 26, 4);
+    g.fillStyle(0x14161c);
+    g.fillRoundedRect(40, 46, 10, 8, 2);
+
+    // tree lower
+    g.fillStyle(0x2f1a0a);
+    g.fillRect(40, 200, 3, 8);
+    g.fillStyle(0x3a6b32);
+    g.fillCircle(41, 198, 8);
+    g.fillStyle(0x4d8a42, 0.9);
+    g.fillCircle(38, 196, 5);
+
+    // streetlight
+    g.fillStyle(0x1a1a1e);
+    g.fillRect(44, 118, 2, 22);
+    g.fillRect(44, 118, 10, 2);
+    g.fillStyle(0xffe89a);
+    g.fillRect(50, 116, 4, 3);
+    g.fillStyle(0xffe89a, 0.15);
+    g.fillCircle(52, 118, 7);
+  });
+
+  // --- Distant parallax silhouette layer (very dark, low detail) ----------
+  make('far-bg', 60, 200, () => {
+    g.fillStyle(0x171a22);
+    g.fillRect(0, 0, 60, 200);
+    // rooftop silhouette
+    g.fillStyle(0x0d0f16);
+    g.fillRect(0, 40, 12, 160);
+    g.fillRect(14, 60, 18, 140);
+    g.fillRect(34, 30, 10, 170);
+    g.fillRect(46, 70, 14, 130);
+    // tiny warm windows
+    g.fillStyle(0xf2c14e, 0.55);
+    for (let y = 90; y < 190; y += 22) {
+      g.fillRect(4, y, 2, 3);
+      g.fillRect(18, y, 2, 3);
+      g.fillRect(36, y, 2, 3);
+      g.fillRect(50, y, 2, 3);
+    }
   });
 
   // --- Tiny particle for collision flashes ---------------------------------
@@ -235,4 +394,5 @@ export function makeTextures(scene: Phaser.Scene) {
 
   g.destroy();
 }
+
 
