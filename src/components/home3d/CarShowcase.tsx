@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows, useGLTF, Text } from "@react-three/drei";
+import { OrbitControls, ContactShadows, useGLTF, Text } from "@react-three/drei";
 import * as THREE from "three";
 import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 
