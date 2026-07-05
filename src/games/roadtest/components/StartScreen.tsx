@@ -115,6 +115,13 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
       </div>
 
+      <button
+        className="dk-btn dk-btn-gold mp-cta"
+        onClick={() => { clickTick(); onMultiplayer(); }}
+      >
+        Multiplayer: Star Rush
+      </button>
+
       <a className="dk-btn dk-btn-black book-cta" href="https://drivingklass.com" target="_blank" rel="noopener noreferrer">
         Book a Driving Lesson
       </a>
