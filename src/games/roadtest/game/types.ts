@@ -17,16 +17,20 @@ export interface DifficultyConfig {
   lengthMul: number;
   gapMul: number;
   trafficMul: number;
+  speedMul: number;      // scales player top speed AND traffic base speed
   speedTolerance: number;
   scoreMul: number;
 }
 
+// IDs are kept stable ('learner'…'legend') so existing leaderboard rows
+// remain valid; labels are the player-facing Easy/Medium/Hard/Expert tiers.
 export const DIFFICULTIES: DifficultyConfig[] = [
-  { id: 'learner',    label: 'Learner',    lengthMul: 1.0, gapMul: 1.0,  trafficMul: 1.0,  speedTolerance: 3, scoreMul: 1.0 },
-  { id: 'licensed',   label: 'Licensed',   lengthMul: 1.4, gapMul: 0.8,  trafficMul: 1.1,  speedTolerance: 2, scoreMul: 1.25 },
-  { id: 'instructor', label: 'Instructor', lengthMul: 1.8, gapMul: 0.65, trafficMul: 1.25, speedTolerance: 1, scoreMul: 1.5 },
-  { id: 'legend',     label: 'Legend',     lengthMul: 2.3, gapMul: 0.5,  trafficMul: 1.4,  speedTolerance: 0, scoreMul: 2.0 },
+  { id: 'learner',    label: 'Easy',   lengthMul: 1.0, gapMul: 1.0,  trafficMul: 1.0,  speedMul: 1.0,  speedTolerance: 3, scoreMul: 1.0  },
+  { id: 'licensed',   label: 'Medium', lengthMul: 1.4, gapMul: 0.8,  trafficMul: 1.15, speedMul: 1.1,  speedTolerance: 2, scoreMul: 1.25 },
+  { id: 'instructor', label: 'Hard',   lengthMul: 1.8, gapMul: 0.65, trafficMul: 1.3,  speedMul: 1.2,  speedTolerance: 1, scoreMul: 1.5  },
+  { id: 'legend',     label: 'Expert', lengthMul: 2.3, gapMul: 0.5,  trafficMul: 1.5,  speedMul: 1.35, speedTolerance: 0, scoreMul: 2.0  },
 ];
+
 
 export function getDifficulty(id: string | null | undefined): DifficultyConfig {
   return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[0];
