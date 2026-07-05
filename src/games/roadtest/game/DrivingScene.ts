@@ -295,7 +295,7 @@ export class DrivingScene extends Phaser.Scene {
         const key = rnd ? rnd.pick(['car-red', 'car-blue', 'car-gray']) : 'car-red';
         sprite = this.add.image(LANE_X[lane], -200, key).setDepth(5).setDisplaySize(44, 82);
         const baseTrafficMul = this.difficulty.trafficMul * (this.level.endless ? this.endlessTrafficMul : 1);
-        mph = this.level.speedLimit * (rnd ? rnd.realInRange(0.45, 0.7) : 0.6) * baseTrafficMul;
+        mph = this.level.speedLimit * (rnd ? rnd.realInRange(0.45, 0.7) : 0.6) * baseTrafficMul * this.difficulty.speedMul;
         break;
       }
       case 'stopSign':
