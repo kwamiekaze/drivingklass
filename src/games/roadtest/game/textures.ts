@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
-import { CAR_SPRITE_URI } from './carSprite';
+import playerCarAsset from '../assets/player-car.png.asset.json';
+
+const PLAYER_CAR_URL = playerCarAsset.url;
 
 
 
