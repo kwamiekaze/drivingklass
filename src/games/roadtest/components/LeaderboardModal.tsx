@@ -31,12 +31,30 @@ export function LeaderboardModal({ onClose }: Props) {
       setLoading(true);
       const { data: userRes } = await supabase.auth.getUser();
       if (!cancelled) setMe(userRes.user?.id ?? null);
-      const { data } = await supabase
-        .from('game_scores')
-        .select('user_id, display_name, level_id, score, grade, difficulty')
-        .order('score', { ascending: false });
+      const [{ data: scores }, { data: guests }] = await Promise.all([
+        supabase
+          .from('game_scores')
+          .select('user_id, display_name, level_id, score, grade, difficulty')
+          .order('score', { ascending: false }),
+        supabase
+          .from('guest_scores')
+          .select('id, display_name, level_id, score, grade, difficulty')
+          .order('score', { ascending: false })
+          .limit(500),
+      ]);
+      const merged: Row[] = [
+        ...(((scores as any[]) ?? []) as Row[]),
+        ...(((guests as any[]) ?? []).map((g) => ({
+          user_id: `guest:${g.id}`,
+          display_name: g.display_name,
+          level_id: g.level_id,
+          score: g.score,
+          grade: g.grade,
+          difficulty: g.difficulty as Difficulty,
+        }))),
+      ];
       if (!cancelled) {
-        setRows(((data as any[]) ?? []) as Row[]);
+        setRows(merged);
         setLoading(false);
       }
     })();
