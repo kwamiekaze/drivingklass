@@ -166,6 +166,7 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
           className="dk-pause-overlay"
           role="dialog"
           aria-label="Paused"
+          onPointerDown={resumeFromPause}
           onClick={resumeFromPause}
         >
           {countdown === null ? (
