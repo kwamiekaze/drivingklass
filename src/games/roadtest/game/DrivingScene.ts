@@ -547,7 +547,14 @@ export class DrivingScene extends Phaser.Scene {
     if (right) this.player.x += steer * dt;
     this.player.x = Phaser.Math.Clamp(this.player.x, ROAD_X + 26, ROAD_X + ROAD_W - 26);
     this.player.setAngle((Number(right) - Number(left)) * 4);
-  }
+
+    // Tire screech when steering hard at speed OR braking hard
+    if (this.mph > 35 && ((left || right) && this.mph > this.level.speedLimit - 5)) {
+      sound.tireScreech(Math.min(1, this.mph / this.level.maxSpeed));
+    } else if (brake && this.prevMph > 40 && this.mph < this.prevMph - 2) {
+      sound.tireScreech(0.6);
+    }
+
 
   private screenY(d: number) {
     return PLAYER_Y - (d - this.traveled);
