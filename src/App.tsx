@@ -60,6 +60,7 @@ import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
 import RoadTestGame from "./games/roadtest/RoadTestGame";
 import { ProtectedRoute } from "./components/portal/ProtectedRoute";
+import { GameControllerFab } from "./components/GameControllerFab";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
         <Sonner />
         <ThemeDebugBadge />
         <BrowserRouter>
+          <GameControllerFab />
           <Routes>
             {/* Fully public route — NO auth providers, no analytics */}
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
@@ -164,12 +166,8 @@ const App = () => (
                       {/* Legacy Admin */}
                       <Route path="/old-admin" element={<Admin />} />
                       
-                      {/* Driving Simulator (admin + instructor only) */}
-                      <Route path="/simulator" element={
-                        <ProtectedRoute allowedRoles={['admin', 'instructor', 'student']} requireApproval={false}>
-                          <RoadTestGame />
-                        </ProtectedRoute>
-                      } />
+                      {/* Driving Simulator — open to everyone (guests can play + post to leaderboard) */}
+                      <Route path="/simulator" element={<RoadTestGame />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>
