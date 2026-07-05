@@ -30,6 +30,31 @@ try {
   muted = localStorage.getItem(MUTE_KEY) === '1';
 } catch { /* ignore */ }
 
+let mediaDest: MediaStreamAudioDestinationNode | null = null;
+let mediaEl: HTMLAudioElement | null = null;
+
+function ensureMediaElement() {
+  if (mediaEl || typeof document === 'undefined') return;
+  try {
+    mediaEl = document.createElement('audio');
+    mediaEl.autoplay = false;
+    (mediaEl as any).playsInline = true;
+    mediaEl.setAttribute('playsinline', '');
+    mediaEl.setAttribute('webkit-playsinline', '');
+    mediaEl.muted = false;
+    mediaEl.style.display = 'none';
+    document.body.appendChild(mediaEl);
+  } catch { /* ignore */ }
+}
+
+function tryPlayMediaEl() {
+  if (!mediaEl) return;
+  if (mediaEl.paused) {
+    const p = mediaEl.play();
+    if (p && typeof p.catch === 'function') p.catch(() => { /* ignore */ });
+  }
+}
+
 function buildContext() {
   try {
     const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -37,9 +62,22 @@ function buildContext() {
     ctx = new AC();
     masterGain = ctx.createGain();
     masterGain.gain.value = muted ? 0 : 0.55;
-    masterGain.connect(ctx.destination);
+    // Route through a MediaStream so iOS treats output as media playback
+    // (unaffected by the ring/silent switch), instead of ctx.destination.
+    try {
+      mediaDest = ctx.createMediaStreamDestination();
+      masterGain.connect(mediaDest);
+      ensureMediaElement();
+      if (mediaEl) {
+        try { (mediaEl as any).srcObject = mediaDest.stream; } catch { /* ignore */ }
+      }
+    } catch {
+      // Fallback to normal destination if MediaStreamDestination unsupported
+      masterGain.connect(ctx.destination);
+    }
   } catch { /* ignore */ }
 }
+
 
 function isRunning() {
   return !!ctx && (ctx.state as string) === 'running';
