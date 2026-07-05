@@ -41,11 +41,19 @@ export class DrivingScene extends Phaser.Scene {
   private tracker!: ScoreTracker;
 
   private road!: Phaser.GameObjects.TileSprite;
+  private shoulderL!: Phaser.GameObjects.TileSprite;
+  private shoulderR!: Phaser.GameObjects.TileSprite;
+  private farBgL!: Phaser.GameObjects.TileSprite;
+  private farBgR!: Phaser.GameObjects.TileSprite;
   private player!: Phaser.GameObjects.Image;
   private headlightL?: Phaser.GameObjects.Image;
   private headlightR?: Phaser.GameObjects.Image;
   private obstacles: Obstacle[] = [];
   private finishSprite!: Phaser.GameObjects.Image;
+
+  // Animated score readout (lerps toward tracker.score)
+  private displayScore = 0;
+
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: WASD;
