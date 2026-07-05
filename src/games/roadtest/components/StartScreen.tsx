@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { LEVELS } from '../game/levels';
 import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
@@ -37,6 +39,7 @@ function computeStreak(): number {
 
 export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer }: Props) {
   const [streak, setStreak] = useState(0);
+  const navigate = useNavigate();
   useEffect(() => { setStreak(computeStreak()); }, []);
 
   const clickTick = () => { sound.init(); sound.uiTick(); };
@@ -44,10 +47,29 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
   const lessons = LEVELS.filter((l) => !l.endless);
   const startLevel = (id: string) => { clickTick(); onStart(id); };
 
+  const goHome = async () => {
+    clickTick();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) { navigate('/'); return; }
+    const { data: roleRow } = await supabase
+      .from('user_roles').select('role').eq('user_id', data.user.id).maybeSingle();
+    const role = roleRow?.role;
+    if (role === 'admin') navigate('/admin');
+    else if (role === 'instructor') navigate('/instructor');
+    else navigate('/student');
+  };
+
   return (
     <div className="screen start-screen">
       <header className="brand-header">
-        <div className="brand-mark">DRIVING<span>KLASS</span></div>
+        <button
+          type="button"
+          onClick={goHome}
+          className="brand-mark brand-mark-link"
+          aria-label="Go to dashboard"
+        >
+          DRIVING<span>KLASS</span>
+        </button>
         <div className="brand-stars">★★★★★</div>
       </header>
 
