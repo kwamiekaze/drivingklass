@@ -8,14 +8,14 @@ const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
 const SIGN = {
-  cx: 0.143,
-  cy: 0.833,
+  cx: 0.125,
+  cy: 0.729,
   cz: 0.002,
-  width: 0.520,
-  height: 0.072,
-  depth: 0.135,
+  width: 0.455,
+  height: 0.063,
+  depth: 0.118,
 };
-const FACE_OFF = SIGN.depth / 2 + 0.0005;
+const FACE_OFF = SIGN.depth / 2 + 0.002;
 
 function makeStarsTexture() {
   const w = 1024;
@@ -125,7 +125,7 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
       <primitive object={prepared} />
       <group position={[SIGN.cx, SIGN.cy, SIGN.cz]}>
         <mesh>
-          <boxGeometry args={[SIGN.width, SIGN.height, SIGN.depth]} />
+          <boxGeometry args={[SIGN.depth, SIGN.height, SIGN.width]} />
           <meshBasicMaterial color="#0d0d10" toneMapped={false} />
         </mesh>
         <mesh position={[FACE_OFF, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
