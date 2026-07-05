@@ -166,7 +166,7 @@ const App = () => (
                       
                       {/* Driving Simulator (admin + instructor only) */}
                       <Route path="/simulator" element={
-                        <ProtectedRoute allowedRoles={['admin', 'instructor']} requireApproval={false}>
+                        <ProtectedRoute allowedRoles={['admin', 'instructor', 'student']} requireApproval={false}>
                           <RoadTestGame />
                         </ProtectedRoute>
                       } />

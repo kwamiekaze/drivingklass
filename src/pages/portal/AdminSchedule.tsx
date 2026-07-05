@@ -61,6 +61,8 @@ function AdminScheduleContent() {
     session_type: "driving",
     pickup_address: "",
     dropoff_address: "",
+    note_for_student: "",
+    note_for_instructor: "",
   });
 
   // Block form state
@@ -141,11 +143,13 @@ function AdminScheduleContent() {
       return;
     }
 
-    // Update session type and addresses if needed
+    // Update session type, addresses, and notes if needed
     const updates: Record<string, any> = {};
     if (formData.session_type !== 'driving') updates.session_type = formData.session_type;
     if (formData.pickup_address.trim()) updates.pickup_address = formData.pickup_address.trim();
     if (formData.dropoff_address.trim()) updates.dropoff_address = formData.dropoff_address.trim();
+    if (formData.note_for_student.trim()) updates.note_for_student = formData.note_for_student.trim();
+    if (formData.note_for_instructor.trim()) updates.note_for_instructor = formData.note_for_instructor.trim();
 
     if (Object.keys(updates).length > 0 && newSession?.id) {
       await supabase.from('sessions').update(updates).eq('id', newSession.id);
@@ -158,7 +162,7 @@ function AdminScheduleContent() {
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "" });
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -411,6 +415,25 @@ function AdminScheduleContent() {
                     value={formData.dropoff_address}
                     onChange={e => setFormData(f => ({ ...f, dropoff_address: e.target.value }))}
                     className="min-h-[44px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Note for Student & Parent</Label>
+                  <textarea
+                    placeholder="Visible to the student and their parent/guardian"
+                    value={formData.note_for_student}
+                    onChange={e => setFormData(f => ({ ...f, note_for_student: e.target.value }))}
+                    className="w-full min-h-[72px] rounded-md border bg-background p-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Note for Instructor</Label>
+                  <textarea
+                    placeholder="Visible only to the assigned instructor"
+                    value={formData.note_for_instructor}
+                    onChange={e => setFormData(f => ({ ...f, note_for_instructor: e.target.value }))}
+                    className="w-full min-h-[72px] rounded-md border bg-background p-2 text-sm"
                   />
                 </div>
 
