@@ -554,6 +554,9 @@ export class DrivingScene extends Phaser.Scene {
     } else if (brake && this.prevMph > 40 && this.mph < this.prevMph - 2) {
       sound.tireScreech(0.6);
     }
+  }
+
+
 
 
   private screenY(d: number) {
