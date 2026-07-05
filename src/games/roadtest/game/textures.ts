@@ -61,7 +61,7 @@ function svgToDataUri(svg: string): string {
 /** Queue the player-car sprite in the loader. Call from preload(). */
 export function loadPlayerCarTexture(scene: Phaser.Scene) {
   if (!scene.textures.exists('player-car')) {
-    scene.load.image('player-car', CAR_SPRITE_URI);
+    scene.load.image('player-car', PLAYER_CAR_URL);
   }
 }
 
