@@ -26,16 +26,19 @@ interface RoadTestGameProps {
  *  menus, modals) keeps native tap → click synthesis on iOS. */
 const GAME_SURFACE_SELECTOR = 'canvas, .game-host, .touch-controls';
 
-export default function RoadTestGame() {
+export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
   const [screen, setScreen] = useState<Screen>('menu');
   const [levelId, setLevelId] = useState('parking-lot');
   const [difficulty, setDifficultyState] = useState<Difficulty>('learner');
   const [result, setResult] = useState<LevelResult | null>(null);
   const [showHowTo, setShowHowTo] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showMyStats, setShowMyStats] = useState(false);
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   const [bestScores, setBestScores] = useState<Record<string, number>>({});
   const [guestPromptResult, setGuestPromptResult] = useState<LevelResult | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
 
   // Non-passive touchstart: only preventDefault on the actual game surfaces so
   // iOS still synthesizes click events for buttons/menus/modals.
