@@ -21,6 +21,7 @@ export default function RoadTestGame() {
   const [showHowTo, setShowHowTo] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [bestScores, setBestScores] = useState<Record<string, number>>({});
+  const [guestPromptResult, setGuestPromptResult] = useState<LevelResult | null>(null);
 
   useEffect(() => {
     try {
@@ -42,8 +43,9 @@ export default function RoadTestGame() {
   const handleComplete = useCallback((r: LevelResult) => {
     setBestScores((prev) => ({ ...prev, [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score) }));
     submitScore(r)
-      .then(({ isNewBest, previousBest }) => {
+      .then(({ isNewBest, previousBest, isGuest }) => {
         setResult({ ...r, isNewBest, previousBest: previousBest ?? undefined });
+        if (isGuest) setGuestPromptResult(r);
       })
       .catch((err) => {
         console.error(err);
@@ -91,6 +93,13 @@ export default function RoadTestGame() {
 
         {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
         {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+        {guestPromptResult && (
+          <GuestScoreModal
+            result={guestPromptResult}
+            onDone={() => setGuestPromptResult(null)}
+            onSkip={() => setGuestPromptResult(null)}
+          />
+        )}
       </div>
     </div>
   );
