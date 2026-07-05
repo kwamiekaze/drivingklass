@@ -6,48 +6,69 @@ export type ObstacleType =
   | 'trafficLight'
   | 'parkedCar'
   | 'traffic'
-  | 'checkpoint';
+  | 'checkpoint'
+  | 'star';
+
+export type Difficulty = 'learner' | 'licensed' | 'instructor' | 'legend';
+
+export interface DifficultyConfig {
+  id: Difficulty;
+  label: string;
+  lengthMul: number;
+  gapMul: number;
+  trafficMul: number;
+  speedTolerance: number;
+  scoreMul: number;
+}
+
+export const DIFFICULTIES: DifficultyConfig[] = [
+  { id: 'learner',    label: 'Learner',    lengthMul: 1.0, gapMul: 1.0,  trafficMul: 1.0,  speedTolerance: 3, scoreMul: 1.0 },
+  { id: 'licensed',   label: 'Licensed',   lengthMul: 1.4, gapMul: 0.8,  trafficMul: 1.1,  speedTolerance: 2, scoreMul: 1.25 },
+  { id: 'instructor', label: 'Instructor', lengthMul: 1.8, gapMul: 0.65, trafficMul: 1.25, speedTolerance: 1, scoreMul: 1.5 },
+  { id: 'legend',     label: 'Legend',     lengthMul: 2.3, gapMul: 0.5,  trafficMul: 1.4,  speedTolerance: 0, scoreMul: 2.0 },
+];
+
+export function getDifficulty(id: string | null | undefined): DifficultyConfig {
+  return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[0];
+}
 
 export interface LevelConfig {
   id: string;
   name: string;
   subtitle: string;
-  /** Total course length in "distance units" (px of world scroll). */
   length: number;
-  /** Speed limit in mph. Driving above it for too long is a fault. */
   speedLimit: number;
-  /** Max speed the car can reach in this level (mph). */
   maxSpeed: number;
-  /** Which obstacle types this level uses. */
   features: ObstacleType[];
-  /** Approx. gap between random obstacles (smaller = denser). */
   obstacleGap: number;
-  /** Score needed for an A grade. Used to scale grading per level. */
   parScore: number;
-  /** Ambient shoulder color: parking-lot concrete vs. neighborhood grass. */
   shoulderColor: number;
-  /** Optional dark overlay alpha for night levels (0 – 0.45). */
   nightAlpha?: number;
+  endless?: boolean;
 }
 
-/** One line item on the Instructor Report Card. */
 export interface ScoreEvent {
   label: string;
-  points: number; // positive = earned, negative = fault
+  points: number;
   count: number;
 }
 
 export interface LevelResult {
   levelId: string;
   levelName: string;
-  score: number;
+  difficulty: Difficulty;
+  score: number;          // final, post-multiplier
+  rawScore: number;       // pre-multiplier
+  multiplier: number;
   grade: string;
   events: ScoreEvent[];
   feedback: string[];
   passed: boolean;
+  distance?: number;      // for endless mode
+  isNewBest?: boolean;
+  previousBest?: number;
 }
 
-/** Events the Phaser scene emits up to React. */
 export const GAME_EVENTS = {
   LEVEL_COMPLETE: 'dk-level-complete',
   HUD_UPDATE: 'dk-hud-update'
