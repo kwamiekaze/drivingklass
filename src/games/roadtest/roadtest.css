@@ -593,3 +593,64 @@
 .dk-lb-list .score { font-family: var(--display); color: var(--gold); font-size: 18px; }
 .dk-lb-list .grade { color: #c9c9d2; font-size: 12px; min-width: 22px; text-align: right; }
 .dk-lb-empty { color: #a9a9b3; font-size: 14px; text-align: center; padding: 20px 0; }
+
+/* ---- Difficulty chips ---- */
+.difficulty-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin: 8px 4px 12px;
+}
+.diff-chip {
+  appearance: none; border: 1px solid var(--road-light);
+  background: var(--ink); color: #c9c9d2;
+  border-radius: 12px; padding: 8px 4px;
+  font-family: var(--display); font-size: 14px; letter-spacing: 1px;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; line-height: 1.1;
+  min-width: 0;
+}
+.diff-chip small { font-family: 'Inter', sans-serif; font-size: 10px; color: #a9a9b3; margin-top: 2px; letter-spacing: 0; }
+.diff-chip.active { background: var(--gold); color: var(--black); border-color: var(--gold); box-shadow: 0 0 12px rgba(242,193,78,0.35); }
+.diff-chip.active small { color: #3a2a00; }
+
+/* ---- Streak badge ---- */
+.streak-badge {
+  display: inline-block; margin-top: 8px;
+  background: rgba(0,0,0,0.55); color: var(--gold);
+  padding: 4px 10px; border-radius: 999px;
+  font-family: var(--display); font-size: 13px; letter-spacing: 1px;
+  border: 1px solid var(--gold);
+}
+
+/* ---- Endless card ---- */
+.level-card.endless {
+  border-color: var(--gold);
+  background: linear-gradient(90deg, rgba(242,193,78,0.12), rgba(0,0,0,0.5));
+  margin-bottom: 8px;
+}
+
+/* ---- Personal best confetti + banner ---- */
+.pb-banner {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 5; background: var(--gold); color: var(--black);
+  padding: 8px 20px; border-radius: 999px;
+  font-family: var(--display); font-size: 18px; letter-spacing: 2px;
+  box-shadow: 0 6px 24px rgba(242,193,78,0.4);
+  animation: pb-pop 0.6s ease-out;
+}
+@keyframes pb-pop {
+  0% { transform: translateX(-50%) scale(0.4); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); }
+}
+.confetti-layer {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4;
+}
+.confetti-bit {
+  position: absolute; top: -12px; width: 8px; height: 14px;
+  background: var(--gold); border-radius: 2px;
+  animation: confetti-fall 1.6s ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120vh) rotate(720deg); opacity: 0.4; }
+}
+.report-screen { position: relative; }
