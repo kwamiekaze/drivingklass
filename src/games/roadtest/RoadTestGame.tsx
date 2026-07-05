@@ -84,7 +84,7 @@ export default function RoadTestGame() {
   }, []);
 
   return (
-    <div className="dk-game">
+    <div className="dk-game" ref={rootRef}>
       <div className="app-shell">
         {screen === 'menu' && (
           <StartScreen
