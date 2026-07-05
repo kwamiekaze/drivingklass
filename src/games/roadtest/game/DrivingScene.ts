@@ -31,7 +31,9 @@ interface Obstacle {
   mph?: number;
   phase?: number;
   state?: 'red' | 'yellow' | 'green';
+  _ramped?: boolean;
 }
+
 
 export class DrivingScene extends Phaser.Scene {
   private level!: LevelConfig;
@@ -41,11 +43,19 @@ export class DrivingScene extends Phaser.Scene {
   private tracker!: ScoreTracker;
 
   private road!: Phaser.GameObjects.TileSprite;
+  private shoulderL!: Phaser.GameObjects.TileSprite;
+  private shoulderR!: Phaser.GameObjects.TileSprite;
+  private farBgL!: Phaser.GameObjects.TileSprite;
+  private farBgR!: Phaser.GameObjects.TileSprite;
   private player!: Phaser.GameObjects.Image;
   private headlightL?: Phaser.GameObjects.Image;
   private headlightR?: Phaser.GameObjects.Image;
   private obstacles: Obstacle[] = [];
   private finishSprite!: Phaser.GameObjects.Image;
+
+  // Animated score readout (lerps toward tracker.score)
+  private displayScore = 0;
+
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: WASD;
@@ -118,10 +128,13 @@ export class DrivingScene extends Phaser.Scene {
     makeTextures(this);
     const lvl = this.level;
 
-    this.add.rectangle(0, 0, ROAD_X, GAME_H, lvl.shoulderColor).setOrigin(0);
-    this.add
-      .rectangle(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, lvl.shoulderColor)
-      .setOrigin(0);
+    // Far background silhouettes (parallax — scroll at 45% road speed)
+    this.farBgL = this.add.tileSprite(0, 0, ROAD_X, GAME_H, 'far-bg').setOrigin(0);
+    this.farBgR = this.add.tileSprite(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, 'far-bg')
+      .setOrigin(0).setFlipX(true);
+    // Sidewalk + buildings + trees (scroll matched to road)
+    this.shoulderL = this.add.tileSprite(0, 0, ROAD_X, GAME_H, 'shoulder-left').setOrigin(0);
+    this.shoulderR = this.add.tileSprite(ROAD_X + ROAD_W, 0, GAME_W - ROAD_X - ROAD_W, GAME_H, 'shoulder-right').setOrigin(0);
     this.road = this.add.tileSprite(ROAD_X, 0, ROAD_W, GAME_H, 'road').setOrigin(0);
 
     if (lvl.nightAlpha) {
@@ -130,6 +143,9 @@ export class DrivingScene extends Phaser.Scene {
 
     if (lvl.endless) this.buildEndlessSeed();
     else this.buildCourse();
+
+    this.displayScore = 0;
+
 
     this.player = this.add.image(LANE_X[1], PLAYER_Y, 'player-car').setDisplaySize(44, 94).setDepth(10);
 
@@ -147,18 +163,23 @@ export class DrivingScene extends Phaser.Scene {
     this.buildHud();
     this.showBanner(lvl.name, `${this.difficulty.label} · ${lvl.subtitle}`);
 
-    // Sound: initialize on first input, start engine.
+    // Sound: initialize on first input, start engine and background music.
     const unlockAudio = () => {
       sound.init();
-      if (sound.isReady()) sound.startEngine();
+      if (sound.isReady()) {
+        sound.startEngine();
+        if (!sound.muted) sound.startMusic();
+      }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
     this.input.on('pointerdown', unlockAudio);
 
     this.events.once('shutdown', () => {
       sound.stopEngine();
+      sound.stopMusic();
     });
   }
+
 
   // ------------------------------------------------------------- course ---
   private buildCourse() {
@@ -375,7 +396,8 @@ export class DrivingScene extends Phaser.Scene {
       this.player.setTint(0xff6b5e);
       this.time.delayedCall(200, () => this.player.clearTint());
     }
-    this.scoreText.setText(`SCORE ${this.tracker.score}`);
+    // score display is lerped by animateScore()
+
     this.updateComboHud();
     return pts;
   }
@@ -406,7 +428,13 @@ export class DrivingScene extends Phaser.Scene {
 
     this.prevMph = this.mph;
     this.handleDriving(dt);
-    this.road.tilePositionY -= this.mph * MPH_TO_PX * dt;
+    const scroll = this.mph * MPH_TO_PX * dt;
+    this.road.tilePositionY -= scroll;
+    this.shoulderL.tilePositionY -= scroll;
+    this.shoulderR.tilePositionY -= scroll;
+    // Parallax: distant silhouettes scroll slower
+    this.farBgL.tilePositionY -= scroll * 0.45;
+    this.farBgR.tilePositionY -= scroll * 0.45;
 
     // Update engine sound
     sound.updateEngine(Math.min(1, this.mph / this.level.maxSpeed));
@@ -420,14 +448,45 @@ export class DrivingScene extends Phaser.Scene {
     this.trySkidMark(time);
 
     if (this.level.endless) this.updateEndless();
+    else this.updateProgressiveRamp();
     this.updateObstacles(time, dt);
     this.checkLaneDiscipline(dt);
     this.checkSpeeding(dt);
     this.checkSmoothDriving(dt);
     this.updateHud();
+    this.animateScore(dt);
 
     if (!this.level.endless && this.traveled >= this.effectiveLength) this.finish();
   }
+
+  /** Smoothly counts the displayed score toward the tracked score. */
+  private animateScore(dt: number) {
+    const target = this.tracker.score;
+    if (this.displayScore === target) return;
+    const diff = target - this.displayScore;
+    const step = Math.sign(diff) * Math.max(1, Math.ceil(Math.abs(diff) * Math.min(1, dt * 6)));
+    if (Math.abs(step) >= Math.abs(diff)) this.displayScore = target;
+    else this.displayScore += step;
+    this.scoreText.setText(`SCORE ${this.displayScore}`);
+  }
+
+  /** Non-endless levels also ramp subtly the longer a run goes. */
+  private updateProgressiveRamp() {
+    // Squeeze gap by up to 25% over full course; traffic speeds by up to 20%.
+    const p = Phaser.Math.Clamp(this.traveled / Math.max(1, this.effectiveLength), 0, 1);
+    const gapFactor = 1 - 0.25 * p;
+    const trafficFactor = 1 + 0.20 * p;
+    // Apply to still-unseen obstacles (cheap: nudge their d spacing lazily via mph).
+    for (const ob of this.obstacles) {
+      if (ob.type === 'traffic' && ob.mph && !ob._ramped) {
+        ob.mph *= trafficFactor;
+        ob._ramped = true;
+      }
+    }
+    // Store for future spawns (used only in endless path); keep effectiveGap fresh for UI feel.
+    this.effectiveGap = this.level.obstacleGap * this.difficulty.gapMul * gapFactor;
+  }
+
 
   private trySkidMark(time: number) {
     const braking = (this.cursors.down.isDown || this.wasd.S.isDown || touchControls.brake);
@@ -489,7 +548,17 @@ export class DrivingScene extends Phaser.Scene {
     if (right) this.player.x += steer * dt;
     this.player.x = Phaser.Math.Clamp(this.player.x, ROAD_X + 26, ROAD_X + ROAD_W - 26);
     this.player.setAngle((Number(right) - Number(left)) * 4);
+
+    // Tire screech when steering hard at speed OR braking hard
+    if (this.mph > 35 && ((left || right) && this.mph > this.level.speedLimit - 5)) {
+      sound.tireScreech(Math.min(1, this.mph / this.level.maxSpeed));
+    } else if (brake && this.prevMph > 40 && this.mph < this.prevMph - 2) {
+      sound.tireScreech(0.6);
+    }
   }
+
+
+
 
   private screenY(d: number) {
     return PLAYER_Y - (d - this.traveled);

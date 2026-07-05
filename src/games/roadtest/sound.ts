@@ -13,6 +13,13 @@ let engineGain: GainNode | null = null;
 let engineFilter: BiquadFilterNode | null = null;
 let muted = false;
 
+// Background music state
+let musicGain: GainNode | null = null;
+let musicTimer: number | null = null;
+let musicStep = 0;
+// Tire screech state (throttled)
+let lastScreechAt = 0;
+
 try {
   muted = localStorage.getItem(MUTE_KEY) === '1';
 } catch { /* ignore */ }
@@ -44,6 +51,8 @@ export const sound = {
 
   toggleMute(): boolean {
     this.setMuted(!muted);
+    if (muted) this.stopMusic();
+    else this.startMusic();
     return muted;
   },
 
@@ -108,7 +117,81 @@ export const sound = {
   uiTick() {
     playTone(880, 0.04, 'square', 0.06);
   },
+
+  /** Filtered noise burst — tire screech on a sharp turn at speed. */
+  tireScreech(intensity01 = 0.7) {
+    if (!ctx || !masterGain) return;
+    const now = performance.now();
+    if (now - lastScreechAt < 180) return; // throttle
+    lastScreechAt = now;
+    const t = ctx.currentTime;
+    const dur = 0.28;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1600;
+    bp.Q.value = 8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(0.16 * intensity01, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp).connect(g).connect(masterGain);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  },
+
+  /** Light background music loop — sparse bassline + soft pad chord. */
+  startMusic() {
+    if (!ctx || !masterGain || musicTimer !== null || muted) return;
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0.09;
+    musicGain.connect(masterGain);
+    const bass = [55, 55, 73.4, 65.4]; // A1 A1 D2 C2, moody
+    const pad  = [220, 261.6, 329.6];  // A3 C4 E4 minor pad
+    musicStep = 0;
+    const tick = () => {
+      if (!ctx || !musicGain) return;
+      const t = ctx.currentTime;
+      // bass pluck
+      const bo = ctx.createOscillator();
+      const bg = ctx.createGain();
+      bo.type = 'triangle';
+      bo.frequency.value = bass[musicStep % bass.length];
+      bg.gain.setValueAtTime(0.0001, t);
+      bg.gain.linearRampToValueAtTime(0.55, t + 0.02);
+      bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      bo.connect(bg).connect(musicGain);
+      bo.start(t); bo.stop(t + 0.6);
+      // soft pad every 4th beat
+      if (musicStep % 4 === 0) {
+        pad.forEach((f) => {
+          const o = ctx!.createOscillator();
+          const g = ctx!.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.11, t + 0.4);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+          o.connect(g).connect(musicGain!);
+          o.start(t); o.stop(t + 2.3);
+        });
+      }
+      musicStep++;
+    };
+    tick();
+    musicTimer = window.setInterval(tick, 620);
+  },
+
+  stopMusic() {
+    if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
+    if (musicGain) { try { musicGain.disconnect(); } catch { /* ignore */ } musicGain = null; }
+  },
 };
+
 
 function playTone(freq: number, dur: number, type: OscillatorType, vol: number) {
   if (!ctx || !masterGain) return;
