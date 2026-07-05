@@ -31,7 +31,9 @@ interface Obstacle {
   mph?: number;
   phase?: number;
   state?: 'red' | 'yellow' | 'green';
+  _ramped?: boolean;
 }
+
 
 export class DrivingScene extends Phaser.Scene {
   private level!: LevelConfig;
