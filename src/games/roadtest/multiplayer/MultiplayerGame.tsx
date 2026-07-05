@@ -23,6 +23,26 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
   const [remotes, setRemotes] = useState<RemotePlayer[]>([]);
   const [remaining, setRemaining] = useState(match.duration_s);
   const [finished, setFinished] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  // Multiplayer: never pause the world (other players keep driving). Show a dim
+  // "reconnecting view" if the tab has been hidden for >2s so the player knows why.
+  useEffect(() => {
+    let timer: number | null = null;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') {
+        timer = window.setTimeout(() => setReconnecting(true), 2000);
+      } else {
+        if (timer !== null) { clearTimeout(timer); timer = null; }
+        setReconnecting(false);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, []);
 
   // Start timestamp: give all clients a 3s buffer to countdown together
   const startAt = useMemo(() => Date.now() + 3000, []);
