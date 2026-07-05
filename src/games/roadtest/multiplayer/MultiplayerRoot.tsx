@@ -30,7 +30,8 @@ export function MultiplayerRoot({ onExit }: Props) {
     setPhase('podium');
   }, []);
 
-  const onRematch = useCallback(() => {
+  const onRematch = useCallback((nextMatch: MatchRow) => {
+    setMatch(nextMatch);
     setStandings([]);
     setPhase('playing');
   }, []);

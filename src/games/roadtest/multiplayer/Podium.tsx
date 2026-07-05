@@ -13,7 +13,7 @@ interface Props {
   match: MatchRow;
   meUid: string;
   standings: Standing[];
-  onRematch: () => void;
+  onRematch: (match: MatchRow) => void;
   onMenu: () => void;
 }
 
@@ -38,13 +38,8 @@ export function Podium({ match, meUid, standings, onRematch, onMenu }: Props) {
 
   const rematch = async () => {
     if (!isHost) return;
-    const seed = Math.floor(Math.random() * 2_000_000_000);
-    // Reset all player scores
-    await supabase.from('game_match_players').update({ stars: 0 }).eq('match_id', match.id);
-    await supabase.from('game_matches')
-      .update({ status: 'playing', seed, started_at: new Date().toISOString() })
-      .eq('id', match.id);
-    onRematch();
+    const { data } = await supabase.rpc('restart_match', { _match_id: match.id });
+    if (data) onRematch(data as MatchRow);
   };
 
   const medal = ['🥇', '🥈', '🥉'];

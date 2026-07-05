@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CAR_COLORS, type MatchRow, type PlayerRow } from './types';
+import { type MatchRow, type PlayerRow } from './types';
 import { sound } from '../sound';
 
 interface Props {
@@ -18,13 +18,6 @@ interface PublicMatch {
   player_count: number;
   seats_left: number;
   created_at: string;
-}
-
-function makeCode(): string {
-  const alph = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let s = '';
-  for (let i = 0; i < 4; i++) s += alph[Math.floor(Math.random() * alph.length)];
-  return s;
 }
 
 function formatDuration(s: number): string {
@@ -103,28 +96,22 @@ export function MultiplayerLobby({ onEnterMatch, onBack }: Props) {
     setBusy(true); setError(null);
     try {
       const meUser = await getMe();
-      let code = makeCode();
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const { data: existing } = await supabase.from('game_matches').select('id').eq('code', code).maybeSingle();
-        if (!existing) break;
-        code = makeCode();
-      }
-      const seed = Math.floor(Math.random() * 2_000_000_000);
-      const { data: m, error: mErr } = await supabase
-        .from('game_matches')
-        .insert({ code, host_id: meUser.id, status: 'lobby', duration_s: duration, seed })
-        .select().single();
+      const { data: m, error: mErr } = await supabase.rpc('create_match', { _duration_s: duration });
       if (mErr || !m) throw mErr ?? new Error('Failed to create match');
 
-      const { data: p, error: pErr } = await supabase
+      const { data: rows, error: pErr } = await supabase
         .from('game_match_players')
-        .insert({ match_id: m.id, user_id: meUser.id, display_name: meUser.name, color: CAR_COLORS[0], stars: 0 })
-        .select().single();
-      if (pErr || !p) throw pErr ?? new Error('Failed to join');
+        .select('*')
+        .eq('match_id', m.id)
+        .order('joined_at');
+      if (pErr) throw pErr;
+      const playerRows = (rows as PlayerRow[]) ?? [];
+      const p = playerRows.find((row) => row.user_id === meUser.id);
+      if (!p) throw new Error('Failed to join');
 
       setMatch(m as MatchRow);
-      setPlayers([p as PlayerRow]);
-      setMe(p as PlayerRow);
+      setPlayers(playerRows);
+      setMe(p);
       setMode('waiting');
     } catch (e: any) {
       setError(e?.message ?? 'Could not create match');
