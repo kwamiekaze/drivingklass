@@ -183,5 +183,56 @@ export function makeTextures(scene: Phaser.Scene) {
     g.fillRect(0, 0, 8, 8);
   });
 
+  // --- Gold star pickup (radiant) ------------------------------------------
+  make('gold-star', 36, 36, () => {
+    const cx = 18, cy = 18, R = 15, r = 6;
+    // glow ring
+    g.fillStyle(0xf2c14e, 0.25);
+    g.fillCircle(cx, cy, 17);
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rad = i % 2 === 0 ? R : r;
+      pts.push(new Phaser.Math.Vector2(cx + rad * Math.cos(a), cy + rad * Math.sin(a)));
+    }
+    g.fillStyle(0xf2c14e);
+    g.fillPoints(pts, true);
+    g.lineStyle(1.5, 0x8a6a10);
+    g.strokePoints(pts, true, true);
+    g.fillStyle(0xffe89a);
+    g.fillCircle(cx - 3, cy - 3, 3);
+  });
+
+  // --- Shield icon for endless-mode strikes --------------------------------
+  make('shield', 30, 34, () => {
+    g.fillStyle(0xf2c14e);
+    g.beginPath();
+    g.moveTo(15, 2);
+    g.lineTo(28, 6);
+    g.lineTo(28, 18);
+    g.lineTo(15, 32);
+    g.lineTo(2, 18);
+    g.lineTo(2, 6);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(2, 0x8a6a10);
+    g.strokePath();
+  });
+
+  // --- Headlight glow cone (radial gradient fake) -------------------------
+  make('headlight-glow', 220, 320, () => {
+    for (let i = 0; i < 10; i++) {
+      const a = 0.08 - i * 0.007;
+      g.fillStyle(0xfff5c8, a);
+      g.beginPath();
+      g.moveTo(110, 320);
+      g.lineTo(110 - 60 - i * 6, 20 + i * 5);
+      g.lineTo(110 + 60 + i * 6, 20 + i * 5);
+      g.closePath();
+      g.fillPath();
+    }
+  });
+
   g.destroy();
 }
+
