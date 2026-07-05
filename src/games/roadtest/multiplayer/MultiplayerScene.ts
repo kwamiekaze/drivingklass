@@ -423,9 +423,9 @@ export class MultiplayerScene extends Phaser.Scene {
       ) * (180 / Math.PI));
       r.label.setPosition(r.sprite.x, r.sprite.y - 36);
       const txt = `${r.data.displayName} · ${r.data.stars}`;
-      if (this.lastLabelText.get(r.uid) !== txt) {
+      if (this.lastLabelText.get(r.data.uid) !== txt) {
         r.label.setText(txt);
-        this.lastLabelText.set(r.uid, txt);
+        this.lastLabelText.set(r.data.uid, txt);
       }
     }
   }
