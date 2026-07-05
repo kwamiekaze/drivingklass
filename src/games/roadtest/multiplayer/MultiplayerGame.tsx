@@ -197,6 +197,7 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
         ))}
       </ul>
       <div ref={hostRef} className="game-host mp-host" />
+      {reconnecting && <div className="mp-reconnect-dim">RECONNECTING VIEW…</div>}
       <TouchControls />
     </div>
   );
