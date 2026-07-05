@@ -5,6 +5,7 @@ import { GameCanvas } from './components/GameCanvas';
 import { ReportCard } from './components/ReportCard';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
+import { GuestScoreModal } from './GuestScoreModal';
 import { submitScore } from './submitScore';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
