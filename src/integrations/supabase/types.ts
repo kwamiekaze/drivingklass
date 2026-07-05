@@ -421,6 +421,42 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_scores: {
+        Row: {
+          created_at: string
+          difficulty: string
+          display_name: string
+          distance: number | null
+          email: string | null
+          grade: string
+          id: string
+          level_id: string
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          difficulty: string
+          display_name: string
+          distance?: number | null
+          email?: string | null
+          grade: string
+          id?: string
+          level_id: string
+          score: number
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          display_name?: string
+          distance?: number | null
+          email?: string | null
+          grade?: string
+          id?: string
+          level_id?: string
+          score?: number
+        }
+        Relationships: []
+      }
       instructor_students: {
         Row: {
           created_at: string | null

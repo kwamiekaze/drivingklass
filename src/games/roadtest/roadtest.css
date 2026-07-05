@@ -810,3 +810,24 @@
 .mp-podium-card.pod-3 { border-color: #c9971f; order: 3; }
 .mp-podium-rank { font-family: var(--display); color: var(--gold); min-width: 30px; }
 .mp-standings-title { font-family: var(--display); letter-spacing: 2px; color: var(--gold); margin: 4px 0; font-size: 16px; }
+
+/* Guest score modal form */
+.dk-guest-form .dk-field { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 13px; }
+.dk-guest-form .dk-field span { opacity: 0.85; font-weight: 600; }
+.dk-guest-form .dk-field input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(242,193,78,0.35);
+  border-radius: 8px;
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+.dk-guest-form .dk-field input:focus { border-color: #f2c14e; box-shadow: 0 0 0 2px rgba(242,193,78,0.25); }
+
+/* Brand-mark rendered as a button/link */
+.brand-mark-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: inherit; font: inherit; letter-spacing: inherit;
+}
+.brand-mark-link:hover { filter: brightness(1.15); }
