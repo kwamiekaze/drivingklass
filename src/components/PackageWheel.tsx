@@ -399,44 +399,42 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
           selectedPackageId ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
         )}>
           <p 
-            className="text-sm mb-2"
+            className="font-display uppercase tracking-[0.28em] text-xs sm:text-sm mb-2"
             style={isLight ? { 
-              color: '#1C1C1C',
+              color: '#3d2a10',
               textShadow: '0 0 1px rgba(212,175,55,0.9), 0 0 6px rgba(212,175,55,0.35)',
             } : { 
-              color: 'hsl(42 30% 65%)' 
+              color: 'hsl(40 55% 72%)' 
             }}
           >
             Selected Package
           </p>
           <p 
-            className="text-lg sm:text-xl font-bold mb-1"
+            className="font-display text-xl sm:text-2xl font-semibold mb-1 tracking-wide"
             style={isLight ? {
-              color: 'rgba(20, 20, 20, 0.92)',
-              fontWeight: 700,
+              color: 'rgba(35, 22, 8, 0.95)',
               textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
             } : {
-              background: 'linear-gradient(135deg, hsl(43 85% 55%) 0%, hsl(48 90% 72%) 100%)',
+              background: 'linear-gradient(135deg, hsl(38 82% 58%) 0%, hsl(45 92% 78%) 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 6px hsl(43 80% 52% / 0.35))',
+              filter: 'drop-shadow(0 0 6px hsl(38 80% 50% / 0.4))',
             }}
           >
             {selectedPackage?.label.replace('\n', ' ')}
           </p>
           <p 
-            className="text-2xl sm:text-3xl font-bold mb-5"
+            className="font-display text-3xl sm:text-4xl font-bold mb-5 tracking-wide"
             style={isLight ? {
-              color: 'rgba(20, 20, 20, 0.92)',
-              fontWeight: 700,
+              color: 'rgba(35, 22, 8, 0.95)',
               textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
             } : {
-              background: 'linear-gradient(135deg, hsl(38 75% 45%) 0%, hsl(43 85% 55%) 50%, hsl(48 90% 72%) 100%)',
+              background: 'linear-gradient(135deg, hsl(30 70% 42%) 0%, hsl(38 85% 55%) 45%, hsl(48 92% 78%) 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 10px hsl(43 80% 52% / 0.3))',
+              filter: 'drop-shadow(0 0 10px hsl(38 82% 52% / 0.35))',
             }}
           >
             {selectedPackage?.price}
@@ -447,7 +445,7 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
           onClick={handleInfoClick}
           disabled={!selectedPackageId}
           className={cn(
-            "px-10 py-4 rounded-full font-bold tracking-wider uppercase text-sm",
+            "font-display px-10 py-4 rounded-full font-bold tracking-[0.25em] uppercase text-sm",
             "transition-all duration-200",
             selectedPackageId 
               ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer" 
