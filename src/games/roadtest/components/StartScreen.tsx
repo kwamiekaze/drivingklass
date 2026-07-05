@@ -1,26 +1,55 @@
+import { useEffect, useState } from 'react';
 import { LEVELS } from '../game/levels';
+import { DIFFICULTIES, type Difficulty } from '../game/types';
+import { sound } from '../sound';
 
 interface Props {
   bestScores: Record<string, number>;
+  difficulty: Difficulty;
+  setDifficulty: (d: Difficulty) => void;
   onStart: (levelId: string) => void;
   onHowToPlay: () => void;
   onLeaderboard: () => void;
 }
 
-export function StartScreen({ bestScores, onStart, onHowToPlay, onLeaderboard }: Props) {
+const STREAK_KEY = 'dk-game-streak';
+const STREAK_DAY_KEY = 'dk-game-streak-day';
+
+function computeStreak(): number {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastDay = localStorage.getItem(STREAK_DAY_KEY);
+    const raw = parseInt(localStorage.getItem(STREAK_KEY) ?? '0', 10) || 0;
+    if (lastDay === today) return raw;
+    // Update streak on first visit today
+    let next = 1;
+    if (lastDay) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const yesterday = y.toISOString().slice(0, 10);
+      if (lastDay === yesterday) next = raw + 1;
+    }
+    localStorage.setItem(STREAK_KEY, String(next));
+    localStorage.setItem(STREAK_DAY_KEY, today);
+    return next;
+  } catch { return 0; }
+}
+
+export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard }: Props) {
+  const [streak, setStreak] = useState(0);
+  useEffect(() => { setStreak(computeStreak()); }, []);
+
+  const clickTick = () => { sound.init(); sound.uiTick(); };
+  const endless = LEVELS.find((l) => l.endless);
+  const lessons = LEVELS.filter((l) => !l.endless);
+  const startLevel = (id: string) => { clickTick(); onStart(id); };
+
   return (
     <div className="screen start-screen">
       <header className="brand-header">
-        <div className="brand-mark">
-          DRIVING<span>KLASS</span>
-        </div>
+        <div className="brand-mark">DRIVING<span>KLASS</span></div>
         <div className="brand-stars">★★★★★</div>
       </header>
 
-      {/*
-        Hero image: the gold DrivingKlass 5-star car.
-        Replace public/assets/drivingklass-hero.webp with any brand photo/logo.
-      */}
       <div className="hero-card">
         <img
           src="/assets/drivingklass-hero.webp"
@@ -32,16 +61,41 @@ export function StartScreen({ bestScores, onStart, onHowToPlay, onLeaderboard }:
         <div className="hero-overlay">
           <h1>Road Test Challenge</h1>
           <p>Hold your lane. Stop at the signs. Earn a 5-star report card.</p>
+          {streak > 0 && (
+            <div className="streak-badge">🔥 {streak}-day streak</div>
+          )}
         </div>
       </div>
 
-      <section className="level-list" aria-label="Choose a lesson">
-        {LEVELS.map((lvl, i) => (
+      <section className="difficulty-row" aria-label="Choose difficulty">
+        {DIFFICULTIES.map((d) => (
           <button
-            key={lvl.id}
-            className="level-card"
-            onClick={() => onStart(lvl.id)}
+            key={d.id}
+            className={`diff-chip${difficulty === d.id ? ' active' : ''}`}
+            onClick={() => { clickTick(); setDifficulty(d.id); }}
           >
+            {d.label}
+            <small>×{d.scoreMul}</small>
+          </button>
+        ))}
+      </section>
+
+      {endless && (
+        <button className="level-card endless" onClick={() => startLevel(endless.id)}>
+          <span className="level-num" style={{ color: '#f2c14e' }}>∞</span>
+          <span className="level-info">
+            <strong>{endless.name}</strong>
+            <small>{endless.subtitle}</small>
+          </span>
+          <span className="level-best">
+            {bestScores[endless.id] ? `Best ${bestScores[endless.id]}` : 'Start →'}
+          </span>
+        </button>
+      )}
+
+      <section className="level-list" aria-label="Choose a lesson">
+        {lessons.map((lvl, i) => (
+          <button key={lvl.id} className="level-card" onClick={() => startLevel(lvl.id)}>
             <span className="level-num">{i + 1}</span>
             <span className="level-info">
               <strong>{lvl.name}</strong>
@@ -55,23 +109,12 @@ export function StartScreen({ bestScores, onStart, onHowToPlay, onLeaderboard }:
       </section>
 
       <div className="btn-row">
-        <button className="dk-btn dk-btn-gold" onClick={() => onStart(LEVELS[0].id)}>
-          Start Lesson
-        </button>
-        <button className="dk-btn dk-btn-outline" onClick={onHowToPlay}>
-          How to Play
-        </button>
-        <button className="dk-btn dk-btn-outline" onClick={onLeaderboard}>
-          Leaderboard
-        </button>
+        <button className="dk-btn dk-btn-gold" onClick={() => startLevel(lessons[0].id)}>Start Lesson</button>
+        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
+        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
       </div>
 
-      <a
-        className="dk-btn dk-btn-black book-cta"
-        href="https://drivingklass.com"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a className="dk-btn dk-btn-black book-cta" href="https://drivingklass.com" target="_blank" rel="noopener noreferrer">
         Book a Driving Lesson
       </a>
 
