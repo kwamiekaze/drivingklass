@@ -14,9 +14,9 @@ import './roadtest.css';
 type Screen = 'menu' | 'playing' | 'report' | 'multiplayer';
 const DIFF_KEY = 'dk-game-difficulty';
 
-/** Selectors that should keep native touch behavior (scrolling, typing). */
-const SCROLLABLE_SELECTOR =
-  '.level-list, .mp-open-list, .dk-lb-list, .dk-modal, .dk-modal-backdrop, input, textarea, select, [contenteditable="true"]';
+/** Only game canvas + touch pedals get preventDefault. Everything else (buttons,
+ *  menus, modals) keeps native tap → click synthesis on iOS. */
+const GAME_SURFACE_SELECTOR = 'canvas, .game-host, .touch-controls';
 
 export default function RoadTestGame() {
   const [screen, setScreen] = useState<Screen>('menu');
@@ -29,19 +29,18 @@ export default function RoadTestGame() {
   const [guestPromptResult, setGuestPromptResult] = useState<LevelResult | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Non-passive touchstart guard: block iOS text-selection / callout / double-tap zoom
-  // on game surfaces without breaking scrolling inside menus, lists, and modals.
+  // Non-passive touchstart: only preventDefault on the actual game surfaces so
+  // iOS still synthesizes click events for buttons/menus/modals.
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
     const handler = (e: TouchEvent) => {
-      // Any user gesture is a good time to try to (re)unlock audio.
       sound.ensureRunning();
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest(SCROLLABLE_SELECTOR)) return; // let scroll/typing happen
-      // Prevent default to kill selection, callouts, and double-tap zoom on the game shell.
-      if (e.cancelable) e.preventDefault();
+      if (target.closest(GAME_SURFACE_SELECTOR) && e.cancelable) {
+        e.preventDefault();
+      }
     };
     el.addEventListener('touchstart', handler, { passive: false });
     const pd = () => sound.ensureRunning();
