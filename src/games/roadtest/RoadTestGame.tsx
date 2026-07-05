@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { HowToPlay } from './components/HowToPlay';
 import { GameCanvas } from './components/GameCanvas';
@@ -7,11 +7,16 @@ import { LeaderboardModal } from './components/LeaderboardModal';
 import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { GuestScoreModal } from './GuestScoreModal';
 import { submitScore } from './submitScore';
+import { sound } from './sound';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
 
 type Screen = 'menu' | 'playing' | 'report' | 'multiplayer';
 const DIFF_KEY = 'dk-game-difficulty';
+
+/** Selectors that should keep native touch behavior (scrolling, typing). */
+const SCROLLABLE_SELECTOR =
+  '.level-list, .mp-open-list, .dk-lb-list, .dk-modal, .dk-modal-backdrop, input, textarea, select, [contenteditable="true"]';
 
 export default function RoadTestGame() {
   const [screen, setScreen] = useState<Screen>('menu');
