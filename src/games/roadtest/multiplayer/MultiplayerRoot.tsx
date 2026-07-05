@@ -18,10 +18,9 @@ export function MultiplayerRoot({ onExit }: Props) {
   const [standings, setStandings] = useState<Standing[]>([]);
 
   const enterMatch = useCallback((m: MatchRow, ps: PlayerRow[], meRow: PlayerRow) => {
-    // Fetch latest snapshot of players (server-of-truth) before boot
     (async () => {
-      const { data } = await supabase.from('game_match_players').select('*').eq('m_id_placeholder', m.id).eq('match_id', m.id);
-      const fresh = ((data as PlayerRow[]) ?? ps).filter((p, i, arr) => arr.findIndex((x) => x.user_id === p.user_id) === i);
+      const { data } = await supabase.from('game_match_players').select('*').eq('match_id', m.id);
+      const fresh = ((data as PlayerRow[] | null) ?? ps).filter((p, i, arr) => arr.findIndex((x) => x.user_id === p.user_id) === i);
       setMatch(m); setPlayers(fresh.length ? fresh : ps); setMe(meRow); setPhase('playing');
     })();
   }, []);
