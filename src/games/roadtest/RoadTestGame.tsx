@@ -62,7 +62,12 @@ export default function RoadTestGame() {
             onStart={start}
             onHowToPlay={() => setShowHowTo(true)}
             onLeaderboard={() => setShowLeaderboard(true)}
+            onMultiplayer={() => setScreen('multiplayer')}
           />
+        )}
+
+        {screen === 'multiplayer' && (
+          <MultiplayerRoot onExit={() => setScreen('menu')} />
         )}
 
         {screen === 'playing' && (
