@@ -143,11 +143,13 @@ function AdminScheduleContent() {
       return;
     }
 
-    // Update session type and addresses if needed
+    // Update session type, addresses, and notes if needed
     const updates: Record<string, any> = {};
     if (formData.session_type !== 'driving') updates.session_type = formData.session_type;
     if (formData.pickup_address.trim()) updates.pickup_address = formData.pickup_address.trim();
     if (formData.dropoff_address.trim()) updates.dropoff_address = formData.dropoff_address.trim();
+    if (formData.note_for_student.trim()) updates.note_for_student = formData.note_for_student.trim();
+    if (formData.note_for_instructor.trim()) updates.note_for_instructor = formData.note_for_instructor.trim();
 
     if (Object.keys(updates).length > 0 && newSession?.id) {
       await supabase.from('sessions').update(updates).eq('id', newSession.id);
@@ -160,7 +162,7 @@ function AdminScheduleContent() {
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "" });
   };
 
   const openCreateFromSlot = (date: Date) => {
