@@ -65,6 +65,8 @@ function makeStarsTexture() {
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
   const { scene } = useGLTF(MODEL_URL) as any;
   const groupRef = useRef<THREE.Group>(null!);
+  const starsTexture = useMemo(() => makeStarsTexture(), []);
+
   const progress = useRef(0); // 0..1 over ~1.6s
   const notified = useRef(false);
 
