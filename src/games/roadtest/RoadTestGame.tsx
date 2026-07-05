@@ -82,9 +82,10 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
   const handleComplete = useCallback((r: LevelResult) => {
     setBestScores((prev) => ({ ...prev, [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score) }));
     submitScore(r)
-      .then(({ isNewBest, previousBest, isGuest }) => {
+      .then(({ isNewBest, previousBest, isGuest, needsUsername }) => {
         setResult({ ...r, isNewBest, previousBest: previousBest ?? undefined });
         if (isGuest) setGuestPromptResult(r);
+        else if (needsUsername) setShowUsernamePrompt(true);
       })
       .catch((err) => {
         console.error(err);
@@ -92,6 +93,13 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
       });
     setScreen('report');
   }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin + '/play' });
+    } catch (e) { console.error(e); }
+  }, []);
+
 
   return (
     <div className="dk-game" ref={rootRef}>
