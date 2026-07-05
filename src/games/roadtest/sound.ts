@@ -13,6 +13,13 @@ let engineGain: GainNode | null = null;
 let engineFilter: BiquadFilterNode | null = null;
 let muted = false;
 
+// Background music state
+let musicGain: GainNode | null = null;
+let musicTimer: number | null = null;
+let musicStep = 0;
+// Tire screech state (throttled)
+let lastScreechAt = 0;
+
 try {
   muted = localStorage.getItem(MUTE_KEY) === '1';
 } catch { /* ignore */ }
@@ -42,10 +49,6 @@ export const sound = {
     }
   },
 
-  toggleMute(): boolean {
-    this.setMuted(!muted);
-    return muted;
-  },
 
   startEngine() {
     if (!ctx || !masterGain || engineOsc) return;
