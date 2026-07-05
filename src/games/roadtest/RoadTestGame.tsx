@@ -4,11 +4,12 @@ import { HowToPlay } from './components/HowToPlay';
 import { GameCanvas } from './components/GameCanvas';
 import { ReportCard } from './components/ReportCard';
 import { LeaderboardModal } from './components/LeaderboardModal';
+import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { submitScore } from './submitScore';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
 
-type Screen = 'menu' | 'playing' | 'report';
+type Screen = 'menu' | 'playing' | 'report' | 'multiplayer';
 const DIFF_KEY = 'dk-game-difficulty';
 
 export default function RoadTestGame() {
