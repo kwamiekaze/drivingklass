@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { touchControls, type ControlState } from '../game/controls';
+import { sound } from '../sound';
 
 /**
  * On-screen buttons for phones/tablets. They write straight into the shared
@@ -21,6 +22,8 @@ export function TouchControls() {
       e.preventDefault();
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       touchControls[key] = true;
+      // Every touch-control press is a good moment to unlock/resume audio.
+      sound.ensureRunning();
     },
     onPointerUp: () => (touchControls[key] = false),
     onPointerLeave: () => (touchControls[key] = false),
