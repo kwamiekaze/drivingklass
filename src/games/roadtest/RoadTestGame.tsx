@@ -6,13 +6,21 @@ import { ReportCard } from './components/ReportCard';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { GuestScoreModal } from './GuestScoreModal';
+import { UsernameModal } from './UsernameModal';
+import { MyStatsModal } from './MyStatsModal';
 import { submitScore } from './submitScore';
 import { sound } from './sound';
+import { lovable } from '@/integrations/lovable';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
 
 type Screen = 'menu' | 'playing' | 'report' | 'multiplayer';
 const DIFF_KEY = 'dk-game-difficulty';
+
+interface RoadTestGameProps {
+  publicMode?: boolean;
+}
+
 
 /** Only game canvas + touch pedals get preventDefault. Everything else (buttons,
  *  menus, modals) keeps native tap → click synthesis on iOS. */
