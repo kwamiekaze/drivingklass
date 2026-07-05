@@ -35,7 +35,7 @@ function computeStreak(): number {
   } catch { return 0; }
 }
 
-export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard }: Props) {
+export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer }: Props) {
   const [streak, setStreak] = useState(0);
   useEffect(() => { setStreak(computeStreak()); }, []);
 
