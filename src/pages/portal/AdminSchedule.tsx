@@ -61,6 +61,8 @@ function AdminScheduleContent() {
     session_type: "driving",
     pickup_address: "",
     dropoff_address: "",
+    note_for_student: "",
+    note_for_instructor: "",
   });
 
   // Block form state
