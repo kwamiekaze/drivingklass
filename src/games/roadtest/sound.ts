@@ -290,6 +290,20 @@ function playArp(freqs: number[], step: number, type: OscillatorType, vol: numbe
   });
 }
 
+// TEMP debug hook (removed after verification)
+if (typeof window !== 'undefined') {
+  (window as any).__dkSoundDebug = () => ({
+    state: ctx?.state ?? 'none',
+    E: engineOsc ? 1 : 0,
+    M: musicTimer !== null ? 1 : 0,
+    G: masterGain ? Number(masterGain.gain.value.toFixed(2)) : null,
+    engineRunning,
+    musicWanted,
+    muted,
+  });
+}
+
+
 function playThud() {
   if (!isRunning() || !masterGain) return;
   try {
