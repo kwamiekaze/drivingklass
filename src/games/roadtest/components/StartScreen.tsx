@@ -10,6 +10,7 @@ interface Props {
   onStart: (levelId: string) => void;
   onHowToPlay: () => void;
   onLeaderboard: () => void;
+  onMultiplayer: () => void;
 }
 
 const STREAK_KEY = 'dk-game-streak';
