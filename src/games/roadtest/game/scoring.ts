@@ -51,8 +51,8 @@ export class ScoreTracker {
   /** Adds an event; returns actual points awarded (after combo multiplier). */
   add(key: PointKey): number {
     this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
-    const base = POINTS[key];
-    let pts = base;
+    const base: number = POINTS[key];
+    let pts: number = base;
     if (base > 0) {
       pts = Math.round(base * this.combo);
       if (POSITIVE_COMBO.includes(key)) {
