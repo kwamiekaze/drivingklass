@@ -2253,6 +2253,25 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: number
       }
+      create_match: {
+        Args: { _duration_s: number }
+        Returns: {
+          code: string
+          created_at: string
+          duration_s: number
+          host_id: string
+          id: string
+          seed: number
+          started_at: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_session_admin: {
         Args: {
           _duration_minutes: number
@@ -2559,6 +2578,25 @@ export type Database = {
           sessions_processed: number
           student_id: string
         }[]
+      }
+      restart_match: {
+        Args: { _match_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          duration_s: number
+          host_id: string
+          id: string
+          seed: number
+          started_at: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
       try_uuid: { Args: { p_text: string }; Returns: string }
