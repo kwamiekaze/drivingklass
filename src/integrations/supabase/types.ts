@@ -2499,6 +2499,21 @@ export type Database = {
         Returns: boolean
       }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      join_open_match: { Args: { _code: string }; Returns: string }
+      list_public_matches: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          duration_s: number
+          host_id: string
+          host_name: string
+          id: string
+          player_count: number
+          seats_left: number
+          status: string
+        }[]
+      }
       list_visible_emails: {
         Args: { p_limit?: number; p_search?: string }
         Returns: {
