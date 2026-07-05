@@ -425,7 +425,13 @@ export class DrivingScene extends Phaser.Scene {
 
     this.prevMph = this.mph;
     this.handleDriving(dt);
-    this.road.tilePositionY -= this.mph * MPH_TO_PX * dt;
+    const scroll = this.mph * MPH_TO_PX * dt;
+    this.road.tilePositionY -= scroll;
+    this.shoulderL.tilePositionY -= scroll;
+    this.shoulderR.tilePositionY -= scroll;
+    // Parallax: distant silhouettes scroll slower
+    this.farBgL.tilePositionY -= scroll * 0.45;
+    this.farBgR.tilePositionY -= scroll * 0.45;
 
     // Update engine sound
     sound.updateEngine(Math.min(1, this.mph / this.level.maxSpeed));
@@ -439,14 +445,45 @@ export class DrivingScene extends Phaser.Scene {
     this.trySkidMark(time);
 
     if (this.level.endless) this.updateEndless();
+    else this.updateProgressiveRamp();
     this.updateObstacles(time, dt);
     this.checkLaneDiscipline(dt);
     this.checkSpeeding(dt);
     this.checkSmoothDriving(dt);
     this.updateHud();
+    this.animateScore(dt);
 
     if (!this.level.endless && this.traveled >= this.effectiveLength) this.finish();
   }
+
+  /** Smoothly counts the displayed score toward the tracked score. */
+  private animateScore(dt: number) {
+    const target = this.tracker.score;
+    if (this.displayScore === target) return;
+    const diff = target - this.displayScore;
+    const step = Math.sign(diff) * Math.max(1, Math.ceil(Math.abs(diff) * Math.min(1, dt * 6)));
+    if (Math.abs(step) >= Math.abs(diff)) this.displayScore = target;
+    else this.displayScore += step;
+    this.scoreText.setText(`SCORE ${this.displayScore}`);
+  }
+
+  /** Non-endless levels also ramp subtly the longer a run goes. */
+  private updateProgressiveRamp() {
+    // Squeeze gap by up to 25% over full course; traffic speeds by up to 20%.
+    const p = Phaser.Math.Clamp(this.traveled / Math.max(1, this.effectiveLength), 0, 1);
+    const gapFactor = 1 - 0.25 * p;
+    const trafficFactor = 1 + 0.20 * p;
+    // Apply to still-unseen obstacles (cheap: nudge their d spacing lazily via mph).
+    for (const ob of this.obstacles) {
+      if (ob.type === 'traffic' && ob.mph && !ob._ramped) {
+        ob.mph *= trafficFactor;
+        ob._ramped = true;
+      }
+    }
+    // Store for future spawns (used only in endless path); keep effectiveGap fresh for UI feel.
+    this.effectiveGap = this.level.obstacleGap * this.difficulty.gapMul * gapFactor;
+  }
+
 
   private trySkidMark(time: number) {
     const braking = (this.cursors.down.isDown || this.wasd.S.isDown || touchControls.brake);
