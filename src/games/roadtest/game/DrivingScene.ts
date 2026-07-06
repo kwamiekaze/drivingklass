@@ -282,6 +282,11 @@ export class DrivingScene extends Phaser.Scene {
         this.spawn('star', d, rnd.between(0, 2));
       }
     }
+    // Endless pedestrians — grow more frequent as the traffic multiplier grows.
+    const pedGap = Math.max(500, 1500 / this.endlessTrafficMul);
+    for (let d = from + 400; d < to; d += pedGap + rnd.between(-100, 200)) {
+      this.spawn('pedestrian', d, 1, rnd);
+    }
     this.endlessSpawnCursor = to;
   }
 
