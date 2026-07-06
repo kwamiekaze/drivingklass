@@ -41,9 +41,17 @@ async function getMe() {
   return { id: user.id, name };
 }
 
+const DURATION_PRESETS: { label: string; seconds: number }[] = [
+  { label: '5 min · Quick', seconds: 300 },
+  { label: '10 min', seconds: 600 },
+  { label: '15 min', seconds: 900 },
+  { label: '30 min', seconds: 1800 },
+  { label: '60 min · Marathon', seconds: 3600 },
+];
+
 export function MultiplayerLobby({ onEnterMatch, onBack }: Props) {
   const [mode, setMode] = useState<'menu' | 'host' | 'join' | 'waiting'>('menu');
-  const [duration, setDuration] = useState<number>(180);
+  const [duration, setDuration] = useState<number>(300);
   const [codeInput, setCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
