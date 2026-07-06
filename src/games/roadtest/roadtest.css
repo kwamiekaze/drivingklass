@@ -339,9 +339,11 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
+  /* Guarantee a comfortable tap area above the iOS Safari bottom toolbar. */
+  padding: 10px 14px calc(18px + env(safe-area-inset-bottom));
   user-select: none;
   touch-action: none;
+  flex-shrink: 0;
 }
 
 .touch-cluster {
