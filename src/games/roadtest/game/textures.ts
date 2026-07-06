@@ -360,8 +360,40 @@ export function makeTextures(scene: Phaser.Scene) {
     g.fillRect(6, 2, 8, 2);
   });
 
+  // --- Dogs (three small breed silhouettes) -------------------------------
+  const dog = (key: string, body: number, ear: number) =>
+    make(key, 20, 16, () => {
+      // shadow
+      g.fillStyle(0x000000, 0.35);
+      g.fillEllipse(10, 14, 14, 4);
+      // body
+      g.fillStyle(body);
+      g.fillRoundedRect(3, 5, 12, 7, 3);
+      // head
+      g.fillStyle(body);
+      g.fillCircle(16, 7, 3);
+      // ears
+      g.fillStyle(ear);
+      g.fillTriangle(15, 4, 17, 4, 16, 1);
+      // legs
+      g.fillStyle(0x101014);
+      g.fillRect(4, 11, 2, 3);
+      g.fillRect(12, 11, 2, 3);
+      // tail
+      g.fillStyle(body);
+      g.fillRect(1, 6, 3, 2);
+    });
+  dog('dog-brown', 0x8a5a2f, 0x4a2f18);
+  dog('dog-black', 0x2a2a2f, 0x101014);
+  dog('dog-gold',  0xd9a24a, 0x8a6420);
+
   g.destroy();
 }
+
+/** Palette tints applied to the shared pedestrian sprite for outfit variety. */
+export const PED_TINTS = [0xffffff, 0x9fd4ff, 0xffb0c8, 0xc8ffb0, 0xfff2a8, 0xd9b0ff] as const;
+export const DOG_KEYS = ['dog-brown', 'dog-black', 'dog-gold'] as const;
+
 
 
 

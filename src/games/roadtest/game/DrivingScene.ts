@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { getLevel } from './levels';
 import { ScoreTracker, buildResult, POINTS, type PointKey } from './scoring';
 import { touchControls } from './controls';
-import { loadPlayerCarTexture, makeTextures } from './textures';
+import { loadPlayerCarTexture, makeTextures, PED_TINTS, DOG_KEYS } from './textures';
 import { GAME_EVENTS, getDifficulty, type LevelConfig, type ObstacleType, type Difficulty, type DifficultyConfig } from './types';
 import { sound } from '../sound';
 
@@ -39,6 +39,12 @@ interface Obstacle {
   pedTelegraph?: number; // seconds remaining pausing before crossing
   pedCrossed?: boolean;  // fully across road
   pedSafeAwarded?: boolean;
+  // shared: stroll = walks parallel on sidewalk, no collision
+  stroll?: boolean;
+  strollVy?: number;     // px/sec vertical relative to world (world scrolls up)
+  // dog fields
+  isRunaway?: boolean;
+  barked?: boolean;
 }
 
 
@@ -147,6 +153,10 @@ export class DrivingScene extends Phaser.Scene {
     if (lvl.nightAlpha) {
       this.add.rectangle(0, 0, GAME_W, GAME_H, 0x0a0a18, lvl.nightAlpha).setOrigin(0).setDepth(15);
     }
+    if (lvl.weatherTint) {
+      this.add.rectangle(0, 0, GAME_W, GAME_H, lvl.weatherTint.color, lvl.weatherTint.alpha)
+        .setOrigin(0).setDepth(16);
+    }
 
     if (lvl.endless) this.buildEndlessSeed();
     else this.buildCourse();
@@ -241,11 +251,26 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
-    // Pedestrians — frequency scales with difficulty tier
-    const pedGap = Math.max(600, 1800 - 300 * DIFF_INDEX[this.difficulty.id]);
+    // Pedestrians — frequency scales with difficulty tier + optional level mul
+    const pedMul = this.level.pedDensityMul ?? 1;
+    const pedGap = Math.max(400, (1800 - 300 * DIFF_INDEX[this.difficulty.id]) / pedMul);
     for (let d = 1000; d < totalLen - 500; d += pedGap + rnd.between(-200, 300)) {
       if (!isFree(d, 200)) continue;
       this.spawn('pedestrian', d, 1, rnd);
+    }
+    // Sidewalk strollers (always some, extra with pedDensityMul)
+    const strollGap = Math.max(320, 900 / pedMul);
+    for (let d = 600; d < totalLen - 300; d += strollGap + rnd.between(-120, 200)) {
+      this.spawnStroller(d, rnd);
+    }
+    // Dogs — some leashed strolling with an owner, some runaway crossing
+    const dogMul = this.level.dogDensityMul ?? 1;
+    if (dogMul > 0) {
+      const dogGap = Math.max(700, 2400 / dogMul);
+      for (let d = 1500; d < totalLen - 600; d += dogGap + rnd.between(-200, 400)) {
+        if (!isFree(d, 180)) continue;
+        this.spawnDog(d, rnd);
+      }
     }
 
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
@@ -286,6 +311,13 @@ export class DrivingScene extends Phaser.Scene {
     const pedGap = Math.max(500, 1500 / this.endlessTrafficMul);
     for (let d = from + 400; d < to; d += pedGap + rnd.between(-100, 200)) {
       this.spawn('pedestrian', d, 1, rnd);
+    }
+    // Sidewalk strollers + occasional runaway dog for variety
+    for (let d = from + 200; d < to; d += 700 + rnd.between(-150, 250)) {
+      this.spawnStroller(d, rnd);
+    }
+    for (let d = from + 900; d < to; d += 2200 + rnd.between(-300, 500)) {
+      this.spawnDog(d, rnd);
     }
     this.endlessSpawnCursor = to;
   }
@@ -338,9 +370,22 @@ export class DrivingScene extends Phaser.Scene {
         const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
         const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
         sprite = this.add.image(startX, -200, 'pedestrian').setDepth(7).setDisplaySize(22, 32);
-        // Speed scales lightly with difficulty
-        const baseVx = 55 * this.difficulty.speedMul;
+        // Outfit variety via tint
+        const tint = rnd ? rnd.pick([...PED_TINTS]) : PED_TINTS[0];
+        sprite.setTint(tint);
+        // Speed scales lightly with difficulty; each ped has a slightly different pace
+        const baseVx = (45 + (rnd ? rnd.between(0, 25) : 15)) * this.difficulty.speedMul;
         mph = fromLeft ? baseVx : -baseVx; // reuse mph field for horizontal velocity
+        break;
+      }
+      case 'dog': {
+        const key = rnd ? rnd.pick([...DOG_KEYS]) : DOG_KEYS[0];
+        // Runaway dogs start on either side, cross fast
+        const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
+        const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
+        sprite = this.add.image(startX, -200, key).setDepth(7).setDisplaySize(24, 18);
+        const baseVx = (85 + (rnd ? rnd.between(0, 40) : 20)) * this.difficulty.speedMul;
+        mph = fromLeft ? baseVx : -baseVx;
         break;
       }
     }
@@ -354,7 +399,47 @@ export class DrivingScene extends Phaser.Scene {
       // Telegraph shrinks at higher difficulty (fair but riskier).
       ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * DIFF_INDEX[this.difficulty.id]);
     }
+    if (type === 'dog') {
+      ob.pedX = sprite.x;
+      ob.pedVx = mph;
+      ob.isRunaway = true;
+      // Shorter warning — audio bark gives fair cue
+      ob.pedTelegraph = Math.max(0.25, 0.9 - 0.2 * DIFF_INDEX[this.difficulty.id]);
+    }
     this.obstacles.push(ob);
+  }
+
+  /** Sidewalk stroller — decorative pedestrian on curb, no collision. */
+  private spawnStroller(d: number, rnd: Phaser.Math.RandomDataGenerator) {
+    const onLeft = rnd.frac() > 0.5;
+    const x = onLeft ? ROAD_X - 20 : ROAD_X + ROAD_W + 20;
+    const sprite = this.add.image(x, -200, 'pedestrian').setDepth(4).setDisplaySize(20, 28);
+    sprite.setTint(rnd.pick([...PED_TINTS]));
+    sprite.setVisible(false);
+    // Some walk with the traffic (down = slower relative flow), some against.
+    const strollVy = rnd.pick([-20, -14, 12, 18]);
+    const ob: Obstacle = { type: 'pedestrian', d, lane: onLeft ? -1 : 3, sprite, stroll: true, strollVy };
+    this.obstacles.push(ob);
+    // 30% of strollers get a leashed dog beside them.
+    if (rnd.frac() < 0.3) {
+      const dogKey = rnd.pick([...DOG_KEYS]);
+      const dogX = x + (onLeft ? 10 : -10);
+      const dogSprite = this.add.image(dogX, -200, dogKey).setDepth(4).setDisplaySize(20, 14);
+      dogSprite.setVisible(false);
+      this.obstacles.push({
+        type: 'dog', d: d + 12, lane: onLeft ? -1 : 3, sprite: dogSprite,
+        stroll: true, strollVy,
+      });
+    }
+  }
+
+  /** Runaway dog + optional chasing owner. Same catastrophic collision as pedestrian. */
+  private spawnDog(d: number, rnd: Phaser.Math.RandomDataGenerator) {
+    this.spawn('dog', d, 1, rnd);
+    // 55% chance an owner comes chasing shortly after
+    if (rnd.frac() < 0.55) {
+      this.spawn('pedestrian', d + 40, 1, rnd);
+    }
   }
 
   // ---------------------------------------------------------------- HUD ---
@@ -652,7 +737,12 @@ export class DrivingScene extends Phaser.Scene {
           this.handleStar(ob);
           break;
         case 'pedestrian':
-          this.handlePedestrian(ob, time, dt);
+          if (ob.stroll) this.handleStroller(ob, time, dt);
+          else this.handlePedestrian(ob, time, dt);
+          break;
+        case 'dog':
+          if (ob.stroll) this.handleStroller(ob, time, dt);
+          else this.handlePedestrian(ob, time, dt);
           break;
         case 'cone':
         case 'parkedCar':
@@ -663,8 +753,24 @@ export class DrivingScene extends Phaser.Scene {
     }
   }
 
+  /** Sidewalk stroller update — pure decoration, moves in world Y, no collision. */
+  private handleStroller(ob: Obstacle, time: number, dt: number) {
+    // Move in world coords by drifting d so screenY() places it naturally.
+    if (ob.strollVy != null) {
+      ob.d += ob.strollVy * dt;
+    }
+    ob.sprite.setAngle(Math.sin(time / 90 + ob.d * 0.01) * 6);
+  }
+
+  /** Replaces the earlier handlePedestrian below with dog-aware variant. */
+
   private handlePedestrian(ob: Obstacle, time: number, dt: number) {
     if (ob.resolved) return;
+    // Fair audio cue: bark once when a runaway dog first appears on screen.
+    if (ob.type === 'dog' && !ob.barked && ob.sprite.y > -50 && ob.sprite.y < GAME_H) {
+      ob.barked = true;
+      sound.dogBark();
+    }
     // Telegraph — stand still at curb, small bob
     if ((ob.pedTelegraph ?? 0) > 0) {
       ob.pedTelegraph! -= dt;
@@ -713,9 +819,11 @@ export class DrivingScene extends Phaser.Scene {
   }
 
   private pedestrianCatastrophe(ob: Obstacle) {
+    const isDog = ob.type === 'dog';
     // Zero score, dramatic FX, end run.
     this.tracker.zeroOut('HIT_PEDESTRIAN');
-    sound.collision();
+    sound.catastrophe();
+    if (isDog) sound.ownerShout();
     try { navigator.vibrate?.([80, 40, 120]); } catch { /* ignore */ }
     this.cameras.main.shake(500, 0.02);
     this.cameras.main.flash(400, 255, 40, 40);
@@ -723,7 +831,8 @@ export class DrivingScene extends Phaser.Scene {
     this.time.timeScale = 0.35;
     this.tweens.add({ targets: ob.sprite, alpha: 0.2, angle: 90, y: ob.sprite.y + 20, duration: 400 });
     // Banner
-    const banner = this.add.text(GAME_W / 2, 340, 'GAME OVER — PEDESTRIAN!', {
+    const bannerLabel = isDog ? 'GAME OVER — HIT A DOG!' : 'GAME OVER — PEDESTRIAN!';
+    const banner = this.add.text(GAME_W / 2, 340, bannerLabel, {
       fontFamily: '"Bebas Neue", sans-serif', fontSize: '38px', color: '#ff5a4e',
       stroke: '#101014', strokeThickness: 8, align: 'center', wordWrap: { width: GAME_W - 30 },
     }).setOrigin(0.5).setDepth(60).setScale(0.2);
@@ -768,11 +877,11 @@ export class DrivingScene extends Phaser.Scene {
     if (dist <= 0) {
       ob.resolved = true;
       if (isLight) {
-        if (ob.state === 'red') this.award('RAN_RED_LIGHT', 'RED LIGHT!');
+        if (ob.state === 'red') { this.award('RAN_RED_LIGHT', 'RED LIGHT!'); sound.yieldBuzz(); }
         else if (ob.state === 'green') { this.award('GREEN_LIGHT', 'GREEN LIGHT'); sound.checkpoint(); }
       } else {
         if (ob.stopped) { this.award('FULL_STOP', 'FULL STOP'); sound.stopDing(); }
-        else this.award('RAN_STOP_SIGN', 'STOP SIGN!');
+        else { this.award('RAN_STOP_SIGN', 'STOP SIGN!'); sound.yieldBuzz(); }
       }
     }
   }
@@ -786,7 +895,7 @@ export class DrivingScene extends Phaser.Scene {
         if (dx > 22 && dx < 40 && this.mph > 10) {
           ob.nearMissed = true;
           this.award('NEAR_MISS', 'CLOSE!');
-          sound.nearMissHorn();
+          sound.nearMissWhoosh();
         }
       }
     }
