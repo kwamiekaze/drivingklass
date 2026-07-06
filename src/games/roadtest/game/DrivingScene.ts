@@ -312,6 +312,13 @@ export class DrivingScene extends Phaser.Scene {
     for (let d = from + 400; d < to; d += pedGap + rnd.between(-100, 200)) {
       this.spawn('pedestrian', d, 1, rnd);
     }
+    // Sidewalk strollers + occasional runaway dog for variety
+    for (let d = from + 200; d < to; d += 700 + rnd.between(-150, 250)) {
+      this.spawnStroller(d, rnd);
+    }
+    for (let d = from + 900; d < to; d += 2200 + rnd.between(-300, 500)) {
+      this.spawnDog(d, rnd);
+    }
     this.endlessSpawnCursor = to;
   }
 
