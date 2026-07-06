@@ -895,7 +895,7 @@ export class DrivingScene extends Phaser.Scene {
         if (dx > 22 && dx < 40 && this.mph > 10) {
           ob.nearMissed = true;
           this.award('NEAR_MISS', 'CLOSE!');
-          sound.nearMissHorn();
+          sound.nearMissWhoosh();
         }
       }
     }
