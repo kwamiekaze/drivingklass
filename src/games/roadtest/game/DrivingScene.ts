@@ -15,6 +15,7 @@ const LANE_X = [120, 240, 360];
 const DIVIDERS = [180, 300];
 const PLAYER_Y = 620;
 const MPH_TO_PX = 5.5;
+const DIFF_INDEX: Record<string, number> = { learner: 0, licensed: 1, instructor: 2, legend: 3 };
 
 type WASD = Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
 
