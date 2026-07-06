@@ -99,6 +99,11 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
       onMessage: (msg) => {
         if (msg.t === 'end') {
           setFinished(true);
+        } else if (msg.t === 'elim') {
+          setEliminatedUids((prev) => {
+            const n = new Set(prev); n.add(msg.uid); return n;
+          });
+          sceneRef.current?.applyNetMessage(msg);
         } else {
           sceneRef.current?.applyNetMessage(msg);
         }
@@ -108,6 +113,12 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
     game.events.on('mp-hud', (data: { stars: number; remotes: RemotePlayer[] }) => {
       setOwnStars(data.stars);
       setRemotes(data.remotes);
+    });
+    game.events.on('mp-elim', (data: { uid: string }) => {
+      if (data.uid === me.user_id) setEliminated(true);
+      setEliminatedUids((prev) => {
+        const n = new Set(prev); n.add(data.uid); return n;
+      });
     });
 
     return () => {
