@@ -819,9 +819,11 @@ export class DrivingScene extends Phaser.Scene {
   }
 
   private pedestrianCatastrophe(ob: Obstacle) {
+    const isDog = ob.type === 'dog';
     // Zero score, dramatic FX, end run.
     this.tracker.zeroOut('HIT_PEDESTRIAN');
-    sound.collision();
+    sound.catastrophe();
+    if (isDog) sound.ownerShout();
     try { navigator.vibrate?.([80, 40, 120]); } catch { /* ignore */ }
     this.cameras.main.shake(500, 0.02);
     this.cameras.main.flash(400, 255, 40, 40);
@@ -829,7 +831,8 @@ export class DrivingScene extends Phaser.Scene {
     this.time.timeScale = 0.35;
     this.tweens.add({ targets: ob.sprite, alpha: 0.2, angle: 90, y: ob.sprite.y + 20, duration: 400 });
     // Banner
-    const banner = this.add.text(GAME_W / 2, 340, 'GAME OVER — PEDESTRIAN!', {
+    const bannerLabel = isDog ? 'GAME OVER — HIT A DOG!' : 'GAME OVER — PEDESTRIAN!';
+    const banner = this.add.text(GAME_W / 2, 340, bannerLabel, {
       fontFamily: '"Bebas Neue", sans-serif', fontSize: '38px', color: '#ff5a4e',
       stroke: '#101014', strokeThickness: 8, align: 'center', wordWrap: { width: GAME_W - 30 },
     }).setOrigin(0.5).setDepth(60).setScale(0.2);
