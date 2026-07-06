@@ -27,13 +27,15 @@ export function FeedbackModal({ onClose }: Props) {
     setBusy(true); setError(null);
     try {
       const { data: userRes } = await supabase.auth.getUser();
-      const { error: insErr } = await supabase.from('game_feedback' as never).insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = supabase as any;
+      const { error: insErr } = await client.from('game_feedback').insert({
         category,
         message: message.trim().slice(0, 2000),
         rating: rating > 0 ? rating : null,
         email: email.trim() || null,
         user_id: userRes.user?.id ?? null,
-      } as never);
+      });
       if (insErr) throw insErr;
       setDone(true);
     } catch (e: any) {
