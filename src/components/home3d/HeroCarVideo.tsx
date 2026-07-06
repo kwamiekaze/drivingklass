@@ -17,30 +17,15 @@ export default function HeroCarVideo() {
   }, []);
 
   return (
-    <div
-      className="absolute"
-      style={{
-        top: "50%",
-        left: "50%",
-        width: "145%",
-        height: "145%",
-        transform: "translate(-50%, -50%)",
-        pointerEvents: "none",
-        zIndex: 0,
-      }}
-    >
+    <div className="absolute inset-0">
       {/* Loading spinner - fades out when video ready */}
       <div
         aria-hidden
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           opacity: ready ? 0 : 1,
           transition: "opacity 500ms ease-out",
-          pointerEvents: "none",
+          zIndex: 1,
         }}
       >
         <div
@@ -55,45 +40,24 @@ export default function HeroCarVideo() {
         />
       </div>
 
-      {/* Circular video mask centered on the car */}
-      <div
+      <video
+        ref={videoRef}
+        src={VIDEO_URL}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        onLoadedData={() => setReady(true)}
+        onCanPlay={() => setReady(true)}
+        className="absolute inset-0 w-full h-full"
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          width: "100%",
-          height: "100%",
-          transform: "translate(-50%, -50%)",
-          borderRadius: "50%",
-          overflow: "hidden",
+          objectFit: "cover",
+          objectPosition: "center",
           opacity: ready ? 1 : 0,
           transition: "opacity 600ms ease-out",
-          boxShadow:
-            "inset 0 0 40px rgba(0,0,0,0.35), 0 0 60px rgba(242,193,78,0.15)",
         }}
-      >
-        <video
-          ref={videoRef}
-          src={VIDEO_URL}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          onLoadedData={() => setReady(true)}
-          onCanPlay={() => setReady(true)}
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: "100%",
-            height: "100%",
-            transform: "translate(-50%, -50%)",
-            objectFit: "cover",
-            objectPosition: "center",
-          }}
-        />
-      </div>
+      />
     </div>
   );
 }

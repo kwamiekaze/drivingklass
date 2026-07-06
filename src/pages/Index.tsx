@@ -9,6 +9,7 @@ import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useTheme } from "@/components/ThemeProvider";
+import HeroCarVideo from "@/components/home3d/HeroCarVideo";
 
 const Index = () => {
   const { resolvedTheme } = useTheme();
@@ -74,8 +75,7 @@ const Index = () => {
             </>
           ) : (
             <>
-              {/* Light mode - warm sunlit driving school background */}
-              <LightModeBackground />
+              <HeroCarVideo />
             </>
           )}
         </div>
