@@ -210,11 +210,20 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         📱 Install app / fix hidden buttons
       </button>
 
+      <button
+        className="dk-btn dk-btn-gold-outline dk-btn-feedback"
+        style={{ width: '100%', marginTop: 4 }}
+        onClick={() => { clickTick(); setShowFeedback(true); }}
+      >
+        ★ Send Feedback
+      </button>
+
       <footer className="fine-print">
         A mini-game by DrivingKlass · Real lessons at drivingklass.com
       </footer>
 
       {showInstall && <InstallTutorial onClose={() => setShowInstall(false)} />}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }
