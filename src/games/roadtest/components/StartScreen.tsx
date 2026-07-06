@@ -200,9 +200,19 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         Book a Driving Lesson
       </a>
 
+      <button
+        className="dk-btn dk-btn-ghost"
+        style={{ width: '100%', marginTop: 4 }}
+        onClick={() => { clickTick(); setShowInstall(true); }}
+      >
+        📱 Install app / fix hidden buttons
+      </button>
+
       <footer className="fine-print">
         A mini-game by DrivingKlass · Real lessons at drivingklass.com
       </footer>
+
+      {showInstall && <InstallTutorial onClose={() => setShowInstall(false)} />}
     </div>
   );
 }
