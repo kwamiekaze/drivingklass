@@ -164,6 +164,14 @@ export function buildResult(
     ? 'Instructor verdict: PASS. Ready for the next lesson!'
     : 'Instructor verdict: NEEDS PRACTICE. Book a lesson and try again!');
 
+  let stars: 0 | 1 | 2 | 3 = 0;
+  if (!tracker.voided && level.starThresholds) {
+    const [s1, s2, s3] = level.starThresholds;
+    if (finalScore >= s3) stars = 3;
+    else if (finalScore >= s2) stars = 2;
+    else if (finalScore >= s1) stars = 1;
+  }
+
   return {
     levelId: level.id,
     levelName: level.name,
@@ -176,5 +184,6 @@ export function buildResult(
     feedback,
     passed,
     distance: extras?.distance,
+    stars,
   };
 }

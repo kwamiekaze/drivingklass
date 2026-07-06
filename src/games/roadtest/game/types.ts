@@ -37,6 +37,31 @@ export function getDifficulty(id: string | null | undefined): DifficultyConfig {
   return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[0];
 }
 
+/** High-level tag describing the driving skill emphasized by a stage.
+ *  Used purely for level-select flavor + report card notes; the underlying
+ *  scene renders the stage using its `features` + tuning knobs. */
+export type StageFlavor =
+  | 'fundamentals'
+  | 'signals'
+  | 'stops'
+  | 'pedestrians'
+  | 'night'
+  | 'roundabout'
+  | 'city'
+  | 'parked'
+  | 'bus'
+  | 'schoolzone'
+  | 'turns'
+  | 'merge'
+  | 'lights'
+  | 'emergency'
+  | 'parking'
+  | 'mastery'
+  | 'storm'
+  | 'exam'
+  | 'endless'
+  | 'daily';
+
 export interface LevelConfig {
   id: string;
   name: string;
@@ -50,7 +75,27 @@ export interface LevelConfig {
   shoulderColor: number;
   nightAlpha?: number;
   endless?: boolean;
+  chapter?: 1 | 2 | 3 | 4 | 5;
+  stageNumber?: number;          // 1..25 for progression display
+  flavor?: StageFlavor;
+  objective?: string;            // human-readable win goal shown pre-stage
+  starThresholds?: [number, number, number]; // score cut-offs for 1★/2★/3★
+  isDaily?: boolean;
 }
+
+export interface ChapterMeta {
+  id: 1 | 2 | 3 | 4 | 5;
+  name: string;
+  subtitle: string;
+}
+
+export const CHAPTERS: ChapterMeta[] = [
+  { id: 1, name: 'Fundamentals',        subtitle: 'Learn the basics of the road' },
+  { id: 2, name: 'Roundabout Academy',  subtitle: 'Yield, choose your lane, take your exit' },
+  { id: 3, name: 'City Pressure',       subtitle: 'Traffic, parked cars, and school zones' },
+  { id: 4, name: 'Split-Second',        subtitle: 'React fast, drive precise' },
+  { id: 5, name: 'Mastery',             subtitle: 'Prove you own the road' },
+];
 
 export interface ScoreEvent {
   label: string;
@@ -72,6 +117,7 @@ export interface LevelResult {
   distance?: number;      // for endless mode
   isNewBest?: boolean;
   previousBest?: number;
+  stars?: 0 | 1 | 2 | 3;  // 1-3 star rating for this run
 }
 
 export const GAME_EVENTS = {

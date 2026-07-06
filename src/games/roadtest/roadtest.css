@@ -1162,3 +1162,120 @@
   60% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); }
 }
+
+/* ============================================================
+   Academy chapter accordion, stage stars, locks, daily card
+   ============================================================ */
+.dk-game .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.dk-game .total-stars-badge { background: linear-gradient(135deg, #f2c14e 0%, #c9971f 100%); color: #101014; font-weight: 700; }
+
+.dk-game .chapter-list { display: flex; flex-direction: column; gap: 10px; }
+
+.dk-game .chapter {
+  border: 1px solid rgba(242, 193, 78, 0.25);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(20, 20, 26, 0.9) 0%, rgba(16, 16, 20, 0.95) 100%);
+  overflow: hidden;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+.dk-game .chapter.open { border-color: rgba(242, 193, 78, 0.55); }
+.dk-game .chapter-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 14px;
+  background: transparent;
+  border: 0;
+  color: var(--white);
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--body);
+}
+.dk-game .chapter-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px; width: 40px;
+  border-radius: 10px;
+  background: #101014;
+  border: 1px solid rgba(242, 193, 78, 0.45);
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+.dk-game .chapter-title strong { display: block; font-size: 16px; letter-spacing: 0.2px; }
+.dk-game .chapter-title small { display: block; opacity: 0.72; font-size: 12px; margin-top: 2px; }
+.dk-game .chapter-progress {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 18px;
+  padding-left: 8px;
+}
+.dk-game .chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 10px 12px 10px;
+  border-top: 1px solid rgba(242, 193, 78, 0.15);
+}
+
+.dk-game .level-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+.dk-game .level-card.locked .level-num { color: rgba(255,255,255,0.55); }
+
+.dk-game .stage-stars {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1;
+}
+.dk-game .stage-stars .star.on { color: var(--gold); text-shadow: 0 0 6px rgba(242,193,78,0.55); }
+.dk-game .stage-stars .star.off { color: rgba(255,255,255,0.18); }
+
+.dk-game .daily-card {
+  border: 1px solid rgba(242, 193, 78, 0.6);
+  background: linear-gradient(135deg, rgba(242,193,78,0.18) 0%, rgba(20,20,26,0.95) 65%);
+  animation: dailyGlow 2.6s ease-in-out infinite;
+}
+@keyframes dailyGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242,193,78,0.35); }
+  50%      { box-shadow: 0 0 22px 2px rgba(242,193,78,0.35); }
+}
+.dk-game .daily-num { background: var(--gold); color: #101014; }
+.dk-game .daily-tag {
+  display: inline-block;
+  background: var(--gold);
+  color: #101014;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.dk-game .report-stars {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 10px 0 6px;
+  font-size: 34px;
+  line-height: 1;
+}
+.dk-game .report-stars .star.on { color: var(--gold); text-shadow: 0 0 12px rgba(242,193,78,0.55); animation: starPop 400ms ease-out both; }
+.dk-game .report-stars .star.on:nth-child(2) { animation-delay: 120ms; }
+.dk-game .report-stars .star.on:nth-child(3) { animation-delay: 240ms; }
+.dk-game .report-stars .star.off { color: rgba(255,255,255,0.14); }
+@keyframes starPop {
+  0%   { transform: scale(0.2); opacity: 0; }
+  70%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}

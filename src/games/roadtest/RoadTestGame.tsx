@@ -10,6 +10,7 @@ import { UsernameModal } from './UsernameModal';
 import { MyStatsModal } from './MyStatsModal';
 import { submitScore } from './submitScore';
 import { sound } from './sound';
+import { saveStars } from './starProgress';
 import { lovable } from '@/integrations/lovable';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
@@ -80,6 +81,7 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
   }, []);
 
   const handleComplete = useCallback((r: LevelResult) => {
+    if (r.stars && r.stars > 0) saveStars(r.levelId, r.stars);
     setBestScores((prev) => ({ ...prev, [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score) }));
     submitScore(r)
       .then(({ isNewBest, previousBest, isGuest, needsUsername }) => {
