@@ -46,6 +46,7 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
