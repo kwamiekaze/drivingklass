@@ -195,7 +195,8 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
         displayName: r.display_name ?? 'Driver',
         color: (r.color as CarColor) ?? 'gold',
         stars: r.stars ?? 0,
-      })).sort((a, b) => b.stars - a.stars);
+        joinedAt: r.joined_at ?? '',
+      })).sort((a, b) => (b.stars - a.stars) || a.joinedAt.localeCompare(b.joinedAt));
       onFinish(standings);
     })();
     return () => { cancelled = true; };
