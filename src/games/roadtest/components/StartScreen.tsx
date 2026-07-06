@@ -5,6 +5,7 @@ import { LEVELS } from '../game/levels';
 import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
 import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
+import { FeedbackModal } from './FeedbackModal';
 
 interface Props {
   bestScores: Record<string, number>;
@@ -45,6 +46,7 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -208,11 +210,20 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         📱 Install app / fix hidden buttons
       </button>
 
+      <button
+        className="dk-btn dk-btn-gold-outline dk-btn-feedback"
+        style={{ width: '100%', marginTop: 4 }}
+        onClick={() => { clickTick(); setShowFeedback(true); }}
+      >
+        ★ Send Feedback
+      </button>
+
       <footer className="fine-print">
         A mini-game by DrivingKlass · Real lessons at drivingklass.com
       </footer>
 
       {showInstall && <InstallTutorial onClose={() => setShowInstall(false)} />}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }

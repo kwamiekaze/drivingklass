@@ -338,7 +338,30 @@ export function makeTextures(scene: Phaser.Scene) {
     }
   });
 
+  // --- Pedestrian (stylized gold-and-black walker, top-down) --------------
+  make('pedestrian', 20, 28, () => {
+    // shadow
+    g.fillStyle(0x000000, 0.35);
+    g.fillEllipse(10, 24, 14, 5);
+    // body — gold jacket
+    g.fillStyle(0xf2c14e);
+    g.fillRoundedRect(4, 10, 12, 12, 4);
+    // black pants
+    g.fillStyle(0x101014);
+    g.fillRect(5, 20, 4, 5);
+    g.fillRect(11, 20, 4, 5);
+    // head — dark skin base with warm rim
+    g.fillStyle(0x1b1b22);
+    g.fillCircle(10, 6, 5);
+    g.fillStyle(0xc9971f, 0.75);
+    g.fillCircle(10, 6, 3);
+    // gold hair/hat highlight
+    g.fillStyle(0xffe89a);
+    g.fillRect(6, 2, 8, 2);
+  });
+
   g.destroy();
 }
+
 
 

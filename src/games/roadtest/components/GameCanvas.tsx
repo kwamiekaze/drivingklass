@@ -5,6 +5,7 @@ import { GAME_EVENTS, type Difficulty, type LevelResult } from '../game/types';
 import { resetTouchControls } from '../game/controls';
 import { sound } from '../sound';
 import { TouchControls } from './TouchControls';
+import { FeedbackModal } from './FeedbackModal';
 
 interface Props {
   levelId: string;
@@ -25,6 +26,7 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
   const [paused, setPaused] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Show a one-time "sound on" toast on the very first run per device.
   useEffect(() => {
@@ -151,6 +153,13 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
           ← Quit lesson
         </button>
         <span className="game-topbar-hint">↑ gas · ↓ brake · ←→ steer</span>
+        <button
+          className="dk-btn dk-btn-gold-outline dk-btn-small"
+          onClick={() => setShowFeedback(true)}
+          aria-label="Send feedback"
+        >
+          ★ Feedback
+        </button>
       </div>
       <div ref={hostRef} className="game-host" />
       <TouchControls />
@@ -201,6 +210,8 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
           </div>
         </div>
       )}
+
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }

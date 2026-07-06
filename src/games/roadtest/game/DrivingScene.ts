@@ -15,6 +15,7 @@ const LANE_X = [120, 240, 360];
 const DIVIDERS = [180, 300];
 const PLAYER_Y = 620;
 const MPH_TO_PX = 5.5;
+const DIFF_INDEX: Record<string, number> = { learner: 0, licensed: 1, instructor: 2, legend: 3 };
 
 type WASD = Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
 
@@ -32,6 +33,12 @@ interface Obstacle {
   phase?: number;
   state?: 'red' | 'yellow' | 'green';
   _ramped?: boolean;
+  // pedestrian fields
+  pedX?: number;         // current world x
+  pedVx?: number;        // px/sec across road
+  pedTelegraph?: number; // seconds remaining pausing before crossing
+  pedCrossed?: boolean;  // fully across road
+  pedSafeAwarded?: boolean;
 }
 
 
@@ -234,6 +241,13 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
+    // Pedestrians — frequency scales with difficulty tier
+    const pedGap = Math.max(600, 1800 - 300 * DIFF_INDEX[this.difficulty.id]);
+    for (let d = 1000; d < totalLen - 500; d += pedGap + rnd.between(-200, 300)) {
+      if (!isFree(d, 200)) continue;
+      this.spawn('pedestrian', d, 1, rnd);
+    }
+
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
   }
 
@@ -267,6 +281,11 @@ export class DrivingScene extends Phaser.Scene {
       for (let d = from + 200; d < to; d += 320 + rnd.between(-40, 80)) {
         this.spawn('star', d, rnd.between(0, 2));
       }
+    }
+    // Endless pedestrians — grow more frequent as the traffic multiplier grows.
+    const pedGap = Math.max(500, 1500 / this.endlessTrafficMul);
+    for (let d = from + 400; d < to; d += pedGap + rnd.between(-100, 200)) {
+      this.spawn('pedestrian', d, 1, rnd);
     }
     this.endlessSpawnCursor = to;
   }
@@ -314,11 +333,28 @@ export class DrivingScene extends Phaser.Scene {
       case 'star':
         sprite = this.add.image(LANE_X[lane], -200, 'gold-star').setDepth(6);
         break;
+      case 'pedestrian': {
+        // Spawn on left or right sidewalk; walk across when telegraph elapses.
+        const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
+        const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
+        sprite = this.add.image(startX, -200, 'pedestrian').setDepth(7).setDisplaySize(22, 32);
+        // Speed scales lightly with difficulty
+        const baseVx = 55 * this.difficulty.speedMul;
+        mph = fromLeft ? baseVx : -baseVx; // reuse mph field for horizontal velocity
+        break;
+      }
     }
     if (!sprite) return;
     sprite.setVisible(false);
     line?.setVisible(false);
-    this.obstacles.push({ type, d, lane, sprite, line, mph, phase, state });
+    const ob: Obstacle = { type, d, lane, sprite, line, mph, phase, state };
+    if (type === 'pedestrian') {
+      ob.pedX = sprite.x;
+      ob.pedVx = mph;
+      // Telegraph shrinks at higher difficulty (fair but riskier).
+      ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * DIFF_INDEX[this.difficulty.id]);
+    }
+    this.obstacles.push(ob);
   }
 
   // ---------------------------------------------------------------- HUD ---
@@ -615,6 +651,9 @@ export class DrivingScene extends Phaser.Scene {
         case 'star':
           this.handleStar(ob);
           break;
+        case 'pedestrian':
+          this.handlePedestrian(ob, time, dt);
+          break;
         case 'cone':
         case 'parkedCar':
         case 'traffic':
@@ -623,6 +662,77 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
   }
+
+  private handlePedestrian(ob: Obstacle, time: number, dt: number) {
+    if (ob.resolved) return;
+    // Telegraph — stand still at curb, small bob
+    if ((ob.pedTelegraph ?? 0) > 0) {
+      ob.pedTelegraph! -= dt;
+      // subtle bob so player notices
+      ob.sprite.setScale(1 + Math.sin(time / 120) * 0.05);
+      return;
+    }
+    // Cross the road
+    if (ob.pedX != null && ob.pedVx != null && !ob.pedCrossed) {
+      ob.pedX += ob.pedVx * dt;
+      ob.sprite.x = ob.pedX;
+      // walking wobble
+      ob.sprite.setAngle(Math.sin(time / 80) * 8);
+      const past = (ob.pedVx > 0 && ob.pedX > ROAD_X + ROAD_W + 4) ||
+                   (ob.pedVx < 0 && ob.pedX < ROAD_X - 4);
+      if (past) {
+        ob.pedCrossed = true;
+        ob.resolved = true;
+        // Safe-pass bonus if player already went past this ped without hitting.
+        if (!ob.hit && !ob.pedSafeAwarded && this.traveled > ob.d + 20) {
+          ob.pedSafeAwarded = true;
+          this.award('PED_SAFE_PASS', 'YIELDED');
+          sound.checkpoint();
+          this.sparks(ob.sprite.x, ob.sprite.y);
+        }
+        ob.sprite.setVisible(false);
+        return;
+      }
+    }
+    // Collision — player bbox overlap => catastrophic
+    if (!ob.hit && time > this.invulnUntil) {
+      const dx = Math.abs(this.player.x - ob.sprite.x);
+      const dy = Math.abs(this.player.y - ob.sprite.y);
+      if (dx < 22 && dy < 44) {
+        ob.hit = true;
+        this.pedestrianCatastrophe(ob);
+        return;
+      }
+    }
+    // Safe pass — passed while crossing but didn't hit
+    if (!ob.hit && !ob.pedSafeAwarded && this.traveled > ob.d + 30 && (ob.pedTelegraph ?? 0) <= 0) {
+      ob.pedSafeAwarded = true;
+      this.award('PED_SAFE_PASS', 'YIELDED');
+      sound.checkpoint();
+    }
+  }
+
+  private pedestrianCatastrophe(ob: Obstacle) {
+    // Zero score, dramatic FX, end run.
+    this.tracker.zeroOut('HIT_PEDESTRIAN');
+    sound.collision();
+    try { navigator.vibrate?.([80, 40, 120]); } catch { /* ignore */ }
+    this.cameras.main.shake(500, 0.02);
+    this.cameras.main.flash(400, 255, 40, 40);
+    // Slow-mo
+    this.time.timeScale = 0.35;
+    this.tweens.add({ targets: ob.sprite, alpha: 0.2, angle: 90, y: ob.sprite.y + 20, duration: 400 });
+    // Banner
+    const banner = this.add.text(GAME_W / 2, 340, 'GAME OVER — PEDESTRIAN!', {
+      fontFamily: '"Bebas Neue", sans-serif', fontSize: '38px', color: '#ff5a4e',
+      stroke: '#101014', strokeThickness: 8, align: 'center', wordWrap: { width: GAME_W - 30 },
+    }).setOrigin(0.5).setDepth(60).setScale(0.2);
+    this.tweens.add({ targets: banner, scale: 1, duration: 350, ease: 'Back.easeOut' });
+    this.mph = 0;
+    // Restore time and finish run
+    window.setTimeout(() => { this.time.timeScale = 1; this.finish(); }, 1200);
+  }
+
 
   private handleStar(ob: Obstacle) {
     if (ob.resolved) return;

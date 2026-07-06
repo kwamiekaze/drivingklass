@@ -26,6 +26,17 @@ const MPH_TO_PX = 3.2;
 const MAX_MPH = 60;
 const SPEEDING_MPH = 45;
 
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export interface MpSceneInit {
   net: MatchNet;
   uid: string;
@@ -63,6 +74,10 @@ export class MultiplayerScene extends Phaser.Scene {
   private stars = 0;
   private invulnUntil = 0;
   private lastSpeedingAt = 0;
+  private eliminated = false;
+
+  // Pedestrians (deterministic from seed; walk fixed patrols)
+  private peds: { sprite: Phaser.GameObjects.Image; x: number; y: number; vx: number; vy: number; ax: number; ay: number; bx: number; by: number }[] = [];
 
   // Remotes
   private remotes = new Map<string, {
@@ -154,6 +169,31 @@ export class MultiplayerScene extends Phaser.Scene {
       this.stars_.set(sp.id, { id: sp.id, sprite: spr, active: true });
     }
 
+    // Pedestrians — seeded deterministic positions at road intersections.
+    // They patrol a short segment across the road, back and forth.
+    const rng = mulberry32(this.cfg.seed ^ 0x9e3779b1);
+    const pedCount = 24;
+    for (let i = 0; i < pedCount; i++) {
+      const bx = Math.floor(rng() * BLOCKS);
+      const by = Math.floor(rng() * BLOCKS);
+      const horizontal = rng() > 0.5;
+      const cx = bx * BLOCK_SIZE + ROAD_W / 2;
+      const cy = by * BLOCK_SIZE + ROAD_W / 2;
+      const halfSpan = 40 + rng() * 30;
+      const ax = horizontal ? cx - halfSpan : cx;
+      const ay = horizontal ? cy : cy - halfSpan;
+      const bx2 = horizontal ? cx + halfSpan : cx;
+      const by2 = horizontal ? cy : cy + halfSpan;
+      const speed = 22 + rng() * 22;
+      const dirx = bx2 - ax, diry = by2 - ay;
+      const dl = Math.hypot(dirx, diry) || 1;
+      const spr = this.add.image(ax, ay, 'pedestrian').setDepth(4).setDisplaySize(16, 22);
+      this.peds.push({
+        sprite: spr, x: ax, y: ay, vx: (dirx / dl) * speed, vy: (diry / dl) * speed,
+        ax, ay, bx: bx2, by: by2,
+      });
+    }
+
     // Local + remote cars
     const spawnList = this.world.spawnPoints;
     this.cfg.players.forEach((p, i) => {
@@ -227,6 +267,10 @@ export class MultiplayerScene extends Phaser.Scene {
     if (msg.t === 'state') this.applyRemoteState(msg);
     else if (msg.t === 'star_taken') this.applyStarTaken(msg);
     else if (msg.t === 'scatter') this.applyScatter(msg);
+    else if (msg.t === 'elim') {
+      const r = this.remotes.get(msg.uid);
+      if (r) { r.sprite.setAlpha(0.35).setTint(0x666666); r.data.stars = 0; }
+    }
   }
 
   private applyRemoteState(m: StateMsg) {
@@ -265,16 +309,74 @@ export class MultiplayerScene extends Phaser.Scene {
     const dt = Math.min(deltaMs, 50) / 1000;
     if (Date.now() < this.cfg.startAt) return; // frozen during countdown
 
-    this.driveLocal(dt);
-    this.checkStarPickup();
-    this.checkScatterPickup();
-    this.checkObstacleCollisions(time);
-    this.checkRemoteCollisions(time);
-    this.checkSpeeding(time);
+    this.updatePedestrians(dt);
+    if (!this.eliminated) {
+      this.driveLocal(dt);
+      this.checkStarPickup();
+      this.checkScatterPickup();
+      this.checkObstacleCollisions(time);
+      this.checkRemoteCollisions(time);
+      this.checkPedCollision(time);
+      this.checkSpeeding(time);
+    }
     this.interpolateRemotes(dt);
     this.updateStarRespawns();
     this.updateHudBroadcast(time);
     sound.updateEngine(Math.min(1, this.mph / MAX_MPH));
+  }
+
+  private updatePedestrians(dt: number) {
+    for (const p of this.peds) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      // Bounce between endpoints
+      const dx1 = p.x - p.ax, dy1 = p.y - p.ay;
+      const dx2 = p.x - p.bx, dy2 = p.y - p.by;
+      const past = (p.vx > 0 && (p.x > Math.max(p.ax, p.bx))) ||
+                   (p.vx < 0 && (p.x < Math.min(p.ax, p.bx))) ||
+                   (p.vy > 0 && (p.y > Math.max(p.ay, p.by))) ||
+                   (p.vy < 0 && (p.y < Math.min(p.ay, p.by)));
+      if (past) { p.vx = -p.vx; p.vy = -p.vy; }
+      p.sprite.setPosition(p.x, p.y);
+      // subtle waddle
+      p.sprite.setAngle(Math.sin((dx1 + dy1) * 0.2) * 6);
+      void dx2; void dy2;
+    }
+  }
+
+  private checkPedCollision(time: number) {
+    if (time < this.invulnUntil) return;
+    for (const p of this.peds) {
+      const dx = this.px - p.x, dy = this.py - p.y;
+      if (dx * dx + dy * dy < 18 * 18 && this.mph > 3) {
+        this.eliminatedByPedestrian();
+        return;
+      }
+    }
+  }
+
+  private eliminatedByPedestrian() {
+    if (this.eliminated) return;
+    this.eliminated = true;
+    this.stars = 0;
+    this.mph = 0;
+    this.cameras.main.shake(500, 0.02);
+    this.cameras.main.flash(400, 255, 40, 40);
+    sound.collision();
+    try { navigator.vibrate?.([80, 40, 120]); } catch { /* ignore */ }
+    const t = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'ELIMINATED\nHIT A PEDESTRIAN', {
+      fontFamily: '"Bebas Neue", sans-serif', fontSize: '44px', color: '#ff5a4e',
+      stroke: '#101014', strokeThickness: 10, align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    this.tweens.add({ targets: t, alpha: 0.7, yoyo: true, repeat: -1, duration: 700 });
+    this.car.setAlpha(0.35).setTint(0x666666);
+    this.game.events.emit('mp-elim', { uid: this.cfg.uid });
+    this.cfg.net.send({ t: 'elim', uid: this.cfg.uid });
+    // Persist zero stars immediately
+    this.cfg.net.send({
+      t: 'state', uid: this.cfg.uid, x: Math.round(this.px), y: Math.round(this.py),
+      a: Math.round(this.angle), s: 0, stars: 0, ts: Date.now(),
+    });
   }
 
   private driveLocal(dt: number) {

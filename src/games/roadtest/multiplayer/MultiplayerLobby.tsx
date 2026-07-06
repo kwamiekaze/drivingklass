@@ -41,9 +41,17 @@ async function getMe() {
   return { id: user.id, name };
 }
 
+const DURATION_PRESETS: { label: string; seconds: number }[] = [
+  { label: '5 min · Quick', seconds: 300 },
+  { label: '10 min', seconds: 600 },
+  { label: '15 min', seconds: 900 },
+  { label: '30 min', seconds: 1800 },
+  { label: '60 min · Marathon', seconds: 3600 },
+];
+
 export function MultiplayerLobby({ onEnterMatch, onBack }: Props) {
   const [mode, setMode] = useState<'menu' | 'host' | 'join' | 'waiting'>('menu');
-  const [duration, setDuration] = useState<number>(180);
+  const [duration, setDuration] = useState<number>(300);
   const [codeInput, setCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -183,30 +191,28 @@ export function MultiplayerLobby({ onEnterMatch, onBack }: Props) {
     return (
       <div className="screen mp-lobby">
         <h2 className="mp-title">Host Match</h2>
-        <label className="mp-label">Round length · {formatDuration(duration)}</label>
-        <div className="mp-slider-row">
-          <input
-            type="range"
-            min={60}
-            max={600}
-            step={30}
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value, 10))}
-            className="mp-slider"
-            aria-label="Round length in seconds"
-          />
-          <div className="mp-slider-ticks">
-            <span>1m</span><span>5m</span><span>10m</span>
-          </div>
+        <label className="mp-label">Round length</label>
+        <div className="mp-preset-row">
+          {DURATION_PRESETS.map((p) => (
+            <button
+              key={p.seconds}
+              type="button"
+              className={`mp-preset-btn${duration === p.seconds ? ' active' : ''}${p.seconds === 300 ? ' quick' : ''}`}
+              onClick={() => { sound.uiTick(); setDuration(p.seconds); }}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
         {error && <p className="mp-error">{error}</p>}
         <div className="btn-row" style={{ flexDirection: 'column' }}>
-          <button className="dk-btn dk-btn-gold" disabled={busy} onClick={hostCreate}>{busy ? 'Creating…' : 'Create Room'}</button>
+          <button className="dk-btn dk-btn-gold" disabled={busy} onClick={hostCreate}>{busy ? 'Creating…' : `Create Room · ${formatDuration(duration)}`}</button>
           <button className="dk-btn dk-btn-ghost" onClick={() => setMode('menu')}>← Back</button>
         </div>
       </div>
     );
   }
+
 
   if (mode === 'join') {
     return (

@@ -5,6 +5,7 @@ import { TouchControls } from '../components/TouchControls';
 import { resetTouchControls } from '../game/controls';
 import { MultiplayerScene, MP_VIEW_W, MP_VIEW_H } from './MultiplayerScene';
 import { MatchNet } from './net';
+import { sound } from '../sound';
 import { CAR_COLORS, type CarColor, type MatchRow, type PlayerRow, type RemotePlayer } from './types';
 
 interface Props {
@@ -24,6 +25,9 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
   const [remaining, setRemaining] = useState(match.duration_s);
   const [finished, setFinished] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [eliminated, setEliminated] = useState(false);
+  const [eliminatedUids, setEliminatedUids] = useState<Set<string>>(() => new Set());
+  const lastTickSecRef = useRef<number>(match.duration_s);
 
   // Multiplayer: never pause the world (other players keep driving). Show a dim
   // "reconnecting view" if the tab has been hidden for >2s so the player knows why.
@@ -95,6 +99,11 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
       onMessage: (msg) => {
         if (msg.t === 'end') {
           setFinished(true);
+        } else if (msg.t === 'elim') {
+          setEliminatedUids((prev) => {
+            const n = new Set(prev); n.add(msg.uid); return n;
+          });
+          sceneRef.current?.applyNetMessage(msg);
         } else {
           sceneRef.current?.applyNetMessage(msg);
         }
@@ -104,6 +113,12 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
     game.events.on('mp-hud', (data: { stars: number; remotes: RemotePlayer[] }) => {
       setOwnStars(data.stars);
       setRemotes(data.remotes);
+    });
+    game.events.on('mp-elim', (data: { uid: string }) => {
+      if (data.uid === me.user_id) setEliminated(true);
+      setEliminatedUids((prev) => {
+        const n = new Set(prev); n.add(data.uid); return n;
+      });
     });
 
     return () => {
@@ -123,6 +138,11 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
       const elapsed = Math.max(0, Math.floor((Date.now() - startAt) / 1000));
       const left = Math.max(0, match.duration_s - elapsed);
       setRemaining(left);
+      // Final-30s ticking chime once per second
+      if (left > 0 && left <= 30 && left !== lastTickSecRef.current) {
+        lastTickSecRef.current = left;
+        sound.uiTick();
+      }
       if (left <= 0) {
         clearInterval(iv);
         setFinished(true);
@@ -130,6 +150,20 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
     }, 250);
     return () => clearInterval(iv);
   }, [match.duration_s, startAt]);
+
+  const scoreboard = useMemo(() => {
+    const rows = [
+      { uid: me.user_id, displayName: me.display_name ?? 'You', color: me.color as CarColor, stars: ownStars, mine: true, stale: false, elim: eliminatedUids.has(me.user_id) || eliminated },
+      ...remotes.map((r) => ({
+        uid: r.uid, displayName: r.displayName, color: r.color, stars: r.stars, mine: false,
+        stale: Date.now() - r.lastAt > 5000, elim: eliminatedUids.has(r.uid),
+      })),
+    ].sort((a, b) => b.stars - a.stars);
+    return rows;
+  }, [ownStars, remotes, me, eliminated, eliminatedUids]);
+
+  const finalPush = remaining > 0 && remaining <= 30;
+
 
   // On finish: persist own score and broadcast end, then collect and report standings
   useEffect(() => {
@@ -161,22 +195,13 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
         displayName: r.display_name ?? 'Driver',
         color: (r.color as CarColor) ?? 'gold',
         stars: r.stars ?? 0,
-      })).sort((a, b) => b.stars - a.stars);
+        joinedAt: r.joined_at ?? '',
+      })).sort((a, b) => (b.stars - a.stars) || a.joinedAt.localeCompare(b.joinedAt));
       onFinish(standings);
     })();
     return () => { cancelled = true; };
   }, [finished, match.id, match.host_id, me.user_id, ownStars, onFinish]);
 
-  const scoreboard = useMemo(() => {
-    const rows = [
-      { uid: me.user_id, displayName: me.display_name ?? 'You', color: me.color as CarColor, stars: ownStars, mine: true, stale: false },
-      ...remotes.map((r) => ({
-        uid: r.uid, displayName: r.displayName, color: r.color, stars: r.stars, mine: false,
-        stale: Date.now() - r.lastAt > 5000,
-      })),
-    ].sort((a, b) => b.stars - a.stars);
-    return rows;
-  }, [ownStars, remotes, me]);
 
   const mm = String(Math.floor(remaining / 60)).padStart(1, '0');
   const ss = String(remaining % 60).padStart(2, '0');
@@ -184,21 +209,28 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
   return (
     <div className="mp-wrap">
       <div className="mp-hud-top">
-        <div className="mp-timer">{mm}:{ss}</div>
+        <div className={`mp-timer${finalPush ? ' final-push' : ''}`}>{mm}:{ss}</div>
         <div className="mp-own-stars">★ {ownStars}</div>
       </div>
       <ul className="mp-scoreboard">
         {scoreboard.map((r) => (
-          <li key={r.uid} className={[r.mine ? 'mine' : '', r.stale ? 'stale' : ''].join(' ').trim()}>
+          <li key={r.uid} className={[r.mine ? 'mine' : '', r.stale ? 'stale' : '', r.elim ? 'elim' : ''].join(' ').trim()}>
             <span className={`mp-color-chip mp-c-${r.color}`} />
-            <span className="mp-sb-name">{r.displayName}{r.mine ? ' (you)' : ''}</span>
+            <span className="mp-sb-name">{r.displayName}{r.mine ? ' (you)' : ''}{r.elim ? ' · OUT' : ''}</span>
             <span className="mp-sb-stars">★ {r.stars}</span>
           </li>
         ))}
       </ul>
       <div ref={hostRef} className="game-host mp-host" />
       {reconnecting && <div className="mp-reconnect-dim">RECONNECTING VIEW…</div>}
+      {eliminated && (
+        <div className="mp-elim-banner">
+          <strong>ELIMINATED</strong>
+          <span>You hit a pedestrian. Spectating until the timer runs out.</span>
+        </div>
+      )}
       <TouchControls />
     </div>
   );
 }
+

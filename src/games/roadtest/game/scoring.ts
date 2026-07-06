@@ -8,6 +8,7 @@ export const POINTS = {
   FINISH_BONUS: 200,
   STAR: 25,
   NEAR_MISS: 15,
+  PED_SAFE_PASS: 40,
 
   HIT_CONE: -50,
   LANE_CROSS: -30,
@@ -15,7 +16,8 @@ export const POINTS = {
   RAN_STOP_SIGN: -100,
   RAN_RED_LIGHT: -120,
   HIT_PARKED_CAR: -100,
-  HIT_TRAFFIC: -150
+  HIT_TRAFFIC: -150,
+  HIT_PEDESTRIAN: 0, // catastrophic — score is zeroed via tracker.zeroOut()
 } as const;
 
 const LABELS: Record<string, string> = {
@@ -26,19 +28,21 @@ const LABELS: Record<string, string> = {
   FINISH_BONUS: 'Completed the course',
   STAR: 'Gold star collected',
   NEAR_MISS: 'Close call — nice reflexes',
+  PED_SAFE_PASS: 'Yielded to a pedestrian',
   HIT_CONE: 'Hit a cone',
   LANE_CROSS: 'Drifted over lane line',
   SPEEDING: 'Exceeded speed limit',
   RAN_STOP_SIGN: 'Ran a stop sign',
   RAN_RED_LIGHT: 'Ran a red light',
   HIT_PARKED_CAR: 'Hit a parked car',
-  HIT_TRAFFIC: 'Collided with traffic'
+  HIT_TRAFFIC: 'Collided with traffic',
+  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run void',
 };
 
 export type PointKey = keyof typeof POINTS;
 
 /** Positive events that build the combo meter. */
-const POSITIVE_COMBO: PointKey[] = ['STAR', 'CHECKPOINT', 'FULL_STOP', 'GREEN_LIGHT', 'SMOOTH_DRIVING', 'NEAR_MISS'];
+const POSITIVE_COMBO: PointKey[] = ['STAR', 'CHECKPOINT', 'FULL_STOP', 'GREEN_LIGHT', 'SMOOTH_DRIVING', 'NEAR_MISS', 'PED_SAFE_PASS'];
 
 export class ScoreTracker {
   private counts = new Map<PointKey, number>();
@@ -47,6 +51,7 @@ export class ScoreTracker {
   combo = 1;
   starsCollected = 0;
   maxCombo = 1;
+  voided = false; // set true if a run-ending event (pedestrian hit) occurred
 
   /** Adds an event; returns actual points awarded (after combo multiplier). */
   add(key: PointKey): number {
@@ -65,6 +70,15 @@ export class ScoreTracker {
     if (key === 'STAR') this.starsCollected++;
     this.score = Math.max(0, this.score + pts);
     return pts;
+  }
+
+  /** Catastrophic event — zero the score and mark the run void. */
+  zeroOut(key: PointKey = 'HIT_PEDESTRIAN') {
+    this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
+    this.score = 0;
+    this.extras = 0;
+    this.combo = 1;
+    this.voided = true;
   }
 
   addDistanceBonus(pts: number) {
@@ -105,9 +119,17 @@ export function buildResult(
   extras?: { distance?: number }
 ): LevelResult {
   const rawScore = tracker.score;
-  const finalScore = Math.round(rawScore * difficulty.scoreMul);
-  const { grade, passed } = gradeFor(finalScore, level.parScore);
+  const finalScore = tracker.voided ? 0 : Math.round(rawScore * difficulty.scoreMul);
+  const { grade, passed } = tracker.voided
+    ? { grade: 'F', passed: false }
+    : gradeFor(finalScore, level.parScore);
   const feedback: string[] = [];
+
+  if (tracker.voided) {
+    feedback.push('🛑 You struck a pedestrian. In a real road test that is an instant fail.');
+    feedback.push('Slow down, scan the sidewalks, and always yield at crossings.');
+  }
+
 
   const faults =
     tracker.countOf('HIT_CONE') +
