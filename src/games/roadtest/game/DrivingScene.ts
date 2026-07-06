@@ -251,11 +251,26 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
-    // Pedestrians — frequency scales with difficulty tier
-    const pedGap = Math.max(600, 1800 - 300 * DIFF_INDEX[this.difficulty.id]);
+    // Pedestrians — frequency scales with difficulty tier + optional level mul
+    const pedMul = this.level.pedDensityMul ?? 1;
+    const pedGap = Math.max(400, (1800 - 300 * DIFF_INDEX[this.difficulty.id]) / pedMul);
     for (let d = 1000; d < totalLen - 500; d += pedGap + rnd.between(-200, 300)) {
       if (!isFree(d, 200)) continue;
       this.spawn('pedestrian', d, 1, rnd);
+    }
+    // Sidewalk strollers (always some, extra with pedDensityMul)
+    const strollGap = Math.max(320, 900 / pedMul);
+    for (let d = 600; d < totalLen - 300; d += strollGap + rnd.between(-120, 200)) {
+      this.spawnStroller(d, rnd);
+    }
+    // Dogs — some leashed strolling with an owner, some runaway crossing
+    const dogMul = this.level.dogDensityMul ?? 1;
+    if (dogMul > 0) {
+      const dogGap = Math.max(700, 2400 / dogMul);
+      for (let d = 1500; d < totalLen - 600; d += dogGap + rnd.between(-200, 400)) {
+        if (!isFree(d, 180)) continue;
+        this.spawnDog(d, rnd);
+      }
     }
 
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
