@@ -268,6 +268,72 @@ export const sound = {
     try { navigator.vibrate?.(60); } catch { /* ignore */ }
   },
   nearMissHorn() { playTone(340, 0.16, 'square', 0.12); },
+  nearMissWhoosh() {
+    if (!isRunning() || !masterGain) return;
+    try {
+      const t = ctx!.currentTime;
+      const dur = 0.22;
+      const buf = ctx!.createBuffer(1, Math.floor(ctx!.sampleRate * dur), ctx!.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ctx!.createBufferSource();
+      src.buffer = buf;
+      const bp = ctx!.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 4;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.09, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(bp).connect(g).connect(masterGain);
+      src.start(t); src.stop(t + dur + 0.02);
+    } catch { /* ignore */ }
+  },
+  dogBark() {
+    // Two short high yips
+    playTone(720, 0.06, 'square', 0.10);
+    setTimeout(() => playTone(880, 0.06, 'square', 0.10), 90);
+  },
+  ownerShout() {
+    // Falling shout blip
+    if (!isRunning() || !masterGain) return;
+    try {
+      const t = ctx!.currentTime;
+      const o = ctx!.createOscillator();
+      const g = ctx!.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(520, t);
+      o.frequency.exponentialRampToValueAtTime(220, t + 0.22);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.10, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+      o.connect(g).connect(masterGain);
+      o.start(t); o.stop(t + 0.26);
+    } catch { /* ignore */ }
+  },
+  yieldBuzz() {
+    playTone(180, 0.09, 'sawtooth', 0.12);
+    setTimeout(() => playTone(150, 0.09, 'sawtooth', 0.12), 90);
+  },
+  catastrophe() {
+    // Loud but not painful — layered thud + descending sine + noise burst.
+    playThud();
+    if (!isRunning() || !masterGain) return;
+    try {
+      const t = ctx!.currentTime;
+      const o = ctx!.createOscillator();
+      const g = ctx!.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(220, t);
+      o.frequency.exponentialRampToValueAtTime(55, t + 0.6);
+      g.gain.setValueAtTime(0.30, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+      o.connect(g).connect(masterGain);
+      o.start(t); o.stop(t + 0.7);
+    } catch { /* ignore */ }
+  },
+  threeStarJingle() {
+    playArp([784, 988, 1319, 1568, 1976], 0.09, 'triangle', 0.18);
+  },
   fanfare() { playArp([523, 659, 784, 1047, 1319], 0.11, 'triangle', 0.2); },
   uiTick() { playTone(880, 0.04, 'square', 0.06); },
 
