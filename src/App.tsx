@@ -63,6 +63,10 @@ import { ProtectedRoute } from "./components/portal/ProtectedRoute";
 import { GameControllerFab } from "./components/GameControllerFab";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
+import GuardianTrackerPage from "./pages/GuardianTrackerPage";
+import InstructorLiveTracker from "./pages/portal/InstructorLiveTracker";
+import AdminLiveTracker from "./pages/portal/AdminLiveTracker";
+import StudentLiveTracker from "./pages/portal/StudentLiveTracker";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -81,6 +85,7 @@ const App = () => (
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/play" element={<RoadTestGame publicMode />} />
+            <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
 
 
 
@@ -124,6 +129,9 @@ const App = () => (
                       {/* Student Portal */}
                       <Route path="/student" element={<StudentDashboard />} />
                       <Route path="/student/proposals" element={<StudentProposals />} />
+                      <Route path="/student/tracker" element={<StudentLiveTracker />} />
+                      <Route path="/instructor/tracker" element={<InstructorLiveTracker />} />
+                      <Route path="/admin/tracker" element={<AdminLiveTracker />} />
                       
                       {/* Instructor Portal */}
                       <Route path="/instructor" element={<InstructorDashboard />} />

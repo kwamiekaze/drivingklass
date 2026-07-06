@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -257,6 +257,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/admin/emails', label: 'Emails', icon: Mail },
         { href: '/admin/qa', label: 'QA', icon: Shield },
         { href: '/admin/practice-test', label: 'Practice Test', icon: BookOpen },
+        { href: '/admin/tracker', label: 'Live Tracker', icon: RadioTower },
         { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
       );
       break;
@@ -282,6 +283,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/instructor/emails', label: 'Emails', icon: Mail },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/instructor/practice-test', label: 'Practice Test', icon: BookOpen },
+        { href: '/instructor/tracker', label: 'Live Tracker', icon: RadioTower },
         { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
       );
       break;
@@ -291,6 +293,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/student', label: t('nav.dashboard'), icon: Home },
         { href: '/profile', label: t('nav.profile'), icon: User },
         { href: '/student/proposals', label: t('nav.proposals'), icon: Send },
+        { href: '/student/tracker', label: 'Live Tracker', icon: RadioTower },
         { href: '/simulator', label: 'Play', icon: Gamepad2 },
       );
       break;

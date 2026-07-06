@@ -2033,6 +2033,119 @@ export type Database = {
           },
         ]
       }
+      session_location_updates: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          session_id: string
+          tracking_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          session_id: string
+          tracking_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          session_id?: string
+          tracking_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_location_updates_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_location_updates_tracking_id_fkey"
+            columns: ["tracking_id"]
+            isOneToOne: false
+            referencedRelation: "session_tracking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_tracking: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          guardian_email: string
+          id: string
+          instructor_id: string
+          is_active: boolean
+          last_accuracy: number | null
+          last_email_sent_at: string | null
+          last_latitude: number | null
+          last_location_at: string | null
+          last_longitude: number | null
+          session_id: string
+          started_at: string
+          student_id: string
+          tracking_token: string
+          update_interval_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          guardian_email: string
+          id?: string
+          instructor_id: string
+          is_active?: boolean
+          last_accuracy?: number | null
+          last_email_sent_at?: string | null
+          last_latitude?: number | null
+          last_location_at?: string | null
+          last_longitude?: number | null
+          session_id: string
+          started_at?: string
+          student_id: string
+          tracking_token: string
+          update_interval_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          guardian_email?: string
+          id?: string
+          instructor_id?: string
+          is_active?: boolean
+          last_accuracy?: number | null
+          last_email_sent_at?: string | null
+          last_latitude?: number | null
+          last_location_at?: string | null
+          last_longitude?: number | null
+          session_id?: string
+          started_at?: string
+          student_id?: string
+          tracking_token?: string
+          update_interval_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_tracking_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           cancel_penalty_applied: boolean
@@ -2539,6 +2652,24 @@ export type Database = {
           student_name: string
         }[]
       }
+      get_public_tracking_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          ended_at: string
+          is_active: boolean
+          last_accuracy: number
+          last_latitude: number
+          last_location_at: string
+          last_longitude: number
+          session_ends_at: string
+          session_starts_at: string
+          session_status: string
+          started_at: string
+          student_first_name: string
+          tracking_id: string
+          update_interval_minutes: number
+        }[]
+      }
       get_report_card_details: {
         Args: { p_report_card_id: string }
         Returns: {
@@ -2708,6 +2839,15 @@ export type Database = {
           current_streak: number
           last_played_on: string
         }[]
+      }
+      record_tracking_location: {
+        Args: {
+          p_accuracy?: number
+          p_latitude: number
+          p_longitude: number
+          p_tracking_id: string
+        }
+        Returns: undefined
       }
       restart_match: {
         Args: { _match_id: string }
