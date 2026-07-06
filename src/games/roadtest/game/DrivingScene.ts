@@ -320,11 +320,28 @@ export class DrivingScene extends Phaser.Scene {
       case 'star':
         sprite = this.add.image(LANE_X[lane], -200, 'gold-star').setDepth(6);
         break;
+      case 'pedestrian': {
+        // Spawn on left or right sidewalk; walk across when telegraph elapses.
+        const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
+        const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
+        sprite = this.add.image(startX, -200, 'pedestrian').setDepth(7).setDisplaySize(22, 32);
+        // Speed scales lightly with difficulty
+        const baseVx = 55 * this.difficulty.speedMul;
+        mph = fromLeft ? baseVx : -baseVx; // reuse mph field for horizontal velocity
+        break;
+      }
     }
     if (!sprite) return;
     sprite.setVisible(false);
     line?.setVisible(false);
-    this.obstacles.push({ type, d, lane, sprite, line, mph, phase, state });
+    const ob: Obstacle = { type, d, lane, sprite, line, mph, phase, state };
+    if (type === 'pedestrian') {
+      ob.pedX = sprite.x;
+      ob.pedVx = mph;
+      // Telegraph shrinks at higher difficulty (fair but riskier).
+      ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * (DIFFICULTIES_INDEX(this.difficulty.id)));
+    }
+    this.obstacles.push(ob);
   }
 
   // ---------------------------------------------------------------- HUD ---
