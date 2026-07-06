@@ -267,6 +267,10 @@ export class MultiplayerScene extends Phaser.Scene {
     if (msg.t === 'state') this.applyRemoteState(msg);
     else if (msg.t === 'star_taken') this.applyStarTaken(msg);
     else if (msg.t === 'scatter') this.applyScatter(msg);
+    else if (msg.t === 'elim') {
+      const r = this.remotes.get(msg.uid);
+      if (r) { r.sprite.setAlpha(0.35).setTint(0x666666); r.data.stars = 0; }
+    }
   }
 
   private applyRemoteState(m: StateMsg) {
