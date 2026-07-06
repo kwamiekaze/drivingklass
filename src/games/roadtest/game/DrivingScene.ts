@@ -730,7 +730,7 @@ export class DrivingScene extends Phaser.Scene {
     this.tweens.add({ targets: banner, scale: 1, duration: 350, ease: 'Back.easeOut' });
     this.mph = 0;
     // Restore time and finish run
-    this.time.delayedCall(1200, () => { this.time.timeScale = 1; this.finish(); });
+    window.setTimeout(() => { this.time.timeScale = 1; this.finish(); }, 1200);
   }
 
 
