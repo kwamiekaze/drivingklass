@@ -210,6 +210,8 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
           </div>
         </div>
       )}
+
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }
