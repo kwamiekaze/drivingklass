@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LEVELS } from '../game/levels';
 import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
+import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
 
 interface Props {
   bestScores: Record<string, number>;
