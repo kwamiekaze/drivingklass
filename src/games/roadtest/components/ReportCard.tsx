@@ -11,10 +11,14 @@ interface Props {
 }
 
 export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
-  const idx = LEVELS.findIndex((l) => l.id === result.levelId);
-  const next = idx >= 0 && idx < LEVELS.length - 1 ? LEVELS[idx + 1] : null;
+  const current = LEVELS.find((l) => l.id === result.levelId);
+  const nextByStage = current?.stageNumber
+    ? LEVELS.find((l) => l.stageNumber === (current.stageNumber! + 1) && !l.isDaily)
+    : null;
+  const next = nextByStage ?? null;
   const diff = DIFFICULTIES.find((d) => d.id === result.difficulty);
   const confettiRef = useRef<HTMLDivElement>(null);
+  const stars = result.stars ?? 0;
 
   useEffect(() => {
     if (!result.isNewBest || !confettiRef.current) return;
@@ -51,10 +55,17 @@ export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
           </div>
         </header>
 
+        <div className="report-stars" aria-label={`Earned ${stars} of 3 stars`}>
+          {[1, 2, 3].map((i) => (
+            <span key={i} className={i <= stars ? 'star on' : 'star off'}>★</span>
+          ))}
+        </div>
+
         <div className="report-score">
           <span>Final score</span>
           <strong>{result.score}</strong>
         </div>
+
 
         <table className="report-table">
           <tbody>
