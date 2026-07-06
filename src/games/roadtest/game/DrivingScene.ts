@@ -32,6 +32,12 @@ interface Obstacle {
   phase?: number;
   state?: 'red' | 'yellow' | 'green';
   _ramped?: boolean;
+  // pedestrian fields
+  pedX?: number;         // current world x
+  pedVx?: number;        // px/sec across road
+  pedTelegraph?: number; // seconds remaining pausing before crossing
+  pedCrossed?: boolean;  // fully across road
+  pedSafeAwarded?: boolean;
 }
 
 
