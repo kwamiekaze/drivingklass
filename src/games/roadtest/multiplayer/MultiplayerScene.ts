@@ -158,6 +158,31 @@ export class MultiplayerScene extends Phaser.Scene {
       this.stars_.set(sp.id, { id: sp.id, sprite: spr, active: true });
     }
 
+    // Pedestrians — seeded deterministic positions at road intersections.
+    // They patrol a short segment across the road, back and forth.
+    const rng = mulberry32(this.cfg.seed ^ 0x9e3779b1);
+    const pedCount = 24;
+    for (let i = 0; i < pedCount; i++) {
+      const bx = Math.floor(rng() * BLOCKS);
+      const by = Math.floor(rng() * BLOCKS);
+      const horizontal = rng() > 0.5;
+      const cx = bx * BLOCK_SIZE + ROAD_W / 2;
+      const cy = by * BLOCK_SIZE + ROAD_W / 2;
+      const halfSpan = 40 + rng() * 30;
+      const ax = horizontal ? cx - halfSpan : cx;
+      const ay = horizontal ? cy : cy - halfSpan;
+      const bx2 = horizontal ? cx + halfSpan : cx;
+      const by2 = horizontal ? cy : cy + halfSpan;
+      const speed = 22 + rng() * 22;
+      const dirx = bx2 - ax, diry = by2 - ay;
+      const dl = Math.hypot(dirx, diry) || 1;
+      const spr = this.add.image(ax, ay, 'pedestrian').setDepth(4).setDisplaySize(16, 22);
+      this.peds.push({
+        sprite: spr, x: ax, y: ay, vx: (dirx / dl) * speed, vy: (diry / dl) * speed,
+        ax, ay, bx: bx2, by: by2,
+      });
+    }
+
     // Local + remote cars
     const spawnList = this.world.spawnPoints;
     this.cfg.players.forEach((p, i) => {
