@@ -8,6 +8,7 @@ export const POINTS = {
   FINISH_BONUS: 200,
   STAR: 25,
   NEAR_MISS: 15,
+  PED_SAFE_PASS: 40,
 
   HIT_CONE: -50,
   LANE_CROSS: -30,
@@ -15,7 +16,8 @@ export const POINTS = {
   RAN_STOP_SIGN: -100,
   RAN_RED_LIGHT: -120,
   HIT_PARKED_CAR: -100,
-  HIT_TRAFFIC: -150
+  HIT_TRAFFIC: -150,
+  HIT_PEDESTRIAN: 0, // catastrophic — score is zeroed via tracker.zeroOut()
 } as const;
 
 const LABELS: Record<string, string> = {
@@ -26,13 +28,15 @@ const LABELS: Record<string, string> = {
   FINISH_BONUS: 'Completed the course',
   STAR: 'Gold star collected',
   NEAR_MISS: 'Close call — nice reflexes',
+  PED_SAFE_PASS: 'Yielded to a pedestrian',
   HIT_CONE: 'Hit a cone',
   LANE_CROSS: 'Drifted over lane line',
   SPEEDING: 'Exceeded speed limit',
   RAN_STOP_SIGN: 'Ran a stop sign',
   RAN_RED_LIGHT: 'Ran a red light',
   HIT_PARKED_CAR: 'Hit a parked car',
-  HIT_TRAFFIC: 'Collided with traffic'
+  HIT_TRAFFIC: 'Collided with traffic',
+  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run void',
 };
 
 export type PointKey = keyof typeof POINTS;
