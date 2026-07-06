@@ -5,6 +5,7 @@ import { TouchControls } from '../components/TouchControls';
 import { resetTouchControls } from '../game/controls';
 import { MultiplayerScene, MP_VIEW_W, MP_VIEW_H } from './MultiplayerScene';
 import { MatchNet } from './net';
+import { sound } from '../sound';
 import { CAR_COLORS, type CarColor, type MatchRow, type PlayerRow, type RemotePlayer } from './types';
 
 interface Props {
@@ -24,6 +25,9 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
   const [remaining, setRemaining] = useState(match.duration_s);
   const [finished, setFinished] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [eliminated, setEliminated] = useState(false);
+  const [eliminatedUids, setEliminatedUids] = useState<Set<string>>(() => new Set());
+  const lastTickSecRef = useRef<number>(match.duration_s);
 
   // Multiplayer: never pause the world (other players keep driving). Show a dim
   // "reconnecting view" if the tab has been hidden for >2s so the player knows why.
