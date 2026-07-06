@@ -363,9 +363,22 @@ export class DrivingScene extends Phaser.Scene {
         const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
         const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
         sprite = this.add.image(startX, -200, 'pedestrian').setDepth(7).setDisplaySize(22, 32);
-        // Speed scales lightly with difficulty
-        const baseVx = 55 * this.difficulty.speedMul;
+        // Outfit variety via tint
+        const tint = rnd ? rnd.pick([...PED_TINTS]) : PED_TINTS[0];
+        sprite.setTint(tint);
+        // Speed scales lightly with difficulty; each ped has a slightly different pace
+        const baseVx = (45 + (rnd ? rnd.between(0, 25) : 15)) * this.difficulty.speedMul;
         mph = fromLeft ? baseVx : -baseVx; // reuse mph field for horizontal velocity
+        break;
+      }
+      case 'dog': {
+        const key = rnd ? rnd.pick([...DOG_KEYS]) : DOG_KEYS[0];
+        // Runaway dogs start on either side, cross fast
+        const fromLeft = (rnd ? rnd.frac() : Math.random()) > 0.5;
+        const startX = fromLeft ? ROAD_X - 4 : ROAD_X + ROAD_W + 4;
+        sprite = this.add.image(startX, -200, key).setDepth(7).setDisplaySize(24, 18);
+        const baseVx = (85 + (rnd ? rnd.between(0, 40) : 20)) * this.difficulty.speedMul;
+        mph = fromLeft ? baseVx : -baseVx;
         break;
       }
     }
@@ -379,7 +392,47 @@ export class DrivingScene extends Phaser.Scene {
       // Telegraph shrinks at higher difficulty (fair but riskier).
       ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * DIFF_INDEX[this.difficulty.id]);
     }
+    if (type === 'dog') {
+      ob.pedX = sprite.x;
+      ob.pedVx = mph;
+      ob.isRunaway = true;
+      // Shorter warning — audio bark gives fair cue
+      ob.pedTelegraph = Math.max(0.25, 0.9 - 0.2 * DIFF_INDEX[this.difficulty.id]);
+    }
     this.obstacles.push(ob);
+  }
+
+  /** Sidewalk stroller — decorative pedestrian on curb, no collision. */
+  private spawnStroller(d: number, rnd: Phaser.Math.RandomDataGenerator) {
+    const onLeft = rnd.frac() > 0.5;
+    const x = onLeft ? ROAD_X - 20 : ROAD_X + ROAD_W + 20;
+    const sprite = this.add.image(x, -200, 'pedestrian').setDepth(4).setDisplaySize(20, 28);
+    sprite.setTint(rnd.pick([...PED_TINTS]));
+    sprite.setVisible(false);
+    // Some walk with the traffic (down = slower relative flow), some against.
+    const strollVy = rnd.pick([-20, -14, 12, 18]);
+    const ob: Obstacle = { type: 'pedestrian', d, lane: onLeft ? -1 : 3, sprite, stroll: true, strollVy };
+    this.obstacles.push(ob);
+    // 30% of strollers get a leashed dog beside them.
+    if (rnd.frac() < 0.3) {
+      const dogKey = rnd.pick([...DOG_KEYS]);
+      const dogX = x + (onLeft ? 10 : -10);
+      const dogSprite = this.add.image(dogX, -200, dogKey).setDepth(4).setDisplaySize(20, 14);
+      dogSprite.setVisible(false);
+      this.obstacles.push({
+        type: 'dog', d: d + 12, lane: onLeft ? -1 : 3, sprite: dogSprite,
+        stroll: true, strollVy,
+      });
+    }
+  }
+
+  /** Runaway dog + optional chasing owner. Same catastrophic collision as pedestrian. */
+  private spawnDog(d: number, rnd: Phaser.Math.RandomDataGenerator) {
+    this.spawn('dog', d, 1, rnd);
+    // 55% chance an owner comes chasing shortly after
+    if (rnd.frac() < 0.55) {
+      this.spawn('pedestrian', d + 40, 1, rnd);
+    }
   }
 
   // ---------------------------------------------------------------- HUD ---
