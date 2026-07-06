@@ -139,7 +139,7 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
 
       {endless && (
         <button className="level-card endless" onClick={() => startLevel(endless.id)}>
-          <span className="level-num" style={{ color: '#f2c14e' }}>∞</span>
+          <span className="level-num">∞</span>
           <span className="level-info">
             <strong>{endless.name}</strong>
             <small>{endless.subtitle}</small>
