@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LEVELS } from '../game/levels';
 import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
+import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
 
 interface Props {
   bestScores: Record<string, number>;
@@ -43,7 +44,17 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Auto-show the install tutorial once for mobile browsers where the
+    // browser chrome can hide the on-screen game controls.
+    if (shouldAutoShowInstallTutorial()) {
+      const t = setTimeout(() => setShowInstall(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -189,9 +200,19 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         Book a Driving Lesson
       </a>
 
+      <button
+        className="dk-btn dk-btn-ghost"
+        style={{ width: '100%', marginTop: 4 }}
+        onClick={() => { clickTick(); setShowInstall(true); }}
+      >
+        📱 Install app / fix hidden buttons
+      </button>
+
       <footer className="fine-print">
         A mini-game by DrivingKlass · Real lessons at drivingklass.com
       </footer>
+
+      {showInstall && <InstallTutorial onClose={() => setShowInstall(false)} />}
     </div>
   );
 }
