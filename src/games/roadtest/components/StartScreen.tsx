@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LEVELS } from '../game/levels';
-import { DIFFICULTIES, type Difficulty } from '../game/types';
+import { LEVELS, levelsByChapter } from '../game/levels';
+import { CHAPTERS, DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
 import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
 import { FeedbackModal } from './FeedbackModal';
+import { chapterStars, getStars, isUnlocked, totalStars } from '../starProgress';
 
 interface Props {
   bestScores: Record<string, number>;
@@ -22,6 +23,7 @@ interface Props {
 
 const STREAK_KEY = 'dk-game-streak';
 const STREAK_DAY_KEY = 'dk-game-streak-day';
+const OPEN_CHAPTER_KEY = 'dk-game-open-chapter';
 
 function guestStreak(): number {
   try {
@@ -41,17 +43,31 @@ function guestStreak(): number {
   } catch { return 0; }
 }
 
+function StarRow({ count }: { count: 0 | 1 | 2 | 3 }) {
+  return (
+    <span className="stage-stars" aria-label={`${count} of 3 stars`}>
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={i <= count ? 'star on' : 'star off'}>★</span>
+      ))}
+    </span>
+  );
+}
+
 export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer, onMyStats, onSignInPrompt, publicMode }: Props) {
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [openChapter, setOpenChapter] = useState<1 | 2 | 3 | 4 | 5>(() => {
+    try {
+      const v = parseInt(localStorage.getItem(OPEN_CHAPTER_KEY) ?? '1', 10);
+      return (v >= 1 && v <= 5 ? v : 1) as 1 | 2 | 3 | 4 | 5;
+    } catch { return 1; }
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Auto-show the install tutorial once for mobile browsers where the
-    // browser chrome can hide the on-screen game controls.
     if (shouldAutoShowInstallTutorial()) {
       const t = setTimeout(() => setShowInstall(true), 400);
       return () => clearTimeout(t);
@@ -72,16 +88,19 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         .select('current_streak, best_streak, last_played_on')
         .eq('id', data.user.id)
         .maybeSingle();
-      // Server truth. If they haven't played today OR yesterday, current is stale — show it anyway; RPC will reset on next run.
       setStreak(profile?.current_streak ?? 0);
       setBestStreak(profile?.best_streak ?? 0);
     })();
   }, []);
 
   const clickTick = () => { sound.init(); sound.uiTick(); };
-  const endless = LEVELS.find((l) => l.endless);
-  const lessons = LEVELS.filter((l) => !l.endless);
+  const grouped = useMemo(() => levelsByChapter(), []);
+  const daily = useMemo(() => LEVELS.find((l) => l.isDaily), []);
   const startLevel = (id: string) => { clickTick(); onStart(id); };
+  const toggleChapter = (id: 1 | 2 | 3 | 4 | 5) => {
+    setOpenChapter(id);
+    try { localStorage.setItem(OPEN_CHAPTER_KEY, String(id)); } catch { /* ignore */ }
+  };
 
   const goHome = async () => {
     clickTick();
@@ -95,6 +114,8 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
     else if (role === 'instructor') navigate('/instructor');
     else navigate('/student');
   };
+
+  const totalEarned = totalStars();
 
   return (
     <div className="screen start-screen">
@@ -119,11 +140,14 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
         />
         <div className="hero-overlay">
-          <h1>Road Test Challenge</h1>
-          <p>Hold your lane. Stop at the signs. Earn a 5-star report card.</p>
-          {streak > 0 && (
-            <div className="streak-badge">🔥 {streak}-day streak{bestStreak > streak ? ` · best ${bestStreak}` : ''}</div>
-          )}
+          <h1>Road Test Academy</h1>
+          <p>25 stages · 5 chapters · Learn the road, earn your stars</p>
+          <div className="hero-badges">
+            {streak > 0 && (
+              <span className="streak-badge">🔥 {streak}-day streak{bestStreak > streak ? ` · best ${bestStreak}` : ''}</span>
+            )}
+            <span className="streak-badge total-stars-badge">★ {totalEarned} / 75</span>
+          </div>
         </div>
       </div>
 
@@ -150,36 +174,83 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         ))}
       </section>
 
-      {endless && (
-        <button className="level-card endless" onClick={() => startLevel(endless.id)}>
-          <span className="level-num">∞</span>
+      {daily && (
+        <button
+          className="level-card daily-card"
+          onClick={() => startLevel(daily.id)}
+        >
+          <span className="level-num daily-num">☀</span>
           <span className="level-info">
-            <strong>{endless.name}</strong>
-            <small>{endless.subtitle}</small>
+            <strong>
+              <span className="daily-tag">NEW TODAY</span> {daily.name}
+            </strong>
+            <small>{daily.subtitle}</small>
           </span>
           <span className="level-best">
-            {bestScores[endless.id] ? `Best ${bestScores[endless.id]}` : 'Start →'}
+            {bestScores[daily.id] ? `Best ${bestScores[daily.id]}` : 'Play →'}
           </span>
         </button>
       )}
 
-      <section className="level-list" aria-label="Choose a lesson">
-        {lessons.map((lvl, i) => (
-          <button key={lvl.id} className="level-card" onClick={() => startLevel(lvl.id)}>
-            <span className="level-num">{i + 1}</span>
-            <span className="level-info">
-              <strong>{lvl.name}</strong>
-              <small>{lvl.subtitle}</small>
-            </span>
-            <span className="level-best">
-              {bestScores[lvl.id] ? `Best ${bestScores[lvl.id]}` : 'Start →'}
-            </span>
-          </button>
-        ))}
+      <section className="chapter-list" aria-label="Choose a chapter">
+        {CHAPTERS.map((ch) => {
+          const stages = grouped[ch.id] ?? [];
+          const { earned, max } = chapterStars(ch.id);
+          const open = openChapter === ch.id;
+          return (
+            <div key={ch.id} className={`chapter${open ? ' open' : ''}`}>
+              <button
+                className="chapter-head"
+                onClick={() => { clickTick(); toggleChapter(ch.id); }}
+                aria-expanded={open}
+              >
+                <span className="chapter-num">CH{ch.id}</span>
+                <span className="chapter-title">
+                  <strong>{ch.name}</strong>
+                  <small>{ch.subtitle}</small>
+                </span>
+                <span className="chapter-progress">★ {earned}/{max}</span>
+              </button>
+              {open && (
+                <div className="chapter-body">
+                  {stages.map((lvl) => {
+                    const unlocked = isUnlocked(lvl.id);
+                    const stars = getStars(lvl.id);
+                    return (
+                      <button
+                        key={lvl.id}
+                        className={`level-card${unlocked ? '' : ' locked'}`}
+                        onClick={() => unlocked && startLevel(lvl.id)}
+                        disabled={!unlocked}
+                        aria-disabled={!unlocked}
+                      >
+                        <span className="level-num">
+                          {unlocked ? (lvl.stageNumber ?? '') : '🔒'}
+                        </span>
+                        <span className="level-info">
+                          <strong>{lvl.name}</strong>
+                          <small>{lvl.objective ?? lvl.subtitle}</small>
+                          <StarRow count={stars} />
+                        </span>
+                        <span className="level-best">
+                          {!unlocked
+                            ? 'Locked'
+                            : bestScores[lvl.id]
+                              ? `Best ${bestScores[lvl.id]}`
+                              : 'Start →'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </section>
 
       <div className="btn-row">
-        <button className="dk-btn dk-btn-gold" onClick={() => startLevel(lessons[0].id)}>Start Lesson</button>
+        <button className="dk-btn dk-btn-gold" onClick={() => startLevel('first-drive')}>Start Academy</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
         {signedIn && onMyStats && (
