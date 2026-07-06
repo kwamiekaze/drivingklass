@@ -329,30 +329,6 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
         }}
       >
         
-        {/* HERO CENTER LAYER - 3D gold car showcase (museum turntable) */}
-        <div
-          className="absolute left-1/2 top-1/2 z-10"
-          style={{
-            width: '58%',
-            height: '58%',
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <Suspense
-            fallback={
-              <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                  src={carHeadlightsOff}
-                  alt="DrivingKlass sports car"
-                  className="w-full h-auto object-contain"
-                  style={{ filter: 'contrast(1.08) saturate(1.05)', pointerEvents: 'none' }}
-                />
-              </div>
-            }
-          >
-            <CarShowcase />
-          </Suspense>
-        </div>
 
         {/* Price chip layer - shows during glow animation, hover (desktop), or selection */}
         {chipIndexToShow && (
