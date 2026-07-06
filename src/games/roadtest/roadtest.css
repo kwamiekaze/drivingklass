@@ -955,3 +955,29 @@
 }
 .stat-chip small { opacity: 0.75; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 .stat-chip strong { color: var(--gold); font-size: 20px; font-family: var(--display); }
+
+/* ---------- Install tutorial ---------- */
+.dk-game .install-steps {
+  margin: 8px 0 4px;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--white);
+}
+.dk-game .install-steps li { line-height: 1.45; }
+.dk-game .install-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  margin: 0 4px;
+  border: 1px solid var(--road-light);
+  border-radius: 6px;
+  color: var(--gold);
+  font-weight: 700;
+  vertical-align: middle;
+}
+.dk-game .install-note p { margin: 0 0 8px; line-height: 1.45; }
