@@ -70,7 +70,12 @@ export interface EndMsg {
   t: 'end';
 }
 
-export type NetMessage = StateMsg | StarTakenMsg | ScatterMsg | StartMsg | EndMsg;
+export interface ElimMsg {
+  t: 'elim';
+  uid: string;
+}
+
+export type NetMessage = StateMsg | StarTakenMsg | ScatterMsg | StartMsg | EndMsg | ElimMsg;
 
 export interface RemotePlayer {
   uid: string;
