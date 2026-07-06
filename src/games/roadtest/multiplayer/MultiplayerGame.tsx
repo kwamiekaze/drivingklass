@@ -138,6 +138,11 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
       const elapsed = Math.max(0, Math.floor((Date.now() - startAt) / 1000));
       const left = Math.max(0, match.duration_s - elapsed);
       setRemaining(left);
+      // Final-30s ticking chime once per second
+      if (left > 0 && left <= 30 && left !== lastTickSecRef.current) {
+        lastTickSecRef.current = left;
+        sound.uiTick();
+      }
       if (left <= 0) {
         clearInterval(iv);
         setFinished(true);
@@ -145,6 +150,20 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
     }, 250);
     return () => clearInterval(iv);
   }, [match.duration_s, startAt]);
+
+  const scoreboard = useMemo(() => {
+    const rows = [
+      { uid: me.user_id, displayName: me.display_name ?? 'You', color: me.color as CarColor, stars: ownStars, mine: true, stale: false, elim: eliminatedUids.has(me.user_id) || eliminated },
+      ...remotes.map((r) => ({
+        uid: r.uid, displayName: r.displayName, color: r.color, stars: r.stars, mine: false,
+        stale: Date.now() - r.lastAt > 5000, elim: eliminatedUids.has(r.uid),
+      })),
+    ].sort((a, b) => b.stars - a.stars);
+    return rows;
+  }, [ownStars, remotes, me, eliminated, eliminatedUids]);
+
+  const finalPush = remaining > 0 && remaining <= 30;
+
 
   // On finish: persist own score and broadcast end, then collect and report standings
   useEffect(() => {
