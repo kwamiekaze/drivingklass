@@ -8,6 +8,9 @@ import { template as intakeConverted } from './intake-converted.tsx'
 import { template as intakeAccepted } from './intake-accepted.tsx'
 import { template as updateAddresses } from './update-addresses.tsx'
 import { template as guardianAdded } from './guardian-added.tsx'
+import { template as trackingStarted } from './tracking-started.tsx'
+import { template as trackingUpdate } from './tracking-update.tsx'
+import { template as trackingEnded } from './tracking-ended.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -26,4 +29,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'intake-accepted': intakeAccepted,
   'update-addresses': updateAddresses,
   'guardian-added': guardianAdded,
+  'tracking-started': trackingStarted,
+  'tracking-update': trackingUpdate,
+  'tracking-ended': trackingEnded,
 }
