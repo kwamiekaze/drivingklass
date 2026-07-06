@@ -63,6 +63,10 @@ import { ProtectedRoute } from "./components/portal/ProtectedRoute";
 import { GameControllerFab } from "./components/GameControllerFab";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
+import GuardianTrackerPage from "./pages/GuardianTrackerPage";
+import InstructorLiveTracker from "./pages/portal/InstructorLiveTracker";
+import AdminLiveTracker from "./pages/portal/AdminLiveTracker";
+import StudentLiveTracker from "./pages/portal/StudentLiveTracker";
 const queryClient = new QueryClient();
 
 const App = () => (
