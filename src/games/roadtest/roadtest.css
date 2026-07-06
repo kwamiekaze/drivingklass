@@ -299,7 +299,11 @@
 .game-wrap {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  /* Use small viewport height so on-screen controls stay above iOS Safari's
+     bottom toolbar even when it's showing. */
+  height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
 }
 
 .game-topbar {
