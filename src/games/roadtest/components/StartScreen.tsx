@@ -44,7 +44,17 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Auto-show the install tutorial once for mobile browsers where the
+    // browser chrome can hide the on-screen game controls.
+    if (shouldAutoShowInstallTutorial()) {
+      const t = setTimeout(() => setShowInstall(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
