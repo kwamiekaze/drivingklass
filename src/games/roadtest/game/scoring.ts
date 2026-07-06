@@ -119,9 +119,17 @@ export function buildResult(
   extras?: { distance?: number }
 ): LevelResult {
   const rawScore = tracker.score;
-  const finalScore = Math.round(rawScore * difficulty.scoreMul);
-  const { grade, passed } = gradeFor(finalScore, level.parScore);
+  const finalScore = tracker.voided ? 0 : Math.round(rawScore * difficulty.scoreMul);
+  const { grade, passed } = tracker.voided
+    ? { grade: 'F', passed: false }
+    : gradeFor(finalScore, level.parScore);
   const feedback: string[] = [];
+
+  if (tracker.voided) {
+    feedback.push('🛑 You struck a pedestrian. In a real road test that is an instant fail.');
+    feedback.push('Slow down, scan the sidewalks, and always yield at crossings.');
+  }
+
 
   const faults =
     tracker.countOf('HIT_CONE') +
