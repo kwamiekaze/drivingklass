@@ -981,3 +981,184 @@
   vertical-align: middle;
 }
 .dk-game .install-note p { margin: 0 0 8px; line-height: 1.45; }
+
+/* -------- Multiplayer preset buttons + final-push timer -------- */
+.dk-game .mp-preset-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 10px 0 6px;
+}
+.dk-game .mp-preset-btn {
+  padding: 10px 8px;
+  background: rgba(20, 20, 24, 0.85);
+  color: var(--white);
+  border: 1.5px solid rgba(242, 193, 78, 0.35);
+  border-radius: 10px;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.dk-game .mp-preset-btn:hover { transform: translateY(-1px); border-color: var(--gold); }
+.dk-game .mp-preset-btn.active {
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  color: var(--black);
+  border-color: var(--gold);
+  box-shadow: 0 4px 14px rgba(242, 193, 78, 0.35);
+}
+.dk-game .mp-preset-btn.quick::after { content: ' ⚡'; }
+
+.dk-game .mp-timer.final-push {
+  color: #ff5a4e !important;
+  animation: dk-timer-pulse 0.7s ease-in-out infinite;
+  text-shadow: 0 0 12px rgba(255, 90, 78, 0.55);
+}
+@keyframes dk-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.14); }
+}
+
+.dk-game .mp-scoreboard li.elim {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+  text-decoration: line-through;
+}
+
+.dk-game .mp-elim-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 24, 0.92);
+  border: 2px solid #ff5a4e;
+  border-radius: 14px;
+  padding: 14px 22px;
+  color: var(--white);
+  text-align: center;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(255, 90, 78, 0.35);
+  pointer-events: none;
+}
+.dk-game .mp-elim-banner strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 32px;
+  color: #ff5a4e;
+  letter-spacing: 0.08em;
+}
+.dk-game .mp-elim-banner span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* -------- Feedback modal + button -------- */
+.dk-game .dk-btn-gold-outline {
+  background: transparent;
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+}
+.dk-game .dk-btn-gold-outline:hover {
+  background: rgba(242, 193, 78, 0.12);
+}
+.dk-game .dk-btn-feedback {
+  letter-spacing: 0.08em;
+}
+
+.dk-game .dk-feedback-modal {
+  max-width: 440px;
+  width: 100%;
+  padding: 20px;
+}
+.dk-game .dk-fb-cats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+.dk-game .dk-fb-cat {
+  flex: 1 1 100px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(242, 193, 78, 0.35);
+  background: rgba(20, 20, 24, 0.7);
+  color: var(--white);
+  cursor: pointer;
+  font-family: var(--body);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.dk-game .dk-fb-cat.active {
+  border-color: var(--gold);
+  background: rgba(242, 193, 78, 0.15);
+  color: var(--gold);
+}
+.dk-game .dk-fb-cat span { font-size: 20px; }
+.dk-game .dk-fb-label {
+  display: block;
+  font-family: var(--display);
+  color: var(--gold);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  margin: 10px 0 4px;
+}
+.dk-game .dk-fb-textarea,
+.dk-game .dk-fb-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(20, 20, 24, 0.85);
+  border: 1.5px solid rgba(242, 193, 78, 0.3);
+  border-radius: 8px;
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 14px;
+  resize: vertical;
+}
+.dk-game .dk-fb-textarea:focus,
+.dk-game .dk-fb-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.dk-game .dk-fb-stars {
+  display: flex;
+  gap: 6px;
+}
+.dk-game .dk-fb-star {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+.dk-game .dk-fb-star.on { color: var(--gold); }
+.dk-game .dk-fb-star:hover { transform: scale(1.15); }
+
+.dk-game .dk-feedback-thanks {
+  text-align: center;
+  padding: 20px 10px;
+}
+.dk-game .dk-feedback-thanks h2 {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 40px;
+  margin: 10px 0 6px;
+  letter-spacing: 0.08em;
+}
+.dk-game .dk-feedback-badge {
+  font-size: 46px;
+  color: var(--gold);
+  animation: dk-badge-pop 0.6s ease-out;
+}
+@keyframes dk-badge-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
