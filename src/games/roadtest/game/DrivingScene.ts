@@ -737,7 +737,12 @@ export class DrivingScene extends Phaser.Scene {
           this.handleStar(ob);
           break;
         case 'pedestrian':
-          this.handlePedestrian(ob, time, dt);
+          if (ob.stroll) this.handleStroller(ob, time, dt);
+          else this.handlePedestrian(ob, time, dt);
+          break;
+        case 'dog':
+          if (ob.stroll) this.handleStroller(ob, time, dt);
+          else this.handlePedestrian(ob, time, dt);
           break;
         case 'cone':
         case 'parkedCar':
@@ -747,6 +752,17 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
   }
+
+  /** Sidewalk stroller update — pure decoration, moves in world Y, no collision. */
+  private handleStroller(ob: Obstacle, time: number, dt: number) {
+    // Move in world coords by drifting d so screenY() places it naturally.
+    if (ob.strollVy != null) {
+      ob.d += ob.strollVy * dt;
+    }
+    ob.sprite.setAngle(Math.sin(time / 90 + ob.d * 0.01) * 6);
+  }
+
+  /** Replaces the earlier handlePedestrian below with dog-aware variant. */
 
   private handlePedestrian(ob: Obstacle, time: number, dt: number) {
     if (ob.resolved) return;
