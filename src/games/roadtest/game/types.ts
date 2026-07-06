@@ -8,7 +8,8 @@ export type ObstacleType =
   | 'traffic'
   | 'checkpoint'
   | 'star'
-  | 'pedestrian';
+  | 'pedestrian'
+  | 'dog';
 
 export type Difficulty = 'learner' | 'licensed' | 'instructor' | 'legend';
 
