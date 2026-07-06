@@ -241,6 +241,13 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
+    // Pedestrians — frequency scales with difficulty tier
+    const pedGap = Math.max(600, 1800 - 300 * DIFF_INDEX[this.difficulty.id]);
+    for (let d = 1000; d < totalLen - 500; d += pedGap + rnd.between(-200, 300)) {
+      if (!isFree(d, 200)) continue;
+      this.spawn('pedestrian', d, 1, rnd);
+    }
+
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
   }
 
