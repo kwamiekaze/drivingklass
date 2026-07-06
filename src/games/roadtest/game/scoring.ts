@@ -51,6 +51,7 @@ export class ScoreTracker {
   combo = 1;
   starsCollected = 0;
   maxCombo = 1;
+  voided = false; // set true if a run-ending event (pedestrian hit) occurred
 
   /** Adds an event; returns actual points awarded (after combo multiplier). */
   add(key: PointKey): number {
@@ -69,6 +70,15 @@ export class ScoreTracker {
     if (key === 'STAR') this.starsCollected++;
     this.score = Math.max(0, this.score + pts);
     return pts;
+  }
+
+  /** Catastrophic event — zero the score and mark the run void. */
+  zeroOut(key: PointKey = 'HIT_PEDESTRIAN') {
+    this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
+    this.score = 0;
+    this.extras = 0;
+    this.combo = 1;
+    this.voided = true;
   }
 
   addDistanceBonus(pts: number) {
