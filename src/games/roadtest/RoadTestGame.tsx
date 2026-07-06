@@ -10,6 +10,7 @@ import { UsernameModal } from './UsernameModal';
 import { MyStatsModal } from './MyStatsModal';
 import { submitScore } from './submitScore';
 import { sound } from './sound';
+import { saveStars } from './starProgress';
 import { lovable } from '@/integrations/lovable';
 import type { Difficulty, LevelResult } from './game/types';
 import './roadtest.css';
