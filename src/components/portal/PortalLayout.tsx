@@ -283,6 +283,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/instructor/emails', label: 'Emails', icon: Mail },
         { href: '/instructor/map', label: 'Map', icon: MapIcon },
         { href: '/instructor/practice-test', label: 'Practice Test', icon: BookOpen },
+        { href: '/instructor/tracker', label: 'Live Tracker', icon: RadioTower },
         { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
       );
       break;
