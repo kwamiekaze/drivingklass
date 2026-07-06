@@ -877,11 +877,11 @@ export class DrivingScene extends Phaser.Scene {
     if (dist <= 0) {
       ob.resolved = true;
       if (isLight) {
-        if (ob.state === 'red') this.award('RAN_RED_LIGHT', 'RED LIGHT!');
+        if (ob.state === 'red') { this.award('RAN_RED_LIGHT', 'RED LIGHT!'); sound.yieldBuzz(); }
         else if (ob.state === 'green') { this.award('GREEN_LIGHT', 'GREEN LIGHT'); sound.checkpoint(); }
       } else {
         if (ob.stopped) { this.award('FULL_STOP', 'FULL STOP'); sound.stopDing(); }
-        else this.award('RAN_STOP_SIGN', 'STOP SIGN!');
+        else { this.award('RAN_STOP_SIGN', 'STOP SIGN!'); sound.yieldBuzz(); }
       }
     }
   }
