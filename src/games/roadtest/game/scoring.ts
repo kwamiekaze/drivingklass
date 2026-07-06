@@ -42,7 +42,7 @@ const LABELS: Record<string, string> = {
 export type PointKey = keyof typeof POINTS;
 
 /** Positive events that build the combo meter. */
-const POSITIVE_COMBO: PointKey[] = ['STAR', 'CHECKPOINT', 'FULL_STOP', 'GREEN_LIGHT', 'SMOOTH_DRIVING', 'NEAR_MISS'];
+const POSITIVE_COMBO: PointKey[] = ['STAR', 'CHECKPOINT', 'FULL_STOP', 'GREEN_LIGHT', 'SMOOTH_DRIVING', 'NEAR_MISS', 'PED_SAFE_PASS'];
 
 export class ScoreTracker {
   private counts = new Map<PointKey, number>();
