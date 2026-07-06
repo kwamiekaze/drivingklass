@@ -153,6 +153,10 @@ export class DrivingScene extends Phaser.Scene {
     if (lvl.nightAlpha) {
       this.add.rectangle(0, 0, GAME_W, GAME_H, 0x0a0a18, lvl.nightAlpha).setOrigin(0).setDepth(15);
     }
+    if (lvl.weatherTint) {
+      this.add.rectangle(0, 0, GAME_W, GAME_H, lvl.weatherTint.color, lvl.weatherTint.alpha)
+        .setOrigin(0).setDepth(16);
+    }
 
     if (lvl.endless) this.buildEndlessSeed();
     else this.buildCourse();
