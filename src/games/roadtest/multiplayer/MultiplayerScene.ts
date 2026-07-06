@@ -63,6 +63,10 @@ export class MultiplayerScene extends Phaser.Scene {
   private stars = 0;
   private invulnUntil = 0;
   private lastSpeedingAt = 0;
+  private eliminated = false;
+
+  // Pedestrians (deterministic from seed; walk fixed patrols)
+  private peds: { sprite: Phaser.GameObjects.Image; x: number; y: number; vx: number; vy: number; ax: number; ay: number; bx: number; by: number }[] = [];
 
   // Remotes
   private remotes = new Map<string, {
