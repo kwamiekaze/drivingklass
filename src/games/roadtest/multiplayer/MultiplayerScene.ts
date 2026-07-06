@@ -305,16 +305,73 @@ export class MultiplayerScene extends Phaser.Scene {
     const dt = Math.min(deltaMs, 50) / 1000;
     if (Date.now() < this.cfg.startAt) return; // frozen during countdown
 
-    this.driveLocal(dt);
-    this.checkStarPickup();
-    this.checkScatterPickup();
-    this.checkObstacleCollisions(time);
-    this.checkRemoteCollisions(time);
-    this.checkSpeeding(time);
+    this.updatePedestrians(dt);
+    if (!this.eliminated) {
+      this.driveLocal(dt);
+      this.checkStarPickup();
+      this.checkScatterPickup();
+      this.checkObstacleCollisions(time);
+      this.checkRemoteCollisions(time);
+      this.checkPedCollision(time);
+      this.checkSpeeding(time);
+    }
     this.interpolateRemotes(dt);
     this.updateStarRespawns();
     this.updateHudBroadcast(time);
     sound.updateEngine(Math.min(1, this.mph / MAX_MPH));
+  }
+
+  private updatePedestrians(dt: number) {
+    for (const p of this.peds) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      // Bounce between endpoints
+      const dx1 = p.x - p.ax, dy1 = p.y - p.ay;
+      const dx2 = p.x - p.bx, dy2 = p.y - p.by;
+      const past = (p.vx > 0 && (p.x > Math.max(p.ax, p.bx))) ||
+                   (p.vx < 0 && (p.x < Math.min(p.ax, p.bx))) ||
+                   (p.vy > 0 && (p.y > Math.max(p.ay, p.by))) ||
+                   (p.vy < 0 && (p.y < Math.min(p.ay, p.by)));
+      if (past) { p.vx = -p.vx; p.vy = -p.vy; }
+      p.sprite.setPosition(p.x, p.y);
+      // subtle waddle
+      p.sprite.setAngle(Math.sin((dx1 + dy1) * 0.2) * 6);
+      void dx2; void dy2;
+    }
+  }
+
+  private checkPedCollision(time: number) {
+    if (time < this.invulnUntil) return;
+    for (const p of this.peds) {
+      const dx = this.px - p.x, dy = this.py - p.y;
+      if (dx * dx + dy * dy < 18 * 18 && this.mph > 3) {
+        this.eliminatedByPedestrian();
+        return;
+      }
+    }
+  }
+
+  private eliminatedByPedestrian() {
+    if (this.eliminated) return;
+    this.eliminated = true;
+    this.stars = 0;
+    this.mph = 0;
+    this.cameras.main.shake(500, 0.02);
+    this.cameras.main.flash(400, 255, 40, 40);
+    sound.collision();
+    try { navigator.vibrate?.([80, 40, 120]); } catch { /* ignore */ }
+    const t = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'ELIMINATED\nHIT A PEDESTRIAN', {
+      fontFamily: '"Bebas Neue", sans-serif', fontSize: '44px', color: '#ff5a4e',
+      stroke: '#101014', strokeThickness: 10, align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    this.tweens.add({ targets: t, alpha: 0.7, yoyo: true, repeat: -1, duration: 700 });
+    this.car.setAlpha(0.35).setTint(0x666666);
+    this.game.events.emit('mp-elim', { uid: this.cfg.uid });
+    // Persist zero stars immediately
+    this.cfg.net.send({
+      t: 'state', uid: this.cfg.uid, x: Math.round(this.px), y: Math.round(this.py),
+      a: Math.round(this.angle), s: 0, stars: 0, ts: Date.now(),
+    });
   }
 
   private driveLocal(dt: number) {
