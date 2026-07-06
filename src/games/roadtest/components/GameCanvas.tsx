@@ -26,6 +26,7 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
   const [paused, setPaused] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Show a one-time "sound on" toast on the very first run per device.
   useEffect(() => {
