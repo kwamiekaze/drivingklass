@@ -201,16 +201,6 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
     return () => { cancelled = true; };
   }, [finished, match.id, match.host_id, me.user_id, ownStars, onFinish]);
 
-  const scoreboard = useMemo(() => {
-    const rows = [
-      { uid: me.user_id, displayName: me.display_name ?? 'You', color: me.color as CarColor, stars: ownStars, mine: true, stale: false },
-      ...remotes.map((r) => ({
-        uid: r.uid, displayName: r.displayName, color: r.color, stars: r.stars, mine: false,
-        stale: Date.now() - r.lastAt > 5000,
-      })),
-    ].sort((a, b) => b.stars - a.stars);
-    return rows;
-  }, [ownStars, remotes, me]);
 
   const mm = String(Math.floor(remaining / 60)).padStart(1, '0');
   const ss = String(remaining % 60).padStart(2, '0');
