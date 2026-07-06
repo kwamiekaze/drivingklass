@@ -367,6 +367,7 @@ export class MultiplayerScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0.7, yoyo: true, repeat: -1, duration: 700 });
     this.car.setAlpha(0.35).setTint(0x666666);
     this.game.events.emit('mp-elim', { uid: this.cfg.uid });
+    this.cfg.net.send({ t: 'elim', uid: this.cfg.uid });
     // Persist zero stars immediately
     this.cfg.net.send({
       t: 'state', uid: this.cfg.uid, x: Math.round(this.px), y: Math.round(this.py),
