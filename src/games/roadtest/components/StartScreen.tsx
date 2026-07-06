@@ -168,7 +168,10 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
           <button key={lvl.id} className="level-card" onClick={() => startLevel(lvl.id)}>
             <span className="level-num">{i + 1}</span>
             <span className="level-info">
-              <strong>{lvl.name}</strong>
+              <strong>
+                {lvl.name}
+                {lvl.isNew && <span className="level-new-badge">NEW</span>}
+              </strong>
               <small>{lvl.subtitle}</small>
             </span>
             <span className="level-best">
