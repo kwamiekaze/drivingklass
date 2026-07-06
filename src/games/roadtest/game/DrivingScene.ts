@@ -39,6 +39,12 @@ interface Obstacle {
   pedTelegraph?: number; // seconds remaining pausing before crossing
   pedCrossed?: boolean;  // fully across road
   pedSafeAwarded?: boolean;
+  // shared: stroll = walks parallel on sidewalk, no collision
+  stroll?: boolean;
+  strollVy?: number;     // px/sec vertical relative to world (world scrolls up)
+  // dog fields
+  isRunaway?: boolean;
+  barked?: boolean;
 }
 
 
