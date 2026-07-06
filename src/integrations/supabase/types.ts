@@ -317,6 +317,36 @@ export type Database = {
         }
         Relationships: []
       }
+      game_feedback: {
+        Row: {
+          category: string
+          created_at: string
+          email: string | null
+          id: string
+          message: string
+          rating: number | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message: string
+          rating?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string
+          rating?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       game_match_players: {
         Row: {
           color: string
