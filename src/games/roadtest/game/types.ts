@@ -51,6 +51,14 @@ export interface LevelConfig {
   shoulderColor: number;
   nightAlpha?: number;
   endless?: boolean;
+  /** Optional: multiply pedestrian spawn density (default 1). */
+  pedDensityMul?: number;
+  /** Optional: multiply dog spawn density (default 1). Set 0 for no dogs. */
+  dogDensityMul?: number;
+  /** Optional: full-screen color tint overlay (rain/fog/snow). */
+  weatherTint?: { color: number; alpha: number };
+  /** Optional: mark as newly added — StartScreen shows a NEW badge. */
+  isNew?: boolean;
 }
 
 export interface ScoreEvent {
