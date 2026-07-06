@@ -8,6 +8,41 @@ const MODEL_URL = carAsset.url;
 useGLTF.preload(MODEL_URL);
 
 
+// Star row constants — cover baked door stars (asymmetric fade in source texture)
+const STAR_ROW = {
+  x0: -0.36,
+  x1: 0.36,
+  y: 0.30,
+  size: 0.09,
+};
+
+// Build a crisp gold five-pointed star canvas texture (used for door decals)
+function buildStarTexture(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const ctx = c.getContext("2d")!;
+  const cx = 64, cy = 64, R = 56, r = 24;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const ang = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rad = i % 2 === 0 ? R : r;
+    const x = cx + Math.cos(ang) * rad;
+    const y = cy + Math.sin(ang) * rad;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#F2C14E";
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#8B6508";
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 // Cinematic entrance for the whole car group: fade + rise + rotate settle
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
   const { scene } = useGLTF(MODEL_URL) as any;
@@ -15,7 +50,7 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
   const progress = useRef(0); // 0..1 over ~1.6s
   const notified = useRef(false);
 
-  const prepared = useMemo(() => {
+  const { prepared, decals } = useMemo(() => {
     const cloned = scene.clone(true);
     const box = new THREE.Box3().setFromObject(cloned);
     const size = new THREE.Vector3();
@@ -37,7 +72,40 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
         }
       }
     });
-    return cloned;
+
+    // Build door-star decals — overlay crisp stars on both sides to fix baked-texture asymmetry
+    const decalGroup = new THREE.Group();
+    const starTex = buildStarTexture();
+    const starMat = new THREE.MeshBasicMaterial({
+      map: starTex,
+      transparent: true,
+      depthWrite: false,
+    });
+    const bb = new THREE.Box3().setFromObject(cloned);
+    const raycaster = new THREE.Raycaster();
+    const n = 5;
+    const xs: number[] = [];
+    for (let i = 0; i < n; i++) {
+      xs.push(STAR_ROW.x0 + ((STAR_ROW.x1 - STAR_ROW.x0) * i) / (n - 1));
+    }
+    for (const sideZ of [1, -1] as const) {
+      const dir = new THREE.Vector3(0, 0, -sideZ);
+      for (const x of xs) {
+        const origin = new THREE.Vector3(x, STAR_ROW.y, sideZ * 1.5);
+        raycaster.set(origin, dir);
+        const hits = raycaster.intersectObject(cloned, true);
+        let z = sideZ > 0 ? bb.max.z : bb.min.z;
+        if (hits.length) z = hits[0].point.z;
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(STAR_ROW.size, STAR_ROW.size),
+          starMat
+        );
+        plane.position.set(x, STAR_ROW.y, z + sideZ * 0.004);
+        plane.rotation.y = sideZ > 0 ? 0 : Math.PI;
+        decalGroup.add(plane);
+      }
+    }
+    return { prepared: cloned, decals: decalGroup };
   }, [scene]);
 
   useEffect(() => {
@@ -68,6 +136,7 @@ function CarModel({ onLoaded }: { onLoaded?: () => void }) {
   return (
     <group ref={groupRef}>
       <primitive object={prepared} />
+      <primitive object={decals} />
     </group>
   );
 }
