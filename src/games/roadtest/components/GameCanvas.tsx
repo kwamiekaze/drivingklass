@@ -5,6 +5,7 @@ import { GAME_EVENTS, type Difficulty, type LevelResult } from '../game/types';
 import { resetTouchControls } from '../game/controls';
 import { sound } from '../sound';
 import { TouchControls } from './TouchControls';
+import { FeedbackModal } from './FeedbackModal';
 
 interface Props {
   levelId: string;
