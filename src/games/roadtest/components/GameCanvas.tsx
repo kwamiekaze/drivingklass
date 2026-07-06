@@ -153,6 +153,13 @@ export function GameCanvas({ levelId, difficulty, onComplete, onQuit }: Props) {
           ← Quit lesson
         </button>
         <span className="game-topbar-hint">↑ gas · ↓ brake · ←→ steer</span>
+        <button
+          className="dk-btn dk-btn-gold-outline dk-btn-small"
+          onClick={() => setShowFeedback(true)}
+          aria-label="Send feedback"
+        >
+          ★ Feedback
+        </button>
       </div>
       <div ref={hostRef} className="game-host" />
       <TouchControls />
