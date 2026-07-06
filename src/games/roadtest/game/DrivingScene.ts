@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { getLevel } from './levels';
 import { ScoreTracker, buildResult, POINTS, type PointKey } from './scoring';
 import { touchControls } from './controls';
-import { loadPlayerCarTexture, makeTextures } from './textures';
+import { loadPlayerCarTexture, makeTextures, PED_TINTS, DOG_KEYS } from './textures';
 import { GAME_EVENTS, getDifficulty, type LevelConfig, type ObstacleType, type Difficulty, type DifficultyConfig } from './types';
 import { sound } from '../sound';
 
