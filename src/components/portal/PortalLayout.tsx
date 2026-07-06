@@ -293,6 +293,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/student', label: t('nav.dashboard'), icon: Home },
         { href: '/profile', label: t('nav.profile'), icon: User },
         { href: '/student/proposals', label: t('nav.proposals'), icon: Send },
+        { href: '/student/tracker', label: 'Live Tracker', icon: RadioTower },
         { href: '/simulator', label: 'Play', icon: Gamepad2 },
       );
       break;
