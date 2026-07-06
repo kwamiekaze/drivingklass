@@ -339,7 +339,7 @@ export class DrivingScene extends Phaser.Scene {
       ob.pedX = sprite.x;
       ob.pedVx = mph;
       // Telegraph shrinks at higher difficulty (fair but riskier).
-      ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * (DIFFICULTIES_INDEX(this.difficulty.id)));
+      ob.pedTelegraph = Math.max(0.35, 1.4 - 0.3 * DIFF_INDEX[this.difficulty.id]);
     }
     this.obstacles.push(ob);
   }
