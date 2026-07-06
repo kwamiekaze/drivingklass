@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import carHeadlightsOff from "@/assets/car-headlights-off.png";
 import carHeadlightsOn from "@/assets/car-headlights-on.png";
 
-const CarShowcase = lazy(() => import("./home3d/CarShowcase"));
+const CarShowcase = lazy(() => import("./home3d/HeroCarVideo"));
 
 // Clickable car center - routes to auth or dashboard based on login state/role
 function CarCenterLink({ children }: { children: React.ReactNode }) {
