@@ -218,21 +218,28 @@ export function MultiplayerGame({ match, players, me, onFinish }: Props) {
   return (
     <div className="mp-wrap">
       <div className="mp-hud-top">
-        <div className="mp-timer">{mm}:{ss}</div>
+        <div className={`mp-timer${finalPush ? ' final-push' : ''}`}>{mm}:{ss}</div>
         <div className="mp-own-stars">★ {ownStars}</div>
       </div>
       <ul className="mp-scoreboard">
         {scoreboard.map((r) => (
-          <li key={r.uid} className={[r.mine ? 'mine' : '', r.stale ? 'stale' : ''].join(' ').trim()}>
+          <li key={r.uid} className={[r.mine ? 'mine' : '', r.stale ? 'stale' : '', r.elim ? 'elim' : ''].join(' ').trim()}>
             <span className={`mp-color-chip mp-c-${r.color}`} />
-            <span className="mp-sb-name">{r.displayName}{r.mine ? ' (you)' : ''}</span>
+            <span className="mp-sb-name">{r.displayName}{r.mine ? ' (you)' : ''}{r.elim ? ' · OUT' : ''}</span>
             <span className="mp-sb-stars">★ {r.stars}</span>
           </li>
         ))}
       </ul>
       <div ref={hostRef} className="game-host mp-host" />
       {reconnecting && <div className="mp-reconnect-dim">RECONNECTING VIEW…</div>}
+      {eliminated && (
+        <div className="mp-elim-banner">
+          <strong>ELIMINATED</strong>
+          <span>You hit a pedestrian. Spectating until the timer runs out.</span>
+        </div>
+      )}
       <TouchControls />
     </div>
   );
 }
+
