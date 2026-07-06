@@ -75,8 +75,7 @@ const Index = () => {
             </>
           ) : (
             <>
-              {/* Light mode - warm sunlit driving school background */}
-              <LightModeBackground />
+              <HeroCarVideo />
             </>
           )}
         </div>
