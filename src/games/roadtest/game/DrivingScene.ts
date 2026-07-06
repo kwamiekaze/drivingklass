@@ -766,6 +766,11 @@ export class DrivingScene extends Phaser.Scene {
 
   private handlePedestrian(ob: Obstacle, time: number, dt: number) {
     if (ob.resolved) return;
+    // Fair audio cue: bark once when a runaway dog first appears on screen.
+    if (ob.type === 'dog' && !ob.barked && ob.sprite.y > -50 && ob.sprite.y < GAME_H) {
+      ob.barked = true;
+      sound.dogBark();
+    }
     // Telegraph — stand still at curb, small bob
     if ((ob.pedTelegraph ?? 0) > 0) {
       ob.pedTelegraph! -= dt;
