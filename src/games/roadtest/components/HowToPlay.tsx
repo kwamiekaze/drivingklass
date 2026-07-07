@@ -37,7 +37,7 @@ export function HowToPlay({ onClose }: Props) {
         <h3>Lose points</h3>
         <ul className="howto-list faults">
           <li>Hit a cone ({POINTS.HIT_CONE})</li>
-          <li>Drift over lane lines ({POINTS.LANE_CROSS})</li>
+          <li>Unsafe lane change — cutting off a car ({POINTS.LANE_CROSS})</li>
           <li>Speed over the limit ({POINTS.SPEEDING})</li>
           <li>Run a stop sign ({POINTS.RAN_STOP_SIGN})</li>
           <li>Run a red light ({POINTS.RAN_RED_LIGHT})</li>
