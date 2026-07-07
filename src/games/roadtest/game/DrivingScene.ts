@@ -952,7 +952,44 @@ export class DrivingScene extends Phaser.Scene {
       if (!this.laneCrossing && this.laneCrossCooldown === 0) {
         this.laneCrossing = true;
         this.laneCrossCooldown = 1.2;
-        this.award('LANE_CROSS', 'LANE LINE');
+        // Determine target lane: the lane the player is moving toward
+        const px = this.player.x;
+        let targetLane = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < LANE_X.length; i++) {
+          const d = Math.abs(px - LANE_X[i]);
+          if (d < bestDist) { bestDist = d; targetLane = i; }
+        }
+        // Unsafe if: (a) a traffic vehicle or parked car in target lane is within
+        // close proximity of the player (would force a brake / cut-off), or
+        // (b) a pedestrian is in the road near the player during the change.
+        const PROX_AHEAD = 220; // px ahead in target lane considered "close"
+        const PROX_BEHIND = 90; // px behind considered a cut-off
+        let unsafe = false;
+        let reason = 'UNSAFE LANE CHANGE';
+        for (const ob of this.obstacles) {
+          if (ob.resolved || ob.hit) continue;
+          const sy = ob.sprite.y;
+          const sx = ob.sprite.x;
+          const dy = PLAYER_Y - sy; // >0 means obstacle is ahead of player
+          if (ob.type === 'traffic' || ob.type === 'parkedCar') {
+            if (ob.lane === targetLane && dy > -PROX_BEHIND && dy < PROX_AHEAD) {
+              unsafe = true;
+              reason = ob.type === 'parkedCar' ? 'UNSAFE LANE CHANGE' : 'CUT OFF A CAR';
+              break;
+            }
+          } else if (ob.type === 'pedestrian' && !ob.stroll) {
+            if (Math.abs(sx - LANE_X[targetLane]) < 60 && Math.abs(sy - PLAYER_Y) < 160) {
+              unsafe = true;
+              reason = 'UNSAFE LANE CHANGE';
+              break;
+            }
+          }
+        }
+        if (unsafe) {
+          this.award('LANE_CROSS', reason);
+        }
+        // Safe lane change → no penalty, no feedback.
       }
     } else if (!onDivider) {
       this.laneCrossing = false;
