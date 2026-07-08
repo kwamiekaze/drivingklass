@@ -87,13 +87,42 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
     try { localStorage.setItem(DIFF_KEY, d); } catch { /* ignore */ }
   }, []);
 
-  const start = useCallback((id: string) => {
+  const start = useCallback((id: string, opts: { daily?: boolean } = {}) => {
     setLevelId(id);
+    setDailyRun(!!opts.daily);
+    if (opts.daily) {
+      const ch = getDailyChallenge();
+      if (ch.difficulty !== difficulty) {
+        setDifficultyState(ch.difficulty);
+        try { localStorage.setItem(DIFF_KEY, ch.difficulty); } catch { /* ignore */ }
+      }
+    }
     setScreen('playing');
-  }, []);
+  }, [difficulty]);
 
   const handleComplete = useCallback((r: LevelResult) => {
     setBestScores((prev) => ({ ...prev, [r.levelId]: Math.max(prev[r.levelId] ?? 0, r.score) }));
+    const after = processRunResult(r);
+    setAftermath(after);
+
+    // Public leaderboard submission for endless mode + daily challenge.
+    const level = LEVELS.find((l) => l.id === r.levelId);
+    const isEndless = !!level?.endless;
+    if ((dailyRun || isEndless) && r.score > 0) {
+      const cachedName = getPlayerName();
+      if (cachedName) {
+        submitLeaderboard({
+          mode: dailyRun ? 'daily' : 'endless',
+          levelId: r.levelId,
+          score: r.score,
+          playerName: cachedName,
+          day: dailyRun ? todayKey() : null,
+        });
+      } else {
+        setShowNamePrompt({ mode: dailyRun ? 'daily' : 'endless', result: r });
+      }
+    }
+
     submitScore(r)
       .then(({ isNewBest, previousBest, isGuest, needsUsername }) => {
         setResult({ ...r, isNewBest, previousBest: previousBest ?? undefined });
@@ -105,7 +134,7 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
         setResult(r);
       });
     setScreen('report');
-  }, []);
+  }, [dailyRun]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
