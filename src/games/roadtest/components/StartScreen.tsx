@@ -6,14 +6,20 @@ import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
 import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
 import { FeedbackModal } from './FeedbackModal';
+import { DailyChallengeCard } from './DailyChallengeCard';
+import { RankBar } from './RankBar';
+import { MissionsPanel } from './MissionsPanel';
 
 interface Props {
   bestScores: Record<string, number>;
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
   onStart: (levelId: string) => void;
+  onStartDaily?: (levelId: string) => void;
   onHowToPlay: () => void;
   onLeaderboard: () => void;
+  onPublicLeaderboard?: () => void;
+  onBadgeCabinet?: () => void;
   onMultiplayer: () => void;
   onMyStats?: () => void;
   onSignInPrompt?: () => void;
@@ -41,7 +47,7 @@ function guestStreak(): number {
   } catch { return 0; }
 }
 
-export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onHowToPlay, onLeaderboard, onMultiplayer, onMyStats, onSignInPrompt, publicMode }: Props) {
+export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, onStartDaily, onHowToPlay, onLeaderboard, onPublicLeaderboard, onBadgeCabinet, onMultiplayer, onMyStats, onSignInPrompt, publicMode }: Props) {
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
@@ -127,6 +133,14 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         </div>
       </div>
 
+      <RankBar />
+
+      {onStartDaily && (
+        <DailyChallengeCard onStart={(id) => { clickTick(); onStartDaily(id); }} />
+      )}
+
+      <MissionsPanel />
+
       {!signedIn && onSignInPrompt && (
         <button
           className="dk-btn dk-btn-gold"
@@ -184,7 +198,13 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
       <div className="btn-row">
         <button className="dk-btn dk-btn-gold" onClick={() => startLevel(lessons[0].id)}>Start Lesson</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
-        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
+        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Best · Me</button>
+        {onPublicLeaderboard && (
+          <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onPublicLeaderboard(); }}>🏆 Global</button>
+        )}
+        {onBadgeCabinet && (
+          <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onBadgeCabinet(); }}>🏅 Badges</button>
+        )}
         {signedIn && onMyStats && (
           <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onMyStats(); }}>My Stats</button>
         )}

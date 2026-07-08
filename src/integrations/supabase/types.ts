@@ -347,6 +347,42 @@ export type Database = {
         }
         Relationships: []
       }
+      game_leaderboard_entries: {
+        Row: {
+          created_at: string
+          day: string | null
+          id: string
+          level_id: string
+          mode: string
+          player_name: string
+          rank_tier: string | null
+          score: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          day?: string | null
+          id?: string
+          level_id: string
+          mode: string
+          player_name: string
+          rank_tier?: string | null
+          score: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          day?: string | null
+          id?: string
+          level_id?: string
+          mode?: string
+          player_name?: string
+          rank_tier?: string | null
+          score?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       game_match_players: {
         Row: {
           color: string

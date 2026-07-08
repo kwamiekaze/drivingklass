@@ -2,15 +2,19 @@ import { useEffect, useRef } from 'react';
 import { LEVELS } from '../game/levels';
 import { DIFFICULTIES } from '../game/types';
 import type { LevelResult } from '../game/types';
+import type { RunAftermath } from '../runComplete';
+import { ShareScoreButton } from './ShareScoreButton';
+import { sound } from '../sound';
 
 interface Props {
   result: LevelResult;
+  aftermath?: RunAftermath | null;
   onRetry: () => void;
   onNext: (nextLevelId: string) => void;
   onMenu: () => void;
 }
 
-export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
+export function ReportCard({ result, aftermath, onRetry, onNext, onMenu }: Props) {
   const idx = LEVELS.findIndex((l) => l.id === result.levelId);
   const next = idx >= 0 && idx < LEVELS.length - 1 ? LEVELS[idx + 1] : null;
   const diff = DIFFICULTIES.find((d) => d.id === result.difficulty);
@@ -29,6 +33,10 @@ export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
     }
     return () => { el.innerHTML = ''; };
   }, [result.isNewBest]);
+
+  useEffect(() => {
+    if (aftermath?.xp.leveledUp) { try { sound.fanfare(); } catch { /* ignore */ } }
+  }, [aftermath?.xp.leveledUp]);
 
   return (
     <div className="screen report-screen">
@@ -89,6 +97,34 @@ export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
           </ul>
         </div>
 
+        {aftermath && (
+          <div className="aftermath">
+            <div className="aftermath-xp">
+              <span>+{aftermath.xp.gained.toLocaleString()} XP</span>
+              {aftermath.xp.leveledUp && aftermath.xp.newRank && (
+                <span className="rank-up">🎉 RANK UP · {aftermath.xp.newRank.icon} {aftermath.xp.newRank.label}</span>
+              )}
+            </div>
+            {aftermath.unlocked.length > 0 && (
+              <div className="aftermath-badges">
+                <strong>🏅 New badges:</strong>
+                <ul>{aftermath.unlocked.map((a) => <li key={a.id}>{a.icon} {a.label}</li>)}</ul>
+              </div>
+            )}
+            {aftermath.completedMissions.length > 0 && (
+              <div className="aftermath-missions">
+                <strong>📋 Missions complete:</strong>
+                <ul>{aftermath.completedMissions.map((m) => <li key={m.id}>{m.label} · +{m.xp} XP</li>)}</ul>
+              </div>
+            )}
+            {aftermath.isDailyChallenge && (
+              <div className={`aftermath-daily${aftermath.dailyBeat ? ' beat' : ''}`}>
+                {aftermath.dailyBeat ? '🏆 Daily par beaten!' : 'Daily Challenge attempted — try again tomorrow for a streak.'}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="btn-row">
           <button className="dk-btn dk-btn-outline" onClick={onRetry}>Retry Lesson</button>
           {next && result.passed && !next.endless ? (
@@ -97,6 +133,8 @@ export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
             <button className="dk-btn dk-btn-gold" onClick={onMenu}>Back to Menu</button>
           )}
         </div>
+
+        <ShareScoreButton result={result} />
 
         <a className="dk-btn dk-btn-black book-cta" href="https://drivingklass.com" target="_blank" rel="noopener noreferrer">
           Book a Real Driving Lesson
