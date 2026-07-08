@@ -44,6 +44,7 @@ import AdminAssignments from "./pages/portal/AdminAssignments";
 import AdminReportCards from "./pages/portal/AdminReportCards";
 import AdminLeads from "./pages/portal/AdminLeads";
 import AdminQA from "./pages/portal/AdminQA";
+import AdminPlatformHealth from "./pages/portal/AdminPlatformHealth";
 import AdminMessages from "./pages/portal/AdminMessages";
 import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
