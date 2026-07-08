@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
@@ -258,6 +258,7 @@ function getNavItems(role: string | null, t: (k: string) => string) {
         { href: '/admin/qa', label: 'QA', icon: Shield },
         { href: '/admin/practice-test', label: 'Practice Test', icon: BookOpen },
         { href: '/admin/tracker', label: 'Live Tracker', icon: RadioTower },
+        { href: '/admin/health', label: 'Platform Health', icon: HeartPulse },
         { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
       );
       break;

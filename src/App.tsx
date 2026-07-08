@@ -44,6 +44,7 @@ import AdminAssignments from "./pages/portal/AdminAssignments";
 import AdminReportCards from "./pages/portal/AdminReportCards";
 import AdminLeads from "./pages/portal/AdminLeads";
 import AdminQA from "./pages/portal/AdminQA";
+import AdminPlatformHealth from "./pages/portal/AdminPlatformHealth";
 import AdminMessages from "./pages/portal/AdminMessages";
 import AdminStudents from "./pages/portal/AdminStudents";
 import AdminInstructors from "./pages/portal/AdminInstructors";
@@ -155,6 +156,7 @@ const App = () => (
                       <Route path="/admin/report-cards" element={<AdminReportCards />} />
                       <Route path="/admin/leads" element={<AdminLeads />} />
                       <Route path="/admin/qa" element={<AdminQA />} />
+                      <Route path="/admin/health" element={<AdminPlatformHealth />} />
                       <Route path="/admin/messages" element={<AdminMessages />} />
                       <Route path="/admin/students" element={<AdminStudents />} />
                       <Route path="/admin/instructors" element={<AdminInstructors />} />
