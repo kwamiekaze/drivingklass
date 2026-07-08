@@ -151,11 +151,12 @@ async function runScan(supabase: ReturnType<typeof createClient>, scanType: "qui
       if (!p.pickup_address || !p.dropoff_address) issues.push({ category: "Students", severity: "warning", check_key: "stu_no_addr", description: "Missing pickup/drop-off address", student_id: p.id, student_name: p.full_name ?? p.email, suggested_fix: "Add addresses in profile" });
       if (!p.permit_file_url) issues.push({ category: "Students", severity: "info", check_key: "stu_no_permit", description: "No permit/license uploaded", student_id: p.id, student_name: p.full_name ?? p.email, suggested_fix: "Ask student to upload permit" });
       if (!p.last_sign_in_at) issues.push({ category: "Students", severity: "info", check_key: "stu_never_signed_in", description: "Student has never signed in", student_id: p.id, student_name: p.full_name ?? p.email, suggested_fix: "Send login reminder" });
-      // Hours consistency
-      if (p.total_hours_completed !== null && p.total_hours_completed !== undefined) {
-        const actual = deductionByStudent.get(p.id) ?? 0;
-        if (Math.abs(Number(p.total_hours_completed) - actual) > 0.51) {
-          issues.push({ category: "Students", severity: "warning", check_key: "stu_hours_mismatch", description: `Completed hours (${p.total_hours_completed}) don't match deduction ledger (${actual.toFixed(2)})`, student_id: p.id, student_name: p.full_name ?? p.email, suggested_fix: "Refresh completed hours from deduction ledger", fixable: true, fix_action: "refresh_completed_hours", fix_payload: { student_id: p.id, correct_hours: actual } });
+      // Hours consistency: purchased_hours - sum(deductions) should equal hours_remaining
+      if (p.purchased_hours !== null && p.purchased_hours !== undefined && p.hours_remaining !== null && p.hours_remaining !== undefined) {
+        const actualCompleted = deductionByStudent.get(p.id) ?? 0;
+        const expectedRemaining = Number(p.purchased_hours) - actualCompleted;
+        if (Math.abs(Number(p.hours_remaining) - expectedRemaining) > 0.51) {
+          issues.push({ category: "Students", severity: "warning", check_key: "stu_hours_mismatch", description: `Hours remaining (${p.hours_remaining}) inconsistent with purchased (${p.purchased_hours}) minus completed (${actualCompleted.toFixed(2)})`, student_id: p.id, student_name: p.full_name ?? p.email, suggested_fix: "Refresh hours_remaining from ledger", fixable: true, fix_action: "refresh_completed_hours", fix_payload: { student_id: p.id, correct_hours_remaining: expectedRemaining } });
         }
       }
     }
