@@ -198,7 +198,13 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
       <div className="btn-row">
         <button className="dk-btn dk-btn-gold" onClick={() => startLevel(lessons[0].id)}>Start Lesson</button>
         <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onHowToPlay(); }}>How to Play</button>
-        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Leaderboard</button>
+        <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onLeaderboard(); }}>Best · Me</button>
+        {onPublicLeaderboard && (
+          <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onPublicLeaderboard(); }}>🏆 Global</button>
+        )}
+        {onBadgeCabinet && (
+          <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onBadgeCabinet(); }}>🏅 Badges</button>
+        )}
         {signedIn && onMyStats && (
           <button className="dk-btn dk-btn-outline" onClick={() => { clickTick(); onMyStats(); }}>My Stats</button>
         )}
