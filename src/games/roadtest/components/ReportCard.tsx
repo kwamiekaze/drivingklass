@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react';
 import { LEVELS } from '../game/levels';
 import { DIFFICULTIES } from '../game/types';
 import type { LevelResult } from '../game/types';
+import type { RunAftermath } from '../runComplete';
+import { ShareScoreButton } from './ShareScoreButton';
+import { sound } from '../sound';
 
 interface Props {
   result: LevelResult;
+  aftermath?: RunAftermath | null;
   onRetry: () => void;
   onNext: (nextLevelId: string) => void;
   onMenu: () => void;
