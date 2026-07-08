@@ -14,7 +14,7 @@ interface Props {
   onMenu: () => void;
 }
 
-export function ReportCard({ result, onRetry, onNext, onMenu }: Props) {
+export function ReportCard({ result, aftermath, onRetry, onNext, onMenu }: Props) {
   const idx = LEVELS.findIndex((l) => l.id === result.levelId);
   const next = idx >= 0 && idx < LEVELS.length - 1 ? LEVELS[idx + 1] : null;
   const diff = DIFFICULTIES.find((d) => d.id === result.difficulty);
