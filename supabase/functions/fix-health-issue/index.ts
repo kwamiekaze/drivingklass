@@ -68,13 +68,13 @@ Deno.serve(async (req) => {
       result = "Submitted timestamp restored";
     } else if (action === "refresh_completed_hours") {
       const studentId = (payload?.student_id ?? (issue as any).fix_payload?.student_id) as string;
-      const correct = Number(payload?.correct_hours ?? (issue as any).fix_payload?.correct_hours ?? 0);
-      const { data: prev } = await admin.from("profiles").select("id,total_hours_completed").eq("id", studentId).maybeSingle();
+      const correct = Number(payload?.correct_hours_remaining ?? (issue as any).fix_payload?.correct_hours_remaining ?? 0);
+      const { data: prev } = await admin.from("profiles").select("id,hours_remaining").eq("id", studentId).maybeSingle();
       before = prev;
-      const { data: upd, error } = await admin.from("profiles").update({ total_hours_completed: correct }).eq("id", studentId).select("id,total_hours_completed").maybeSingle();
+      const { data: upd, error } = await admin.from("profiles").update({ hours_remaining: correct }).eq("id", studentId).select("id,hours_remaining").maybeSingle();
       if (error) throw error;
       after = upd;
-      result = `Completed hours refreshed to ${correct.toFixed(2)}`;
+      result = `Hours remaining refreshed to ${correct.toFixed(2)}`;
     } else {
       return json({ error: `Unsupported action: ${action}` }, 400);
     }
