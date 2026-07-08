@@ -133,6 +133,14 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
         </div>
       </div>
 
+      <RankBar />
+
+      {onStartDaily && (
+        <DailyChallengeCard onStart={(id) => { clickTick(); onStartDaily(id); }} />
+      )}
+
+      <MissionsPanel />
+
       {!signedIn && onSignInPrompt && (
         <button
           className="dk-btn dk-btn-gold"
