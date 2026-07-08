@@ -34,6 +34,10 @@ export function ReportCard({ result, aftermath, onRetry, onNext, onMenu }: Props
     return () => { el.innerHTML = ''; };
   }, [result.isNewBest]);
 
+  useEffect(() => {
+    if (aftermath?.xp.leveledUp) { try { sound.fanfare(); } catch { /* ignore */ } }
+  }, [aftermath?.xp.leveledUp]);
+
   return (
     <div className="screen report-screen">
       {result.isNewBest && (
