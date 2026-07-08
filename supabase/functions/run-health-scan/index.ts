@@ -232,11 +232,20 @@ async function runScan(supabase: ReturnType<typeof createClient>, scanType: "qui
       }
     }
 
-    // ---- Score
+    // ---- Score: 10 pts per category (healthy=10, warning=6, critical=0), minus penalty for many crits
+    const CATS = ["Sessions", "Report Cards", "Road Tests", "Students", "Scheduling", "Notifications", "Live Tracker", "Database Integrity", "Public Sharing", "Route Integrity"];
+    const byCat: Record<string, { crit: number; warn: number; info: number }> = {};
+    for (const c of CATS) byCat[c] = { crit: 0, warn: 0, info: 0 };
+    for (const i of issues) {
+      const b = byCat[i.category] ?? (byCat[i.category] = { crit: 0, warn: 0, info: 0 });
+      if (i.severity === "critical") b.crit++; else if (i.severity === "warning") b.warn++; else b.info++;
+    }
+    let score = 0;
+    for (const c of CATS) { const b = byCat[c]; score += b.crit > 0 ? 0 : b.warn > 0 ? 6 : 10; }
     const critical = issues.filter((i) => i.severity === "critical").length;
     const warning = issues.filter((i) => i.severity === "warning").length;
     const info = issues.filter((i) => i.severity === "info").length;
-    const score = Math.max(0, Math.min(100, 100 - critical * 6 - warning * 2 - info));
+    score = Math.max(0, Math.min(100, score - Math.min(20, critical)));
 
     const summary = {
       counts: { critical, warning, info, total: issues.length },
