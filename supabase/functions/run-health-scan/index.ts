@@ -48,7 +48,7 @@ async function runScan(supabase: ReturnType<typeof createClient>, scanType: "qui
       supabase.from("sessions").select("id,student_id,instructor_id,starts_at,ends_at,status,report_card_id,session_type,completed_at,duration_minutes,cancelled_at").order("starts_at", { ascending: false }).limit(heavy ? 10000 : 3000),
       supabase.from("report_cards").select("id,session_id,student_id,report_card_status,submitted_at,is_public,public_share_slug,public_access_code,overall").limit(heavy ? 10000 : 3000),
       supabase.from("road_test_results").select("id,session_id,student_id,result,notes,created_at").limit(heavy ? 10000 : 3000),
-      supabase.from("profiles").select("id,full_name,email,intake_submitted,approval_status,guardian_email,pickup_address,dropoff_address,permit_file_url,last_sign_in_at,total_hours_purchased,total_hours_completed").limit(heavy ? 10000 : 3000),
+      supabase.from("profiles").select("id,full_name,email,intake_submitted,approval_status,guardian_email,pickup_address,dropoff_address,permit_file_url,last_sign_in_at,purchased_hours,hours_remaining").limit(heavy ? 10000 : 3000),
       supabase.from("user_roles").select("user_id,role"),
       supabase.from("schedule_proposals").select("id,student_id,instructor_id,proposal_status,expires_at,accepted_at,created_at").limit(heavy ? 5000 : 1500),
       supabase.from("session_tracking").select("id,session_id,student_id,instructor_id,is_active,tracking_token,started_at,ended_at,last_email_sent_at,update_interval_minutes").limit(heavy ? 5000 : 1500),
