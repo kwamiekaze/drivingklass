@@ -151,9 +151,12 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
             bestScores={bestScores}
             difficulty={difficulty}
             setDifficulty={setDifficulty}
-            onStart={start}
+            onStart={(id) => start(id)}
+            onStartDaily={(id) => start(id, { daily: true })}
             onHowToPlay={() => setShowHowTo(true)}
             onLeaderboard={() => setShowLeaderboard(true)}
+            onPublicLeaderboard={() => setShowPublicLb(true)}
+            onBadgeCabinet={() => setShowBadges(true)}
             onMultiplayer={() => setScreen('multiplayer')}
             onMyStats={() => setShowMyStats(true)}
             onSignInPrompt={signInWithGoogle}
@@ -177,7 +180,8 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
         {screen === 'report' && result && (
           <ReportCard
             result={result}
-            onRetry={() => start(result.levelId)}
+            aftermath={aftermath}
+            onRetry={() => start(result.levelId, { daily: dailyRun })}
             onNext={(nextId) => start(nextId)}
             onMenu={() => setScreen('menu')}
           />
@@ -185,6 +189,8 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
 
         {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
         {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+        {showPublicLb && <PublicLeaderboardModal onClose={() => setShowPublicLb(false)} />}
+        {showBadges && <BadgeCabinet onClose={() => setShowBadges(false)} />}
         {showMyStats && <MyStatsModal onClose={() => setShowMyStats(false)} />}
         {showUsernamePrompt && (
           <UsernameModal
@@ -197,6 +203,23 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
             result={guestPromptResult}
             onDone={() => setGuestPromptResult(null)}
             onSkip={() => setGuestPromptResult(null)}
+          />
+        )}
+        {showNamePrompt && (
+          <PlayerNamePrompt
+            title={showNamePrompt.mode === 'daily' ? 'Post your Daily Challenge score' : 'Post your Endless score'}
+            onClose={() => setShowNamePrompt(null)}
+            onSave={(name) => {
+              const p = showNamePrompt;
+              setShowNamePrompt(null);
+              submitLeaderboard({
+                mode: p.mode,
+                levelId: p.result.levelId,
+                score: p.result.score,
+                playerName: name,
+                day: p.mode === 'daily' ? todayKey() : null,
+              });
+            }}
           />
         )}
 
