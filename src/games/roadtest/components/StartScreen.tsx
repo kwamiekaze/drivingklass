@@ -6,14 +6,20 @@ import { DIFFICULTIES, type Difficulty } from '../game/types';
 import { sound } from '../sound';
 import { InstallTutorial, shouldAutoShowInstallTutorial } from './InstallTutorial';
 import { FeedbackModal } from './FeedbackModal';
+import { DailyChallengeCard } from './DailyChallengeCard';
+import { RankBar } from './RankBar';
+import { MissionsPanel } from './MissionsPanel';
 
 interface Props {
   bestScores: Record<string, number>;
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
   onStart: (levelId: string) => void;
+  onStartDaily?: (levelId: string) => void;
   onHowToPlay: () => void;
   onLeaderboard: () => void;
+  onPublicLeaderboard?: () => void;
+  onBadgeCabinet?: () => void;
   onMultiplayer: () => void;
   onMyStats?: () => void;
   onSignInPrompt?: () => void;
