@@ -523,6 +523,157 @@ export type Database = {
         }
         Relationships: []
       }
+      health_issues: {
+        Row: {
+          affected_entity_id: string | null
+          affected_entity_type: string | null
+          category: string
+          check_key: string
+          created_at: string
+          description: string
+          fix_action: string | null
+          fix_payload: Json | null
+          fixable: boolean
+          fixed_at: string | null
+          fixed_by: string | null
+          id: string
+          report_id: string | null
+          scan_id: string | null
+          session_id: string | null
+          severity: string
+          student_id: string | null
+          student_name: string | null
+          suggested_fix: string | null
+        }
+        Insert: {
+          affected_entity_id?: string | null
+          affected_entity_type?: string | null
+          category: string
+          check_key: string
+          created_at?: string
+          description: string
+          fix_action?: string | null
+          fix_payload?: Json | null
+          fixable?: boolean
+          fixed_at?: string | null
+          fixed_by?: string | null
+          id?: string
+          report_id?: string | null
+          scan_id?: string | null
+          session_id?: string | null
+          severity: string
+          student_id?: string | null
+          student_name?: string | null
+          suggested_fix?: string | null
+        }
+        Update: {
+          affected_entity_id?: string | null
+          affected_entity_type?: string | null
+          category?: string
+          check_key?: string
+          created_at?: string
+          description?: string
+          fix_action?: string | null
+          fix_payload?: Json | null
+          fixable?: boolean
+          fixed_at?: string | null
+          fixed_by?: string | null
+          id?: string
+          report_id?: string | null
+          scan_id?: string | null
+          session_id?: string | null
+          severity?: string
+          student_id?: string | null
+          student_name?: string | null
+          suggested_fix?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_issues_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "health_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_repair_log: {
+        Row: {
+          action: string
+          admin_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          id: string
+          issue_id: string | null
+          result: string
+        }
+        Insert: {
+          action: string
+          admin_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          issue_id?: string | null
+          result: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          issue_id?: string | null
+          result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_repair_log_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "health_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_scans: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          scan_type: string
+          score: number | null
+          started_at: string
+          status: string
+          summary: Json
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          scan_type: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          scan_type?: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       instructor_students: {
         Row: {
           created_at: string | null
