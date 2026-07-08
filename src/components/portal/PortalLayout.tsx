@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower } from "lucide-react";
+import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
 import { useState } from "react";
