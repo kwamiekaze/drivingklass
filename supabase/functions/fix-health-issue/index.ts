@@ -16,12 +16,9 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: isAdmin } = await admin.rpc("is_staff_or_admin", { _user_id: userId }).maybeSingle().then(() => admin.rpc("has_role", { _user_id: userId, _role: "admin" }));
-    // Fallback direct check
     const { data: roleRows } = await admin.from("user_roles").select("role").eq("user_id", userId);
     const roles = new Set((roleRows ?? []).map((r: any) => r.role));
     if (!roles.has("admin") && !roles.has("staff")) return json({ error: "forbidden" }, 403);
-    void isAdmin;
 
     const body = await req.json();
     const { issue_id, action, payload } = body as { issue_id: string; action: string; payload: Record<string, unknown> };
