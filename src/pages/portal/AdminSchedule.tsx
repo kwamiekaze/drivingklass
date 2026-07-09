@@ -58,6 +58,7 @@ function AdminScheduleContent() {
     instructor_id: "",
     date: "",
     start_time: "",
+    pickup_time: "",
     duration_minutes: "120",
     session_type: "driving",
     pickup_address: "",
