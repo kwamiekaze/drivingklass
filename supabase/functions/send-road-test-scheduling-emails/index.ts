@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   // Load session with student + instructor
   const { data: session, error: sErr } = await supabase
     .from('sessions')
-    .select('id, starts_at, dds_location, session_type, student_id, instructor_id')
+    .select('id, starts_at, dds_location, session_type, student_id, instructor_id, pickup_time')
     .eq('id', sessionId)
     .maybeSingle()
   if (sErr || !session) return json({ error: 'Session not found' }, 404)
@@ -49,10 +49,13 @@ Deno.serve(async (req) => {
 
   // Format date/time in America/New_York
   const starts = new Date(session.starts_at)
-  const fmt = (opts: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts }).format(starts)
-  const dateLabel = fmt({ weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  const timeLabel = fmt({ hour: 'numeric', minute: '2-digit', hour12: true })
+  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts }).format(d)
+  const dateLabel = fmt(starts, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  const timeLabel = fmt(starts, { hour: 'numeric', minute: '2-digit', hour12: true })
+  const pickupTimeLabel = (session as any).pickup_time
+    ? fmt(new Date((session as any).pickup_time), { hour: 'numeric', minute: '2-digit', hour12: true })
+    : ''
 
   async function send(templateName: string, recipientEmail: string, data: Record<string, any>, subjectFallback: string) {
     const idempotencyKey = `road-test-${templateName}-${sessionId}-${starts.getTime()}`
