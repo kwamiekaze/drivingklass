@@ -25,6 +25,8 @@ import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
 import { LatestReportSnapshot } from "./LatestReportSnapshot";
+import { DdsLocationPicker } from "./DdsLocationPicker";
+import { RoadTestSentEmails } from "./RoadTestSentEmails";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -64,6 +66,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editPickupAddress, setEditPickupAddress] = useState("");
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
+  const [editDdsLocation, setEditDdsLocation] = useState<string>("");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
@@ -257,6 +260,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditPickupAddress(sessionDetails?.pickup_address || '');
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
+    setEditDdsLocation((session as any).dds_location || '');
     setEditDialogOpen(true);
   };
 
@@ -340,6 +344,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       }
 
       // Update session including addresses
+      if (editSessionType === 'testing' && !editDdsLocation) {
+        setEditConflictWarning("Please select a DDS testing location for this road test.");
+        setIsLoading(false);
+        return;
+      }
       const updatePayload: Record<string, any> = {
         starts_at: newStartsAt,
         ends_at: newEndsAt,
@@ -347,8 +356,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         pickup_address: editPickupAddress.trim() || null,
         dropoff_address: editDropoffAddress.trim() || null,
         session_type: editSessionType,
+        dds_location: editSessionType === 'testing' ? editDdsLocation : null,
       };
 
+      const previousLocation = (selectedSession as any).dds_location || null;
+      const previousStartsAt = selectedSession.starts_at;
       const { error } = await supabase
         .from('sessions')
         .update(updatePayload)
