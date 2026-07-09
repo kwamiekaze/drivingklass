@@ -160,6 +160,10 @@ function AdminScheduleContent() {
     if (formData.session_type === 'testing' && formData.dds_location) {
       updates.dds_location = formData.dds_location;
     }
+    if (formData.session_type === 'testing' && formData.pickup_time) {
+      const pickupIso = new Date(`${formData.date}T${formData.pickup_time}`).toISOString();
+      updates.pickup_time = pickupIso;
+    }
 
     if (Object.keys(updates).length > 0 && newSession?.id) {
       await supabase.from('sessions').update(updates).eq('id', newSession.id);
