@@ -22,6 +22,7 @@ import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { useToast } from "@/hooks/use-toast";
 import { StudentFullScheduleSection } from "@/components/portal/StudentFullScheduleSection";
+import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
 
 export default function InstructorDashboard() {
   return (
