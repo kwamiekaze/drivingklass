@@ -632,6 +632,20 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </Link>
                   )}
 
+                  {/* DDS location + Sent Emails for road tests (staff/instructor) */}
+                  {selectedSession.session_type === 'testing' && (isStaffOrAdmin || userRole === 'instructor') && (
+                    <div className="space-y-2">
+                      {(selectedSession as any).dds_location && (
+                        <div className="rounded-lg border bg-card/40 p-3 text-sm">
+                          <div className="text-xs text-muted-foreground mb-0.5">DDS Testing Location</div>
+                          <div className="font-medium">{(selectedSession as any).dds_location}</div>
+                        </div>
+                      )}
+                      <RoadTestSentEmails sessionId={selectedSession.id} />
+                    </div>
+                  )}
+
+
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
