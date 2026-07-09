@@ -42,14 +42,22 @@ export function DdsLocationPicker({ value, onChange, placeholder = "Search DDS t
           <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[min(92vw,520px)] bg-popover z-50" align="start">
+      <PopoverContent
+        className="p-0 w-[min(96vw,560px)] bg-popover z-50 shadow-2xl"
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        collisionPadding={12}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Type a city, street, or ZIP…"
             value={query}
             onValueChange={setQuery}
+            autoFocus
+            className="h-12 text-base"
           />
-          <CommandList className="max-h-[320px]">
+          <CommandList className="max-h-[60vh] sm:max-h-[380px] overscroll-contain">
             <CommandEmpty>No DDS location found.</CommandEmpty>
             <CommandGroup>
               {filtered.map((loc) => (
@@ -61,10 +69,10 @@ export function DdsLocationPicker({ value, onChange, placeholder = "Search DDS t
                     setOpen(false);
                     setQuery("");
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer py-3 min-h-[48px]"
                 >
-                  <Check className={cn("mr-2 h-4 w-4", value === loc ? "opacity-100" : "opacity-0")} />
-                  <span className="text-sm">{loc}</span>
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === loc ? "opacity-100" : "opacity-0")} />
+                  <span className="text-sm leading-snug break-words">{loc}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
