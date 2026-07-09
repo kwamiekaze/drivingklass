@@ -643,19 +643,13 @@ function AdminScheduleContent() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Start Time</Label>
-                <Select value={blockForm.start_time} onValueChange={v => setBlockForm(f => ({ ...f, start_time: v }))}>
-                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select time" /></SelectTrigger>
-                  <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                    {Array.from({ length: 48 }, (_, i) => {
-                      const hours = Math.floor(i / 2);
-                      const mins = (i % 2) * 30;
-                      const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                      const ampm = hours < 12 ? 'AM' : 'PM';
-                      return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
+                <Input
+                  type="time"
+                  step={60}
+                  value={blockForm.start_time}
+                  onChange={e => setBlockForm(f => ({ ...f, start_time: e.target.value }))}
+                  className="min-h-[44px]"
+                />
               </div>
             </div>
             <div className="space-y-2">
