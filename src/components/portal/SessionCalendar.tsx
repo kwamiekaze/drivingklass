@@ -771,6 +771,19 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 </div>
               </div>
 
+              {editSessionType === 'testing' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    DDS Testing Location <span className="text-destructive">*</span>
+                  </Label>
+                  <DdsLocationPicker value={editDdsLocation} onChange={setEditDdsLocation} />
+                  <p className="text-xs text-muted-foreground">
+                    Saving with a new location or time re-sends the DDS 2 GO instructions to the student and instructor.
+                  </p>
+                </div>
+              )}
+
+
               {selectedSession.report_card_id && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-700 dark:text-amber-300">
                   ⚠️ This session has a submitted report card. Updating the date/time will keep the report linked.
