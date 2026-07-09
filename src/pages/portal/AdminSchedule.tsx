@@ -20,6 +20,7 @@ import { StudentPickerModal } from "@/components/portal/StudentPickerModal";
 import type { CalendarEvent } from "@/components/portal/FullCalendarView";
 import { StudentFullScheduleSection } from "@/components/portal/StudentFullScheduleSection";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { DdsLocationPicker } from "@/components/portal/DdsLocationPicker";
 
 export default function AdminSchedule() {
   return (
@@ -63,6 +64,7 @@ function AdminScheduleContent() {
     dropoff_address: "",
     note_for_student: "",
     note_for_instructor: "",
+    dds_location: "",
   });
 
   // Block form state
@@ -128,6 +130,10 @@ function AdminScheduleContent() {
       toast.error("Please fill in all required fields");
       return;
     }
+    if (formData.session_type === 'testing' && !formData.dds_location) {
+      toast.error("Please select a DDS testing location for the road test");
+      return;
+    }
     const startsAt = new Date(`${formData.date}T${formData.start_time}`);
     const durationMinutes = parseInt(formData.duration_minutes);
 
@@ -150,9 +156,22 @@ function AdminScheduleContent() {
     if (formData.dropoff_address.trim()) updates.dropoff_address = formData.dropoff_address.trim();
     if (formData.note_for_student.trim()) updates.note_for_student = formData.note_for_student.trim();
     if (formData.note_for_instructor.trim()) updates.note_for_instructor = formData.note_for_instructor.trim();
+    if (formData.session_type === 'testing' && formData.dds_location) {
+      updates.dds_location = formData.dds_location;
+    }
 
     if (Object.keys(updates).length > 0 && newSession?.id) {
       await supabase.from('sessions').update(updates).eq('id', newSession.id);
+    }
+
+    // Fire road test scheduling emails (student + instructor) and log them
+    if (formData.session_type === 'testing' && newSession?.id && formData.dds_location) {
+      supabase.functions.invoke('send-road-test-scheduling-emails', {
+        body: { sessionId: newSession.id },
+      }).then(({ error: e }) => {
+        if (e) toast.error(`Road test emails failed: ${e.message}`);
+        else toast.success("Road test scheduling emails sent");
+      });
     }
 
     toast.success("Session created successfully");
@@ -162,7 +181,7 @@ function AdminScheduleContent() {
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "" });
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -397,6 +416,22 @@ function AdminScheduleContent() {
                     </Select>
                   </div>
                 </div>
+
+                {formData.session_type === 'testing' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">
+                      DDS Testing Location <span className="text-destructive">*</span>
+                    </Label>
+                    <DdsLocationPicker
+                      value={formData.dds_location}
+                      onChange={(v) => setFormData(f => ({ ...f, dds_location: v }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This location is included in the student's DDS 2 GO scheduling instructions.
+                    </p>
+                  </div>
+                )}
+
 
                 {/* Pickup / Drop-off */}
                 <div className="space-y-2">

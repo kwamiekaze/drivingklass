@@ -1912,6 +1912,50 @@ export type Database = {
           },
         ]
       }
+      road_test_emails: {
+        Row: {
+          body: string | null
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_type: string
+          sent_at: string
+          session_id: string
+          status: string
+          subject: string
+        }
+        Insert: {
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_type: string
+          sent_at?: string
+          session_id: string
+          status?: string
+          subject: string
+        }
+        Update: {
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_type?: string
+          sent_at?: string
+          session_id?: string
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_test_emails_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       road_test_results: {
         Row: {
           created_at: string
@@ -2347,6 +2391,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
@@ -2376,6 +2421,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           created_by?: string | null
+          dds_location?: string | null
           dropoff_address?: string | null
           duration_minutes: number
           ends_at: string
@@ -2405,6 +2451,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           created_by?: string | null
+          dds_location?: string | null
           dropoff_address?: string | null
           duration_minutes?: number
           ends_at?: string
@@ -2598,6 +2645,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
@@ -2640,6 +2688,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
@@ -2710,6 +2759,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
@@ -3077,6 +3127,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           created_by: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string

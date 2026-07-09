@@ -25,6 +25,8 @@ import { RoadTestResultModal } from "./RoadTestResultModal";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalendarView";
 import { LatestReportSnapshot } from "./LatestReportSnapshot";
+import { DdsLocationPicker } from "./DdsLocationPicker";
+import { RoadTestSentEmails } from "./RoadTestSentEmails";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -64,6 +66,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editPickupAddress, setEditPickupAddress] = useState("");
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
+  const [editDdsLocation, setEditDdsLocation] = useState<string>("");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
@@ -257,6 +260,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditPickupAddress(sessionDetails?.pickup_address || '');
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
+    setEditDdsLocation((session as any).dds_location || '');
     setEditDialogOpen(true);
   };
 
@@ -340,6 +344,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       }
 
       // Update session including addresses
+      if (editSessionType === 'testing' && !editDdsLocation) {
+        setEditConflictWarning("Please select a DDS testing location for this road test.");
+        setIsLoading(false);
+        return;
+      }
       const updatePayload: Record<string, any> = {
         starts_at: newStartsAt,
         ends_at: newEndsAt,
@@ -347,14 +356,32 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         pickup_address: editPickupAddress.trim() || null,
         dropoff_address: editDropoffAddress.trim() || null,
         session_type: editSessionType,
+        dds_location: editSessionType === 'testing' ? editDdsLocation : null,
       };
 
+      const previousLocation = (selectedSession as any).dds_location || null;
+      const previousStartsAt = selectedSession.starts_at;
       const { error } = await supabase
         .from('sessions')
         .update(updatePayload)
         .eq('id', selectedSession.id);
 
       if (error) throw error;
+
+      // Re-send road test scheduling emails if this is a testing session and
+      // either the DDS location or start time changed (or was just added).
+      if (
+        editSessionType === 'testing' &&
+        editDdsLocation &&
+        (editDdsLocation !== previousLocation || newStartsAt !== previousStartsAt)
+      ) {
+        supabase.functions.invoke('send-road-test-scheduling-emails', {
+          body: { sessionId: selectedSession.id },
+        }).then(({ error: e }) => {
+          if (e) toast({ title: 'Road test emails failed', description: e.message, variant: 'destructive' });
+          else toast({ title: 'Road test emails sent', description: 'Student and instructor notified.' });
+        });
+      }
 
       toast({ title: "Session Updated", description: "Session updated successfully." });
       setEditDialogOpen(false);
@@ -605,6 +632,20 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     </Link>
                   )}
 
+                  {/* DDS location + Sent Emails for road tests (staff/instructor) */}
+                  {selectedSession.session_type === 'testing' && (isStaffOrAdmin || userRole === 'instructor') && (
+                    <div className="space-y-2">
+                      {(selectedSession as any).dds_location && (
+                        <div className="rounded-lg border bg-card/40 p-3 text-sm">
+                          <div className="text-xs text-muted-foreground mb-0.5">DDS Testing Location</div>
+                          <div className="font-medium">{(selectedSession as any).dds_location}</div>
+                        </div>
+                      )}
+                      <RoadTestSentEmails sessionId={selectedSession.id} />
+                    </div>
+                  )}
+
+
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
@@ -743,6 +784,19 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                   <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
                 </div>
               </div>
+
+              {editSessionType === 'testing' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    DDS Testing Location <span className="text-destructive">*</span>
+                  </Label>
+                  <DdsLocationPicker value={editDdsLocation} onChange={setEditDdsLocation} />
+                  <p className="text-xs text-muted-foreground">
+                    Saving with a new location or time re-sends the DDS 2 GO instructions to the student and instructor.
+                  </p>
+                </div>
+              )}
+
 
               {selectedSession.report_card_id && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-700 dark:text-amber-300">
