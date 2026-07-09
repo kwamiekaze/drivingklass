@@ -27,9 +27,9 @@ export const RoadTestStudentEmail = ({
         <Heading style={brand.h1}>Your DrivingKlass Road Test</Heading>
         <Text style={brand.text}>Hi {studentName || 'there'},</Text>
         <Text style={brand.text}>
-          Congratulations on reaching the road test stage! Below are the details you and your
-          instructor agreed on, followed by simple step-by-step instructions to schedule your
-          official Georgia road test through the DDS 2 GO app.
+          Congratulations on reaching the road test stage! Below are the details of your road test
+          appointment followed by simple step-by-step instructions to schedule your official
+          Georgia road test through the DDS 2 GO app.
         </Text>
 
         <Section style={brand.card}>
