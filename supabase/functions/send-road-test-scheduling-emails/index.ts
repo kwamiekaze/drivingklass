@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     results.student = await send(
       'road-test-scheduled-student',
       student.email,
-      { studentName, ddsLocation, dateLabel, timeLabel },
+      { studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel },
       'Your DrivingKlass Road Test — How to Schedule on DDS 2 GO',
     )
   } else {
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     results.instructor = await send(
       'road-test-scheduled-instructor',
       instructor.email,
-      { instructorName, studentName, ddsLocation, dateLabel, timeLabel, cityLabel },
+      { instructorName, studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel, cityLabel },
       `Road Test Scheduled: ${studentName} — ${dateLabel} ${timeLabel} ${cityLabel}`,
     )
   } else {
