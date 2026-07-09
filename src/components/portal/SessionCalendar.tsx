@@ -368,6 +368,21 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
 
       if (error) throw error;
 
+      // Re-send road test scheduling emails if this is a testing session and
+      // either the DDS location or start time changed (or was just added).
+      if (
+        editSessionType === 'testing' &&
+        editDdsLocation &&
+        (editDdsLocation !== previousLocation || newStartsAt !== previousStartsAt)
+      ) {
+        supabase.functions.invoke('send-road-test-scheduling-emails', {
+          body: { sessionId: selectedSession.id },
+        }).then(({ error: e }) => {
+          if (e) toast({ title: 'Road test emails failed', description: e.message, variant: 'destructive' });
+          else toast({ title: 'Road test emails sent', description: 'Student and instructor notified.' });
+        });
+      }
+
       toast({ title: "Session Updated", description: "Session updated successfully." });
       setEditDialogOpen(false);
       setSelectedSession(null);
