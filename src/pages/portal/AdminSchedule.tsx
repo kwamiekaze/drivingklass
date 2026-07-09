@@ -417,6 +417,22 @@ function AdminScheduleContent() {
                   </div>
                 </div>
 
+                {formData.session_type === 'testing' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">
+                      DDS Testing Location <span className="text-destructive">*</span>
+                    </Label>
+                    <DdsLocationPicker
+                      value={formData.dds_location}
+                      onChange={(v) => setFormData(f => ({ ...f, dds_location: v }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This location is included in the student's DDS 2 GO scheduling instructions.
+                    </p>
+                  </div>
+                )}
+
+
                 {/* Pickup / Drop-off */}
                 <div className="space-y-2">
                   <Label className="text-sm">Pickup Address</Label>
