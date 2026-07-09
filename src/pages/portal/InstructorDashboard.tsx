@@ -410,12 +410,23 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-          <Link to={reportBtn.route} className="flex-1 sm:flex-initial">
-            <Button size="sm" className="gap-2 w-full min-h-[40px]">
-              {reportBtn.icon}
-              {reportBtn.label}
+          {isTesting && !existingReport ? (
+            <Button
+              size="sm"
+              className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
+              onClick={() => setRoadTestOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Grade Road Test
             </Button>
-          </Link>
+          ) : (
+            <Link to={reportBtn.route} className="flex-1 sm:flex-initial">
+              <Button size="sm" className="gap-2 w-full min-h-[40px]">
+                {reportBtn.icon}
+                {reportBtn.label}
+              </Button>
+            </Link>
+          )}
           {session.status === 'scheduled' && (
             <>
               <Button
