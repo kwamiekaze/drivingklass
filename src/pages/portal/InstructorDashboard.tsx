@@ -473,6 +473,16 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
         onConfirmCancel={handleCancel}
         isLoading={isLoading}
       />
+      {isTesting && session.instructor_id && (
+        <RoadTestResultModal
+          open={roadTestOpen}
+          onOpenChange={setRoadTestOpen}
+          sessionId={session.id}
+          studentId={session.student_id}
+          instructorId={session.instructor_id}
+          onSubmitted={onUpdate}
+        />
+      )}
     </>
   );
 }
