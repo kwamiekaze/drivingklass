@@ -832,24 +832,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-sm">Start Time (ET)</Label>
-                  <Select value={editStartTime} onValueChange={(v) => { setEditStartTime(v); setEditConflictWarning(null); }}>
-                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Start" /></SelectTrigger>
-                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                      {generateTimeOptions()}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm">
+                    {editSessionType === 'testing' ? 'Road Test Start Time (ET)' : 'Start Time (ET)'}
+                  </Label>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editStartTime}
+                    onChange={(e) => { setEditStartTime(e.target.value); setEditConflictWarning(null); }}
+                    className="min-h-[44px]"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">End Time (ET)</Label>
-                  <Select value={editEndTime} onValueChange={(v) => { setEditEndTime(v); setEditConflictWarning(null); }}>
-                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="End" /></SelectTrigger>
-                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                      {generateTimeOptions()}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editEndTime}
+                    onChange={(e) => { setEditEndTime(e.target.value); setEditConflictWarning(null); }}
+                    className="min-h-[44px]"
+                  />
                 </div>
               </div>
+
+              {editSessionType === 'testing' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Pickup Time (ET)</Label>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editPickupTime}
+                    onChange={(e) => setEditPickupTime(e.target.value)}
+                    className="min-h-[44px]"
+                  />
+                  <p className="text-[11px] text-muted-foreground">When the instructor picks the student up before the road test.</p>
+                </div>
+              )}
 
               {/* Pickup / Drop-off */}
               <div className="space-y-2">
