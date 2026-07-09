@@ -11,6 +11,7 @@ interface Props {
   ddsLocation?: string
   dateLabel?: string
   timeLabel?: string
+  pickupTimeLabel?: string
   cityLabel?: string
 }
 
@@ -20,6 +21,7 @@ const Email = ({
   ddsLocation = 'TBD',
   dateLabel = 'TBD',
   timeLabel = 'TBD',
+  pickupTimeLabel = '',
 }: Props) => (
   <Html>
     <Head />
@@ -36,7 +38,10 @@ const Email = ({
           <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Student:</strong> {studentName}</Text>
           <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Testing Location:</strong> {ddsLocation}</Text>
           <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Date:</strong> {dateLabel}</Text>
-          <Text style={{ ...brand.text, margin: '0' }}><strong>Time:</strong> {timeLabel}</Text>
+          {pickupTimeLabel ? (
+            <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Pickup Time:</strong> {pickupTimeLabel}</Text>
+          ) : null}
+          <Text style={{ ...brand.text, margin: '0' }}><strong>Road Test Start Time:</strong> {timeLabel}</Text>
         </Section>
 
         <Text style={brand.muted}>Questions? Call us at {SUPPORT_PHONE}.</Text>
@@ -51,6 +56,7 @@ const Email = ({
           ddsLocation={ddsLocation}
           dateLabel={dateLabel}
           timeLabel={timeLabel}
+          pickupTimeLabel={pickupTimeLabel}
         />
 
         <Text style={brand.footer}>{SITE} • {SITE_URL}</Text>
@@ -70,6 +76,7 @@ export const template = {
     ddsLocation: 'Marietta - 1605 County Services Pkwy. Marietta GA 30008',
     dateLabel: 'Aug 12, 2026',
     timeLabel: '10:00 AM',
+    pickupTimeLabel: '9:15 AM',
     cityLabel: 'Marietta',
   },
 } satisfies TemplateEntry

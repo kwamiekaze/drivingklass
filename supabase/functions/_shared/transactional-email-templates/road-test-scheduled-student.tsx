@@ -9,6 +9,7 @@ export interface RoadTestStudentProps {
   ddsLocation?: string
   dateLabel?: string
   timeLabel?: string
+  pickupTimeLabel?: string
 }
 
 const step: React.CSSProperties = { ...brand.text, margin: '0 0 10px' }
@@ -18,6 +19,7 @@ export const RoadTestStudentEmail = ({
   ddsLocation = 'your DDS testing location',
   dateLabel = 'TBD',
   timeLabel = 'TBD',
+  pickupTimeLabel = '',
 }: RoadTestStudentProps) => (
   <Html>
     <Head />
@@ -35,7 +37,10 @@ export const RoadTestStudentEmail = ({
         <Section style={brand.card}>
           <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Testing Location:</strong> {ddsLocation}</Text>
           <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Date:</strong> {dateLabel}</Text>
-          <Text style={{ ...brand.text, margin: '0' }}><strong>Time:</strong> {timeLabel}</Text>
+          {pickupTimeLabel ? (
+            <Text style={{ ...brand.text, margin: '0 0 6px' }}><strong>Pickup Time:</strong> {pickupTimeLabel}</Text>
+          ) : null}
+          <Text style={{ ...brand.text, margin: '0' }}><strong>Road Test Start Time:</strong> {timeLabel}</Text>
         </Section>
 
         <Heading as="h2" style={{ ...brand.h1, fontSize: '17px', margin: '4px 0 12px' }}>
@@ -77,5 +82,6 @@ export const template = {
     ddsLocation: 'Marietta - 1605 County Services Pkwy. Marietta GA 30008',
     dateLabel: 'Aug 12, 2026',
     timeLabel: '10:00 AM',
+    pickupTimeLabel: '9:15 AM',
   },
 } satisfies TemplateEntry

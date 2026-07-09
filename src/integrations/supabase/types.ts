@@ -2401,6 +2401,7 @@ export type Database = {
           note_for_instructor: string | null
           note_for_student: string | null
           pickup_address: string | null
+          pickup_time: string | null
           report_card_id: string | null
           session_type: string
           starts_at: string
@@ -2431,6 +2432,7 @@ export type Database = {
           note_for_instructor?: string | null
           note_for_student?: string | null
           pickup_address?: string | null
+          pickup_time?: string | null
           report_card_id?: string | null
           session_type?: string
           starts_at: string
@@ -2461,6 +2463,7 @@ export type Database = {
           note_for_instructor?: string | null
           note_for_student?: string | null
           pickup_address?: string | null
+          pickup_time?: string | null
           report_card_id?: string | null
           session_type?: string
           starts_at?: string
@@ -2655,6 +2658,7 @@ export type Database = {
           note_for_instructor: string | null
           note_for_student: string | null
           pickup_address: string | null
+          pickup_time: string | null
           report_card_id: string | null
           session_type: string
           starts_at: string
@@ -2698,6 +2702,7 @@ export type Database = {
           note_for_instructor: string | null
           note_for_student: string | null
           pickup_address: string | null
+          pickup_time: string | null
           report_card_id: string | null
           session_type: string
           starts_at: string
@@ -2769,6 +2774,7 @@ export type Database = {
           note_for_instructor: string | null
           note_for_student: string | null
           pickup_address: string | null
+          pickup_time: string | null
           report_card_id: string | null
           session_type: string
           starts_at: string
@@ -3137,6 +3143,7 @@ export type Database = {
           note_for_instructor: string | null
           note_for_student: string | null
           pickup_address: string | null
+          pickup_time: string | null
           report_card_id: string | null
           session_type: string
           starts_at: string

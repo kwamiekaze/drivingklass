@@ -63,6 +63,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDate, setEditDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  const [editPickupTime, setEditPickupTime] = useState("");
   const [editPickupAddress, setEditPickupAddress] = useState("");
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
@@ -261,6 +262,13 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
     setEditDdsLocation((session as any).dds_location || '');
+    const pickupTs = (session as any).pickup_time || (sessionDetails as any)?.pickup_time;
+    if (pickupTs) {
+      const pt = etTimeFormatter.format(parseISO(pickupTs)).replace(/\u200E/g, '');
+      setEditPickupTime(pt.startsWith('24') ? '00' + pt.slice(2) : pt);
+    } else {
+      setEditPickupTime('');
+    }
     setEditDialogOpen(true);
   };
 
@@ -357,10 +365,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         dropoff_address: editDropoffAddress.trim() || null,
         session_type: editSessionType,
         dds_location: editSessionType === 'testing' ? editDdsLocation : null,
+        pickup_time: editSessionType === 'testing' && editPickupTime
+          ? toEasternISO(editDate, editPickupTime)
+          : null,
       };
 
       const previousLocation = (selectedSession as any).dds_location || null;
       const previousStartsAt = selectedSession.starts_at;
+      const previousPickupTime = (selectedSession as any).pickup_time || null;
       const { error } = await supabase
         .from('sessions')
         .update(updatePayload)
@@ -369,11 +381,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       if (error) throw error;
 
       // Re-send road test scheduling emails if this is a testing session and
-      // either the DDS location or start time changed (or was just added).
+      // any scheduling detail (location, start time, or pickup time) changed.
       if (
         editSessionType === 'testing' &&
         editDdsLocation &&
-        (editDdsLocation !== previousLocation || newStartsAt !== previousStartsAt)
+        (
+          editDdsLocation !== previousLocation ||
+          newStartsAt !== previousStartsAt ||
+          (updatePayload.pickup_time || null) !== previousPickupTime
+        )
       ) {
         supabase.functions.invoke('send-road-test-scheduling-emails', {
           body: { sessionId: selectedSession.id },
@@ -488,11 +504,21 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       <p className="font-medium text-sm sm:text-base">{format(parseISO(sessionDetails.starts_at), 'EEEE, MMMM d, yyyy')}</p>
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {selectedSession.session_type === 'testing' ? 'Road Test Start Time' : 'Time'}
+                      </p>
                       <p className="font-medium text-sm sm:text-base">
                         {format(parseISO(sessionDetails.starts_at), 'h:mm a')} - {format(parseISO(sessionDetails.ends_at), 'h:mm a')}
                       </p>
                     </div>
+                    {selectedSession.session_type === 'testing' && (selectedSession as any).pickup_time && (
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Pickup Time</p>
+                        <p className="font-medium text-sm sm:text-base">
+                          {format(parseISO((selectedSession as any).pickup_time), 'h:mm a')}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                       <div className="flex items-center gap-1">
@@ -816,24 +842,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-sm">Start Time (ET)</Label>
-                  <Select value={editStartTime} onValueChange={(v) => { setEditStartTime(v); setEditConflictWarning(null); }}>
-                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Start" /></SelectTrigger>
-                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                      {generateTimeOptions()}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm">
+                    {editSessionType === 'testing' ? 'Road Test Start Time (ET)' : 'Start Time (ET)'}
+                  </Label>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editStartTime}
+                    onChange={(e) => { setEditStartTime(e.target.value); setEditConflictWarning(null); }}
+                    className="min-h-[44px]"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">End Time (ET)</Label>
-                  <Select value={editEndTime} onValueChange={(v) => { setEditEndTime(v); setEditConflictWarning(null); }}>
-                    <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="End" /></SelectTrigger>
-                    <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                      {generateTimeOptions()}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editEndTime}
+                    onChange={(e) => { setEditEndTime(e.target.value); setEditConflictWarning(null); }}
+                    className="min-h-[44px]"
+                  />
                 </div>
               </div>
+
+              {editSessionType === 'testing' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Pickup Time (ET)</Label>
+                  <Input
+                    type="time"
+                    step={60}
+                    value={editPickupTime}
+                    onChange={(e) => setEditPickupTime(e.target.value)}
+                    className="min-h-[44px]"
+                  />
+                  <p className="text-[11px] text-muted-foreground">When the instructor picks the student up before the road test.</p>
+                </div>
+              )}
 
               {/* Pickup / Drop-off */}
               <div className="space-y-2">

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   // Load session with student + instructor
   const { data: session, error: sErr } = await supabase
     .from('sessions')
-    .select('id, starts_at, dds_location, session_type, student_id, instructor_id')
+    .select('id, starts_at, dds_location, session_type, student_id, instructor_id, pickup_time')
     .eq('id', sessionId)
     .maybeSingle()
   if (sErr || !session) return json({ error: 'Session not found' }, 404)
@@ -49,10 +49,13 @@ Deno.serve(async (req) => {
 
   // Format date/time in America/New_York
   const starts = new Date(session.starts_at)
-  const fmt = (opts: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts }).format(starts)
-  const dateLabel = fmt({ weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  const timeLabel = fmt({ hour: 'numeric', minute: '2-digit', hour12: true })
+  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts }).format(d)
+  const dateLabel = fmt(starts, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  const timeLabel = fmt(starts, { hour: 'numeric', minute: '2-digit', hour12: true })
+  const pickupTimeLabel = (session as any).pickup_time
+    ? fmt(new Date((session as any).pickup_time), { hour: 'numeric', minute: '2-digit', hour12: true })
+    : ''
 
   async function send(templateName: string, recipientEmail: string, data: Record<string, any>, subjectFallback: string) {
     const idempotencyKey = `road-test-${templateName}-${sessionId}-${starts.getTime()}`
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
     results.student = await send(
       'road-test-scheduled-student',
       student.email,
-      { studentName, ddsLocation, dateLabel, timeLabel },
+      { studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel },
       'Your DrivingKlass Road Test — How to Schedule on DDS 2 GO',
     )
   } else {
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
     results.instructor = await send(
       'road-test-scheduled-instructor',
       instructor.email,
-      { instructorName, studentName, ddsLocation, dateLabel, timeLabel, cityLabel },
+      { instructorName, studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel, cityLabel },
       `Road Test Scheduled: ${studentName} — ${dateLabel} ${timeLabel} ${cityLabel}`,
     )
   } else {

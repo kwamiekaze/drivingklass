@@ -58,6 +58,7 @@ function AdminScheduleContent() {
     instructor_id: "",
     date: "",
     start_time: "",
+    pickup_time: "",
     duration_minutes: "120",
     session_type: "driving",
     pickup_address: "",
@@ -159,6 +160,10 @@ function AdminScheduleContent() {
     if (formData.session_type === 'testing' && formData.dds_location) {
       updates.dds_location = formData.dds_location;
     }
+    if (formData.session_type === 'testing' && formData.pickup_time) {
+      const pickupIso = new Date(`${formData.date}T${formData.pickup_time}`).toISOString();
+      updates.pickup_time = pickupIso;
+    }
 
     if (Object.keys(updates).length > 0 && newSession?.id) {
       await supabase.from('sessions').update(updates).eq('id', newSession.id);
@@ -181,7 +186,7 @@ function AdminScheduleContent() {
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "" });
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -373,23 +378,58 @@ function AdminScheduleContent() {
                     <Label className="text-sm">Date</Label>
                     <Input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))} className="min-h-[44px]" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">Start Time</Label>
-                    <Select value={formData.start_time} onValueChange={v => setFormData(f => ({ ...f, start_time: v }))}>
-                      <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select time" /></SelectTrigger>
-                      <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                        {Array.from({ length: 48 }, (_, i) => {
-                          const hours = Math.floor(i / 2);
-                          const mins = (i % 2) * 30;
-                          const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-                          const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                          const ampm = hours < 12 ? 'AM' : 'PM';
-                          return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {formData.session_type !== 'testing' ? (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Start Time</Label>
+                      <Input
+                        type="time"
+                        step={60}
+                        value={formData.start_time}
+                        onChange={e => setFormData(f => ({ ...f, start_time: e.target.value }))}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Session Type</Label>
+                      <Select value={formData.session_type} onValueChange={v => setFormData(f => ({ ...f, session_type: v }))}>
+                        <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border z-50">
+                          <SelectItem value="driving">Driving Session</SelectItem>
+                          <SelectItem value="testing">Road Test</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
+
+                {formData.session_type === 'testing' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Pickup Time</Label>
+                      <Input
+                        type="time"
+                        step={60}
+                        value={formData.pickup_time}
+                        onChange={e => setFormData(f => ({ ...f, pickup_time: e.target.value }))}
+                        className="min-h-[44px]"
+                      />
+                      <p className="text-[11px] text-muted-foreground">When the instructor picks the student up.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Road Test Start Time</Label>
+                      <Input
+                        type="time"
+                        step={60}
+                        value={formData.start_time}
+                        onChange={e => setFormData(f => ({ ...f, start_time: e.target.value }))}
+                        className="min-h-[44px]"
+                      />
+                      <p className="text-[11px] text-muted-foreground">Official DDS road test time.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label className="text-sm">Duration</Label>
@@ -405,16 +445,20 @@ function AdminScheduleContent() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">Session Type</Label>
-                    <Select value={formData.session_type} onValueChange={v => setFormData(f => ({ ...f, session_type: v }))}>
-                      <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border z-50">
-                        <SelectItem value="driving">Driving Session</SelectItem>
-                        <SelectItem value="testing">Road Test</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {formData.session_type !== 'testing' ? (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Session Type</Label>
+                      <Select value={formData.session_type} onValueChange={v => setFormData(f => ({ ...f, session_type: v }))}>
+                        <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border z-50">
+                          <SelectItem value="driving">Driving Session</SelectItem>
+                          <SelectItem value="testing">Road Test</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 sm:col-span-1" />
+                  )}
                 </div>
 
                 {formData.session_type === 'testing' && (
@@ -599,19 +643,13 @@ function AdminScheduleContent() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Start Time</Label>
-                <Select value={blockForm.start_time} onValueChange={v => setBlockForm(f => ({ ...f, start_time: v }))}>
-                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select time" /></SelectTrigger>
-                  <SelectContent className="bg-popover border z-50 max-h-[300px]">
-                    {Array.from({ length: 48 }, (_, i) => {
-                      const hours = Math.floor(i / 2);
-                      const mins = (i % 2) * 30;
-                      const timeValue = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                      const ampm = hours < 12 ? 'AM' : 'PM';
-                      return <SelectItem key={timeValue} value={timeValue}>{`${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
+                <Input
+                  type="time"
+                  step={60}
+                  value={blockForm.start_time}
+                  onChange={e => setBlockForm(f => ({ ...f, start_time: e.target.value }))}
+                  className="min-h-[44px]"
+                />
               </div>
             </div>
             <div className="space-y-2">
