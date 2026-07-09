@@ -504,11 +504,21 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                       <p className="font-medium text-sm sm:text-base">{format(parseISO(sessionDetails.starts_at), 'EEEE, MMMM d, yyyy')}</p>
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Time</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {selectedSession.session_type === 'testing' ? 'Road Test Start Time' : 'Time'}
+                      </p>
                       <p className="font-medium text-sm sm:text-base">
                         {format(parseISO(sessionDetails.starts_at), 'h:mm a')} - {format(parseISO(sessionDetails.ends_at), 'h:mm a')}
                       </p>
                     </div>
+                    {selectedSession.session_type === 'testing' && (selectedSession as any).pickup_time && (
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Pickup Time</p>
+                        <p className="font-medium text-sm sm:text-base">
+                          {format(parseISO((selectedSession as any).pickup_time), 'h:mm a')}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">Student</p>
                       <div className="flex items-center gap-1">
