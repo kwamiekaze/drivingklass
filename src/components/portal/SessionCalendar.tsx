@@ -63,6 +63,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDate, setEditDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  const [editPickupTime, setEditPickupTime] = useState("");
   const [editPickupAddress, setEditPickupAddress] = useState("");
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
