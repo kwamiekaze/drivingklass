@@ -262,6 +262,13 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
     setEditDdsLocation((session as any).dds_location || '');
+    const pickupTs = (session as any).pickup_time || (sessionDetails as any)?.pickup_time;
+    if (pickupTs) {
+      const pt = etTimeFormatter.format(parseISO(pickupTs)).replace(/\u200E/g, '');
+      setEditPickupTime(pt.startsWith('24') ? '00' + pt.slice(2) : pt);
+    } else {
+      setEditPickupTime('');
+    }
     setEditDialogOpen(true);
   };
 
