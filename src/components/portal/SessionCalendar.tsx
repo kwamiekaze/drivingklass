@@ -365,10 +365,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         dropoff_address: editDropoffAddress.trim() || null,
         session_type: editSessionType,
         dds_location: editSessionType === 'testing' ? editDdsLocation : null,
+        pickup_time: editSessionType === 'testing' && editPickupTime
+          ? toEasternISO(editDate, editPickupTime)
+          : null,
       };
 
       const previousLocation = (selectedSession as any).dds_location || null;
       const previousStartsAt = selectedSession.starts_at;
+      const previousPickupTime = (selectedSession as any).pickup_time || null;
       const { error } = await supabase
         .from('sessions')
         .update(updatePayload)
@@ -377,11 +381,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       if (error) throw error;
 
       // Re-send road test scheduling emails if this is a testing session and
-      // either the DDS location or start time changed (or was just added).
+      // any scheduling detail (location, start time, or pickup time) changed.
       if (
         editSessionType === 'testing' &&
         editDdsLocation &&
-        (editDdsLocation !== previousLocation || newStartsAt !== previousStartsAt)
+        (
+          editDdsLocation !== previousLocation ||
+          newStartsAt !== previousStartsAt ||
+          (updatePayload.pickup_time || null) !== previousPickupTime
+        )
       ) {
         supabase.functions.invoke('send-road-test-scheduling-emails', {
           body: { sessionId: selectedSession.id },
