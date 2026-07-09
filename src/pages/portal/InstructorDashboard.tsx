@@ -348,7 +348,9 @@ function InstructorDashboardContent() {
 function NeedingReportCard({ session, existingReport, onUpdate }: { session: Session; existingReport?: ReportCard; onUpdate: () => void }) {
   const { toast } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [roadTestOpen, setRoadTestOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isTesting = session.session_type === 'testing';
 
   const handleCancel = async (reason: string, waiveFee?: boolean, suppressStudentNotification?: boolean) => {
     setIsLoading(true);
