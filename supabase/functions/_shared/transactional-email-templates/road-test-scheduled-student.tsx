@@ -82,5 +82,6 @@ export const template = {
     ddsLocation: 'Marietta - 1605 County Services Pkwy. Marietta GA 30008',
     dateLabel: 'Aug 12, 2026',
     timeLabel: '10:00 AM',
+    pickupTimeLabel: '9:15 AM',
   },
 } satisfies TemplateEntry
