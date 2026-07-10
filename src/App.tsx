@@ -87,6 +87,7 @@ const App = () => (
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/play" element={<RoadTestGame publicMode />} />
             <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
+            <Route path="/preview" element={<Preview />} />
 
 
 
