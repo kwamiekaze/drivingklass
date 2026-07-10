@@ -9,19 +9,39 @@ function GLBCar({ url }: { url: string }) {
 
   const prepared = useMemo(() => {
     const clone = scene.clone(true);
-    const box = new THREE.Box3().setFromObject(clone);
+    // Measure BEFORE any transforms
+    const preBox = new THREE.Box3().setFromObject(clone);
     const size = new THREE.Vector3();
+    preBox.getSize(size);
+    // Orient long axis along +X so keyframes (rear-3/4, side profile) frame it
+    if (size.z > size.x) {
+      clone.rotation.y = Math.PI / 2;
+      clone.updateMatrixWorld(true);
+    }
+    // Re-measure after rotation
+    const box = new THREE.Box3().setFromObject(clone);
+    const size2 = new THREE.Vector3();
     const center = new THREE.Vector3();
-    box.getSize(size);
+    box.getSize(size2);
     box.getCenter(center);
     const targetLength = 4.4;
-    const scale = targetLength / Math.max(size.x, size.z);
+    const scale = targetLength / Math.max(size2.x, size2.z);
     clone.scale.setScalar(scale);
+    // Ground contact at y=0, centered on XZ
     clone.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
     clone.traverse((obj) => {
-      if ((obj as THREE.Mesh).isMesh) {
-        (obj as THREE.Mesh).castShadow = true;
-        (obj as THREE.Mesh).receiveShadow = true;
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[];
+        const bump = (m: THREE.Material) => {
+          const std = m as THREE.MeshStandardMaterial;
+          if ("envMapIntensity" in std) std.envMapIntensity = 1.6;
+          std.needsUpdate = true;
+        };
+        if (Array.isArray(mat)) mat.forEach(bump);
+        else if (mat) bump(mat);
       }
     });
     return clone;
