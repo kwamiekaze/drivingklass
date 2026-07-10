@@ -68,6 +68,7 @@ import GuardianTrackerPage from "./pages/GuardianTrackerPage";
 import InstructorLiveTracker from "./pages/portal/InstructorLiveTracker";
 import AdminLiveTracker from "./pages/portal/AdminLiveTracker";
 import StudentLiveTracker from "./pages/portal/StudentLiveTracker";
+import Preview from "./pages/preview/Preview";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/play" element={<RoadTestGame publicMode />} />
             <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
+            <Route path="/preview" element={<Preview />} />
 
 
 
