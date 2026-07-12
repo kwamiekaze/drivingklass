@@ -24,6 +24,7 @@ import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList
 import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 import { useTranslation } from "react-i18next";
 import { useSkillLabel } from "@/i18n/skills";
+import { RichTextDisplay } from "@/components/portal/RichTextDisplay";
 
 interface ReportCardDetails {
   id: string;
