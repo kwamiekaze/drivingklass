@@ -24,6 +24,7 @@ import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { LatestReportSnapshot } from "@/components/portal/LatestReportSnapshot";
+import { RichTextEditor } from "@/components/portal/RichTextEditor";
 import { Link } from "react-router-dom";
 
 export default function ReportCardForm() {
