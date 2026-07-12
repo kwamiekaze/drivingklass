@@ -202,11 +202,11 @@ export interface Notification {
 }
 
 export const RATING_CATEGORIES = [
-  { key: 'acceleration', label: 'Acceleration' },
+  { key: 'acceleration', label: 'Acceleration/Deceleration' },
   { key: 'braking', label: 'Braking' },
   { key: 'left_turns', label: 'Left Turns' },
   { key: 'right_turns', label: 'Right Turns' },
-  { key: 'speed_maintenance', label: 'Speed Maintenance' },
+  { key: 'speed_maintenance', label: 'Speed Maintenance/Control' },
   { key: 'lane_maintenance', label: 'Lane Maintenance' },
   { key: 'blind_spots', label: 'Blind Spots & Mirrors' },
   { key: 'signal_usage', label: 'Signal Usage' },
