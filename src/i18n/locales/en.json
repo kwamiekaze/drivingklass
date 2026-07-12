@@ -147,11 +147,11 @@
     "optional5": "(optional)"
   },
   "skills": {
-    "acceleration": "Acceleration",
+    "acceleration": "Acceleration/Deceleration",
     "braking": "Braking",
     "left_turns": "Left Turns",
     "right_turns": "Right Turns",
-    "speed_maintenance": "Speed Maintenance",
+    "speed_maintenance": "Speed Maintenance/Control",
     "lane_maintenance": "Lane Maintenance",
     "blind_spots": "Blind Spots & Mirrors",
     "signal_usage": "Signal Usage",
