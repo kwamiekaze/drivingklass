@@ -235,12 +235,10 @@ export default function CarShowcase() {
             enableDamping
             dampingFactor={0.08}
             autoRotate
-            // Synced with PackageWheel auto-advance: 6 packages × 1.8s = 10.8s per full revolution.
-            // OrbitControls: autoRotateSpeed 2.0 = 30s/orbit → speed = 60/10.8 ≈ 5.556.
-            // Positive value orbits the camera counter-clockwise viewed from above, which
-            // makes the car appear to rotate clockwise on screen — matching the wheel's
-            // clockwise highlight travel (index 0 → 1 goes from top to upper-right).
-            autoRotateSpeed={5.556}
+            // Reversed direction and slowed 50% from the PackageWheel-synced speed.
+            // Negative autoRotateSpeed orbits the camera clockwise viewed from above,
+            // making the car appear to rotate counter-clockwise on screen.
+            autoRotateSpeed={-2.778}
             minDistance={1.5}
             maxDistance={8}
             target={[0, 0.5, 0]}
