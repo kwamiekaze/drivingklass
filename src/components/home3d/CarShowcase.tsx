@@ -5,12 +5,13 @@ import * as THREE from "three";
 import carAsset from "@/assets/dk-car-gold.glb.asset.json";
 
 const MODEL_URL = carAsset.url;
-useGLTF.preload(MODEL_URL);
+// Draco-compressed GLB → enable drei's built-in DracoLoader (gstatic decoder)
+useGLTF.preload(MODEL_URL, true);
 
 
 // Cinematic entrance for the whole car group: fade + rise + rotate settle
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
-  const { scene } = useGLTF(MODEL_URL) as any;
+  const { scene } = useGLTF(MODEL_URL, true) as any;
   const groupRef = useRef<THREE.Group>(null!);
   const progress = useRef(0); // 0..1 over ~1.6s
   const notified = useRef(false);
@@ -234,7 +235,12 @@ export default function CarShowcase() {
             enableDamping
             dampingFactor={0.08}
             autoRotate
-            autoRotateSpeed={0.6}
+            // Synced with PackageWheel auto-advance: 6 packages × 1.8s = 10.8s per full revolution.
+            // OrbitControls: autoRotateSpeed 2.0 = 30s/orbit → speed = 60/10.8 ≈ 5.556.
+            // Positive value orbits the camera counter-clockwise viewed from above, which
+            // makes the car appear to rotate clockwise on screen — matching the wheel's
+            // clockwise highlight travel (index 0 → 1 goes from top to upper-right).
+            autoRotateSpeed={5.556}
             minDistance={1.5}
             maxDistance={8}
             target={[0, 0.5, 0]}
