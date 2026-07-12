@@ -749,9 +749,10 @@ export default function ReportCardView() {
               <Card className="portal-card">
                 <CardContent className="p-4 sm:p-6">
                   <h4 className="font-medium mb-2 text-sm sm:text-base">{t('report.lessonSummary')}</h4>
-                  <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
-                    {reportCard.transcription_summary}
-                  </p>
+                  <RichTextDisplay
+                    value={reportCard.transcription_summary}
+                    className="text-xs sm:text-sm report-text-sweep"
+                  />
                 </CardContent>
               </Card>
             )}
