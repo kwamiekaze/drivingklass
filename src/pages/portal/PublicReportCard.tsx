@@ -22,6 +22,7 @@ import { CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import { useSkillLabel } from "@/i18n/skills";
 import { LanguageSwitcherButton } from "@/components/LanguageSwitcherButton";
+import { RichTextDisplay } from "@/components/portal/RichTextDisplay";
 
 interface PublicReportData {
   id: string;
