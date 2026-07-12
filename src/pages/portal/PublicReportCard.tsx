@@ -600,9 +600,10 @@ export default function PublicReportCard() {
                 <Card className="portal-card border-border/50 bg-card/80 backdrop-blur">
                   <CardContent className="p-4 sm:p-6">
                     <h4 className="font-medium mb-2 text-sm sm:text-base text-foreground">{t('report.lessonSummary')}</h4>
-                    <p className="text-xs sm:text-sm whitespace-pre-wrap report-text-sweep">
-                      {report.transcription_summary}
-                    </p>
+                    <RichTextDisplay
+                      value={report.transcription_summary}
+                      className="text-xs sm:text-sm report-text-sweep"
+                    />
                   </CardContent>
                 </Card>
               )}
