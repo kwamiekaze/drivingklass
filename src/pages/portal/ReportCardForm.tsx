@@ -24,6 +24,7 @@ import { getDisplayName } from "@/lib/profileUtils";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { LatestReportSnapshot } from "@/components/portal/LatestReportSnapshot";
+import { RichTextEditor } from "@/components/portal/RichTextEditor";
 import { Link } from "react-router-dom";
 
 export default function ReportCardForm() {
@@ -742,13 +743,13 @@ function ReportCardFormContent() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="transcription">Summary Notes</Label>
-              <Textarea
-                id="transcription"
+              <RichTextEditor
                 value={formData.transcription_summary}
-                onChange={(e) => setFormData(prev => ({ ...prev, transcription_summary: e.target.value }))}
+                onChange={(html) => setFormData(prev => ({ ...prev, transcription_summary: html }))}
                 placeholder="Summary of the lesson..."
-                rows={4}
+                minHeight={110}
               />
+              <p className="text-xs text-muted-foreground">Use <strong>bold</strong> and <em>italic</em> (Cmd/Ctrl+B, Cmd/Ctrl+I) to emphasise key moments.</p>
             </div>
           </CardContent>
         </Card>
