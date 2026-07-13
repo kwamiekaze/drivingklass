@@ -768,7 +768,7 @@ body {
     var(--gold-grad-dark-1) 100%
   );
   background-size: 250% 100%;
-  background-position: 0% 50%;
+  background-position: 50% 50%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
