@@ -134,11 +134,17 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       const numLabel = sessionNum ? `Session ${sessionNum}` : '';
       const typeLabel = s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving';
 
+      // For road tests, the calendar block should begin at the pickup time
+      // (instructor picks up the student and drives to the DDS). The road
+      // test start time itself is shown in the session details modal.
+      const pickupTs = (s as any).pickup_time as string | null | undefined;
+      const eventStart = s.session_type === 'testing' && pickupTs ? pickupTs : s.starts_at;
+
       return {
         id: s.id,
         title: studentName,
         subtitle: numLabel ? `${numLabel} · ${typeLabel}` : typeLabel,
-        start: s.starts_at,
+        start: eventStart,
         end: s.ends_at,
         color,
         dotColor,
