@@ -158,11 +158,13 @@ export function MultiplayerLobby({ onEnterMatch, onBack }: Props) {
 
   const startMatch = useCallback(async () => {
     if (!match || !me || match.host_id !== me.user_id) return;
+    sound.init();
     sound.uiTick();
     await supabase.from('game_matches')
       .update({ status: 'playing', started_at: new Date().toISOString() })
       .eq('id', match.id);
   }, [match, me]);
+
 
   const leaveLobby = useCallback(async () => {
     if (match && me) {
