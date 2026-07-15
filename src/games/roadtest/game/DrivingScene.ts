@@ -4,7 +4,7 @@ import { ScoreTracker, buildResult, POINTS, type PointKey } from './scoring';
 import { touchControls } from './controls';
 import { loadPlayerCarTexture, makeTextures, PED_TINTS, DOG_KEYS } from './textures';
 import { GAME_EVENTS, getDifficulty, type LevelConfig, type ObstacleType, type Difficulty, type DifficultyConfig } from './types';
-import { sound } from '../sound';
+import { sound, pickMoodForLevel } from '../sound';
 
 export const GAME_W = 480;
 export const GAME_H = 800;
