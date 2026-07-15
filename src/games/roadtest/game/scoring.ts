@@ -36,7 +36,7 @@ const LABELS: Record<string, string> = {
   RAN_RED_LIGHT: 'Ran a red light',
   HIT_PARKED_CAR: 'Hit a parked car',
   HIT_TRAFFIC: 'Collided with traffic',
-  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run void',
+  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run ended',
 };
 
 export type PointKey = keyof typeof POINTS;
