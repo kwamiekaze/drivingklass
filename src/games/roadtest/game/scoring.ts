@@ -17,7 +17,7 @@ export const POINTS = {
   RAN_RED_LIGHT: -120,
   HIT_PARKED_CAR: -100,
   HIT_TRAFFIC: -150,
-  HIT_PEDESTRIAN: 0, // catastrophic — score is zeroed via tracker.zeroOut()
+  HIT_PEDESTRIAN: 0, // catastrophic — ends run but preserves earned score
 } as const;
 
 const LABELS: Record<string, string> = {
