@@ -181,11 +181,12 @@ export class DrivingScene extends Phaser.Scene {
     this.showBanner(lvl.name, `${this.difficulty.label} · ${lvl.subtitle}`);
 
     // Sound: initialize on first input, start engine and background music.
+    const mood = pickMoodForLevel(lvl);
     const unlockAudio = () => {
       sound.init();
       if (sound.isReady()) {
         sound.startEngine();
-        if (!sound.muted) sound.startMusic();
+        if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
       }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
