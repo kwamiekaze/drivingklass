@@ -72,14 +72,13 @@ export class ScoreTracker {
     return pts;
   }
 
-  /** Catastrophic event — zero the score and mark the run void. */
+  /** Catastrophic event — ends the run but PRESERVES the earned score. */
   zeroOut(key: PointKey = 'HIT_PEDESTRIAN') {
     this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
-    this.score = 0;
-    this.extras = 0;
     this.combo = 1;
     this.voided = true;
   }
+
 
   addDistanceBonus(pts: number) {
     this.extras += pts;
