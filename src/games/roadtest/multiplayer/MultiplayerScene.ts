@@ -221,7 +221,10 @@ export class MultiplayerScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as WASD;
 
-    // Sound
+    // Sound: context was unlocked by the Start Match button; start immediately.
+    sound.init();
+    sound.startEngine();
+    if (!sound.muted && !sound.musicMuted) sound.startMusic('tense');
     const unlock = () => {
       sound.init();
       if (sound.isReady()) {
@@ -231,6 +234,7 @@ export class MultiplayerScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown', unlock);
     this.input.on('pointerdown', unlock);
+
     this.events.once('shutdown', () => { sound.stopEngine(); sound.stopMusic(); });
 
     // 3-2-1 countdown banner
