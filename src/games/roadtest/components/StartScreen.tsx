@@ -226,12 +226,13 @@ export function StartScreen({ bestScores, difficulty, setDifficulty, onStart, on
       </a>
 
       <button
-        className="dk-btn dk-btn-ghost"
+        className="dk-btn dk-btn-gold-outline"
         style={{ width: '100%', marginTop: 4 }}
         onClick={() => { clickTick(); setShowInstall(true); }}
       >
         📱 Install app / fix hidden buttons
       </button>
+
 
       <button
         className="dk-btn dk-btn-gold-outline dk-btn-feedback"
