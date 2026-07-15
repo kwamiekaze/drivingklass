@@ -17,7 +17,7 @@ export const POINTS = {
   RAN_RED_LIGHT: -120,
   HIT_PARKED_CAR: -100,
   HIT_TRAFFIC: -150,
-  HIT_PEDESTRIAN: 0, // catastrophic — score is zeroed via tracker.zeroOut()
+  HIT_PEDESTRIAN: 0, // catastrophic — ends run but preserves earned score
 } as const;
 
 const LABELS: Record<string, string> = {
@@ -36,7 +36,7 @@ const LABELS: Record<string, string> = {
   RAN_RED_LIGHT: 'Ran a red light',
   HIT_PARKED_CAR: 'Hit a parked car',
   HIT_TRAFFIC: 'Collided with traffic',
-  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run void',
+  HIT_PEDESTRIAN: '🛑 HIT A PEDESTRIAN — run ended',
 };
 
 export type PointKey = keyof typeof POINTS;
@@ -72,14 +72,13 @@ export class ScoreTracker {
     return pts;
   }
 
-  /** Catastrophic event — zero the score and mark the run void. */
+  /** Catastrophic event — ends the run but PRESERVES the earned score. */
   zeroOut(key: PointKey = 'HIT_PEDESTRIAN') {
     this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
-    this.score = 0;
-    this.extras = 0;
     this.combo = 1;
     this.voided = true;
   }
+
 
   addDistanceBonus(pts: number) {
     this.extras += pts;
@@ -119,10 +118,11 @@ export function buildResult(
   extras?: { distance?: number }
 ): LevelResult {
   const rawScore = tracker.score;
-  const finalScore = tracker.voided ? 0 : Math.round(rawScore * difficulty.scoreMul);
+  const finalScore = Math.round(rawScore * difficulty.scoreMul);
   const { grade, passed } = tracker.voided
     ? { grade: 'F', passed: false }
     : gradeFor(finalScore, level.parScore);
+
   const feedback: string[] = [];
 
   if (tracker.voided) {
