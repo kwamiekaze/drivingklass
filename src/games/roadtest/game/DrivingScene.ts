@@ -4,7 +4,7 @@ import { ScoreTracker, buildResult, POINTS, type PointKey } from './scoring';
 import { touchControls } from './controls';
 import { loadPlayerCarTexture, makeTextures, PED_TINTS, DOG_KEYS } from './textures';
 import { GAME_EVENTS, getDifficulty, type LevelConfig, type ObstacleType, type Difficulty, type DifficultyConfig } from './types';
-import { sound } from '../sound';
+import { sound, pickMoodForLevel } from '../sound';
 
 export const GAME_W = 480;
 export const GAME_H = 800;
@@ -181,11 +181,12 @@ export class DrivingScene extends Phaser.Scene {
     this.showBanner(lvl.name, `${this.difficulty.label} · ${lvl.subtitle}`);
 
     // Sound: initialize on first input, start engine and background music.
+    const mood = pickMoodForLevel(lvl);
     const unlockAudio = () => {
       sound.init();
       if (sound.isReady()) {
         sound.startEngine();
-        if (!sound.muted) sound.startMusic();
+        if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
       }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
@@ -530,6 +531,7 @@ export class DrivingScene extends Phaser.Scene {
     this.comboText.setScale(scale);
     this.comboText.setColor(c >= 5 ? '#ffe89a' : c >= 3 ? '#f2c14e' : '#ffffff');
     this.starHudText.setText(`★ ${this.tracker.starsCollected}`);
+    sound.setMusicIntensity(c);
   }
 
   private sparks(x: number, y: number) {
@@ -627,12 +629,15 @@ export class DrivingScene extends Phaser.Scene {
   }
 
   private updateEndless() {
-    // Ramp difficulty every 500 units
+    // Ramp difficulty every 500 units — asymptotic (capped) so the run stays
+    // hard-yet-survivable no matter how far the player goes. Endless truly is endless:
+    // the run ends only via existing rules (3 vehicle-crash strikes, or a catastrophic
+    // pedestrian/dog hit). No distance, time, score, or entity-count cap exists.
     const step = Math.floor(this.traveled / 500);
     if (step > this.lastRampAt) {
       this.lastRampAt = step;
-      this.endlessGap = Math.max(120, this.endlessGap * 0.96);
-      this.endlessTrafficMul *= 1.02;
+      this.endlessGap = Math.max(140, this.endlessGap * 0.96);
+      this.endlessTrafficMul = Math.min(2.2, this.endlessTrafficMul * 1.02);
     }
     // Extend the world
     if (this.traveled + 4000 > this.endlessSpawnCursor) {
