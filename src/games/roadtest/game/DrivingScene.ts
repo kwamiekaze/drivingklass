@@ -531,6 +531,7 @@ export class DrivingScene extends Phaser.Scene {
     this.comboText.setScale(scale);
     this.comboText.setColor(c >= 5 ? '#ffe89a' : c >= 3 ? '#f2c14e' : '#ffffff');
     this.starHudText.setText(`★ ${this.tracker.starsCollected}`);
+    sound.setMusicIntensity(c);
   }
 
   private sparks(x: number, y: number) {
