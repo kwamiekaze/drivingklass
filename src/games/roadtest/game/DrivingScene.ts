@@ -629,12 +629,15 @@ export class DrivingScene extends Phaser.Scene {
   }
 
   private updateEndless() {
-    // Ramp difficulty every 500 units
+    // Ramp difficulty every 500 units — asymptotic (capped) so the run stays
+    // hard-yet-survivable no matter how far the player goes. Endless truly is endless:
+    // the run ends only via existing rules (3 vehicle-crash strikes, or a catastrophic
+    // pedestrian/dog hit). No distance, time, score, or entity-count cap exists.
     const step = Math.floor(this.traveled / 500);
     if (step > this.lastRampAt) {
       this.lastRampAt = step;
-      this.endlessGap = Math.max(120, this.endlessGap * 0.96);
-      this.endlessTrafficMul *= 1.02;
+      this.endlessGap = Math.max(140, this.endlessGap * 0.96);
+      this.endlessTrafficMul = Math.min(2.2, this.endlessTrafficMul * 1.02);
     }
     // Extend the world
     if (this.traveled + 4000 > this.endlessSpawnCursor) {
