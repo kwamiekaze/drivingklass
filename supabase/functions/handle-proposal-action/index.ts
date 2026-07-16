@@ -327,6 +327,7 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
 
   let scheduled = 0
   let conflicts = 0
+  const createdSessions: any[] = []
 
   for (const item of items) {
     const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
@@ -343,6 +344,7 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
       .update({ item_status: 'finalized', created_session_id: session.id })
       .eq('id', item.id)
     scheduled++
+    createdSessions.push({ session, item })
   }
 
   const finalStatus = targetItemStatus === 'proposed' ? 'revised_and_finalized' : 
@@ -366,13 +368,66 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
     type: 'schedule', severity: 'info', link: '/student',
   })
 
-  const { data: studentProfile } = await supabase.from('profiles').select('full_name').eq('id', proposal.student_id).single()
+  const { data: studentProfile } = await supabase.from('profiles').select('id, full_name, first_name, email, email_prefs').eq('id', proposal.student_id).single()
+  const { data: instructorProfile } = await supabase.from('profiles').select('id, full_name, first_name, email, email_prefs').eq('id', proposal.instructor_id).single()
+
   await supabase.from('notifications').insert({
     user_id: proposal.instructor_id,
     title: 'Schedule Finalized',
     message: `${scheduled} session(s) for ${studentProfile?.full_name || 'student'} have been finalized.`,
     type: 'schedule', severity: 'info', link: '/instructor',
   })
+
+  // Send scheduled-lesson emails to both student and instructor for each newly created session
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const studentName = studentProfile?.first_name || studentProfile?.full_name || ''
+  const instructorName = instructorProfile?.first_name || instructorProfile?.full_name || ''
+  const studentEmailOn = (studentProfile?.email_prefs as any)?.lesson_scheduled !== false
+  const instructorEmailOn = (instructorProfile?.email_prefs as any)?.lesson_scheduled !== false
+
+  const fmtDate = (iso: string) => {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso))
+    return parts
+  }
+  const fmtTime = (iso: string) => {
+    return new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TZ, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso))
+  }
+
+  for (const { session } of createdSessions) {
+    const dateLabel = fmtDate(session.starts_at)
+    const timeLabel = fmtTime(session.starts_at)
+
+    const sendOne = async (audience: 'student' | 'instructor', email: string | null | undefined, recipientName: string) => {
+      if (!email) return
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({
+            templateName: 'lesson-scheduled',
+            recipientEmail: email,
+            idempotencyKey: `lesson-scheduled-${session.id}-${audience}`,
+            templateData: {
+              recipientName,
+              audience,
+              dateLabel,
+              timeLabel,
+              instructorName,
+              studentName,
+              pickupAddress: session.pickup_address || undefined,
+              durationMinutes: session.duration_minutes,
+            },
+          }),
+        })
+      } catch (e) {
+        console.error(`[handle-proposal-action] Failed to send lesson-scheduled email to ${audience}:`, (e as any)?.message)
+      }
+    }
+
+    if (studentEmailOn) await sendOne('student', studentProfile?.email, studentName)
+    if (instructorEmailOn) await sendOne('instructor', instructorProfile?.email, instructorName)
+  }
 
   return new Response(JSON.stringify({ success: true, scheduled, conflicts }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },

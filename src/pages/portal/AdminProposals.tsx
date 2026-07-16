@@ -15,6 +15,7 @@ import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 function formatTime24to12(time: string): string {
   const [hStr, mStr] = time.split(':');
@@ -44,6 +45,59 @@ function AdminProposalsContent() {
   const [finalizing, setFinalizing] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editBuilderOpen, setEditBuilderOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [savingItem, setSavingItem] = useState(false);
+
+  const startEditItem = (item: any) => {
+    setEditingItemId(item.id);
+    setEditDate(item.proposed_date);
+    setEditStart((item.start_time || '').slice(0, 5));
+    setEditEnd((item.end_time || '').slice(0, 5));
+  };
+
+  const cancelEditItem = () => {
+    setEditingItemId(null);
+  };
+
+  const saveEditItem = async (item: any) => {
+    if (!editDate || !editStart || !editEnd) {
+      toast.error('Date, start and end are required');
+      return;
+    }
+    if (editEnd <= editStart) {
+      toast.error('End time must be after start time');
+      return;
+    }
+    setSavingItem(true);
+    try {
+      const [sh, sm] = editStart.split(':').map(Number);
+      const [eh, em] = editEnd.split(':').map(Number);
+      const durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+      const nextStatus = item.item_status === 'conflict' ? 'pending_admin_finalize' : item.item_status;
+      const { error } = await supabase
+        .from('schedule_proposal_items')
+        .update({
+          proposed_date: editDate,
+          start_time: `${editStart}:00`,
+          end_time: `${editEnd}:00`,
+          duration_minutes: durationMinutes,
+          item_status: nextStatus,
+          conflict_reason: null,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+      toast.success('Date updated');
+      setEditingItemId(null);
+      if (selectedProposal) await openProposal(selectedProposal);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSavingItem(false);
+    }
+  };
 
   useEffect(() => { fetchProposals(); }, []);
 
@@ -309,25 +363,63 @@ function AdminProposalsContent() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Dates ({items.length})</Label>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {items.map((item, idx) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg text-sm">
-                      <Badge variant="secondary" className="text-[10px] shrink-0">{idx + 1}</Badge>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">{format(parseISO(item.proposed_date), 'EEE, MMM d, yyyy')}</p>
-                        <p className="text-xs text-muted-foreground">{formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}</p>
+                  {items.map((item, idx) => {
+                    const isEditing = editingItemId === item.id;
+                    const canEditItem = ['pending_admin_finalize', 'proposed', 'conflict'].includes(item.item_status)
+                      && ['pending_admin_finalize', 'edit_requested', 'under_revision', 'sent', 'revised_and_resent'].includes(selectedProposal.proposal_status);
+                    return (
+                      <div key={item.id} className="p-3 border rounded-lg text-sm space-y-2">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="secondary" className="text-[10px] shrink-0">{idx + 1}</Badge>
+                          <div className="flex-1 min-w-0">
+                            {!isEditing ? (
+                              <>
+                                <p className="font-medium">{format(parseISO(item.proposed_date), 'EEE, MMM d, yyyy')}</p>
+                                <p className="text-xs text-muted-foreground">{formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}</p>
+                              </>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-2">
+                                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="h-9 text-xs" />
+                                <Input type="time" value={editStart} onChange={(e) => setEditStart(e.target.value)} className="h-9 text-xs" />
+                                <Input type="time" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="h-9 text-xs" />
+                              </div>
+                            )}
+                          </div>
+                          <SessionTypeBadge sessionType={item.session_type} />
+                          {!isEditing && item.item_status === 'pending_admin_finalize' && (
+                            <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                          )}
+                          {!isEditing && (item.item_status === 'auto_scheduled' || item.item_status === 'finalized') && (
+                            <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                          )}
+                          {!isEditing && item.item_status === 'conflict' && (
+                            <Badge variant="destructive" className="text-[10px]">Conflict</Badge>
+                          )}
+                        </div>
+                        {canEditItem && (
+                          <div className="flex gap-2 justify-end">
+                            {!isEditing ? (
+                              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => startEditItem(item)}>
+                                <Edit3 className="h-3 w-3" /> Edit
+                              </Button>
+                            ) : (
+                              <>
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={cancelEditItem} disabled={savingItem}>
+                                  Cancel
+                                </Button>
+                                <Button size="sm" className="h-7 gap-1 text-xs" onClick={() => saveEditItem(item)} disabled={savingItem}>
+                                  <Check className="h-3 w-3" /> {savingItem ? 'Saving…' : 'Save'}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {item.conflict_reason && !isEditing && (
+                          <p className="text-[11px] text-destructive">{item.conflict_reason}</p>
+                        )}
                       </div>
-                      <SessionTypeBadge sessionType={item.session_type} />
-                      {item.item_status === 'pending_admin_finalize' && (
-                        <XCircle className="h-4 w-4 text-destructive shrink-0" />
-                      )}
-                      {(item.item_status === 'auto_scheduled' || item.item_status === 'finalized') && (
-                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                      )}
-                      {item.item_status === 'conflict' && (
-                        <Badge variant="destructive" className="text-[10px]">Conflict</Badge>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
