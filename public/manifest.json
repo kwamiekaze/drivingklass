@@ -1,5 +1,5 @@
 {
-  "name": "Driving Klass",
+  "name": "DrivingKlass",
   "short_name": "DrivingKlass",
   "description": "Where 5-Star Drivers Are Made",
   "start_url": "/",
@@ -8,20 +8,28 @@
   "theme_color": "#0a0906",
   "icons": [
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
+      "src": "/icons/drivingklass-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/icons/drivingklass-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/drivingklass-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/drivingklass-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
