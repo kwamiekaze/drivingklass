@@ -44,6 +44,59 @@ function AdminProposalsContent() {
   const [finalizing, setFinalizing] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editBuilderOpen, setEditBuilderOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [savingItem, setSavingItem] = useState(false);
+
+  const startEditItem = (item: any) => {
+    setEditingItemId(item.id);
+    setEditDate(item.proposed_date);
+    setEditStart((item.start_time || '').slice(0, 5));
+    setEditEnd((item.end_time || '').slice(0, 5));
+  };
+
+  const cancelEditItem = () => {
+    setEditingItemId(null);
+  };
+
+  const saveEditItem = async (item: any) => {
+    if (!editDate || !editStart || !editEnd) {
+      toast.error('Date, start and end are required');
+      return;
+    }
+    if (editEnd <= editStart) {
+      toast.error('End time must be after start time');
+      return;
+    }
+    setSavingItem(true);
+    try {
+      const [sh, sm] = editStart.split(':').map(Number);
+      const [eh, em] = editEnd.split(':').map(Number);
+      const durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+      const nextStatus = item.item_status === 'conflict' ? 'pending_admin_finalize' : item.item_status;
+      const { error } = await supabase
+        .from('schedule_proposal_items')
+        .update({
+          proposed_date: editDate,
+          start_time: `${editStart}:00`,
+          end_time: `${editEnd}:00`,
+          duration_minutes: durationMinutes,
+          item_status: nextStatus,
+          conflict_reason: null,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+      toast.success('Date updated');
+      setEditingItemId(null);
+      if (selectedProposal) await openProposal(selectedProposal);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSavingItem(false);
+    }
+  };
 
   useEffect(() => { fetchProposals(); }, []);
 
