@@ -327,6 +327,7 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
 
   let scheduled = 0
   let conflicts = 0
+  const createdSessions: any[] = []
 
   for (const item of items) {
     const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
@@ -343,6 +344,7 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
       .update({ item_status: 'finalized', created_session_id: session.id })
       .eq('id', item.id)
     scheduled++
+    createdSessions.push({ session, item })
   }
 
   const finalStatus = targetItemStatus === 'proposed' ? 'revised_and_finalized' : 
