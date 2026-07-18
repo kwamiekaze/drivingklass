@@ -45,7 +45,7 @@ export interface Session {
   instructor_id: string;
   starts_at: string;
   ends_at: string;
-  status: 'scheduled' | 'cancelled' | 'completed';
+  status: 'scheduled' | 'cancelled' | 'completed' | 'pending';
   session_type: SessionType;
   cancelled_at: string | null;
   cancelled_by: string | null;
