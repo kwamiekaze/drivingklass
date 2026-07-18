@@ -133,6 +133,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       const sessionNum = sessionNumberMap[s.id];
       const numLabel = sessionNum ? `Session ${sessionNum}` : '';
       const typeLabel = s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving';
+      const pendingLabel = s.status === 'pending' ? ' · ⏳ PENDING' : '';
 
       // For road tests, the calendar block should begin at the pickup time
       // (instructor picks up the student and drives to the DDS). The road
@@ -143,7 +144,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       return {
         id: s.id,
         title: studentName,
-        subtitle: numLabel ? `${numLabel} · ${typeLabel}` : typeLabel,
+        subtitle: (numLabel ? `${numLabel} · ${typeLabel}` : typeLabel) + pendingLabel,
         start: eventStart,
         end: s.ends_at,
         color,
