@@ -66,6 +66,7 @@ function AdminScheduleContent() {
     note_for_student: "",
     note_for_instructor: "",
     dds_location: "",
+    is_pending: false,
   });
 
   // Block form state
@@ -137,8 +138,23 @@ function AdminScheduleContent() {
     }
     const startsAt = new Date(`${formData.date}T${formData.start_time}`);
     const durationMinutes = parseInt(formData.duration_minutes);
+    const endsAt = new Date(startsAt.getTime() + durationMinutes * 60000);
 
-    const { data: newSession, error } = await supabase.rpc('create_session_admin', {
+    // Pre-check for conflicts (UX; DB trigger is the hard rule)
+    const { data: conflicts } = await supabase.rpc('check_schedule_conflicts', {
+      _instructor_id: formData.instructor_id,
+      _student_id: formData.student_id,
+      _starts_at: startsAt.toISOString(),
+      _ends_at: endsAt.toISOString(),
+    });
+    if (conflicts && conflicts.length > 0) {
+      const c: any = conflicts[0];
+      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
+      return;
+    }
+
+    const rpcName = formData.is_pending ? 'create_pending_session_admin' : 'create_session_admin';
+    const { data: newSession, error } = await supabase.rpc(rpcName as any, {
       _student_id: formData.student_id,
       _instructor_id: formData.instructor_id,
       _starts_at: startsAt.toISOString(),
@@ -165,28 +181,28 @@ function AdminScheduleContent() {
       updates.pickup_time = pickupIso;
     }
 
-    if (Object.keys(updates).length > 0 && newSession?.id) {
-      await supabase.from('sessions').update(updates).eq('id', newSession.id);
+    if (Object.keys(updates).length > 0 && (newSession as any)?.id) {
+      await supabase.from('sessions').update(updates).eq('id', (newSession as any).id);
     }
 
-    // Fire road test scheduling emails (student + instructor) and log them
-    if (formData.session_type === 'testing' && newSession?.id && formData.dds_location) {
+    // Fire road test scheduling emails only for confirmed (non-pending) road tests
+    if (!formData.is_pending && formData.session_type === 'testing' && (newSession as any)?.id && formData.dds_location) {
       supabase.functions.invoke('send-road-test-scheduling-emails', {
-        body: { sessionId: newSession.id },
+        body: { sessionId: (newSession as any).id },
       }).then(({ error: e }) => {
         if (e) toast.error(`Road test emails failed: ${e.message}`);
         else toast.success("Road test scheduling emails sent");
       });
     }
 
-    toast.success("Session created successfully");
+    toast.success(formData.is_pending ? "Pending slot created" : "Session created successfully");
     setDialogOpen(false);
     resetForm();
     fetchData();
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "", is_pending: false });
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -261,13 +277,28 @@ function AdminScheduleContent() {
     }
     const startsAt = new Date(`${blockForm.date}T${blockForm.start_time}`);
     const endsAt = new Date(startsAt.getTime() + parseInt(blockForm.duration_minutes) * 60000);
+    const targetInstructor = blockForm.instructor_id === 'all' ? null : blockForm.instructor_id;
     const payload: any = {
       title: blockForm.title.trim() || 'Unavailable',
       notes: blockForm.notes.trim() || null,
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
-      instructor_id: blockForm.instructor_id === 'all' ? null : blockForm.instructor_id,
+      instructor_id: targetInstructor,
     };
+
+    // Pre-check for conflicts (UX; DB trigger is the hard rule)
+    const { data: conflicts } = await supabase.rpc('check_schedule_conflicts', {
+      _instructor_id: targetInstructor,
+      _student_id: null,
+      _starts_at: startsAt.toISOString(),
+      _ends_at: endsAt.toISOString(),
+      _exclude_block_id: editingBlock?.id ?? null,
+    });
+    if (conflicts && conflicts.length > 0) {
+      const c: any = conflicts[0];
+      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
+      return;
+    }
 
     if (editingBlock) {
       const { error } = await (supabase as any).from('schedule_blocks').update(payload).eq('id', editingBlock.id);
@@ -516,8 +547,23 @@ function AdminScheduleContent() {
                   />
                 </div>
 
+                <label className="flex items-start gap-2 p-3 rounded-md border border-gold/40 bg-gold/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_pending}
+                    onChange={e => setFormData(f => ({ ...f, is_pending: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">Save as pending slot</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Hold this slot for a student who hasn't paid yet. Approve later to confirm.
+                    </span>
+                  </span>
+                </label>
+
                 <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
-                  Create Session
+                  {formData.is_pending ? 'Create Pending Slot' : 'Create Session'}
                 </Button>
               </div>
             </DialogContent>
@@ -577,6 +623,7 @@ function AdminScheduleContent() {
                   <SelectContent className="bg-popover border z-50">
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>

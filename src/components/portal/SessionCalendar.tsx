@@ -133,6 +133,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       const sessionNum = sessionNumberMap[s.id];
       const numLabel = sessionNum ? `Session ${sessionNum}` : '';
       const typeLabel = s.session_type === 'testing' ? '🏁 Road Test' : '🚗 Driving';
+      const pendingLabel = s.status === 'pending' ? ' · ⏳ PENDING' : '';
 
       // For road tests, the calendar block should begin at the pickup time
       // (instructor picks up the student and drives to the DDS). The road
@@ -143,7 +144,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       return {
         id: s.id,
         title: studentName,
-        subtitle: numLabel ? `${numLabel} · ${typeLabel}` : typeLabel,
+        subtitle: (numLabel ? `${numLabel} · ${typeLabel}` : typeLabel) + pendingLabel,
         start: eventStart,
         end: s.ends_at,
         color,
@@ -436,7 +437,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const canGrade = (session: Session) => {
     if (session.session_type === 'testing') return false;
     if (session.report_card_id) return false;
-    if (session.status === 'cancelled') return false;
+    if (session.status === 'cancelled' || session.status === 'pending') return false;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     if (isStaffOrAdmin) return true;
     return false;
@@ -446,8 +447,32 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     switch (session.status) {
       case 'completed': return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
       case 'cancelled': return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+      case 'pending': return <Badge variant="outline" className="border-2 border-dashed border-amber-500 text-amber-700 dark:text-amber-300 gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
       default: return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
     }
+  };
+
+  const handleApprovePending = async () => {
+    if (!selectedSession) return;
+    setIsLoading(true);
+    const { error } = await supabase.rpc('approve_pending_session', { _session_id: selectedSession.id });
+    setIsLoading(false);
+    if (error) { toast({ title: "Approve failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Pending slot approved", description: "Now scheduled." });
+    setSelectedSession(null);
+    onSessionUpdate?.();
+  };
+
+  const handleDeletePending = async () => {
+    if (!selectedSession) return;
+    if (!confirm('Delete this pending slot? This cannot be undone.')) return;
+    setIsLoading(true);
+    const { error } = await supabase.from('sessions').delete().eq('id', selectedSession.id);
+    setIsLoading(false);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Pending slot deleted" });
+    setSelectedSession(null);
+    onSessionUpdate?.();
   };
 
   // Resolve default view
@@ -680,6 +705,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
 
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
+                    {isStaffOrAdmin && selectedSession.status === 'pending' && (
+                      <>
+                        <Button className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleApprovePending} disabled={isLoading}>
+                          <CheckCircle className="h-4 w-4" />Approve Pending Slot
+                        </Button>
+                        <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
+                          <XCircle className="h-4 w-4" />Delete Pending
+                        </Button>
+                      </>
+                    )}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
                         <Button className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />Grade Session</Button>
@@ -958,6 +993,7 @@ function generateTimeOptions() {
 function getCalendarColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
+  if (session.status === 'pending') return "bg-transparent text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
   return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
 }
@@ -965,6 +1001,7 @@ function getCalendarColor(session: Session): string {
 function getDotColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500";
+  if (session.status === 'pending') return "bg-amber-400 ring-2 ring-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500";
   return "bg-gray-400";
 }
