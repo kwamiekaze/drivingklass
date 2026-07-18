@@ -13,6 +13,7 @@ import { template as trackingUpdate } from './tracking-update.tsx'
 import { template as trackingEnded } from './tracking-ended.tsx'
 import { template as roadTestScheduledStudent } from './road-test-scheduled-student.tsx'
 import { template as roadTestScheduledInstructor } from './road-test-scheduled-instructor.tsx'
+import { template as pendingSlotNotice } from './pending-slot-notice.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -36,4 +37,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'tracking-ended': trackingEnded,
   'road-test-scheduled-student': roadTestScheduledStudent,
   'road-test-scheduled-instructor': roadTestScheduledInstructor,
+  'pending-slot-notice': pendingSlotNotice,
 }
