@@ -68,14 +68,38 @@ export function PortalMenuButton() {
           role="menu"
           className="absolute right-0 mt-2 w-56 rounded-xl border border-gold/40 bg-card/95 backdrop-blur-md shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2"
         >
+          {/* 1) Portal */}
           <button
             role="menuitem"
             onClick={goDashboard}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 border-b border-border/50 text-left"
           >
             <LayoutDashboard className="h-4 w-4 text-gold" />
-            <span>Dashboard</span>
+            <span>Portal</span>
           </button>
+          {/* 2) Sign In (only when logged out) */}
+          {!user && (
+            <button
+              role="menuitem"
+              onClick={() => { setOpen(false); navigate("/login"); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 border-b border-border/50 text-left"
+            >
+              <LogIn className="h-4 w-4 text-gold" />
+              <span>Sign In</span>
+            </button>
+          )}
+          {/* 3) Profile (only when logged in) */}
+          {user && (
+            <button
+              role="menuitem"
+              onClick={goProfile}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 border-b border-border/50 text-left"
+            >
+              <UserCircle className="h-4 w-4 text-gold" />
+              <span>Profile</span>
+            </button>
+          )}
+          {/* 4) Play Mini-Game */}
           <button
             role="menuitem"
             onClick={goPlay}
@@ -84,32 +108,15 @@ export function PortalMenuButton() {
             <Gamepad2 className="h-4 w-4 text-gold" />
             <span>Play Mini-Game</span>
           </button>
-          <button
-            role="menuitem"
-            onClick={goProfile}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 border-b border-border/50 text-left"
-          >
-            <UserCircle className="h-4 w-4 text-gold" />
-            <span>Profile</span>
-          </button>
+          {/* 5) Install as App */}
           <button
             role="menuitem"
             onClick={() => { setOpen(false); setShowInstall(true); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 border-b border-border/50 text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 text-left"
           >
             <Download className="h-4 w-4 text-gold" />
             <span>Install as App</span>
           </button>
-          {!user && (
-            <button
-              role="menuitem"
-              onClick={() => { setOpen(false); navigate("/login"); }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 text-left"
-            >
-              <LogIn className="h-4 w-4 text-gold" />
-              <span>Sign In</span>
-            </button>
-          )}
         </div>
       )}
 
