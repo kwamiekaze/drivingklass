@@ -66,6 +66,7 @@ function AdminScheduleContent() {
     note_for_student: "",
     note_for_instructor: "",
     dds_location: "",
+    is_pending: false,
   });
 
   // Block form state
