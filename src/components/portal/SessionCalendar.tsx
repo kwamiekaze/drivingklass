@@ -68,6 +68,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
   const [editDdsLocation, setEditDdsLocation] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("scheduled");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
@@ -269,6 +270,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
     setEditDdsLocation((session as any).dds_location || '');
+    setEditStatus(session.status || 'scheduled');
     const pickupTs = (session as any).pickup_time || (sessionDetails as any)?.pickup_time;
     if (pickupTs) {
       const pt = etTimeFormatter.format(parseISO(pickupTs)).replace(/\u200E/g, '');
@@ -376,6 +378,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
           ? toEasternISO(editDate, editPickupTime)
           : null,
       };
+
+      // Allow staff/admin to toggle between scheduled and pending on the same session
+      if (
+        isStaffOrAdmin &&
+        (selectedSession.status === 'scheduled' || selectedSession.status === 'pending') &&
+        (editStatus === 'scheduled' || editStatus === 'pending')
+      ) {
+        updatePayload.status = editStatus;
+      }
 
       const previousLocation = (selectedSession as any).dds_location || null;
       const previousStartsAt = selectedSession.starts_at;
@@ -848,7 +859,17 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                  {isStaffOrAdmin && (selectedSession.status === 'scheduled' || selectedSession.status === 'pending') ? (
+                    <Select value={editStatus} onValueChange={setEditStatus}>
+                      <SelectTrigger className="min-h-[44px] mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border z-50">
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="pending">Pending (awaiting payment)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                  )}
                 </div>
               </div>
 
