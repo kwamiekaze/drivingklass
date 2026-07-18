@@ -37,4 +37,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'tracking-ended': trackingEnded,
   'road-test-scheduled-student': roadTestScheduledStudent,
   'road-test-scheduled-instructor': roadTestScheduledInstructor,
+  'pending-slot-notice': pendingSlotNotice,
 }
