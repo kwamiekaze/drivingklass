@@ -982,6 +982,7 @@ function generateTimeOptions() {
 function getCalendarColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
+  if (session.status === 'pending') return "bg-transparent text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
   return "bg-gray-500/20 text-gray-700 dark:text-gray-300";
 }
@@ -989,6 +990,7 @@ function getCalendarColor(session: Session): string {
 function getDotColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500";
+  if (session.status === 'pending') return "bg-amber-400 ring-2 ring-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500";
   return "bg-gray-400";
 }
