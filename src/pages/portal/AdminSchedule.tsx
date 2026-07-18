@@ -138,8 +138,23 @@ function AdminScheduleContent() {
     }
     const startsAt = new Date(`${formData.date}T${formData.start_time}`);
     const durationMinutes = parseInt(formData.duration_minutes);
+    const endsAt = new Date(startsAt.getTime() + durationMinutes * 60000);
 
-    const { data: newSession, error } = await supabase.rpc('create_session_admin', {
+    // Pre-check for conflicts (UX; DB trigger is the hard rule)
+    const { data: conflicts } = await supabase.rpc('check_schedule_conflicts', {
+      _instructor_id: formData.instructor_id,
+      _student_id: formData.student_id,
+      _starts_at: startsAt.toISOString(),
+      _ends_at: endsAt.toISOString(),
+    });
+    if (conflicts && conflicts.length > 0) {
+      const c: any = conflicts[0];
+      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
+      return;
+    }
+
+    const rpcName = formData.is_pending ? 'create_pending_session_admin' : 'create_session_admin';
+    const { data: newSession, error } = await supabase.rpc(rpcName as any, {
       _student_id: formData.student_id,
       _instructor_id: formData.instructor_id,
       _starts_at: startsAt.toISOString(),
@@ -166,28 +181,28 @@ function AdminScheduleContent() {
       updates.pickup_time = pickupIso;
     }
 
-    if (Object.keys(updates).length > 0 && newSession?.id) {
-      await supabase.from('sessions').update(updates).eq('id', newSession.id);
+    if (Object.keys(updates).length > 0 && (newSession as any)?.id) {
+      await supabase.from('sessions').update(updates).eq('id', (newSession as any).id);
     }
 
-    // Fire road test scheduling emails (student + instructor) and log them
-    if (formData.session_type === 'testing' && newSession?.id && formData.dds_location) {
+    // Fire road test scheduling emails only for confirmed (non-pending) road tests
+    if (!formData.is_pending && formData.session_type === 'testing' && (newSession as any)?.id && formData.dds_location) {
       supabase.functions.invoke('send-road-test-scheduling-emails', {
-        body: { sessionId: newSession.id },
+        body: { sessionId: (newSession as any).id },
       }).then(({ error: e }) => {
         if (e) toast.error(`Road test emails failed: ${e.message}`);
         else toast.success("Road test scheduling emails sent");
       });
     }
 
-    toast.success("Session created successfully");
+    toast.success(formData.is_pending ? "Pending slot created" : "Session created successfully");
     setDialogOpen(false);
     resetForm();
     fetchData();
   };
 
   const resetForm = () => {
-    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "" });
+    setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "", is_pending: false });
   };
 
   const openCreateFromSlot = (date: Date) => {
