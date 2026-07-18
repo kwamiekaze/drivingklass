@@ -85,7 +85,7 @@ export interface SessionDetails {
   starts_at: string;
   ends_at: string;
   duration_minutes: number;
-  status: 'scheduled' | 'cancelled' | 'completed';
+  status: 'scheduled' | 'cancelled' | 'completed' | 'pending';
   student_id: string;
   instructor_id: string;
   student_name: string;
