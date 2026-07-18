@@ -437,7 +437,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const canGrade = (session: Session) => {
     if (session.session_type === 'testing') return false;
     if (session.report_card_id) return false;
-    if (session.status === 'cancelled') return false;
+    if (session.status === 'cancelled' || session.status === 'pending') return false;
     if (userRole === 'instructor' && session.instructor_id === user?.id) return true;
     if (isStaffOrAdmin) return true;
     return false;
