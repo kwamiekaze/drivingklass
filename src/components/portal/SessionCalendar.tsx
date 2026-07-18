@@ -859,7 +859,17 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                  {isStaffOrAdmin && (selectedSession.status === 'scheduled' || selectedSession.status === 'pending') ? (
+                    <Select value={editStatus} onValueChange={setEditStatus}>
+                      <SelectTrigger className="min-h-[44px] mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border z-50">
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="pending">Pending (awaiting payment)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">{selectedSession.status}</Badge>
+                  )}
                 </div>
               </div>
 
