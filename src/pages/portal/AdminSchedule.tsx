@@ -195,6 +195,43 @@ function AdminScheduleContent() {
       });
     }
 
+    // Fire pending-slot notification email to the student when a pending slot is created
+    if (formData.is_pending && (newSession as any)?.id) {
+      const { data: studentProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name, first_name')
+        .eq('id', formData.student_id)
+        .maybeSingle();
+      const recipientEmail = (studentProfile as any)?.email;
+      if (recipientEmail) {
+        const recipientName = (studentProfile as any)?.first_name || (studentProfile as any)?.full_name || 'there';
+        const dateLabel = format(startsAt, 'EEEE, MMMM d, yyyy');
+        const timeLabel = format(startsAt, 'h:mm a');
+        const pickupTimeLabel = formData.session_type === 'testing' && formData.pickup_time
+          ? format(new Date(`${formData.date}T${formData.pickup_time}`), 'h:mm a')
+          : undefined;
+        supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'pending-slot-notice',
+            recipientEmail,
+            idempotencyKey: `pending-notice-${(newSession as any).id}`,
+            templateData: {
+              recipientName,
+              sessionType: formData.session_type,
+              dateLabel,
+              timeLabel,
+              pickupTimeLabel,
+              locationLabel: formData.session_type === 'testing' ? (formData.dds_location || undefined) : undefined,
+              paymentUrl: 'https://drivingklass.com/#packages',
+            },
+          },
+        }).then(({ error: e }) => {
+          if (e) toast.error(`Pending email failed: ${e.message}`);
+        });
+      }
+    }
+
+
     toast.success(formData.is_pending ? "Pending slot created" : "Session created successfully");
     setDialogOpen(false);
     resetForm();
