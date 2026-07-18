@@ -547,8 +547,23 @@ function AdminScheduleContent() {
                   />
                 </div>
 
+                <label className="flex items-start gap-2 p-3 rounded-md border border-gold/40 bg-gold/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_pending}
+                    onChange={e => setFormData(f => ({ ...f, is_pending: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">Save as pending slot</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Hold this slot for a student who hasn't paid yet. Approve later to confirm.
+                    </span>
+                  </span>
+                </label>
+
                 <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
-                  Create Session
+                  {formData.is_pending ? 'Create Pending Slot' : 'Create Session'}
                 </Button>
               </div>
             </DialogContent>
