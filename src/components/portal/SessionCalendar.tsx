@@ -705,6 +705,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
 
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
+                    {isStaffOrAdmin && selectedSession.status === 'pending' && (
+                      <>
+                        <Button className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleApprovePending} disabled={isLoading}>
+                          <CheckCircle className="h-4 w-4" />Approve Pending Slot
+                        </Button>
+                        <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
+                          <XCircle className="h-4 w-4" />Delete Pending
+                        </Button>
+                      </>
+                    )}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
                       <Link to={`/instructor/report-cards/new?session_id=${selectedSession.id}`} className="flex-1">
                         <Button className="w-full min-h-[44px] gap-2"><FileText className="h-4 w-4" />Grade Session</Button>
