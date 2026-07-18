@@ -68,6 +68,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDropoffAddress, setEditDropoffAddress] = useState("");
   const [editSessionType, setEditSessionType] = useState<string>("driving");
   const [editDdsLocation, setEditDdsLocation] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<string>("scheduled");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
 
   // Fetch session details via RPC
