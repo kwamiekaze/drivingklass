@@ -277,13 +277,28 @@ function AdminScheduleContent() {
     }
     const startsAt = new Date(`${blockForm.date}T${blockForm.start_time}`);
     const endsAt = new Date(startsAt.getTime() + parseInt(blockForm.duration_minutes) * 60000);
+    const targetInstructor = blockForm.instructor_id === 'all' ? null : blockForm.instructor_id;
     const payload: any = {
       title: blockForm.title.trim() || 'Unavailable',
       notes: blockForm.notes.trim() || null,
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
-      instructor_id: blockForm.instructor_id === 'all' ? null : blockForm.instructor_id,
+      instructor_id: targetInstructor,
     };
+
+    // Pre-check for conflicts (UX; DB trigger is the hard rule)
+    const { data: conflicts } = await supabase.rpc('check_schedule_conflicts', {
+      _instructor_id: targetInstructor,
+      _student_id: null,
+      _starts_at: startsAt.toISOString(),
+      _ends_at: endsAt.toISOString(),
+      _exclude_block_id: editingBlock?.id ?? null,
+    });
+    if (conflicts && conflicts.length > 0) {
+      const c: any = conflicts[0];
+      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
+      return;
+    }
 
     if (editingBlock) {
       const { error } = await (supabase as any).from('schedule_blocks').update(payload).eq('id', editingBlock.id);
