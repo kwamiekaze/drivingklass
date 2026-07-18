@@ -446,8 +446,32 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     switch (session.status) {
       case 'completed': return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
       case 'cancelled': return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+      case 'pending': return <Badge variant="outline" className="border-2 border-dashed border-amber-500 text-amber-700 dark:text-amber-300 gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
       default: return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
     }
+  };
+
+  const handleApprovePending = async () => {
+    if (!selectedSession) return;
+    setIsLoading(true);
+    const { error } = await supabase.rpc('approve_pending_session', { _session_id: selectedSession.id });
+    setIsLoading(false);
+    if (error) { toast.error(`Approve failed: ${error.message}`); return; }
+    toast.success("Pending slot approved and scheduled");
+    setSelectedSession(null);
+    onSessionUpdate?.();
+  };
+
+  const handleDeletePending = async () => {
+    if (!selectedSession) return;
+    if (!confirm('Delete this pending slot? This cannot be undone.')) return;
+    setIsLoading(true);
+    const { error } = await supabase.from('sessions').delete().eq('id', selectedSession.id);
+    setIsLoading(false);
+    if (error) { toast.error(`Delete failed: ${error.message}`); return; }
+    toast.success("Pending slot deleted");
+    setSelectedSession(null);
+    onSessionUpdate?.();
   };
 
   // Resolve default view
