@@ -117,6 +117,7 @@ function StudentDashboardContent() {
   );
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
+  const pendingSessions = sessions.filter(s => s.status === 'pending');
   const averageRating = reportCards.length > 0 
     ? Math.round(reportCards.reduce((acc, rc) => acc + (rc.overall || 0), 0) / reportCards.length * 10) / 10
     : null;
