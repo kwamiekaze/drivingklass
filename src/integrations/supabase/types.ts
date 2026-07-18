@@ -2621,6 +2621,46 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: boolean
       }
+      approve_pending_session: {
+        Args: { _session_id: string }
+        Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          dds_location: string | null
+          dropoff_address: string | null
+          duration_minutes: number
+          ends_at: string
+          hours_deducted_at: string | null
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          pickup_address: string | null
+          pickup_time: string | null
+          report_card_id: string | null
+          session_type: string
+          starts_at: string
+          status: string
+          student_id: string
+          suppress_student_notification: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_read_report_card: {
         Args: { p_report_card_id: string }
         Returns: boolean
@@ -2676,6 +2716,23 @@ export type Database = {
       check_game_username_available: {
         Args: { _username: string }
         Returns: boolean
+      }
+      check_schedule_conflicts: {
+        Args: {
+          _ends_at: string
+          _exclude_block_id?: string
+          _exclude_session_id?: string
+          _instructor_id: string
+          _starts_at: string
+          _student_id: string
+        }
+        Returns: {
+          ends_at: string
+          id: string
+          kind: string
+          label: string
+          starts_at: string
+        }[]
       }
       complete_session: {
         Args: { _session_id: string; _via?: string }
@@ -2740,6 +2797,51 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "game_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_pending_session_admin: {
+        Args: {
+          _duration_minutes: number
+          _instructor_id: string
+          _starts_at: string
+          _student_id: string
+        }
+        Returns: {
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          dds_location: string | null
+          dropoff_address: string | null
+          duration_minutes: number
+          ends_at: string
+          hours_deducted_at: string | null
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          pickup_address: string | null
+          pickup_time: string | null
+          report_card_id: string | null
+          session_type: string
+          starts_at: string
+          status: string
+          student_id: string
+          suppress_student_notification: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
           isOneToOne: true
           isSetofReturn: false
         }
