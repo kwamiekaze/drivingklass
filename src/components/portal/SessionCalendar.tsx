@@ -468,8 +468,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setIsLoading(true);
     const { error } = await supabase.from('sessions').delete().eq('id', selectedSession.id);
     setIsLoading(false);
-    if (error) { toast.error(`Delete failed: ${error.message}`); return; }
-    toast.success("Pending slot deleted");
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Pending slot deleted" });
     setSelectedSession(null);
     onSessionUpdate?.();
   };
