@@ -203,8 +203,60 @@ function StudentDashboardContent() {
 
       {/* Hours Remaining is intentionally hidden from students — only staff/admin/instructors can view */}
 
+      {/* Pending Slots Notice */}
+      {pendingSessions.length > 0 && (
+        <Card className="portal-card border-2 border-dashed border-amber-500/70 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-base sm:text-lg text-amber-700 dark:text-amber-300">
+                {pendingSessions.length === 1 ? 'You have a pending slot' : `You have ${pendingSessions.length} pending slots`}
+              </CardTitle>
+            </div>
+            <CardDescription className="text-amber-800/90 dark:text-amber-200/90">
+              Pending slots are <strong>not confirmed</strong>. Dates and times are subject to change until payment is made to secure the slot.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              {pendingSessions.map(s => {
+                const isTesting = (s as any).session_type === 'testing';
+                const start = parseISO(s.starts_at);
+                return (
+                  <div key={s.id} className="flex items-start justify-between gap-3 p-3 rounded-md border-2 border-dashed border-amber-500/60 bg-background/60">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="border-2 border-dashed border-amber-500 text-amber-700 dark:text-amber-300 gap-1">
+                          <Clock className="h-3 w-3" /> PENDING — awaiting payment
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{isTesting ? 'Road Test' : 'Driving Session'}</span>
+                      </div>
+                      <p className="mt-1 text-sm font-medium">
+                        {format(start, 'EEE, MMM d, yyyy')} · {format(start, 'h:mm a')}
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Subject to change until payment is made.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <Button asChild className="flex-1">
+                <a href="https://drivingklass.com/#packages" target="_blank" rel="noopener noreferrer">Make a Payment</a>
+              </Button>
+              <Button asChild variant="outline" className="flex-1">
+                <a href="tel:404-404-5820">Contact us: 404-404-5820</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
         <Card className="portal-card">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
