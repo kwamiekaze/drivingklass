@@ -270,6 +270,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setEditDropoffAddress(sessionDetails?.dropoff_address || '');
     setEditSessionType(session.session_type || 'driving');
     setEditDdsLocation((session as any).dds_location || '');
+    setEditStatus(session.status || 'scheduled');
     const pickupTs = (session as any).pickup_time || (sessionDetails as any)?.pickup_time;
     if (pickupTs) {
       const pt = etTimeFormatter.format(parseISO(pickupTs)).replace(/\u200E/g, '');
