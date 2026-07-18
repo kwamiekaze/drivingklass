@@ -456,8 +456,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     setIsLoading(true);
     const { error } = await supabase.rpc('approve_pending_session', { _session_id: selectedSession.id });
     setIsLoading(false);
-    if (error) { toast.error(`Approve failed: ${error.message}`); return; }
-    toast.success("Pending slot approved and scheduled");
+    if (error) { toast({ title: "Approve failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Pending slot approved", description: "Now scheduled." });
     setSelectedSession(null);
     onSessionUpdate?.();
   };
