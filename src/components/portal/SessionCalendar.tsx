@@ -379,6 +379,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
           : null,
       };
 
+      // Allow staff/admin to toggle between scheduled and pending on the same session
+      if (
+        isStaffOrAdmin &&
+        (selectedSession.status === 'scheduled' || selectedSession.status === 'pending') &&
+        (editStatus === 'scheduled' || editStatus === 'pending')
+      ) {
+        updatePayload.status = editStatus;
+      }
+
       const previousLocation = (selectedSession as any).dds_location || null;
       const previousStartsAt = selectedSession.starts_at;
       const previousPickupTime = (selectedSession as any).pickup_time || null;
