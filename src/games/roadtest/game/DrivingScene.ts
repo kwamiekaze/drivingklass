@@ -366,6 +366,15 @@ export class DrivingScene extends Phaser.Scene {
     for (let d = from + 900; d < to; d += 2200 + rnd.between(-300, 500)) {
       this.spawnDog(d, rnd);
     }
+    // Pickups per chunk (~1 per 2500 units): two positions, alternating.
+    const chunkFlipBase = Math.floor(from / 2500);
+    const spots = [from + 1000, from + 3000];
+    for (let i = 0; i < spots.length; i++) {
+      const d = spots[i] + rnd.between(-120, 120);
+      if (d <= from || d >= to) continue;
+      const type: ObstacleType = ((chunkFlipBase + i) % 2 === 0) ? 'magnet' : 'shieldPickup';
+      this.spawn(type, d, rnd.between(0, 2));
+    }
     this.endlessSpawnCursor = to;
   }
 
