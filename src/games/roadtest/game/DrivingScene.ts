@@ -145,6 +145,21 @@ export class DrivingScene extends Phaser.Scene {
     this.shieldSprites = [];
     this.skidPool = [];
     this.skidLastAt = 0;
+    this.magnetUntil = 0;
+    this.hasShield = false;
+    this.shieldAura = undefined;
+    this.magnetHudBg = undefined;
+    this.magnetHudText = undefined;
+    this.shieldHudIcon = undefined;
+    this.lastIntensityStep = 0;
+    this.pbShown = false;
+    this.pbBestDistance = 0;
+    if (this.level.endless) {
+      try {
+        const raw = parseInt(localStorage.getItem('dk-game-endless-best-' + this.level.id) ?? '0', 10);
+        this.pbBestDistance = Number.isFinite(raw) ? raw : 0;
+      } catch { /* ignore */ }
+    }
   }
 
   preload() {
