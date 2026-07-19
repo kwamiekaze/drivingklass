@@ -817,8 +817,13 @@ export class DrivingScene extends Phaser.Scene {
         case 'traffic':
           this.handleCollision(ob, time);
           break;
+        case 'magnet':
+        case 'shieldPickup':
+          this.handlePickup(ob, time);
+          break;
       }
     }
+    this.updatePickupsHud(time);
   }
 
   /** Sidewalk stroller update — pure decoration, moves in world Y, no collision. */
