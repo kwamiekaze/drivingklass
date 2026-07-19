@@ -780,6 +780,31 @@ export class DrivingScene extends Phaser.Scene {
       this.tracker.addDistanceBonus(gain);
       this.scoreText.setText(`SCORE ${this.tracker.score}`);
     }
+    // Adaptive music intensity: step up every 2000 units, capped at 3.
+    const intensity = Math.min(3, Math.floor(this.traveled / 2000));
+    if (intensity !== this.lastIntensityStep) {
+      this.lastIntensityStep = intensity;
+      sound.setEndlessIntensity(intensity);
+    }
+    // Personal Best marker — gold sweep + fanfare when we cross prior best.
+    if (!this.pbShown && this.pbBestDistance > 0 && this.traveled >= this.pbBestDistance) {
+      this.pbShown = true;
+      this.showPersonalBest();
+    }
+  }
+
+  private showPersonalBest() {
+    sound.personalBest();
+    const line = this.add.rectangle(ROAD_X, this.player.y - 40, ROAD_W, 6, 0xf2c14e, 0.95).setOrigin(0, 0.5).setDepth(35);
+    const label = this.add.text(GAME_W / 2, this.player.y - 100, 'NEW BEST!', {
+      fontFamily: '"Bebas Neue", sans-serif', fontSize: '48px', color: '#f2c14e',
+      stroke: '#101014', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(36).setScale(0.2);
+    this.tweens.add({ targets: label, scale: 1, duration: 320, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: line, scaleY: 3, alpha: 0, duration: 900, ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy() });
+    this.tweens.add({ targets: label, alpha: 0, y: label.y - 20, delay: 1400, duration: 600,
+      onComplete: () => label.destroy() });
   }
   private _lastDistChunk = 0;
 
