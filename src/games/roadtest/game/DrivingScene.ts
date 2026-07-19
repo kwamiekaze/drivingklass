@@ -1009,6 +1009,26 @@ export class DrivingScene extends Phaser.Scene {
 
   private handleStar(ob: Obstacle) {
     if (ob.resolved) return;
+    const now = this.time.now;
+    const magActive = now < this.magnetUntil;
+    // Magnet: within 1.5 lanes (~180px), drift the star toward the player.
+    if (magActive) {
+      const distX = this.player.x - ob.sprite.x;
+      const distY = this.player.y - ob.sprite.y;
+      const flat = Math.hypot(distX, distY);
+      if (Math.abs(distX) < 180) {
+        const pull = 6; // stronger the closer we get
+        ob.sprite.x += Math.sign(distX) * Math.min(Math.abs(distX), pull);
+        ob.sprite.y += Math.sign(distY) * Math.min(Math.abs(distY), pull * 1.3);
+        if (flat < 40) {
+          ob.resolved = true;
+          ob.sprite.setVisible(false);
+          this.award('STAR', 'STAR');
+          sound.starPickup();
+          return;
+        }
+      }
+    }
     const dx = Math.abs(this.player.x - ob.sprite.x);
     const dy = Math.abs(this.player.y - ob.sprite.y);
     if (dx < 22 && dy < 26) {
@@ -1016,7 +1036,6 @@ export class DrivingScene extends Phaser.Scene {
       ob.sprite.setVisible(false);
       this.award('STAR', 'STAR');
       sound.starPickup();
-      // sparkle
       for (let i = 0; i < 4; i++) {
         const s = this.add.image(ob.sprite.x, ob.sprite.y, 'spark').setDepth(25).setTint(0xf2c14e);
         this.tweens.add({ targets: s, x: s.x + Phaser.Math.Between(-30, 30), y: s.y - 40,
