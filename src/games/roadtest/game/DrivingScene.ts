@@ -309,6 +309,17 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
+    // Sparse pickups (~1 per 2500 units), alternating types, never adjacent.
+    let pkFlip = 0;
+    let lastPickupD = -Infinity;
+    for (let d = 1200; d < totalLen - 400; d += 2500 + rnd.between(-300, 300)) {
+      if (!isFree(d, 200) || Math.abs(d - lastPickupD) < 500) continue;
+      const type: ObstacleType = (pkFlip++ % 2 === 0) ? 'magnet' : 'shieldPickup';
+      const lane = rnd.between(0, 2);
+      this.spawn(type, d, lane);
+      lastPickupD = d;
+    }
+
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
   }
 
