@@ -444,6 +444,14 @@ export class DrivingScene extends Phaser.Scene {
         mph = fromLeft ? baseVx : -baseVx;
         break;
       }
+      case 'magnet': {
+        sprite = this.add.image(LANE_X[lane], -200, 'magnet').setDepth(6).setDisplaySize(34, 34);
+        break;
+      }
+      case 'shieldPickup': {
+        sprite = this.add.image(LANE_X[lane], -200, 'shield').setDepth(6).setDisplaySize(30, 34);
+        break;
+      }
     }
     if (!sprite) return;
     sprite.setVisible(false);
