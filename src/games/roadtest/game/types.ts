@@ -9,7 +9,9 @@ export type ObstacleType =
   | 'checkpoint'
   | 'star'
   | 'pedestrian'
-  | 'dog';
+  | 'dog'
+  | 'magnet'
+  | 'shieldPickup';
 
 export type Difficulty = 'learner' | 'licensed' | 'instructor' | 'legend';
 
