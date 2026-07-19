@@ -594,7 +594,73 @@ export class DrivingScene extends Phaser.Scene {
     this.comboText.setScale(scale);
     this.comboText.setColor(c >= 5 ? '#ffe89a' : c >= 3 ? '#f2c14e' : '#ffffff');
     this.starHudText.setText(`★ ${this.tracker.starsCollected}`);
-    sound.setMusicIntensity(c);
+    // Each combo step raises positive SFX pitch by a semitone.
+    sound.setSfxPitchStep(Math.max(0, c - 1));
+  }
+
+  private handlePickup(ob: Obstacle, time: number) {
+    if (ob.resolved) return;
+    const dx = Math.abs(this.player.x - ob.sprite.x);
+    const dy = Math.abs(this.player.y - ob.sprite.y);
+    if (dx > 26 || dy > 34) return;
+    ob.resolved = true;
+    ob.sprite.setVisible(false);
+    if (ob.type === 'magnet') {
+      this.magnetUntil = time + 10000;
+      sound.magnetPickup();
+      this.float('★ MAGNET', '#f2c14e');
+    } else {
+      if (!this.hasShield) {
+        this.hasShield = true;
+        this.shieldAura = this.add.image(this.player.x, this.player.y, 'shield-aura')
+          .setDepth(9).setAlpha(0.9).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: this.shieldAura, alpha: 0.6, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.easeInOut' });
+      }
+      sound.shieldPickup();
+      this.float('🛡 SHIELD', '#f2c14e');
+    }
+    for (let i = 0; i < 6; i++) {
+      const s = this.add.image(ob.sprite.x, ob.sprite.y, 'spark').setDepth(25).setTint(0xf2c14e);
+      this.tweens.add({
+        targets: s, x: s.x + Phaser.Math.Between(-40, 40), y: s.y + Phaser.Math.Between(-40, 40),
+        alpha: 0, scale: 0, duration: 450, onComplete: () => s.destroy(),
+      });
+    }
+  }
+
+  private updatePickupsHud(time: number) {
+    if (this.shieldAura) {
+      this.shieldAura.x = this.player.x;
+      this.shieldAura.y = this.player.y;
+      this.shieldAura.setVisible(this.hasShield);
+    }
+    const magActive = time < this.magnetUntil;
+    if (magActive) {
+      const secs = Math.max(0, Math.ceil((this.magnetUntil - time) / 1000));
+      if (!this.magnetHudBg) {
+        this.magnetHudBg = this.add.rectangle(GAME_W / 2, 78, 118, 22, 0xf2c14e, 0.22)
+          .setStrokeStyle(1.5, 0xf2c14e).setDepth(22);
+        this.magnetHudText = this.add.text(GAME_W / 2, 78, `★ MAGNET ${secs}s`, {
+          fontFamily: '"Bebas Neue", sans-serif', fontSize: '15px', color: '#ffe89a',
+        }).setOrigin(0.5).setDepth(23);
+      } else {
+        this.magnetHudText?.setText(`★ MAGNET ${secs}s`);
+      }
+      if (time - this.magnetTrailAt > 60) {
+        this.magnetTrailAt = time;
+        const s = this.add.image(this.player.x + Phaser.Math.Between(-10, 10), this.player.y + 20, 'spark')
+          .setDepth(9).setTint(0xf2c14e).setScale(0.5);
+        this.tweens.add({ targets: s, alpha: 0, scale: 0, y: s.y + 30, duration: 500, onComplete: () => s.destroy() });
+      }
+    } else if (this.magnetHudBg) {
+      this.magnetHudBg.destroy(); this.magnetHudBg = undefined;
+      this.magnetHudText?.destroy(); this.magnetHudText = undefined;
+    }
+    if (this.hasShield && !this.shieldHudIcon) {
+      this.shieldHudIcon = this.add.image(58, 42, 'shield').setDepth(22).setScale(0.55);
+    } else if (!this.hasShield && this.shieldHudIcon) {
+      this.shieldHudIcon.destroy(); this.shieldHudIcon = undefined;
+    }
   }
 
   private sparks(x: number, y: number) {
