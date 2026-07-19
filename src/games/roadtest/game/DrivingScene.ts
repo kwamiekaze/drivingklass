@@ -1096,6 +1096,22 @@ export class DrivingScene extends Phaser.Scene {
     ob.hit = true;
     this.sparks(s.x, s.y);
 
+    // Shield absorbs the next car collision entirely (traffic + parked car).
+    if (this.hasShield && (ob.type === 'traffic' || ob.type === 'parkedCar')) {
+      this.hasShield = false;
+      if (this.shieldAura) { this.shieldAura.destroy(); this.shieldAura = undefined; }
+      sound.shieldBreak();
+      this.float('SHIELD ABSORBED', '#ffe89a');
+      this.invulnUntil = time + 900;
+      this.cameras.main.flash(200, 242, 193, 78);
+      // Blow the obstacle out of the way harmlessly.
+      this.tweens.add({
+        targets: s, x: s.x + Phaser.Math.Between(-140, 140), y: s.y + 200,
+        angle: 200, alpha: 0.2, duration: 600,
+      });
+      return;
+    }
+
     if (ob.type === 'cone') {
       this.award('HIT_CONE', 'CONE');
       sound.collision();
