@@ -224,12 +224,12 @@ export class MultiplayerScene extends Phaser.Scene {
     // Sound: context was unlocked by the Start Match button; start immediately.
     sound.init();
     sound.startEngine();
-    if (!sound.muted && !sound.musicMuted) sound.startMusic('tense');
+    if (!sound.muted && !sound.musicMuted) sound.playTrack('starRush');
     const unlock = () => {
       sound.init();
       if (sound.isReady()) {
         sound.startEngine();
-        if (!sound.muted && !sound.musicMuted) sound.startMusic('tense');
+        if (!sound.muted && !sound.musicMuted) sound.playTrack('starRush');
       }
     };
     this.input.keyboard!.on('keydown', unlock);

@@ -4,7 +4,7 @@ import { ScoreTracker, buildResult, POINTS, type PointKey } from './scoring';
 import { touchControls } from './controls';
 import { loadPlayerCarTexture, makeTextures, PED_TINTS, DOG_KEYS } from './textures';
 import { GAME_EVENTS, getDifficulty, type LevelConfig, type ObstacleType, type Difficulty, type DifficultyConfig } from './types';
-import { sound, pickMoodForLevel } from '../sound';
+import { sound, pickTrackForLevel } from '../sound';
 
 export const GAME_W = 480;
 export const GAME_H = 800;
@@ -99,6 +99,20 @@ export class DrivingScene extends Phaser.Scene {
   private shieldSprites: Phaser.GameObjects.Image[] = [];
   private muteBtn!: Phaser.GameObjects.Text;
 
+  // Pickups: Star Magnet + Shield
+  private magnetUntil = 0;
+  private hasShield = false;
+  private shieldAura?: Phaser.GameObjects.Image;
+  private magnetHudBg?: Phaser.GameObjects.Rectangle;
+  private magnetHudText?: Phaser.GameObjects.Text;
+  private shieldHudIcon?: Phaser.GameObjects.Image;
+  private magnetTrailAt = 0;
+
+  // Adaptive endless intensity + Personal Best marker
+  private lastIntensityStep = 0;
+  private pbBestDistance = 0;
+  private pbShown = false;
+
   // Skid marks pool
   private skidPool: Phaser.GameObjects.Rectangle[] = [];
   private skidLastAt = 0;
@@ -131,6 +145,21 @@ export class DrivingScene extends Phaser.Scene {
     this.shieldSprites = [];
     this.skidPool = [];
     this.skidLastAt = 0;
+    this.magnetUntil = 0;
+    this.hasShield = false;
+    this.shieldAura = undefined;
+    this.magnetHudBg = undefined;
+    this.magnetHudText = undefined;
+    this.shieldHudIcon = undefined;
+    this.lastIntensityStep = 0;
+    this.pbShown = false;
+    this.pbBestDistance = 0;
+    if (this.level.endless) {
+      try {
+        const raw = parseInt(localStorage.getItem('dk-game-endless-best-' + this.level.id) ?? '0', 10);
+        this.pbBestDistance = Number.isFinite(raw) ? raw : 0;
+      } catch { /* ignore */ }
+    }
   }
 
   preload() {
@@ -183,15 +212,15 @@ export class DrivingScene extends Phaser.Scene {
     // Sound: context was unlocked by the START button tap, so start engine + music
     // immediately on scene create. Keep input listeners as a fallback for edge cases
     // (e.g. direct deep-link into a game without a prior gesture).
-    const mood = pickMoodForLevel(lvl);
+    const trackId = pickTrackForLevel(lvl);
     sound.init();
     sound.startEngine();
-    if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
+    if (!sound.muted && !sound.musicMuted) sound.playTrack(trackId);
     const unlockAudio = () => {
       sound.init();
       if (sound.isReady()) {
         sound.startEngine();
-        if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
+        if (!sound.muted && !sound.musicMuted) sound.playTrack(trackId);
       }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
@@ -280,6 +309,17 @@ export class DrivingScene extends Phaser.Scene {
       }
     }
 
+    // Sparse pickups (~1 per 2500 units), alternating types, never adjacent.
+    let pkFlip = 0;
+    let lastPickupD = -Infinity;
+    for (let d = 1200; d < totalLen - 400; d += 2500 + rnd.between(-300, 300)) {
+      if (!isFree(d, 200) || Math.abs(d - lastPickupD) < 500) continue;
+      const type: ObstacleType = (pkFlip++ % 2 === 0) ? 'magnet' : 'shieldPickup';
+      const lane = rnd.between(0, 2);
+      this.spawn(type, d, lane);
+      lastPickupD = d;
+    }
+
     this.finishSprite = this.add.image(ROAD_X, -2000, 'finish').setOrigin(0, 0.5).setDepth(2);
   }
 
@@ -325,6 +365,15 @@ export class DrivingScene extends Phaser.Scene {
     }
     for (let d = from + 900; d < to; d += 2200 + rnd.between(-300, 500)) {
       this.spawnDog(d, rnd);
+    }
+    // Pickups per chunk (~1 per 2500 units): two positions, alternating.
+    const chunkFlipBase = Math.floor(from / 2500);
+    const spots = [from + 1000, from + 3000];
+    for (let i = 0; i < spots.length; i++) {
+      const d = spots[i] + rnd.between(-120, 120);
+      if (d <= from || d >= to) continue;
+      const type: ObstacleType = ((chunkFlipBase + i) % 2 === 0) ? 'magnet' : 'shieldPickup';
+      this.spawn(type, d, rnd.between(0, 2));
     }
     this.endlessSpawnCursor = to;
   }
@@ -393,6 +442,14 @@ export class DrivingScene extends Phaser.Scene {
         sprite = this.add.image(startX, -200, key).setDepth(7).setDisplaySize(24, 18);
         const baseVx = (85 + (rnd ? rnd.between(0, 40) : 20)) * this.difficulty.speedMul;
         mph = fromLeft ? baseVx : -baseVx;
+        break;
+      }
+      case 'magnet': {
+        sprite = this.add.image(LANE_X[lane], -200, 'magnet').setDepth(6).setDisplaySize(34, 34);
+        break;
+      }
+      case 'shieldPickup': {
+        sprite = this.add.image(LANE_X[lane], -200, 'shield').setDepth(6).setDisplaySize(30, 34);
         break;
       }
     }
@@ -537,7 +594,73 @@ export class DrivingScene extends Phaser.Scene {
     this.comboText.setScale(scale);
     this.comboText.setColor(c >= 5 ? '#ffe89a' : c >= 3 ? '#f2c14e' : '#ffffff');
     this.starHudText.setText(`★ ${this.tracker.starsCollected}`);
-    sound.setMusicIntensity(c);
+    // Each combo step raises positive SFX pitch by a semitone.
+    sound.setSfxPitchStep(Math.max(0, c - 1));
+  }
+
+  private handlePickup(ob: Obstacle, time: number) {
+    if (ob.resolved) return;
+    const dx = Math.abs(this.player.x - ob.sprite.x);
+    const dy = Math.abs(this.player.y - ob.sprite.y);
+    if (dx > 26 || dy > 34) return;
+    ob.resolved = true;
+    ob.sprite.setVisible(false);
+    if (ob.type === 'magnet') {
+      this.magnetUntil = time + 10000;
+      sound.magnetPickup();
+      this.float('★ MAGNET', '#f2c14e');
+    } else {
+      if (!this.hasShield) {
+        this.hasShield = true;
+        this.shieldAura = this.add.image(this.player.x, this.player.y, 'shield-aura')
+          .setDepth(9).setAlpha(0.9).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: this.shieldAura, alpha: 0.6, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.easeInOut' });
+      }
+      sound.shieldPickup();
+      this.float('🛡 SHIELD', '#f2c14e');
+    }
+    for (let i = 0; i < 6; i++) {
+      const s = this.add.image(ob.sprite.x, ob.sprite.y, 'spark').setDepth(25).setTint(0xf2c14e);
+      this.tweens.add({
+        targets: s, x: s.x + Phaser.Math.Between(-40, 40), y: s.y + Phaser.Math.Between(-40, 40),
+        alpha: 0, scale: 0, duration: 450, onComplete: () => s.destroy(),
+      });
+    }
+  }
+
+  private updatePickupsHud(time: number) {
+    if (this.shieldAura) {
+      this.shieldAura.x = this.player.x;
+      this.shieldAura.y = this.player.y;
+      this.shieldAura.setVisible(this.hasShield);
+    }
+    const magActive = time < this.magnetUntil;
+    if (magActive) {
+      const secs = Math.max(0, Math.ceil((this.magnetUntil - time) / 1000));
+      if (!this.magnetHudBg) {
+        this.magnetHudBg = this.add.rectangle(GAME_W / 2, 78, 118, 22, 0xf2c14e, 0.22)
+          .setStrokeStyle(1.5, 0xf2c14e).setDepth(22);
+        this.magnetHudText = this.add.text(GAME_W / 2, 78, `★ MAGNET ${secs}s`, {
+          fontFamily: '"Bebas Neue", sans-serif', fontSize: '15px', color: '#ffe89a',
+        }).setOrigin(0.5).setDepth(23);
+      } else {
+        this.magnetHudText?.setText(`★ MAGNET ${secs}s`);
+      }
+      if (time - this.magnetTrailAt > 60) {
+        this.magnetTrailAt = time;
+        const s = this.add.image(this.player.x + Phaser.Math.Between(-10, 10), this.player.y + 20, 'spark')
+          .setDepth(9).setTint(0xf2c14e).setScale(0.5);
+        this.tweens.add({ targets: s, alpha: 0, scale: 0, y: s.y + 30, duration: 500, onComplete: () => s.destroy() });
+      }
+    } else if (this.magnetHudBg) {
+      this.magnetHudBg.destroy(); this.magnetHudBg = undefined;
+      this.magnetHudText?.destroy(); this.magnetHudText = undefined;
+    }
+    if (this.hasShield && !this.shieldHudIcon) {
+      this.shieldHudIcon = this.add.image(58, 42, 'shield').setDepth(22).setScale(0.55);
+    } else if (!this.hasShield && this.shieldHudIcon) {
+      this.shieldHudIcon.destroy(); this.shieldHudIcon = undefined;
+    }
   }
 
   private sparks(x: number, y: number) {
@@ -657,6 +780,31 @@ export class DrivingScene extends Phaser.Scene {
       this.tracker.addDistanceBonus(gain);
       this.scoreText.setText(`SCORE ${this.tracker.score}`);
     }
+    // Adaptive music intensity: step up every 2000 units, capped at 3.
+    const intensity = Math.min(3, Math.floor(this.traveled / 2000));
+    if (intensity !== this.lastIntensityStep) {
+      this.lastIntensityStep = intensity;
+      sound.setEndlessIntensity(intensity);
+    }
+    // Personal Best marker — gold sweep + fanfare when we cross prior best.
+    if (!this.pbShown && this.pbBestDistance > 0 && this.traveled >= this.pbBestDistance) {
+      this.pbShown = true;
+      this.showPersonalBest();
+    }
+  }
+
+  private showPersonalBest() {
+    sound.personalBest();
+    const line = this.add.rectangle(ROAD_X, this.player.y - 40, ROAD_W, 6, 0xf2c14e, 0.95).setOrigin(0, 0.5).setDepth(35);
+    const label = this.add.text(GAME_W / 2, this.player.y - 100, 'NEW BEST!', {
+      fontFamily: '"Bebas Neue", sans-serif', fontSize: '48px', color: '#f2c14e',
+      stroke: '#101014', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(36).setScale(0.2);
+    this.tweens.add({ targets: label, scale: 1, duration: 320, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: line, scaleY: 3, alpha: 0, duration: 900, ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy() });
+    this.tweens.add({ targets: label, alpha: 0, y: label.y - 20, delay: 1400, duration: 600,
+      onComplete: () => label.destroy() });
   }
   private _lastDistChunk = 0;
 
@@ -760,8 +908,13 @@ export class DrivingScene extends Phaser.Scene {
         case 'traffic':
           this.handleCollision(ob, time);
           break;
+        case 'magnet':
+        case 'shieldPickup':
+          this.handlePickup(ob, time);
+          break;
       }
     }
+    this.updatePickupsHud(time);
   }
 
   /** Sidewalk stroller update — pure decoration, moves in world Y, no collision. */
@@ -856,6 +1009,26 @@ export class DrivingScene extends Phaser.Scene {
 
   private handleStar(ob: Obstacle) {
     if (ob.resolved) return;
+    const now = this.time.now;
+    const magActive = now < this.magnetUntil;
+    // Magnet: within 1.5 lanes (~180px), drift the star toward the player.
+    if (magActive) {
+      const distX = this.player.x - ob.sprite.x;
+      const distY = this.player.y - ob.sprite.y;
+      const flat = Math.hypot(distX, distY);
+      if (Math.abs(distX) < 180) {
+        const pull = 6; // stronger the closer we get
+        ob.sprite.x += Math.sign(distX) * Math.min(Math.abs(distX), pull);
+        ob.sprite.y += Math.sign(distY) * Math.min(Math.abs(distY), pull * 1.3);
+        if (flat < 40) {
+          ob.resolved = true;
+          ob.sprite.setVisible(false);
+          this.award('STAR', 'STAR');
+          sound.starPickup();
+          return;
+        }
+      }
+    }
     const dx = Math.abs(this.player.x - ob.sprite.x);
     const dy = Math.abs(this.player.y - ob.sprite.y);
     if (dx < 22 && dy < 26) {
@@ -863,7 +1036,6 @@ export class DrivingScene extends Phaser.Scene {
       ob.sprite.setVisible(false);
       this.award('STAR', 'STAR');
       sound.starPickup();
-      // sparkle
       for (let i = 0; i < 4; i++) {
         const s = this.add.image(ob.sprite.x, ob.sprite.y, 'spark').setDepth(25).setTint(0xf2c14e);
         this.tweens.add({ targets: s, x: s.x + Phaser.Math.Between(-30, 30), y: s.y - 40,
@@ -923,6 +1095,22 @@ export class DrivingScene extends Phaser.Scene {
 
     ob.hit = true;
     this.sparks(s.x, s.y);
+
+    // Shield absorbs the next car collision entirely (traffic + parked car).
+    if (this.hasShield && (ob.type === 'traffic' || ob.type === 'parkedCar')) {
+      this.hasShield = false;
+      if (this.shieldAura) { this.shieldAura.destroy(); this.shieldAura = undefined; }
+      sound.shieldBreak();
+      this.float('SHIELD ABSORBED', '#ffe89a');
+      this.invulnUntil = time + 900;
+      this.cameras.main.flash(200, 242, 193, 78);
+      // Blow the obstacle out of the way harmlessly.
+      this.tweens.add({
+        targets: s, x: s.x + Phaser.Math.Between(-140, 140), y: s.y + 200,
+        angle: 200, alpha: 0.2, duration: 600,
+      });
+      return;
+    }
 
     if (ob.type === 'cone') {
       this.award('HIT_CONE', 'CONE');
@@ -1048,6 +1236,14 @@ export class DrivingScene extends Phaser.Scene {
     if (!this.level.endless) this.tracker.add('FINISH_BONUS');
     this.scoreText.setText(`SCORE ${this.tracker.score}`);
     sound.fanfare();
+    sound.setSfxPitchStep(0);
+    sound.setEndlessIntensity(0);
+    if (this.level.endless) {
+      try {
+        const d = Math.round(this.traveled);
+        if (d > this.pbBestDistance) localStorage.setItem('dk-game-endless-best-' + this.level.id, String(d));
+      } catch { /* ignore */ }
+    }
 
     const label = this.level.endless ? 'RUN OVER' : 'FINISH!';
     const banner = this.add.text(GAME_W / 2, 340, label, {

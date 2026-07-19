@@ -324,6 +324,41 @@ export function makeTextures(scene: Phaser.Scene) {
     g.strokePath();
   });
 
+  // --- Star Magnet pickup (gold horseshoe magnet) -------------------------
+  make('magnet', 40, 40, () => {
+    // outer glow
+    g.fillStyle(0xf2c14e, 0.28);
+    g.fillCircle(20, 20, 19);
+    // horseshoe body
+    g.lineStyle(6, 0xf2c14e);
+    g.beginPath();
+    g.arc(20, 22, 12, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340), false);
+    g.strokePath();
+    // straight legs
+    g.fillStyle(0xf2c14e);
+    g.fillRect(6, 12, 6, 12);
+    g.fillRect(28, 12, 6, 12);
+    // silver tips
+    g.fillStyle(0xe8e8ef);
+    g.fillRect(6, 8, 6, 5);
+    g.fillRect(28, 8, 6, 5);
+    // stroke pass
+    g.lineStyle(1.5, 0x8a6a10);
+    g.strokeRect(6, 8, 6, 16);
+    g.strokeRect(28, 8, 6, 16);
+  });
+
+  // --- Shield aura (soft ring drawn behind the player) --------------------
+  make('shield-aura', 80, 80, () => {
+    for (let i = 0; i < 6; i++) {
+      g.lineStyle(2, 0xf2c14e, 0.22 - i * 0.03);
+      g.strokeCircle(40, 40, 34 - i * 3);
+    }
+    g.fillStyle(0xffe89a, 0.10);
+    g.fillCircle(40, 40, 30);
+  });
+
+
   // --- Headlight glow cone (radial gradient fake) -------------------------
   make('headlight-glow', 220, 320, () => {
     for (let i = 0; i < 10; i++) {

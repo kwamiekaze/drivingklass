@@ -11,6 +11,7 @@ import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { GuestScoreModal } from './GuestScoreModal';
 import { UsernameModal } from './UsernameModal';
 import { MyStatsModal } from './MyStatsModal';
+import { AudioSettingsButton } from './components/AudioSettingsButton';
 import { submitScore } from './submitScore';
 import { submitLeaderboard } from './submitLeaderboard';
 import { getPlayerName } from './playerName';
@@ -143,8 +144,29 @@ export default function RoadTestGame({ publicMode }: RoadTestGameProps = {}) {
   }, []);
 
 
+  const [trackToast, setTrackToast] = useState<string | null>(null);
+  useEffect(() => {
+    const off = sound.onTrackChange((_id, label) => {
+      setTrackToast(label);
+      window.setTimeout(() => setTrackToast((cur) => (cur === label ? null : cur)), 2500);
+    });
+    return () => { off(); };
+  }, []);
+
+  // Menu music — start Showroom on the menu screen. Multiplayer/gameplay
+  // screens set their own tracks via their scenes.
+  useEffect(() => {
+    if (screen !== 'menu') return;
+    sound.init();
+    if (!sound.muted && !sound.musicMuted) sound.playTrack('showroom');
+  }, [screen]);
+
   return (
     <div className="dk-game" ref={rootRef}>
+      <AudioSettingsButton />
+      {trackToast && (
+        <div className="dk-track-toast" role="status">♪ {trackToast}</div>
+      )}
       <div className="app-shell">
         {screen === 'menu' && (
           <StartScreen
