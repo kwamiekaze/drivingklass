@@ -11,6 +11,7 @@ import { MultiplayerRoot } from './multiplayer/MultiplayerRoot';
 import { GuestScoreModal } from './GuestScoreModal';
 import { UsernameModal } from './UsernameModal';
 import { MyStatsModal } from './MyStatsModal';
+import { AudioSettingsButton } from './components/AudioSettingsButton';
 import { submitScore } from './submitScore';
 import { submitLeaderboard } from './submitLeaderboard';
 import { getPlayerName } from './playerName';
