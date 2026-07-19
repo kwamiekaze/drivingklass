@@ -1236,6 +1236,14 @@ export class DrivingScene extends Phaser.Scene {
     if (!this.level.endless) this.tracker.add('FINISH_BONUS');
     this.scoreText.setText(`SCORE ${this.tracker.score}`);
     sound.fanfare();
+    sound.setSfxPitchStep(0);
+    sound.setEndlessIntensity(0);
+    if (this.level.endless) {
+      try {
+        const d = Math.round(this.traveled);
+        if (d > this.pbBestDistance) localStorage.setItem('dk-game-endless-best-' + this.level.id, String(d));
+      } catch { /* ignore */ }
+    }
 
     const label = this.level.endless ? 'RUN OVER' : 'FINISH!';
     const banner = this.add.text(GAME_W / 2, 340, label, {
