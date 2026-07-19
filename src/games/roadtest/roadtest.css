@@ -1323,3 +1323,81 @@
 .aftermath-badges li, .aftermath-missions li { padding: 2px 0; }
 .aftermath-daily { margin-top: 6px; font-size: 13px; color: rgba(255,255,255,0.85); }
 .aftermath-daily.beat { color: #ffe89a; font-weight: 700; }
+
+/* ---------- Audio settings popover (floating top-right) ---------- */
+.dk-audio-wrap {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  right: calc(10px + env(safe-area-inset-right));
+  z-index: 220;
+}
+.dk-audio-btn {
+  min-width: 44px;
+  padding: 6px 10px !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+.dk-audio-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 200px;
+  background: rgba(16, 16, 20, 0.96);
+  border: 1px solid var(--gold, #f2c14e);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+}
+.dk-audio-title {
+  font-family: "Bebas Neue", sans-serif;
+  letter-spacing: 1.2px;
+  color: var(--gold, #f2c14e);
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+.dk-audio-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  cursor: pointer;
+  gap: 12px;
+}
+.dk-audio-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold, #f2c14e);
+}
+
+/* ---------- Track-change toast (bottom left, non-blocking) ---------- */
+.dk-track-toast {
+  position: fixed;
+  left: calc(14px + env(safe-area-inset-left));
+  bottom: calc(120px + env(safe-area-inset-bottom));
+  z-index: 210;
+  background: linear-gradient(180deg, var(--gold, #f2c14e), var(--gold-deep, #b98a1a));
+  color: var(--black, #101014);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-family: "Bebas Neue", sans-serif;
+  letter-spacing: 1.5px;
+  font-size: 14px;
+  box-shadow: 0 8px 22px rgba(242, 193, 78, 0.45);
+  animation: dk-track-toast-in 0.28s ease-out, dk-track-toast-out 0.35s ease-in 2.15s forwards;
+  pointer-events: none;
+  max-width: min(60vw, 260px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes dk-track-toast-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes dk-track-toast-out {
+  to { transform: translateY(6px); opacity: 0; }
+}
