@@ -99,6 +99,20 @@ export class DrivingScene extends Phaser.Scene {
   private shieldSprites: Phaser.GameObjects.Image[] = [];
   private muteBtn!: Phaser.GameObjects.Text;
 
+  // Pickups: Star Magnet + Shield
+  private magnetUntil = 0;
+  private hasShield = false;
+  private shieldAura?: Phaser.GameObjects.Image;
+  private magnetHudBg?: Phaser.GameObjects.Rectangle;
+  private magnetHudText?: Phaser.GameObjects.Text;
+  private shieldHudIcon?: Phaser.GameObjects.Image;
+  private magnetTrailAt = 0;
+
+  // Adaptive endless intensity + Personal Best marker
+  private lastIntensityStep = 0;
+  private pbBestDistance = 0;
+  private pbShown = false;
+
   // Skid marks pool
   private skidPool: Phaser.GameObjects.Rectangle[] = [];
   private skidLastAt = 0;
