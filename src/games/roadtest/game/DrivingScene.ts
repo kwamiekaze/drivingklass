@@ -183,15 +183,15 @@ export class DrivingScene extends Phaser.Scene {
     // Sound: context was unlocked by the START button tap, so start engine + music
     // immediately on scene create. Keep input listeners as a fallback for edge cases
     // (e.g. direct deep-link into a game without a prior gesture).
-    const mood = pickMoodForLevel(lvl);
+    const trackId = pickTrackForLevel(lvl);
     sound.init();
     sound.startEngine();
-    if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
+    if (!sound.muted && !sound.musicMuted) sound.playTrack(trackId);
     const unlockAudio = () => {
       sound.init();
       if (sound.isReady()) {
         sound.startEngine();
-        if (!sound.muted && !sound.musicMuted) sound.startMusic(mood);
+        if (!sound.muted && !sound.musicMuted) sound.playTrack(trackId);
       }
     };
     this.input.keyboard!.on('keydown', unlockAudio);
