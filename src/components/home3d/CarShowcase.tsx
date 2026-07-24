@@ -8,14 +8,9 @@ const MODEL_URL = carAsset.url;
 // Draco-compressed GLB → enable drei's built-in DracoLoader (gstatic decoder)
 useGLTF.preload(MODEL_URL, true);
 
-// Frame-rate independent auto-rotation. Time-based (rad/sec) so both themes spin
-// at identical real-time speed regardless of canvas FPS (night video decode can
-// otherwise drop FPS and slow OrbitControls' per-frame autoRotate).
-// Matches prior autoRotateSpeed = -2.778 @ 60fps → one revolution per ~21.6s.
-// 2π / 21.6 ≈ 0.2909; negative preserves prior clockwise camera orbit direction.
-const ROT_RAD_PER_SEC = -(2 * Math.PI) / 21.6;
-
-
+// Shared across BOTH themes — car auto-rotation speed & direction must be identical
+// in light and dark mode. Negative value orbits camera clockwise (car appears CCW).
+const AUTO_ROTATE_SPEED = -2.778;
 
 
 
@@ -129,34 +124,6 @@ function DustField() {
   );
 }
 
-// Frame-rate independent idle orbit. Rotates the camera around the controls target
-// by ROT_RAD_PER_SEC * delta each frame, so real-time speed is identical at any FPS.
-function AutoOrbit({
-  controlsRef,
-  pausedRef,
-}: {
-  controlsRef: React.MutableRefObject<any>;
-  pausedRef: React.MutableRefObject<boolean>;
-}) {
-  useFrame((state, delta) => {
-    const controls = controlsRef.current;
-    if (!controls || pausedRef.current) return;
-    // Clamp delta to avoid huge jumps after tab-away.
-    const dt = Math.min(delta, 0.1);
-    const cam = state.camera;
-    const target = controls.target as THREE.Vector3;
-    const offset = cam.position.clone().sub(target);
-    const spherical = new THREE.Spherical().setFromVector3(offset);
-    spherical.theta += ROT_RAD_PER_SEC * dt;
-    offset.setFromSpherical(spherical);
-    cam.position.copy(target).add(offset);
-    cam.lookAt(target);
-    controls.update();
-  });
-  return null;
-}
-
-
 export default function CarShowcase() {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -164,7 +131,6 @@ export default function CarShowcase() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<any>(null);
   const resumeTimer = useRef<number | null>(null);
-  const pausedRef = useRef(false);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -180,13 +146,13 @@ export default function CarShowcase() {
     const c = controlsRef.current;
     if (!c) return;
     const onStart = () => {
-      pausedRef.current = true;
+      c.autoRotate = false;
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
     };
     const onEnd = () => {
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
       resumeTimer.current = window.setTimeout(() => {
-        pausedRef.current = false;
+        if (controlsRef.current) controlsRef.current.autoRotate = true;
       }, 3000);
     };
     c.addEventListener("start", onStart);
@@ -197,7 +163,6 @@ export default function CarShowcase() {
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
     };
   }, [ready]);
-
 
   return (
     <div
@@ -274,13 +239,13 @@ export default function CarShowcase() {
             enablePan={false}
             enableDamping
             dampingFactor={0.08}
-            autoRotate={false}
+            autoRotate
+            // Shared constant — identical speed & direction in both light and dark themes.
+            autoRotateSpeed={AUTO_ROTATE_SPEED}
             minDistance={1.5}
             maxDistance={8}
             target={[0, 0.5, 0]}
           />
-          <AutoOrbit controlsRef={controlsRef} pausedRef={pausedRef} />
-
         </Suspense>
       </Canvas>
     </div>
