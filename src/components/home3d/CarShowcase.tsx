@@ -164,6 +164,7 @@ export default function CarShowcase() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<any>(null);
   const resumeTimer = useRef<number | null>(null);
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -179,13 +180,13 @@ export default function CarShowcase() {
     const c = controlsRef.current;
     if (!c) return;
     const onStart = () => {
-      c.autoRotate = false;
+      pausedRef.current = true;
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
     };
     const onEnd = () => {
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
       resumeTimer.current = window.setTimeout(() => {
-        if (controlsRef.current) controlsRef.current.autoRotate = true;
+        pausedRef.current = false;
       }, 3000);
     };
     c.addEventListener("start", onStart);
@@ -196,6 +197,7 @@ export default function CarShowcase() {
       if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
     };
   }, [ready]);
+
 
   return (
     <div
