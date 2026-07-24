@@ -831,4 +831,81 @@ body {
       drop-shadow(0 1px 1px rgba(80, 50, 0, 0.55))
       drop-shadow(0 0 12px rgba(242, 193, 78, 0.45)) !important;
   }
+  .gold-pill-shimmer::before {
+    animation: none !important;
+  }
 }
+
+/* Award-winning gold pill button (Reviews / About / Call) */
+@keyframes gold-pill-sweep {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60% { transform: translateX(220%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+.gold-pill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, hsl(30 10% 12%) 0%, hsl(30 12% 7%) 100%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow:
+    0 4px 18px hsl(0 0% 0% / 0.28),
+    0 0 22px hsl(43 80% 52% / 0.28),
+    inset 0 1px 0 hsl(48 90% 78% / 0.35);
+}
+.gold-pill::after {
+  /* metallic gold ring */
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg,
+    hsl(48 90% 78%) 0%,
+    hsl(43 85% 55%) 35%,
+    hsl(36 70% 32%) 65%,
+    hsl(48 90% 78%) 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+.gold-pill-shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    hsl(48 95% 85% / 0.55) 50%,
+    transparent 100%);
+  filter: blur(6px);
+  transform: translateX(-120%) skewX(-20deg);
+  animation: gold-pill-sweep 5.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.gold-pill:hover {
+  box-shadow:
+    0 6px 26px hsl(0 0% 0% / 0.32),
+    0 0 34px hsl(43 85% 55% / 0.45),
+    inset 0 1px 0 hsl(48 90% 78% / 0.5);
+}
+.gold-pill-label {
+  background: linear-gradient(180deg,
+    hsl(48 95% 82%) 0%,
+    hsl(43 85% 58%) 55%,
+    hsl(36 75% 42%) 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px hsl(0 0% 0% / 0.5));
+}
+
