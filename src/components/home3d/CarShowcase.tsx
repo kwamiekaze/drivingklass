@@ -8,9 +8,14 @@ const MODEL_URL = carAsset.url;
 // Draco-compressed GLB → enable drei's built-in DracoLoader (gstatic decoder)
 useGLTF.preload(MODEL_URL, true);
 
-// Shared across BOTH themes — car auto-rotation speed & direction must be identical
-// in light and dark mode. Negative value orbits camera clockwise (car appears CCW).
-const AUTO_ROTATE_SPEED = -2.778;
+// Frame-rate independent auto-rotation. Time-based (rad/sec) so both themes spin
+// at identical real-time speed regardless of canvas FPS (night video decode can
+// otherwise drop FPS and slow OrbitControls' per-frame autoRotate).
+// Matches prior autoRotateSpeed = -2.778 @ 60fps → one revolution per ~21.6s.
+// 2π / 21.6 ≈ 0.2909; negative preserves prior clockwise camera orbit direction.
+const ROT_RAD_PER_SEC = -(2 * Math.PI) / 21.6;
+
+
 
 
 
