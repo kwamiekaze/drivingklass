@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { GalaxyStars } from "@/components/GalaxyStars";
+
 
 const VIDEO_SRC = "/videos/night-road-loop.mp4";
 const VIDEO_POSTER = "/videos/night-road-loop-poster.jpg";
@@ -74,26 +74,16 @@ export function DarkModeBackground() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none transition-all duration-500">
-      {/* Fallback layer BEHIND video: rich black gradient + galaxy stars */}
+      {/* Poster fallback (video's own first frame) BEHIND the video */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 bg-cover bg-no-repeat"
         style={{
+          backgroundImage: `url(${VIDEO_POSTER})`,
+          backgroundPosition: "center 35%",
+          backgroundColor: "hsl(0 0% 2%)",
           zIndex: 0,
-          background:
-            "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)",
         }}
       />
-      <div
-        className="absolute inset-0"
-        style={{
-          zIndex: 1,
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)",
-        }}
-      />
-      <div className="absolute inset-0" style={{ zIndex: 2 }}>
-        <GalaxyStars />
-      </div>
 
       {/* Full-bleed looping night road video */}
       <video

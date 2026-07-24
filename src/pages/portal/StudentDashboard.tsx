@@ -16,7 +16,7 @@ import { ReportCardList } from "@/components/portal/ReportCardList";
 import { HoursRemainingCard } from "@/components/portal/HoursRemainingCard";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useTranslation } from "react-i18next";
@@ -146,7 +146,7 @@ function StudentDashboardContent() {
               }}
             />
             {/* Galaxy stars */}
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <>
