@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { HeroSection } from "@/components/HeroSection";
 import { ContactSection } from "@/components/ContactSection";
-import { NavigationButtons } from "@/components/NavigationButtons";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
 import { LightModeBackground } from "@/components/LightModeBackground";
