@@ -5,8 +5,8 @@ import { ContactSection } from "@/components/ContactSection";
 import { NavigationButtons } from "@/components/NavigationButtons";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
-import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useTheme } from "@/components/ThemeProvider";
 
