@@ -33,8 +33,9 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
           <PortalMenuButton size="lg" />
         </div>
 
-        {/* Stars row — sits in the gap between slogan and wheel on mobile */}
-        <div className="w-full md:hidden flex justify-center mb-4">
+        {/* Stars row — sits in the gap between slogan and wheel on mobile.
+            Extra bottom margin so the "1 HR" package (top of wheel) clears the stars. */}
+        <div className="w-full md:hidden flex justify-center mb-12">
           <HeaderStars />
         </div>
 
