@@ -447,20 +447,25 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
           className={cn(
             "font-display px-10 py-4 rounded-full font-bold tracking-[0.25em] uppercase text-sm",
             "transition-all duration-200",
-            selectedPackageId 
-              ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer" 
-              : "opacity-50 cursor-not-allowed"
+            selectedPackageId
+              ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer"
+              : "opacity-50 cursor-not-allowed",
+            // In light theme on mobile, pin the Info button over the dashboard
+            // instrument-cluster area of the road video (~72% vh). Desktop unchanged.
+            isLight && "fixed left-1/2 -translate-x-1/2 z-40 md:static md:translate-x-0"
           )}
           style={{
             background: selectedPackageId
               ? 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)'
               : 'linear-gradient(145deg, hsl(36 30% 25%) 0%, hsl(43 35% 35%) 50%, hsl(48 30% 40%) 100%)',
             color: selectedPackageId ? 'hsl(30 10% 8%)' : 'hsl(30 10% 25%)',
-            boxShadow: selectedPackageId 
+            boxShadow: selectedPackageId
               ? '0 4px 25px hsl(43 80% 52% / 0.35), 0 0 40px hsl(43 80% 52% / 0.15), inset 0 1px 0 hsl(48 80% 70% / 0.4)'
               : '0 2px 10px hsl(0 0% 0% / 0.3)',
+            ...(isLight && isMobile ? { top: '72vh' } : {}),
           }}
         >
+
           Info
         </button>
       </div>

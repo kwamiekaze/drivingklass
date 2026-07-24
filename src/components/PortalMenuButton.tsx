@@ -5,12 +5,14 @@ import portalCarIcon from "@/assets/portal-car-icon.png";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { InstallAppModal } from "./InstallAppModal";
 
-export function PortalMenuButton() {
+export function PortalMenuButton({ size = "md" }: { size?: "md" | "lg" } = {}) {
   const [open, setOpen] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, role, isApproved } = usePortalAuth();
+  const isLg = size === "lg";
+
 
   useEffect(() => {
     if (!open) return;
@@ -51,7 +53,7 @@ export function PortalMenuButton() {
     <div ref={wrapRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="p-1.5 rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group"
+        className={`${isLg ? "p-2.5" : "p-1.5"} rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group shadow-[0_0_18px_rgba(0,0,0,0.35)]`}
         title="Menu"
         aria-label="Open menu"
         aria-expanded={open}
@@ -59,9 +61,10 @@ export function PortalMenuButton() {
         <img
           src={portalCarIcon}
           alt="Menu"
-          className="w-8 h-8 object-contain group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(212,175,55,0.5)]"
+          className={`${isLg ? "w-11 h-11" : "w-8 h-8"} object-contain group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(212,175,55,0.5)]`}
         />
       </button>
+
 
       {open && (
         <div
