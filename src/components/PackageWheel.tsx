@@ -392,8 +392,17 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
         })}
       </div>
 
-      {/* Selected package indicator & INFO CTA - moved down with more spacing */}
-      <div className="mt-12 sm:mt-16 md:mt-20 text-center pb-6">
+      {/* Selected package indicator & INFO CTA.
+          On light-theme mobile the wheel sits over a video; pin this block to the
+          dashboard instrument-cluster area (~74vh) so spacing above/below the wheel is balanced. */}
+      <div
+        className={cn(
+          "text-center pb-6",
+          isLight && isMobile
+            ? "fixed left-1/2 -translate-x-1/2 top-[74vh] z-30 w-full px-4"
+            : "mt-12 sm:mt-16 md:mt-20"
+        )}
+      >
         <div className={cn(
           "transition-all duration-300",
           selectedPackageId ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"

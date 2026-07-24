@@ -33,8 +33,9 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
           <PortalMenuButton size="lg" />
         </div>
 
-        {/* Stars row — sits in the gap between slogan and wheel on mobile */}
-        <div className="w-full md:hidden flex justify-center mb-4">
+        {/* Stars row — sits in the gap between slogan and wheel on mobile.
+            Extra bottom margin so the "1 HR" package (top of wheel) clears the stars. */}
+        <div className="w-full md:hidden flex justify-center mb-12">
           <HeaderStars />
         </div>
 
@@ -45,8 +46,8 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
         </div>
         <HeaderBrand className="hidden md:block relative z-10 mb-12" />
 
-        {/* Wheel — small lift on mobile so it hugs the stars without overlap */}
-        <div className="w-full flex justify-center translate-y-0 md:translate-y-0">
+        {/* Wheel — small top margin on mobile so the top package clears the stars row */}
+        <div className="w-full flex justify-center mt-2 md:mt-0">
           <PackageWheel
             onPackageSelect={handlePackageSelect}
             splashComplete={splashComplete}
