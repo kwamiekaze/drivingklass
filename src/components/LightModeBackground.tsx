@@ -8,17 +8,43 @@ const VIDEO_POSTER = "/videos/light-road-loop-poster.jpg";
 export function LightModeBackground() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Pause video when off-screen to save battery/CPU (light-weight IntersectionObserver)
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
 
-    // Kick off playback (iOS requires the load-then-play sequence)
+    let cancelled = false;
     const tryPlay = () => {
+      if (cancelled || !el) return;
       const p = el.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          // Retry once shortly after — some browsers need a second nudge
+          setTimeout(() => {
+            if (!cancelled && el.paused) {
+              const r = el.play();
+              if (r && typeof r.catch === "function") r.catch(() => {});
+            }
+          }, 250);
+        });
+      }
     };
+
+    // Kick off immediately and on multiple readiness events
     tryPlay();
+    el.addEventListener("loadeddata", tryPlay);
+    el.addEventListener("canplay", tryPlay);
+    el.addEventListener("canplaythrough", tryPlay);
+
+    // First user interaction anywhere: force a play attempt (one-time)
+    const onFirstInteract = () => {
+      tryPlay();
+      window.removeEventListener("touchstart", onFirstInteract);
+      window.removeEventListener("click", onFirstInteract);
+      window.removeEventListener("keydown", onFirstInteract);
+    };
+    window.addEventListener("touchstart", onFirstInteract, { once: true, passive: true });
+    window.addEventListener("click", onFirstInteract, { once: true });
+    window.addEventListener("keydown", onFirstInteract, { once: true });
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -38,19 +64,27 @@ export function LightModeBackground() {
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
+      cancelled = true;
       io.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
+      el.removeEventListener("loadeddata", tryPlay);
+      el.removeEventListener("canplay", tryPlay);
+      el.removeEventListener("canplaythrough", tryPlay);
+      window.removeEventListener("touchstart", onFirstInteract);
+      window.removeEventListener("click", onFirstInteract);
+      window.removeEventListener("keydown", onFirstInteract);
     };
   }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none transition-all duration-500">
-      {/* Poster fallback image behind the video for instant paint / slow connections */}
+      {/* Poster fallback image BEHIND the video (z-0). Video sits above at z-10. */}
       <div
         className="absolute inset-0 md:hidden bg-cover bg-no-repeat"
         style={{
           backgroundImage: `url(${lightBgMobile})`,
           backgroundPosition: "center top",
+          zIndex: 0,
         }}
       />
       <div
@@ -58,6 +92,7 @@ export function LightModeBackground() {
         style={{
           backgroundImage: `url(${lightBgDesktop})`,
           backgroundPosition: "center 30%",
+          zIndex: 0,
         }}
       />
 
@@ -65,21 +100,25 @@ export function LightModeBackground() {
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ objectPosition: "center 30%" }}
+        style={{ objectPosition: "center 30%", zIndex: 10 }}
         src={VIDEO_SRC}
         poster={VIDEO_POSTER}
         autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        // @ts-expect-error – non-standard iOS attribute
+        webkit-playsinline="true"
+        preload="auto"
+        disablePictureInPicture
         aria-hidden="true"
       />
 
-      {/* Subtle readability overlay - gentle top/bottom darkening only */}
+      {/* Subtle readability overlay above video (does not block playback) */}
       <div
         className="absolute inset-0"
         style={{
+          zIndex: 20,
           background: `linear-gradient(
             180deg,
             hsl(0 0% 0% / 0.18) 0%,
