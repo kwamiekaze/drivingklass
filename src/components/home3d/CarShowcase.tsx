@@ -8,6 +8,11 @@ const MODEL_URL = carAsset.url;
 // Draco-compressed GLB → enable drei's built-in DracoLoader (gstatic decoder)
 useGLTF.preload(MODEL_URL, true);
 
+// Shared across BOTH themes — car auto-rotation speed & direction must be identical
+// in light and dark mode. Negative value orbits camera clockwise (car appears CCW).
+const AUTO_ROTATE_SPEED = -2.778;
+
+
 
 // Cinematic entrance for the whole car group: fade + rise + rotate settle
 function CarModel({ onLoaded }: { onLoaded?: () => void }) {
@@ -235,10 +240,8 @@ export default function CarShowcase() {
             enableDamping
             dampingFactor={0.08}
             autoRotate
-            // Reversed direction and slowed 50% from the PackageWheel-synced speed.
-            // Negative autoRotateSpeed orbits the camera clockwise viewed from above,
-            // making the car appear to rotate counter-clockwise on screen.
-            autoRotateSpeed={-2.778}
+            // Shared constant — identical speed & direction in both light and dark themes.
+            autoRotateSpeed={AUTO_ROTATE_SPEED}
             minDistance={1.5}
             maxDistance={8}
             target={[0, 0.5, 0]}
