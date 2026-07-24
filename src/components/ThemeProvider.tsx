@@ -119,7 +119,7 @@ export function ThemeProvider({
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
     const handleChange = () => {
-      applyTheme(getSystemTheme());
+      applyTheme(getSystemTheme() ?? getTimeBasedTheme());
     };
 
     mediaQuery.addEventListener("change", handleChange);
