@@ -178,7 +178,7 @@ export function NavigationButtons({ onReviewsClick, onAboutClick }: NavigationBu
   return (
     <div
       className={cn(
-        "flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6",
+        "flex flex-wrap justify-center gap-5 sm:gap-6 md:gap-6",
         // Light theme mobile: fix to bottom of viewport (~90%) over the steering wheel
         // area of the road video. Desktop / dark unchanged.
         isLight
