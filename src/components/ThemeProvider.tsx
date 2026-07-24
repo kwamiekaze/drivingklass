@@ -28,29 +28,39 @@ function isThemePreference(value: unknown): value is ThemePreference {
   return value === "dark" || value === "light" || value === "system" || value === "time-based";
 }
 
-function getSystemTheme(): Theme {
+function getSystemTheme(): Theme | null {
   if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    // Some environments return a MediaQueryList that never matches anything meaningful;
+    // trust it when matchMedia is present.
+    return mq.matches ? "dark" : "light";
   }
-  return "dark";
+  return null;
 }
 
 /**
- * Time-based theme: Light from 7:00 AM to 6:00 PM, Dark otherwise
+ * Time-based theme using GEORGIA time (America/New_York):
+ * Light 7:00 AM – 7:00 PM, Dark otherwise.
  */
 function getTimeBasedTheme(): Theme {
-  const now = new Date();
-  const hour = now.getHours();
-  // Light theme: 7:00 AM (7) to 6:00 PM (18)
-  if (hour >= 7 && hour < 18) {
-    return "light";
+  try {
+    const hourStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date());
+    const hour = parseInt(hourStr, 10);
+    if (!Number.isNaN(hour) && hour >= 7 && hour < 19) return "light";
+    return "dark";
+  } catch {
+    const hour = new Date().getHours();
+    return hour >= 7 && hour < 19 ? "light" : "dark";
   }
-  return "dark";
 }
 
 function resolveTheme(preference: ThemePreference): Theme {
   if (preference === "system") {
-    return getSystemTheme();
+    return getSystemTheme() ?? getTimeBasedTheme();
   }
   if (preference === "time-based") {
     return getTimeBasedTheme();
@@ -109,7 +119,7 @@ export function ThemeProvider({
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
     const handleChange = () => {
-      applyTheme(getSystemTheme());
+      applyTheme(getSystemTheme() ?? getTimeBasedTheme());
     };
 
     mediaQuery.addEventListener("change", handleChange);

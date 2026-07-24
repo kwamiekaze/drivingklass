@@ -5,8 +5,8 @@ import { ContactSection } from "@/components/ContactSection";
 import { NavigationButtons } from "@/components/NavigationButtons";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
-import { GalaxyStars } from "@/components/GalaxyStars";
 import { LightModeBackground } from "@/components/LightModeBackground";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -54,29 +54,9 @@ const Index = () => {
         {/* Fixed background layer - theme aware */}
         <div className="fixed inset-0" style={{ zIndex: 0 }}>
           {isDark ? (
-            <>
-              {/* Dark mode - rich black gradient */}
-              <div 
-                className="absolute inset-0 transition-colors duration-500"
-                style={{
-                  background: 'linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)',
-                }}
-              />
-              {/* Subtle gold atmospheric glow */}
-              <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
-                }}
-              />
-              {/* Galaxy stars */}
-              <GalaxyStars />
-            </>
+            <DarkModeBackground />
           ) : (
-            <>
-              {/* Light mode - warm sunlit driving school background */}
-              <LightModeBackground />
-            </>
+            <LightModeBackground />
           )}
         </div>
 
