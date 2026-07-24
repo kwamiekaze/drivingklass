@@ -40,16 +40,16 @@ export function ThemeToggle() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-10 w-10 rounded-full border border-gold/30 bg-background/50 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/50 transition-all duration-300"
+          className="relative p-2.5 h-auto w-auto rounded-full border border-gold/30 bg-card/40 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/60 transition-all duration-300 shadow-[0_0_18px_rgba(0,0,0,0.35)]"
         >
           {theme === "time-based" ? (
-            <Clock className="h-5 w-5 text-gold" />
+            <Clock className="w-11 h-11 text-gold" />
           ) : theme === "system" ? (
-            <SystemIcon className="h-5 w-5 text-gold" />
+            <SystemIcon className="w-11 h-11 text-gold" />
           ) : (
             <>
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all text-gold dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all text-gold dark:rotate-0 dark:scale-100" />
+              <Sun className="w-11 h-11 rotate-0 scale-100 transition-all text-gold dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute w-11 h-11 rotate-90 scale-0 transition-all text-gold dark:rotate-0 dark:scale-100" />
             </>
           )}
           <span className="sr-only">Toggle theme</span>
