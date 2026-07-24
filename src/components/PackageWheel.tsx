@@ -449,10 +449,7 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
             "transition-all duration-200",
             selectedPackageId
               ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer"
-              : "opacity-50 cursor-not-allowed",
-            // In light theme on mobile, pin the Info button over the dashboard
-            // instrument-cluster area of the road video (~72% vh). Desktop unchanged.
-            isLight && "fixed left-1/2 -translate-x-1/2 z-40 md:static md:translate-x-0"
+              : "opacity-50 cursor-not-allowed"
           )}
           style={{
             background: selectedPackageId
@@ -462,7 +459,6 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
             boxShadow: selectedPackageId
               ? '0 4px 25px hsl(43 80% 52% / 0.35), 0 0 40px hsl(43 80% 52% / 0.15), inset 0 1px 0 hsl(48 80% 70% / 0.4)'
               : '0 2px 10px hsl(0 0% 0% / 0.3)',
-            ...(isLight && isMobile ? { top: '72vh' } : {}),
           }}
         >
 

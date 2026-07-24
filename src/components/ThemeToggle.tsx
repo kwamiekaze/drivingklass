@@ -11,11 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function ThemeToggle() {
+export function ThemeToggle({ size = "md" }: { size?: "md" | "lg" } = {}) {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { trackClick } = useAnalytics();
   const isMobile = useIsMobile();
-  
+  const isLg = size === "lg";
+
   // Get role - will be null if not logged in or context not available
   let isAdmin = false;
   try {
@@ -34,22 +35,27 @@ export function ThemeToggle() {
   // System icon changes based on device type
   const SystemIcon = isMobile ? Smartphone : Laptop;
 
+  const btnClass = isLg
+    ? "relative p-2.5 h-auto w-auto rounded-full border border-gold/30 bg-card/40 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/60 transition-all duration-300 shadow-[0_0_18px_rgba(0,0,0,0.35)]"
+    : "relative h-10 w-10 rounded-full border border-gold/30 bg-background/50 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/50 transition-all duration-300";
+  const iconClass = isLg ? "w-11 h-11 text-gold" : "h-5 w-5 text-gold";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-10 w-10 rounded-full border border-gold/30 bg-background/50 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/50 transition-all duration-300"
+          className={btnClass}
         >
           {theme === "time-based" ? (
-            <Clock className="h-5 w-5 text-gold" />
+            <Clock className={iconClass} />
           ) : theme === "system" ? (
-            <SystemIcon className="h-5 w-5 text-gold" />
+            <SystemIcon className={iconClass} />
           ) : (
             <>
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all text-gold dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all text-gold dark:rotate-0 dark:scale-100" />
+              <Sun className={`${iconClass} rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0`} />
+              <Moon className={`absolute ${iconClass} rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100`} />
             </>
           )}
           <span className="sr-only">Toggle theme</span>
