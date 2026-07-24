@@ -129,6 +129,34 @@ function DustField() {
   );
 }
 
+// Frame-rate independent idle orbit. Rotates the camera around the controls target
+// by ROT_RAD_PER_SEC * delta each frame, so real-time speed is identical at any FPS.
+function AutoOrbit({
+  controlsRef,
+  pausedRef,
+}: {
+  controlsRef: React.MutableRefObject<any>;
+  pausedRef: React.MutableRefObject<boolean>;
+}) {
+  useFrame((state, delta) => {
+    const controls = controlsRef.current;
+    if (!controls || pausedRef.current) return;
+    // Clamp delta to avoid huge jumps after tab-away.
+    const dt = Math.min(delta, 0.1);
+    const cam = state.camera;
+    const target = controls.target as THREE.Vector3;
+    const offset = cam.position.clone().sub(target);
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    spherical.theta += ROT_RAD_PER_SEC * dt;
+    offset.setFromSpherical(spherical);
+    cam.position.copy(target).add(offset);
+    cam.lookAt(target);
+    controls.update();
+  });
+  return null;
+}
+
+
 export default function CarShowcase() {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
