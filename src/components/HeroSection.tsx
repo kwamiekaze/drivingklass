@@ -52,7 +52,7 @@ export function HeroSection({ splashComplete = true, onReviewsClick, onAboutClic
             Scrolls away with the hero (not fixed). */}
         {onReviewsClick && onAboutClick && (
           <div
-            className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[520px] md:bottom-[7vh] bottom-[8vh]"
+            className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[520px] md:bottom-[7vh] bottom-[12.5vh]"
             style={{ pointerEvents: "auto" }}
           >
             <NavigationButtons
