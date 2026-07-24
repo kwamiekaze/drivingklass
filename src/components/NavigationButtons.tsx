@@ -172,29 +172,13 @@ interface NavigationButtonsProps {
 }
 
 export function NavigationButtons({ onReviewsClick, onAboutClick }: NavigationButtonsProps) {
-  const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === "light";
-
   return (
-    <div
-      className={cn(
-        "flex flex-wrap justify-center gap-5 sm:gap-6 md:gap-6",
-        // Light theme mobile: fix to bottom of viewport (~90%) over the steering wheel
-        // area of the road video. Desktop / dark unchanged.
-        isLight
-          ? "fixed left-0 right-0 z-40 px-4 py-3 md:static md:py-14 md:px-0"
-          : "py-10 md:py-14"
-      )}
-      style={
-        isLight
-          ? { bottom: 'max(env(safe-area-inset-bottom), 12px)' }
-          : undefined
-      }
-    >
+    <div className="flex flex-wrap justify-center gap-5 sm:gap-6 md:gap-6 py-10 md:py-14">
       <NavButton label="Reviews" onClick={onReviewsClick} />
       <NavButton label="About Us" onClick={onAboutClick} />
       <CallButton />
     </div>
   );
 }
+
 

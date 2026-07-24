@@ -36,16 +36,16 @@ export function ThemeToggle({ size = "md" }: { size?: "md" | "lg" } = {}) {
   const SystemIcon = isMobile ? Smartphone : Laptop;
 
   const btnClass = isLg
-    ? "relative p-2.5 h-auto w-auto rounded-full border border-gold/30 bg-card/40 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/60 transition-all duration-300 shadow-[0_0_18px_rgba(0,0,0,0.35)]"
-    : "relative h-10 w-10 rounded-full border border-gold/30 bg-background/50 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/50 transition-all duration-300";
+    ? "relative inline-flex items-center justify-center p-2.5 rounded-full border border-gold/30 bg-card/40 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/60 transition-all duration-300 shadow-[0_0_18px_rgba(0,0,0,0.35)]"
+    : "relative inline-flex items-center justify-center h-10 w-10 rounded-full border border-gold/30 bg-background/50 backdrop-blur-sm hover:bg-gold/10 hover:border-gold/50 transition-all duration-300";
   const iconClass = isLg ? "w-11 h-11 text-gold" : "h-5 w-5 text-gold";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
+          aria-label="Toggle theme"
           className={btnClass}
         >
           {theme === "time-based" ? (
@@ -59,8 +59,9 @@ export function ThemeToggle({ size = "md" }: { size?: "md" | "lg" } = {}) {
             </>
           )}
           <span className="sr-only">Toggle theme</span>
-        </Button>
+        </button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           <Sun className="mr-2 h-4 w-4" />

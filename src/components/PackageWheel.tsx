@@ -272,27 +272,16 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
     return () => clearInterval(intervalId);
   }, [isMobile, hasUserSelected, totalButtons, splashComplete]);
 
-  // Handle package click - also opens modal on double-tap of same package
+  // Handle package click - selects and immediately opens the modal
   const handlePackageClick = useCallback((packageId: string) => {
     trackClick("package_select", { package_id: packageId });
-    if (selectedPackageId === packageId) {
-      // Second tap on the same package opens the modal
-      setIsModalOpen(true);
-    } else {
-      setSelectedPackageId(packageId);
-      setHasUserSelected(true);
-      onPackageSelect?.(packageId);
-      // Trigger headlight flicker on new selection
-      triggerFlicker();
-    }
-  }, [selectedPackageId, onPackageSelect, trackClick, triggerFlicker]);
+    setSelectedPackageId(packageId);
+    setHasUserSelected(true);
+    onPackageSelect?.(packageId);
+    triggerFlicker();
+    setIsModalOpen(true);
+  }, [onPackageSelect, trackClick, triggerFlicker]);
 
-  const handleInfoClick = () => {
-    if (selectedPackageId) {
-      trackClick("open_info", { package_id: selectedPackageId });
-      setIsModalOpen(true);
-    }
-  };
 
   // Calculate button positions in a circle
   // Starting from top (12 o'clock position) and going clockwise
@@ -392,88 +381,8 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
         })}
       </div>
 
-      {/* Selected package indicator & INFO CTA.
-          On light-theme mobile the wheel sits over a video; pin this block to the
-          dashboard instrument-cluster area (~74vh) so spacing above/below the wheel is balanced. */}
-      <div
-        className={cn(
-          "text-center pb-6",
-          isLight && isMobile
-            ? "fixed left-1/2 -translate-x-1/2 top-[74vh] z-30 w-full px-4"
-            : "mt-12 sm:mt-16 md:mt-20"
-        )}
-      >
-        <div className={cn(
-          "transition-all duration-300",
-          selectedPackageId ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-        )}>
-          <p 
-            className="font-display uppercase tracking-[0.28em] text-xs sm:text-sm mb-2"
-            style={isLight ? { 
-              color: '#3d2a10',
-              textShadow: '0 0 1px rgba(212,175,55,0.9), 0 0 6px rgba(212,175,55,0.35)',
-            } : { 
-              color: 'hsl(40 55% 72%)' 
-            }}
-          >
-            Selected Package
-          </p>
-          <p 
-            className="font-display text-xl sm:text-2xl font-semibold mb-1 tracking-wide"
-            style={isLight ? {
-              color: 'rgba(35, 22, 8, 0.95)',
-              textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
-            } : {
-              background: 'linear-gradient(135deg, hsl(38 82% 58%) 0%, hsl(45 92% 78%) 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 6px hsl(38 80% 50% / 0.4))',
-            }}
-          >
-            {selectedPackage?.label.replace('\n', ' ')}
-          </p>
-          <p 
-            className="font-display text-3xl sm:text-4xl font-bold mb-5 tracking-wide"
-            style={isLight ? {
-              color: 'rgba(35, 22, 8, 0.95)',
-              textShadow: '0 1px 0 rgba(0,0,0,0.12), 0 0 6px rgba(212, 175, 55, 0.55), 0 0 14px rgba(212, 175, 55, 0.35), 0 0 22px rgba(212, 175, 55, 0.18)',
-            } : {
-              background: 'linear-gradient(135deg, hsl(30 70% 42%) 0%, hsl(38 85% 55%) 45%, hsl(48 92% 78%) 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 10px hsl(38 82% 52% / 0.35))',
-            }}
-          >
-            {selectedPackage?.price}
-          </p>
-        </div>
-        
-        <button
-          onClick={handleInfoClick}
-          disabled={!selectedPackageId}
-          className={cn(
-            "font-display px-10 py-4 rounded-full font-bold tracking-[0.25em] uppercase text-sm",
-            "transition-all duration-200",
-            selectedPackageId
-              ? "hover:scale-[0.98] active:scale-[0.96] cursor-pointer"
-              : "opacity-50 cursor-not-allowed"
-          )}
-          style={{
-            background: selectedPackageId
-              ? 'linear-gradient(145deg, hsl(36 75% 35%) 0%, hsl(43 80% 52%) 50%, hsl(48 75% 60%) 100%)'
-              : 'linear-gradient(145deg, hsl(36 30% 25%) 0%, hsl(43 35% 35%) 50%, hsl(48 30% 40%) 100%)',
-            color: selectedPackageId ? 'hsl(30 10% 8%)' : 'hsl(30 10% 25%)',
-            boxShadow: selectedPackageId
-              ? '0 4px 25px hsl(43 80% 52% / 0.35), 0 0 40px hsl(43 80% 52% / 0.15), inset 0 1px 0 hsl(48 80% 70% / 0.4)'
-              : '0 2px 10px hsl(0 0% 0% / 0.3)',
-          }}
-        >
 
-          Info
-        </button>
-      </div>
+
 
       {/* Package Details Modal */}
       <PackageModal 
