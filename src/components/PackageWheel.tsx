@@ -272,27 +272,16 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
     return () => clearInterval(intervalId);
   }, [isMobile, hasUserSelected, totalButtons, splashComplete]);
 
-  // Handle package click - also opens modal on double-tap of same package
+  // Handle package click - selects and immediately opens the modal
   const handlePackageClick = useCallback((packageId: string) => {
     trackClick("package_select", { package_id: packageId });
-    if (selectedPackageId === packageId) {
-      // Second tap on the same package opens the modal
-      setIsModalOpen(true);
-    } else {
-      setSelectedPackageId(packageId);
-      setHasUserSelected(true);
-      onPackageSelect?.(packageId);
-      // Trigger headlight flicker on new selection
-      triggerFlicker();
-    }
-  }, [selectedPackageId, onPackageSelect, trackClick, triggerFlicker]);
+    setSelectedPackageId(packageId);
+    setHasUserSelected(true);
+    onPackageSelect?.(packageId);
+    triggerFlicker();
+    setIsModalOpen(true);
+  }, [onPackageSelect, trackClick, triggerFlicker]);
 
-  const handleInfoClick = () => {
-    if (selectedPackageId) {
-      trackClick("open_info", { package_id: selectedPackageId });
-      setIsModalOpen(true);
-    }
-  };
 
   // Calculate button positions in a circle
   // Starting from top (12 o'clock position) and going clockwise
