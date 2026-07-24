@@ -28,13 +28,13 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
         {/* Row 1 — top band with brand centered between the two buttons (mobile).
             On md+, revert to the original stacked layout via the hidden/flex switch below. */}
         <div className="w-full md:hidden grid grid-cols-[auto_1fr_auto] items-center gap-2 mb-2">
-          <ThemeToggle />
+          <ThemeToggle size="lg" />
           <HeaderBrand compact hideStars className="min-w-0" />
           <PortalMenuButton size="lg" />
         </div>
 
         {/* Stars row — sits in the gap between slogan and wheel on mobile */}
-        <div className="w-full md:hidden flex justify-center mb-2">
+        <div className="w-full md:hidden flex justify-center mb-4">
           <HeaderStars />
         </div>
 
@@ -45,8 +45,8 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
         </div>
         <HeaderBrand className="hidden md:block relative z-10 mb-12" />
 
-        {/* Wheel — same lift so car sits on the vanishing point on mobile */}
-        <div className="w-full flex justify-center -translate-y-6 sm:-translate-y-4 md:translate-y-0">
+        {/* Wheel — small lift on mobile so it hugs the stars without overlap */}
+        <div className="w-full flex justify-center translate-y-0 md:translate-y-0">
           <PackageWheel
             onPackageSelect={handlePackageSelect}
             splashComplete={splashComplete}
