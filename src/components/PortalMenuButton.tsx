@@ -5,12 +5,14 @@ import portalCarIcon from "@/assets/portal-car-icon.png";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { InstallAppModal } from "./InstallAppModal";
 
-export function PortalMenuButton() {
+export function PortalMenuButton({ size = "md" }: { size?: "md" | "lg" } = {}) {
   const [open, setOpen] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, role, isApproved } = usePortalAuth();
+  const isLg = size === "lg";
+
 
   useEffect(() => {
     if (!open) return;
