@@ -107,8 +107,7 @@ export function LightModeBackground() {
         muted
         loop
         playsInline
-        // @ts-expect-error – non-standard iOS attribute
-        webkit-playsinline="true"
+        {...({ "webkit-playsinline": "true" } as Record<string, string>)}
         preload="auto"
         disablePictureInPicture
         aria-hidden="true"
