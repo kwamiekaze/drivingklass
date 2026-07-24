@@ -274,13 +274,13 @@ export default function CarShowcase() {
             enablePan={false}
             enableDamping
             dampingFactor={0.08}
-            autoRotate
-            // Shared constant — identical speed & direction in both light and dark themes.
-            autoRotateSpeed={AUTO_ROTATE_SPEED}
+            autoRotate={false}
             minDistance={1.5}
             maxDistance={8}
             target={[0, 0.5, 0]}
           />
+          <AutoOrbit controlsRef={controlsRef} pausedRef={pausedRef} />
+
         </Suspense>
       </Canvas>
     </div>
