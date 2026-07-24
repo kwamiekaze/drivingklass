@@ -1,6 +1,4 @@
 import { useEffect, useRef } from "react";
-import lightBgMobile from "@/assets/light-bg-mobile.jpeg";
-import lightBgDesktop from "@/assets/light-bg-desktop.jpeg";
 
 const VIDEO_SRC = "/videos/light-road-loop.mp4";
 const VIDEO_POSTER = "/videos/light-road-loop-poster.jpg";
@@ -18,7 +16,6 @@ export function LightModeBackground() {
       const p = el.play();
       if (p && typeof p.catch === "function") {
         p.catch(() => {
-          // Retry once shortly after — some browsers need a second nudge
           setTimeout(() => {
             if (!cancelled && el.paused) {
               const r = el.play();
@@ -29,13 +26,11 @@ export function LightModeBackground() {
       }
     };
 
-    // Kick off immediately and on multiple readiness events
     tryPlay();
     el.addEventListener("loadeddata", tryPlay);
     el.addEventListener("canplay", tryPlay);
     el.addEventListener("canplaythrough", tryPlay);
 
-    // First user interaction anywhere: force a play attempt (one-time)
     const onFirstInteract = () => {
       tryPlay();
       window.removeEventListener("touchstart", onFirstInteract);
@@ -78,20 +73,13 @@ export function LightModeBackground() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none transition-all duration-500">
-      {/* Poster fallback image BEHIND the video (z-0). Video sits above at z-10. */}
+      {/* Poster fallback (video's own first frame) BEHIND the video */}
       <div
-        className="absolute inset-0 md:hidden bg-cover bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-no-repeat"
         style={{
-          backgroundImage: `url(${lightBgMobile})`,
-          backgroundPosition: "center top",
-          zIndex: 0,
-        }}
-      />
-      <div
-        className="absolute inset-0 hidden md:block bg-cover bg-no-repeat"
-        style={{
-          backgroundImage: `url(${lightBgDesktop})`,
+          backgroundImage: `url(${VIDEO_POSTER})`,
           backgroundPosition: "center 30%",
+          backgroundColor: "hsl(210 30% 85%)",
           zIndex: 0,
         }}
       />
