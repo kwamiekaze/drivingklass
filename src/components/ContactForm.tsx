@@ -275,7 +275,7 @@ export function ContactForm() {
           {/* Permit upload */}
           <div className="space-y-3">
             <label className="block text-sm font-medium tracking-wide" style={labelStyle}>
-              Attach or take a photo of your permit *
+              Attach or take a photo of your Permit/License *
             </label>
             <p className="text-xs" style={{ color: isLight ? "#555" : "hsl(42 20% 50%)" }}>
               JPG, PNG, HEIC, WebP, or PDF up to 20MB
