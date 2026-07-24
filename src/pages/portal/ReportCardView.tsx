@@ -16,7 +16,7 @@ import { ArrowLeft, Loader2, FileText, Calendar, User, Star, MessageSquare, Cloc
 import { format, parseISO } from "date-fns";
 import { RATING_CATEGORIES } from "@/types/portal";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { StudentProgressSection } from "@/components/portal/StudentProgressSection";
 import { LessonRating } from "@/components/portal/LessonRating";
@@ -431,7 +431,7 @@ export default function ReportCardView() {
                 background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
               }}
             />
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <LightModeBackground />

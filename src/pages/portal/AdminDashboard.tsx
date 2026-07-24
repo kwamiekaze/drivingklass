@@ -11,7 +11,7 @@ import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays, format } from "date-fns";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { getDisplayName } from "@/lib/profileUtils";
@@ -183,7 +183,7 @@ function AdminDashboardContent() {
               }}
             />
             {/* Galaxy stars */}
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <>

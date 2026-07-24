@@ -13,7 +13,7 @@ import { Headset, Search, Mail, Phone, MapPin, Calendar, FileText, Eye, Copy, Ch
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 
 interface ContactSubmission {
@@ -241,7 +241,7 @@ function AdminMessagesContent() {
                 background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
               }}
             />
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <LightModeBackground />

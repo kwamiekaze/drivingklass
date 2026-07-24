@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 
 interface InstructorStudentProfile {
@@ -182,7 +182,7 @@ export default function InstructorStudents() {
               <>
                 <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }} />
                 <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)" }} />
-                <GalaxyStars />
+                <DarkModeBackground />
               </>
             ) : <LightModeBackground />}
           </div>

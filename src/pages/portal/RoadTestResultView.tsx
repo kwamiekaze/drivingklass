@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Calendar, User, Clock, MessageSquare, ShieldX, CheckCircle, XCircle, ClipboardCheck, Copy, Check, Share2, Lock, Link2, Eye, EyeOff } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTheme } from "@/components/ThemeProvider";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 import { ReportCardHistoryList } from "@/components/portal/ReportCardHistoryList";
@@ -327,7 +327,7 @@ export default function RoadTestResultView() {
           <>
             <div className="absolute inset-0 transition-colors duration-500" style={{ background: "linear-gradient(180deg, hsl(30 15% 4%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 1%) 100%)" }} />
             <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)" }} />
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <LightModeBackground />

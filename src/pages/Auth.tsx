@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { GoldParticles } from "@/components/GoldParticles";
-import { GalaxyStars } from "@/components/GalaxyStars";
+import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { useTheme } from "@/components/ThemeProvider";
 import { lovable } from "@/integrations/lovable/index";
@@ -155,7 +155,7 @@ export default function Auth() {
                 background: 'radial-gradient(ellipse 80% 60% at 50% 35%, hsl(40 80% 30% / 0.12) 0%, transparent 60%)',
               }}
             />
-            <GalaxyStars />
+            <DarkModeBackground />
           </>
         ) : (
           <LightModeBackground />
