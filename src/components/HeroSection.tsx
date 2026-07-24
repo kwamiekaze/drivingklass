@@ -42,7 +42,7 @@ export function HeroSection({ splashComplete = true }: HeroSectionProps) {
       <div
         className={cn(
           "w-full flex justify-center",
-          isLight ? "-translate-y-6 sm:-translate-y-2 md:translate-y-0" : ""
+          isLight ? "-translate-y-16 sm:-translate-y-8 md:translate-y-0" : ""
         )}
       >
         <PackageWheel
