@@ -63,18 +63,10 @@ const Index = () => {
           {/* Hero Section with car and package wheel - pass splashComplete */}
           <HeroSection
             splashComplete={splashComplete}
-            onReviewsClick={isDark ? undefined : () => setIsReviewsOpen(true)}
-            onAboutClick={isDark ? undefined : () => setIsAboutOpen(true)}
+            onReviewsClick={() => setIsReviewsOpen(true)}
+            onAboutClick={() => setIsAboutOpen(true)}
           />
 
-          {/* Navigation Buttons — only in normal flow for dark theme.
-              Light theme renders them absolutely inside the hero. */}
-          {isDark && (
-            <NavigationButtons
-              onReviewsClick={() => setIsReviewsOpen(true)}
-              onAboutClick={() => setIsAboutOpen(true)}
-            />
-          )}
 
           {/* Contact Section */}
           <ContactSection />
