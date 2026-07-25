@@ -61,7 +61,7 @@ import PracticeTest from "./pages/portal/PracticeTest";
 import AdminPracticeQuestions from "./pages/portal/AdminPracticeQuestions";
 import RoadTestGame from "./games/roadtest/RoadTestGame";
 import { ProtectedRoute } from "./components/portal/ProtectedRoute";
-import { GameControllerFab } from "./components/GameControllerFab";
+
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import GuardianTrackerPage from "./pages/GuardianTrackerPage";
@@ -79,7 +79,6 @@ const App = () => (
         <Sonner />
         <ThemeDebugBadge />
         <BrowserRouter>
-          <GameControllerFab />
           <Routes>
             {/* Fully public route — NO auth providers, no analytics */}
             <Route path="/report/public/:slug" element={<PublicReportCard />} />
