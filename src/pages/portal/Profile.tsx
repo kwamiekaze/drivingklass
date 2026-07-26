@@ -108,12 +108,14 @@ function ProfileContent() {
         guardian_email: profile?.guardian_email || '',
       });
       setAvatarUrl((profile as any)?.avatar_url || null);
+      setAvatarMediaType((profile as any)?.avatar_media_type === "video" ? "video" : "image");
       setPermitPreview(profile?.permit_file_url || null);
     }
   }, [profile, user]);
 
-  const handleAvatarUpdate = (url: string) => {
+  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
     setAvatarUrl(url);
+    setAvatarMediaType(mediaType);
     refetchProfile();
   };
 
@@ -294,8 +296,10 @@ function ProfileContent() {
               <AvatarUpload
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
+                currentMediaType={avatarMediaType}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
+                role={role}
               />
             )}
           </CardContent>
