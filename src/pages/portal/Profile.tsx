@@ -276,7 +276,9 @@ function ProfileContent() {
   const isPermitLockedAfterIntake = !isStaffOrAdmin && hasAutoGatheredPermitData;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+    <>
+      <PortalBackground />
+      <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 relative">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Your Profile</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
