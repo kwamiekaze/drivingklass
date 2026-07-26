@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageCropModal } from "./ImageCropModal";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { VideoFrameEditor, DEFAULT_FRAMING, type VideoFraming } from "./VideoFrameEditor";
+import { compressVideoWithFraming } from "@/lib/videoCompress";
 import {
   PROFILE_MEDIA_ACCEPT,
   PROFILE_MEDIA_BUCKET,
