@@ -50,6 +50,17 @@ function StudentProfileContent() {
   const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">(
     (profile as any)?.avatar_media_type === "video" ? "video" : "image"
   );
+  const [avatarFraming, setAvatarFraming] = useState<{ zoom: number; x: number; y: number } | null>(
+    (profile as any)?.avatar_zoom != null ||
+      (profile as any)?.avatar_pos_x != null ||
+      (profile as any)?.avatar_pos_y != null
+      ? {
+          zoom: Number((profile as any)?.avatar_zoom ?? 1),
+          x: Number((profile as any)?.avatar_pos_x ?? 50),
+          y: Number((profile as any)?.avatar_pos_y ?? 50),
+        }
+      : null
+  );
   
   const [formData, setFormData] = useState({
     first_name: (profile as any)?.first_name || '',
