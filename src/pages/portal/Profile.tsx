@@ -257,6 +257,19 @@ function ProfileContent() {
           });
         }
 
+        // Instructor stats — instructors can edit their own; admins any (RLS enforces)
+        if (role === 'instructor' || isStaffOrAdmin) {
+          const hcNum = parseFloat(formData.hours_completed);
+          const rtNum = parseFloat(formData.rating);
+          if (!Number.isNaN(hcNum) && hcNum >= 0) {
+            updatePayload.hours_completed = hcNum;
+          }
+          if (!Number.isNaN(rtNum) && rtNum >= 1 && rtNum <= 5) {
+            updatePayload.rating = rtNum;
+          }
+        }
+
+
         const { error: updateError } = await supabase
           .from('profiles')
           .update(updatePayload)
