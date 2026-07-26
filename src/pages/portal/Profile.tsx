@@ -402,6 +402,72 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
+        {/* Instructor Stats — editable by the instructor (own profile) or admin/staff */}
+        {(role === 'instructor' || (isStaffOrAdmin && (profile as any)?.avatar_url !== undefined)) && (
+          <Card className="portal-card">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Instructor Stats</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Shown to students on your instructor profile card.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hours_completed" className="text-sm">Hours Completed</Label>
+                  <Input
+                    id="hours_completed"
+                    name="hours_completed"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={formData.hours_completed}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className="theme-input min-h-[44px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rating" className="text-sm">Rating (1–5)</Label>
+                  <Input
+                    id="rating"
+                    name="rating"
+                    type="number"
+                    min={1}
+                    max={5}
+                    step="0.1"
+                    value={formData.rating}
+                    onChange={handleInputChange}
+                    placeholder="5"
+                    className="theme-input min-h-[44px]"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Student Hours — read-only summary */}
+        {isStudent && (
+          <Card className="portal-card">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Your Driving Hours</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Automatically accumulated as your sessions are completed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold theme-heading">
+                {Number((profile as any)?.hours_completed ?? 0).toLocaleString('en-US', {
+                  maximumFractionDigits: 1,
+                })}
+                <span className="text-sm font-normal text-muted-foreground ml-1">hours completed</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
         {/* Addresses - Students and Admin/Staff only */}
         {(isStudent || isStaffOrAdmin) && (
           <Card className="portal-card">
