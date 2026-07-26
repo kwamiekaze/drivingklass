@@ -82,9 +82,14 @@ function StudentProfileContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
+  const handleAvatarUpdate = (
+    url: string,
+    mediaType: "image" | "video" = "image",
+    framing?: { zoom: number; x: number; y: number } | null
+  ) => {
     setAvatarUrl(url);
     setAvatarMediaType(mediaType);
+    setAvatarFraming(framing ?? null);
     refetchProfile();
   };
 
