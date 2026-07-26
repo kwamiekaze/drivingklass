@@ -102,6 +102,24 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // Fire-and-forget admin notification. Must never block or fail the user's submission.
+    try {
+      fetch(`${supabaseUrl}/functions/v1/notify-admins-submission`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          type: "contact",
+          submission_id: submission.id,
+          sourceLabel: "Homepage Contact Form",
+        }),
+      }).catch((e) => console.warn("notify-admins-submission (contact) failed", e));
+    } catch (e) {
+      console.warn("notify-admins-submission (contact) dispatch error", e);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

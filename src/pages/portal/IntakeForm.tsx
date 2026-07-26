@@ -346,6 +346,17 @@ function IntakeFormContent({ isAdminEdit = false }: { isAdminEdit?: boolean }) {
             }))
           );
         }
+
+        // Fire-and-forget admin email. Never blocks the user's success flow.
+        try {
+          supabase.functions
+            .invoke("notify-admins-submission", {
+              body: { type: "intake", profile_id: targetUserId },
+            })
+            .catch((e) => console.warn("notify-admins-submission (intake) failed", e));
+        } catch (e) {
+          console.warn("notify-admins-submission (intake) dispatch error", e);
+        }
       }
 
       // Clear server draft
