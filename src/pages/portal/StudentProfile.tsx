@@ -70,8 +70,9 @@ function StudentProfileContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleAvatarUpdate = (url: string) => {
+  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
     setAvatarUrl(url);
+    setAvatarMediaType(mediaType);
     refetchProfile();
   };
 
