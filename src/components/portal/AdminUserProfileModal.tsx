@@ -112,6 +112,7 @@ export function AdminUserProfileModal({
       const fullProfile: FullProfile = {
         ...profileData,
         approval_status: profileData.approval_status as any,
+        avatar_media_type: profileData.avatar_media_type as any,
         role: roleData?.role || undefined,
       };
 
