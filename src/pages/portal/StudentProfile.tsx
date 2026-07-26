@@ -1,3 +1,4 @@
+import { PortalBackground } from "@/components/portal/PortalBackground";
 import { useState, useRef } from "react";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
