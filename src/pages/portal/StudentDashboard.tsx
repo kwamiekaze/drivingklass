@@ -20,6 +20,8 @@ import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useTranslation } from "react-i18next";
+import { ProfileAvatar } from "@/components/portal/ProfileAvatar";
+import { InstructorProfileModal } from "@/components/portal/InstructorProfileModal";
 
 export default function StudentDashboard() {
   return (
@@ -38,6 +40,7 @@ function StudentDashboardContent() {
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [instructor, setInstructor] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedHours, setCompletedHours] = useState<number>(0);
 
