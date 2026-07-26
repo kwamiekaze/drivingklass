@@ -21,7 +21,7 @@ interface ImageCropModalProps {
 async function getCroppedImg(
   imageSrc: string,
   pixelCrop: Area,
-  outputSize: number = 512
+  outputSize: number = 800
 ): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
@@ -31,9 +31,9 @@ async function getCroppedImg(
     throw new Error("No 2d context");
   }
 
-  // Set output size to at least 512x512
   canvas.width = outputSize;
   canvas.height = outputSize;
+  ctx.imageSmoothingQuality = "high";
 
   ctx.drawImage(
     image,
@@ -50,14 +50,11 @@ async function getCroppedImg(
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error("Canvas is empty"));
-        }
+        if (blob) resolve(blob);
+        else reject(new Error("Canvas is empty"));
       },
-      "image/png",
-      1
+      "image/jpeg",
+      0.88
     );
   });
 }
