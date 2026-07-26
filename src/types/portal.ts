@@ -20,6 +20,10 @@ export interface Profile {
   approved_by?: string | null;
   rejected_by?: string | null;
   avatar_url?: string | null;
+  avatar_media_type?: "image" | "video" | null;
+  avatar_zoom?: number | null;
+  avatar_pos_x?: number | null;
+  avatar_pos_y?: number | null;
   intake_submitted: boolean | null;
   public_id: string | null;
   phone: string | null;
