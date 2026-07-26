@@ -970,6 +970,11 @@ export default function ReportCardView() {
           </div>
         ) : null}
       </div>
+      <InstructorProfileModal
+        open={instructorModalOpen}
+        onOpenChange={setInstructorModalOpen}
+        instructor={instructorProfile}
+      />
     </PortalLayout>
   );
 }
