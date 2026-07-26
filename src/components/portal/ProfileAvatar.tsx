@@ -7,10 +7,12 @@ import type { Profile } from "@/types/portal";
 
 interface ProfileAvatarProps {
   profile?: Partial<Profile> | null;
-  /** Override — raw avatar_url value (path or full URL) */
   avatarUrl?: string | null;
-  /** Override — media type */
   mediaType?: "image" | "video" | null;
+  /** Video framing overrides (falls back to profile fields, then defaults). */
+  zoom?: number | null;
+  posX?: number | null;
+  posY?: number | null;
   name?: string | null;
   className?: string;
   onClick?: () => void;
@@ -18,14 +20,13 @@ interface ProfileAvatarProps {
   ariaLabel?: string;
 }
 
-/**
- * Unified avatar renderer supporting image OR looping muted autoplay video.
- * Resolves storage paths (profile-media bucket) to signed URLs automatically.
- */
 export function ProfileAvatar({
   profile,
   avatarUrl,
   mediaType,
+  zoom,
+  posX,
+  posY,
   name,
   className,
   onClick,
@@ -39,6 +40,11 @@ export function ProfileAvatar({
   const displayName =
     name ?? profile?.full_name ?? profile?.first_name ?? "User";
   const initials = getProfileInitials(profile ?? undefined);
+
+  const fZoom = Number(zoom ?? (profile as any)?.avatar_zoom ?? 1) || 1;
+  const fx = Number(posX ?? (profile as any)?.avatar_pos_x ?? 50);
+  const fy = Number(posY ?? (profile as any)?.avatar_pos_y ?? 50);
+
   const [resolved, setResolved] = useState<string | null>(
     stored && /^https?:\/\//i.test(stored) ? stored : null
   );
@@ -88,7 +94,13 @@ export function ProfileAvatar({
       {resolved && type === "video" ? (
         <video
           src={resolved}
-          className="aspect-square h-full w-full object-cover"
+          className="aspect-square h-full w-full"
+          style={{
+            objectFit: "cover",
+            objectPosition: `${fx}% ${fy}%`,
+            transform: `scale(${fZoom})`,
+            transformOrigin: "center",
+          }}
           autoPlay
           muted
           loop
