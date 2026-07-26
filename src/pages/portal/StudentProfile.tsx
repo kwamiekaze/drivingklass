@@ -227,8 +227,10 @@ function StudentProfileContent() {
               <AvatarUpload
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
+                currentMediaType={avatarMediaType}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
+                role="student"
               />
             )}
           </CardContent>
