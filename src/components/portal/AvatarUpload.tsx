@@ -136,6 +136,7 @@ export function AvatarUpload({
   const handleUploadCroppedImage = async (croppedBlob: Blob) => {
     setCropModalOpen(false);
     setSelectedImage(null);
+    setProgressLabel("Uploading");
     await uploadBlob(croppedBlob, "jpg", "image", null);
   };
 
