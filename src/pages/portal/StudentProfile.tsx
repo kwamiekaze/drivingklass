@@ -46,6 +46,9 @@ function StudentProfileContent() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>((profile as any)?.avatar_url || null);
+  const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">(
+    (profile as any)?.avatar_media_type === "video" ? "video" : "image"
+  );
   
   const [formData, setFormData] = useState({
     first_name: (profile as any)?.first_name || '',
