@@ -314,6 +314,7 @@ function ProfileContent() {
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
                 currentMediaType={avatarMediaType}
+                currentFraming={avatarFraming}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
                 role={role}
