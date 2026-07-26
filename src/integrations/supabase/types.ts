@@ -1388,6 +1388,7 @@ export type Database = {
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
+          hours_completed: number
           hours_remaining: number
           id: string
           intake_edit_count: number | null
@@ -1410,6 +1411,7 @@ export type Database = {
           pickup_lng: number | null
           public_id: string | null
           purchased_hours: number
+          rating: number
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string | null
@@ -1442,6 +1444,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
+          hours_completed?: number
           hours_remaining?: number
           id: string
           intake_edit_count?: number | null
@@ -1464,6 +1467,7 @@ export type Database = {
           pickup_lng?: number | null
           public_id?: string | null
           purchased_hours?: number
+          rating?: number
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
@@ -1496,6 +1500,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
+          hours_completed?: number
           hours_remaining?: number
           id?: string
           intake_edit_count?: number | null
@@ -1518,6 +1523,7 @@ export type Database = {
           pickup_lng?: number | null
           public_id?: string | null
           purchased_hours?: number
+          rating?: number
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
@@ -2407,6 +2413,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2438,6 +2445,7 @@ export type Database = {
           dropoff_address?: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted?: boolean
           hours_deducted_at?: string | null
           id?: string
           instructor_id: string
@@ -2469,6 +2477,7 @@ export type Database = {
           dropoff_address?: string | null
           duration_minutes?: number
           ends_at?: string
+          hours_counted?: boolean
           hours_deducted_at?: string | null
           id?: string
           instructor_id?: string
@@ -2652,6 +2661,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2704,6 +2714,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2765,6 +2776,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2837,6 +2849,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2882,6 +2895,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
@@ -2941,6 +2955,7 @@ export type Database = {
           guardian_email: string | null
           guardian_name: string | null
           guardian_phone: string | null
+          hours_completed: number
           hours_remaining: number
           id: string
           intake_edit_count: number | null
@@ -2963,6 +2978,7 @@ export type Database = {
           pickup_lng: number | null
           public_id: string | null
           purchased_hours: number
+          rating: number
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string | null
@@ -3255,6 +3271,7 @@ export type Database = {
           dropoff_address: string | null
           duration_minutes: number
           ends_at: string
+          hours_counted: boolean
           hours_deducted_at: string | null
           id: string
           instructor_id: string
