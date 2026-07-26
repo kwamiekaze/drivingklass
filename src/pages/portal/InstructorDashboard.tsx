@@ -43,6 +43,7 @@ function InstructorDashboardContent() {
   const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [blocks, setBlocks] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -90,6 +91,18 @@ function InstructorDashboardContent() {
         console.error('Error fetching students:', studentsError);
       } else if (studentsData) {
         setStudents(studentsData as InstructorStudent[]);
+      }
+
+      // Fetch schedule blocks (own + all-instructor blocks)
+      const { data: blockData, error: blockError } = await (supabase as any)
+        .from('schedule_blocks')
+        .select('*')
+        .or(`instructor_id.is.null,instructor_id.eq.${user.id}`)
+        .order('starts_at', { ascending: true });
+      if (blockError) {
+        console.error('Error fetching schedule blocks:', blockError);
+      } else {
+        setBlocks(blockData || []);
       }
 
       // Compute unique student count from all sessions (not just assignments)
@@ -293,6 +306,7 @@ function InstructorDashboardContent() {
             sessions={sessions} 
             userRole="instructor"
             onSessionUpdate={fetchData}
+            extraEvents={blockEvents}
           />
         </TabsContent>
 
