@@ -187,11 +187,21 @@ function StudentDashboardContent() {
         {loading ? (
           <Skeleton className="h-16 w-full sm:w-64" />
         ) : instructor && (
-          <Card className="w-full sm:w-auto sm:max-w-xs">
+          <Card
+            className="w-full sm:w-auto sm:max-w-xs cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 hover:shadow-lg"
+            onClick={() => setInstructorModalOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setInstructorModalOpen(true);
+              }
+            }}
+            aria-label={`View ${getDisplayName(instructor, t('student.notAssigned'))}'s profile`}
+          >
             <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <User className="h-5 w-5 text-primary" />
-              </div>
+              <ProfileAvatar profile={instructor} className="h-10 w-10 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground">{t('student.yourInstructor')}</p>
                 <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, t('student.notAssigned'))}</p>
