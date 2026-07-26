@@ -285,7 +285,7 @@ export function AvatarUpload({
         <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground w-full max-w-xs">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading… {progress}%
+            {progressLabel} {progress}%
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
             <div
