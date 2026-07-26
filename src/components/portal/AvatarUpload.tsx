@@ -211,8 +211,15 @@ export function AvatarUpload({
     setPendingVideoUrl(null);
     setPendingVideoFile(null);
     if (!file) return;
-    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-    await uploadBlob(file, ext, "video", framing);
+
+    setUploading(true);
+    setProgressLabel("Optimizing video…");
+    setProgress(5);
+    const compressed = await compressVideoWithFraming(file, framing, {
+      onProgress: (p) => setProgress(5 + Math.round(p * 0.55)),
+    });
+    setProgressLabel(compressed.compressed ? "Uploading" : "Uploading original");
+    await uploadBlob(compressed.blob, compressed.ext, "video", framing);
   };
 
   const openAdjust = async () => {
