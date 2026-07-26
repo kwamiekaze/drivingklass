@@ -25,6 +25,8 @@ import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 import { useTranslation } from "react-i18next";
 import { useSkillLabel } from "@/i18n/skills";
 import { RichTextDisplay } from "@/components/portal/RichTextDisplay";
+import { InstructorProfileModal } from "@/components/portal/InstructorProfileModal";
+import type { Profile } from "@/types/portal";
 
 interface ReportCardDetails {
   id: string;
@@ -652,7 +654,17 @@ export default function ReportCardView() {
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">{t('common.instructor')}</p>
-                      <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
+                      {role === 'student' ? (
+                        <button
+                          type="button"
+                          onClick={() => setInstructorModalOpen(true)}
+                          className="font-medium text-sm sm:text-base break-words report-text-sweep text-left hover:underline hover:text-primary transition-colors"
+                        >
+                          {reportCard.instructor_name}
+                        </button>
+                      ) : (
+                        <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
