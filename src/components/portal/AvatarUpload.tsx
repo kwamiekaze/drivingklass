@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageCropModal } from "./ImageCropModal";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { VideoFrameEditor, DEFAULT_FRAMING, type VideoFraming } from "./VideoFrameEditor";
+import { compressVideoWithFraming } from "@/lib/videoCompress";
 import {
   PROFILE_MEDIA_ACCEPT,
   PROFILE_MEDIA_BUCKET,
@@ -44,6 +45,7 @@ export function AvatarUpload({
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState<string>("Uploading");
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -71,7 +73,7 @@ export function AvatarUpload({
     framing: VideoFraming | null
   ) => {
     setUploading(true);
-    setProgress(10);
+    setProgress((p) => Math.max(p, 65));
     try {
       const path = `${userId}/avatar_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
@@ -80,7 +82,7 @@ export function AvatarUpload({
           contentType: blob.type || (mediaType === "video" ? `video/${ext}` : `image/${ext}`),
           upsert: true,
         });
-      setProgress(70);
+      setProgress(90);
       if (uploadError) throw uploadError;
 
       // Best-effort cleanup: remove any prior profile-media file for this user
@@ -134,6 +136,7 @@ export function AvatarUpload({
   const handleUploadCroppedImage = async (croppedBlob: Blob) => {
     setCropModalOpen(false);
     setSelectedImage(null);
+    setProgressLabel("Uploading");
     await uploadBlob(croppedBlob, "jpg", "image", null);
   };
 
@@ -208,8 +211,15 @@ export function AvatarUpload({
     setPendingVideoUrl(null);
     setPendingVideoFile(null);
     if (!file) return;
-    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-    await uploadBlob(file, ext, "video", framing);
+
+    setUploading(true);
+    setProgressLabel("Optimizing video…");
+    setProgress(5);
+    const compressed = await compressVideoWithFraming(file, framing, {
+      onProgress: (p) => setProgress(5 + Math.round(p * 0.55)),
+    });
+    setProgressLabel(compressed.compressed ? "Uploading" : "Uploading original");
+    await uploadBlob(compressed.blob, compressed.ext, "video", framing);
   };
 
   const openAdjust = async () => {
@@ -275,7 +285,7 @@ export function AvatarUpload({
         <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground w-full max-w-xs">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading… {progress}%
+            {progressLabel} {progress}%
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
             <div
