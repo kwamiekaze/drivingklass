@@ -1369,6 +1369,7 @@ export type Database = {
           availability_days: string[] | null
           availability_notes: string | null
           availability_windows: string[] | null
+          avatar_media_type: string
           avatar_url: string | null
           best_streak: number
           created_at: string
@@ -1419,6 +1420,7 @@ export type Database = {
           availability_days?: string[] | null
           availability_notes?: string | null
           availability_windows?: string[] | null
+          avatar_media_type?: string
           avatar_url?: string | null
           best_streak?: number
           created_at?: string
@@ -1469,6 +1471,7 @@ export type Database = {
           availability_days?: string[] | null
           availability_notes?: string | null
           availability_windows?: string[] | null
+          avatar_media_type?: string
           avatar_url?: string | null
           best_streak?: number
           created_at?: string
@@ -2910,6 +2913,7 @@ export type Database = {
           availability_days: string[] | null
           availability_notes: string | null
           availability_windows: string[] | null
+          avatar_media_type: string
           avatar_url: string | null
           best_streak: number
           created_at: string
