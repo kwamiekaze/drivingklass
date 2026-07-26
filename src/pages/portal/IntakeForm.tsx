@@ -346,7 +346,6 @@ function IntakeFormContent({ isAdminEdit = false }: { isAdminEdit?: boolean }) {
             }))
           );
         }
-        }
 
         // Fire-and-forget admin email. Never blocks the user's success flow.
         try {
@@ -358,6 +357,7 @@ function IntakeFormContent({ isAdminEdit = false }: { isAdminEdit?: boolean }) {
         } catch (e) {
           console.warn("notify-admins-submission (intake) dispatch error", e);
         }
+      }
 
       // Clear server draft
       if (!isAdminEdit && user?.id) {
