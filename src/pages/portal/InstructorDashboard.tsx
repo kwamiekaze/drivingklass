@@ -117,6 +117,17 @@ function InstructorDashboardContent() {
     }
   };
 
+  const blockEvents = (blocks || []).map((b: any) => ({
+    id: `block-${b.id}`,
+    title: b.title || 'Unavailable',
+    subtitle: b.instructor_id ? '🚫 Instructor unavailable' : '🚫 All instructors',
+    start: b.starts_at,
+    end: b.ends_at,
+    color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
+    dotColor: 'bg-muted-foreground',
+    meta: { type: 'block', block: b },
+  }));
+
   const upcomingSessions = sessions.filter(s => 
     s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date())
   );
