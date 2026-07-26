@@ -73,7 +73,7 @@ export function AvatarUpload({
     framing: VideoFraming | null
   ) => {
     setUploading(true);
-    setProgress(10);
+    setProgress((p) => Math.max(p, 65));
     try {
       const path = `${userId}/avatar_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
@@ -82,7 +82,7 @@ export function AvatarUpload({
           contentType: blob.type || (mediaType === "video" ? `video/${ext}` : `image/${ext}`),
           upsert: true,
         });
-      setProgress(70);
+      setProgress(90);
       if (uploadError) throw uploadError;
 
       // Best-effort cleanup: remove any prior profile-media file for this user
