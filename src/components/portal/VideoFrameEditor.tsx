@@ -130,7 +130,7 @@ export function VideoFrameEditor({
 
         <div
           ref={dragRef}
-          className="relative w-full aspect-square bg-muted rounded-full overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
+          className="relative w-full aspect-square bg-muted rounded-2xl overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
