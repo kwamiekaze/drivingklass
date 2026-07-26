@@ -25,6 +25,8 @@ import { fetchSessionNumberForStudent } from "@/lib/sessionNumbering";
 import { useTranslation } from "react-i18next";
 import { useSkillLabel } from "@/i18n/skills";
 import { RichTextDisplay } from "@/components/portal/RichTextDisplay";
+import { InstructorProfileModal } from "@/components/portal/InstructorProfileModal";
+import type { Profile } from "@/types/portal";
 
 interface ReportCardDetails {
   id: string;
@@ -93,6 +95,22 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
+  const [instructorProfile, setInstructorProfile] = useState<Partial<Profile> | null>(null);
+
+  useEffect(() => {
+    if (!reportCard?.instructor_id) return;
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('id, first_name, last_name, full_name, email, avatar_url, avatar_media_type')
+      .eq('id', reportCard.instructor_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setInstructorProfile(data as any);
+      });
+    return () => { cancelled = true; };
+  }, [reportCard?.instructor_id]);
 
   // Staff view mode
   const [viewMode, setViewMode] = useState<StaffViewMode>("normal");
@@ -652,7 +670,17 @@ export default function ReportCardView() {
                     <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">{t('common.instructor')}</p>
-                      <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
+                      {role === 'student' ? (
+                        <button
+                          type="button"
+                          onClick={() => setInstructorModalOpen(true)}
+                          className="font-medium text-sm sm:text-base break-words report-text-sweep text-left hover:underline hover:text-primary transition-colors"
+                        >
+                          {reportCard.instructor_name}
+                        </button>
+                      ) : (
+                        <p className="font-medium text-sm sm:text-base break-words report-text-sweep">{reportCard.instructor_name}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
@@ -942,6 +970,11 @@ export default function ReportCardView() {
           </div>
         ) : null}
       </div>
+      <InstructorProfileModal
+        open={instructorModalOpen}
+        onOpenChange={setInstructorModalOpen}
+        instructor={instructorProfile}
+      />
     </PortalLayout>
   );
 }

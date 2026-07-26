@@ -1,3 +1,4 @@
+import { PortalBackground } from "@/components/portal/PortalBackground";
 import { useState, useRef, useEffect } from "react";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,7 @@ function ProfileContent() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">("image");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
@@ -107,12 +109,14 @@ function ProfileContent() {
         guardian_email: profile?.guardian_email || '',
       });
       setAvatarUrl((profile as any)?.avatar_url || null);
+      setAvatarMediaType((profile as any)?.avatar_media_type === "video" ? "video" : "image");
       setPermitPreview(profile?.permit_file_url || null);
     }
   }, [profile, user]);
 
-  const handleAvatarUpdate = (url: string) => {
+  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
     setAvatarUrl(url);
+    setAvatarMediaType(mediaType);
     refetchProfile();
   };
 
@@ -273,7 +277,9 @@ function ProfileContent() {
   const isPermitLockedAfterIntake = !isStaffOrAdmin && hasAutoGatheredPermitData;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+    <>
+      <PortalBackground />
+      <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 relative">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold theme-heading">Your Profile</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
@@ -293,8 +299,10 @@ function ProfileContent() {
               <AvatarUpload
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
+                currentMediaType={avatarMediaType}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
+                role={role}
               />
             )}
           </CardContent>
@@ -537,5 +545,6 @@ function ProfileContent() {
         </Button>
       </form>
     </div>
+    </>
   );
 }

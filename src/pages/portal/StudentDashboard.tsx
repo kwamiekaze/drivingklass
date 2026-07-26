@@ -20,6 +20,8 @@ import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { LightModeBackground } from "@/components/LightModeBackground";
 import { getDisplayName } from "@/lib/profileUtils";
 import { useTranslation } from "react-i18next";
+import { ProfileAvatar } from "@/components/portal/ProfileAvatar";
+import { InstructorProfileModal } from "@/components/portal/InstructorProfileModal";
 
 export default function StudentDashboard() {
   return (
@@ -38,6 +40,7 @@ function StudentDashboardContent() {
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [instructor, setInstructor] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedHours, setCompletedHours] = useState<number>(0);
 
@@ -187,11 +190,21 @@ function StudentDashboardContent() {
         {loading ? (
           <Skeleton className="h-16 w-full sm:w-64" />
         ) : instructor && (
-          <Card className="w-full sm:w-auto sm:max-w-xs">
+          <Card
+            className="w-full sm:w-auto sm:max-w-xs cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 hover:shadow-lg"
+            onClick={() => setInstructorModalOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setInstructorModalOpen(true);
+              }
+            }}
+            aria-label={`View ${getDisplayName(instructor, t('student.notAssigned'))}'s profile`}
+          >
             <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <User className="h-5 w-5 text-primary" />
-              </div>
+              <ProfileAvatar profile={instructor} className="h-10 w-10 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground">{t('student.yourInstructor')}</p>
                 <p className="font-medium text-sm sm:text-base truncate">{getDisplayName(instructor, t('student.notAssigned'))}</p>
@@ -381,6 +394,11 @@ function StudentDashboardContent() {
           </Card>
         </TabsContent>
       </Tabs>
+      <InstructorProfileModal
+        open={instructorModalOpen}
+        onOpenChange={setInstructorModalOpen}
+        instructor={instructor}
+      />
     </div>
   );
 }

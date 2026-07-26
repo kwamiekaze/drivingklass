@@ -43,6 +43,7 @@ function InstructorDashboardContent() {
   const [uniqueStudentCount, setUniqueStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [blocks, setBlocks] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -92,6 +93,18 @@ function InstructorDashboardContent() {
         setStudents(studentsData as InstructorStudent[]);
       }
 
+      // Fetch schedule blocks (own + all-instructor blocks)
+      const { data: blockData, error: blockError } = await (supabase as any)
+        .from('schedule_blocks')
+        .select('*')
+        .or(`instructor_id.is.null,instructor_id.eq.${user.id}`)
+        .order('starts_at', { ascending: true });
+      if (blockError) {
+        console.error('Error fetching schedule blocks:', blockError);
+      } else {
+        setBlocks(blockData || []);
+      }
+
       // Compute unique student count from all sessions (not just assignments)
       if (sessionsData) {
         const uniqueIds = new Set(sessionsData.filter((s: any) => s.status !== 'cancelled').map((s: any) => s.student_id));
@@ -103,6 +116,17 @@ function InstructorDashboardContent() {
       setLoading(false);
     }
   };
+
+  const blockEvents = (blocks || []).map((b: any) => ({
+    id: `block-${b.id}`,
+    title: b.title || 'Unavailable',
+    subtitle: b.instructor_id ? '🚫 Instructor unavailable' : '🚫 All instructors',
+    start: b.starts_at,
+    end: b.ends_at,
+    color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
+    dotColor: 'bg-muted-foreground',
+    meta: { type: 'block', block: b },
+  }));
 
   const upcomingSessions = sessions.filter(s => 
     s.status === 'scheduled' && isAfter(parseISO(s.starts_at), new Date())
@@ -293,6 +317,7 @@ function InstructorDashboardContent() {
             sessions={sessions} 
             userRole="instructor"
             onSessionUpdate={fetchData}
+            extraEvents={blockEvents}
           />
         </TabsContent>
 
