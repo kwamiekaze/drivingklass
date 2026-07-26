@@ -111,13 +111,26 @@ function ProfileContent() {
       });
       setAvatarUrl((profile as any)?.avatar_url || null);
       setAvatarMediaType((profile as any)?.avatar_media_type === "video" ? "video" : "image");
+      const az = (profile as any)?.avatar_zoom;
+      const ax = (profile as any)?.avatar_pos_x;
+      const ay = (profile as any)?.avatar_pos_y;
+      setAvatarFraming(
+        az != null || ax != null || ay != null
+          ? { zoom: Number(az ?? 1), x: Number(ax ?? 50), y: Number(ay ?? 50) }
+          : null
+      );
       setPermitPreview(profile?.permit_file_url || null);
     }
   }, [profile, user]);
 
-  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
+  const handleAvatarUpdate = (
+    url: string,
+    mediaType: "image" | "video" = "image",
+    framing?: { zoom: number; x: number; y: number } | null
+  ) => {
     setAvatarUrl(url);
     setAvatarMediaType(mediaType);
+    setAvatarFraming(framing ?? null);
     refetchProfile();
   };
 
