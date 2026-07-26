@@ -394,6 +394,11 @@ function StudentDashboardContent() {
           </Card>
         </TabsContent>
       </Tabs>
+      <InstructorProfileModal
+        open={instructorModalOpen}
+        onOpenChange={setInstructorModalOpen}
+        instructor={instructor}
+      />
     </div>
   );
 }
