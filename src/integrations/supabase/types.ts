@@ -1370,7 +1370,10 @@ export type Database = {
           availability_notes: string | null
           availability_windows: string[] | null
           avatar_media_type: string
+          avatar_pos_x: number | null
+          avatar_pos_y: number | null
           avatar_url: string | null
+          avatar_zoom: number | null
           best_streak: number
           created_at: string
           current_streak: number
@@ -1421,7 +1424,10 @@ export type Database = {
           availability_notes?: string | null
           availability_windows?: string[] | null
           avatar_media_type?: string
+          avatar_pos_x?: number | null
+          avatar_pos_y?: number | null
           avatar_url?: string | null
+          avatar_zoom?: number | null
           best_streak?: number
           created_at?: string
           current_streak?: number
@@ -1472,7 +1478,10 @@ export type Database = {
           availability_notes?: string | null
           availability_windows?: string[] | null
           avatar_media_type?: string
+          avatar_pos_x?: number | null
+          avatar_pos_y?: number | null
           avatar_url?: string | null
+          avatar_zoom?: number | null
           best_streak?: number
           created_at?: string
           current_streak?: number
@@ -2914,7 +2923,10 @@ export type Database = {
           availability_notes: string | null
           availability_windows: string[] | null
           avatar_media_type: string
+          avatar_pos_x: number | null
+          avatar_pos_y: number | null
           avatar_url: string | null
+          avatar_zoom: number | null
           best_streak: number
           created_at: string
           current_streak: number

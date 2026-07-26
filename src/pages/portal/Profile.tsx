@@ -55,6 +55,7 @@ function ProfileContent() {
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">("image");
+  const [avatarFraming, setAvatarFraming] = useState<{ zoom: number; x: number; y: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
@@ -110,13 +111,26 @@ function ProfileContent() {
       });
       setAvatarUrl((profile as any)?.avatar_url || null);
       setAvatarMediaType((profile as any)?.avatar_media_type === "video" ? "video" : "image");
+      const az = (profile as any)?.avatar_zoom;
+      const ax = (profile as any)?.avatar_pos_x;
+      const ay = (profile as any)?.avatar_pos_y;
+      setAvatarFraming(
+        az != null || ax != null || ay != null
+          ? { zoom: Number(az ?? 1), x: Number(ax ?? 50), y: Number(ay ?? 50) }
+          : null
+      );
       setPermitPreview(profile?.permit_file_url || null);
     }
   }, [profile, user]);
 
-  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
+  const handleAvatarUpdate = (
+    url: string,
+    mediaType: "image" | "video" = "image",
+    framing?: { zoom: number; x: number; y: number } | null
+  ) => {
     setAvatarUrl(url);
     setAvatarMediaType(mediaType);
+    setAvatarFraming(framing ?? null);
     refetchProfile();
   };
 
@@ -300,6 +314,7 @@ function ProfileContent() {
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
                 currentMediaType={avatarMediaType}
+                currentFraming={avatarFraming}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
                 role={role}

@@ -50,6 +50,17 @@ function StudentProfileContent() {
   const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">(
     (profile as any)?.avatar_media_type === "video" ? "video" : "image"
   );
+  const [avatarFraming, setAvatarFraming] = useState<{ zoom: number; x: number; y: number } | null>(
+    (profile as any)?.avatar_zoom != null ||
+      (profile as any)?.avatar_pos_x != null ||
+      (profile as any)?.avatar_pos_y != null
+      ? {
+          zoom: Number((profile as any)?.avatar_zoom ?? 1),
+          x: Number((profile as any)?.avatar_pos_x ?? 50),
+          y: Number((profile as any)?.avatar_pos_y ?? 50),
+        }
+      : null
+  );
   
   const [formData, setFormData] = useState({
     first_name: (profile as any)?.first_name || '',
@@ -71,9 +82,14 @@ function StudentProfileContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleAvatarUpdate = (url: string, mediaType: "image" | "video" = "image") => {
+  const handleAvatarUpdate = (
+    url: string,
+    mediaType: "image" | "video" = "image",
+    framing?: { zoom: number; x: number; y: number } | null
+  ) => {
     setAvatarUrl(url);
     setAvatarMediaType(mediaType);
+    setAvatarFraming(framing ?? null);
     refetchProfile();
   };
 
@@ -231,6 +247,7 @@ function StudentProfileContent() {
                 userId={user.id}
                 currentAvatarUrl={avatarUrl}
                 currentMediaType={avatarMediaType}
+                currentFraming={avatarFraming}
                 userName={`${formData.first_name} ${formData.last_name}`.trim()}
                 onAvatarUpdate={handleAvatarUpdate}
                 role="student"

@@ -16,6 +16,9 @@ export function InstructorProfileModal({ open, onOpenChange, instructor }: Instr
   const stored = (instructor as any)?.avatar_url ?? null;
   const type: "image" | "video" =
     (instructor as any)?.avatar_media_type === "video" ? "video" : "image";
+  const zoom = Number((instructor as any)?.avatar_zoom ?? 1) || 1;
+  const px = Number((instructor as any)?.avatar_pos_x ?? 50);
+  const py = Number((instructor as any)?.avatar_pos_y ?? 50);
   const [resolved, setResolved] = useState<string | null>(
     stored && /^https?:\/\//i.test(stored) ? stored : null
   );
@@ -51,7 +54,13 @@ export function InstructorProfileModal({ open, onOpenChange, instructor }: Instr
             {resolved && type === "video" ? (
               <video
                 src={resolved}
-                className="w-full h-full object-cover"
+                className="w-full h-full"
+                style={{
+                  objectFit: "cover",
+                  objectPosition: `${px}% ${py}%`,
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "center",
+                }}
                 autoPlay
                 muted
                 loop

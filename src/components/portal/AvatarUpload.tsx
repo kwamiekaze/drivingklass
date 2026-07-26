@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, Loader2 } from "lucide-react";
+import { Camera, Upload, Loader2, Crop } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageCropModal } from "./ImageCropModal";
 import { ProfileAvatar } from "./ProfileAvatar";
+import { VideoFrameEditor, DEFAULT_FRAMING, type VideoFraming } from "./VideoFrameEditor";
 import {
   PROFILE_MEDIA_ACCEPT,
   PROFILE_MEDIA_BUCKET,
@@ -14,15 +15,21 @@ import {
   humanSize,
   invalidateProfileMediaCache,
   maxSizeForRole,
+  resolveProfileMediaUrl,
 } from "@/lib/profileMedia";
 
 interface AvatarUploadProps {
   userId: string;
   currentAvatarUrl: string | null;
   userName: string | null;
-  onAvatarUpdate: (url: string, mediaType: "image" | "video") => void;
+  onAvatarUpdate: (
+    url: string,
+    mediaType: "image" | "video",
+    framing?: VideoFraming | null
+  ) => void;
   role?: string | null;
   currentMediaType?: "image" | "video" | null;
+  currentFraming?: Partial<VideoFraming> | null;
 }
 
 export function AvatarUpload({
@@ -32,12 +39,24 @@ export function AvatarUpload({
   onAvatarUpdate,
   role,
   currentMediaType,
+  currentFraming,
 }: AvatarUploadProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Video framing (new upload flow)
+  const [videoEditorOpen, setVideoEditorOpen] = useState(false);
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+  const [pendingVideoUrl, setPendingVideoUrl] = useState<string | null>(null);
+
+  // Adjust-framing flow for existing video
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustSrc, setAdjustSrc] = useState<string | null>(null);
+  const [savingFraming, setSavingFraming] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,7 +64,12 @@ export function AvatarUpload({
   const isInstructor = role === "instructor" || role === "admin" || role === "staff";
   const limitLabel = isInstructor ? "50MB" : "10MB";
 
-  const uploadBlob = async (blob: Blob, ext: string, mediaType: "image" | "video") => {
+  const uploadBlob = async (
+    blob: Blob,
+    ext: string,
+    mediaType: "image" | "video",
+    framing: VideoFraming | null
+  ) => {
     setUploading(true);
     setProgress(10);
     try {
@@ -74,15 +98,22 @@ export function AvatarUpload({
         /* ignore */
       }
 
+      const payload: Record<string, any> = {
+        avatar_url: path,
+        avatar_media_type: mediaType,
+        avatar_zoom: mediaType === "video" ? framing?.zoom ?? null : null,
+        avatar_pos_x: mediaType === "video" ? framing?.x ?? null : null,
+        avatar_pos_y: mediaType === "video" ? framing?.y ?? null : null,
+      };
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: path, avatar_media_type: mediaType } as any)
+        .update(payload as any)
         .eq("id", userId);
       if (updateError) throw updateError;
 
       invalidateProfileMediaCache();
       setProgress(100);
-      onAvatarUpdate(path, mediaType);
+      onAvatarUpdate(path, mediaType, mediaType === "video" ? framing : null);
       toast({
         title: "Profile media updated",
         description: `Your profile ${mediaType} has been saved.`,
@@ -103,7 +134,7 @@ export function AvatarUpload({
   const handleUploadCroppedImage = async (croppedBlob: Blob) => {
     setCropModalOpen(false);
     setSelectedImage(null);
-    await uploadBlob(croppedBlob, "png", "image");
+    await uploadBlob(croppedBlob, "jpg", "image", null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +150,6 @@ export function AvatarUpload({
       e.target.value = "";
       return;
     }
-    // Mime allow-list
     const allowed =
       kind === "image"
         ? PROFILE_MEDIA_IMAGE_MIME.includes(file.type) || file.type === ""
@@ -144,9 +174,10 @@ export function AvatarUpload({
     }
 
     if (kind === "video") {
-      // Upload directly, no cropping for videos
-      const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-      uploadBlob(file, ext, "video");
+      const url = URL.createObjectURL(file);
+      setPendingVideoFile(file);
+      setPendingVideoUrl(url);
+      setVideoEditorOpen(true);
     } else {
       const imageUrl = URL.createObjectURL(file);
       setSelectedImage(imageUrl);
@@ -163,11 +194,79 @@ export function AvatarUpload({
     }
   };
 
+  const handleVideoEditorClose = () => {
+    setVideoEditorOpen(false);
+    if (pendingVideoUrl) URL.revokeObjectURL(pendingVideoUrl);
+    setPendingVideoUrl(null);
+    setPendingVideoFile(null);
+  };
+
+  const handleVideoEditorSave = async (framing: VideoFraming) => {
+    const file = pendingVideoFile;
+    setVideoEditorOpen(false);
+    if (pendingVideoUrl) URL.revokeObjectURL(pendingVideoUrl);
+    setPendingVideoUrl(null);
+    setPendingVideoFile(null);
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+    await uploadBlob(file, ext, "video", framing);
+  };
+
+  const openAdjust = async () => {
+    if (!currentAvatarUrl) return;
+    if (currentMediaType !== "video") {
+      toast({
+        title: "Re-upload to re-crop",
+        description:
+          "Adjusting framing after upload is available for videos. For photos, please re-upload the image to change the crop.",
+      });
+      return;
+    }
+    const url = /^https?:\/\//i.test(currentAvatarUrl)
+      ? currentAvatarUrl
+      : await resolveProfileMediaUrl(currentAvatarUrl);
+    if (!url) return;
+    setAdjustSrc(url);
+    setAdjustOpen(true);
+  };
+
+  const handleAdjustSave = async (framing: VideoFraming) => {
+    setAdjustOpen(false);
+    setAdjustSrc(null);
+    setSavingFraming(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          avatar_zoom: framing.zoom,
+          avatar_pos_x: framing.x,
+          avatar_pos_y: framing.y,
+        } as any)
+        .eq("id", userId);
+      if (error) throw error;
+      onAvatarUpdate(currentAvatarUrl || "", "video", framing);
+      toast({ title: "Framing updated" });
+    } catch (err: any) {
+      toast({
+        title: "Could not save framing",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingFraming(false);
+    }
+  };
+
+  const hasExisting = !!currentAvatarUrl;
+
   return (
     <div className="flex flex-col items-center gap-4">
       <ProfileAvatar
         avatarUrl={currentAvatarUrl}
         mediaType={currentMediaType || "image"}
+        zoom={currentFraming?.zoom ?? null}
+        posX={currentFraming?.x ?? null}
+        posY={currentFraming?.y ?? null}
         name={userName}
         className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-primary/20"
       />
@@ -207,6 +306,19 @@ export function AvatarUpload({
               Take Photo
             </Button>
           </div>
+          {hasExisting && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="min-h-[36px] gap-2"
+              onClick={openAdjust}
+              disabled={savingFraming}
+            >
+              <Crop className="h-4 w-4" />
+              {currentMediaType === "video" ? "Adjust framing" : "Re-crop photo (re-upload)"}
+            </Button>
+          )}
           <p className="text-xs text-muted-foreground text-center">
             Up to {limitLabel} — image or video. Videos loop silently.
           </p>
@@ -235,6 +347,31 @@ export function AvatarUpload({
           imageSrc={selectedImage}
           onClose={handleCropClose}
           onSave={handleUploadCroppedImage}
+        />
+      )}
+
+      {pendingVideoUrl && (
+        <VideoFrameEditor
+          open={videoEditorOpen}
+          src={pendingVideoUrl}
+          initial={DEFAULT_FRAMING}
+          title="Frame Profile Video"
+          onClose={handleVideoEditorClose}
+          onSave={handleVideoEditorSave}
+        />
+      )}
+
+      {adjustSrc && (
+        <VideoFrameEditor
+          open={adjustOpen}
+          src={adjustSrc}
+          initial={currentFraming ?? DEFAULT_FRAMING}
+          title="Adjust Framing"
+          onClose={() => {
+            setAdjustOpen(false);
+            setAdjustSrc(null);
+          }}
+          onSave={handleAdjustSave}
         />
       )}
     </div>
