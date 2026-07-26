@@ -37,6 +37,8 @@ export interface Profile {
   guardian_email: string | null;
   permit_file_url: string | null;
   hours_remaining?: number;
+  hours_completed?: number;
+  rating?: number;
   last_sign_in_at?: string | null;
 }
 
