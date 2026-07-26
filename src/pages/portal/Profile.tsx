@@ -53,6 +53,7 @@ function ProfileContent() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">("image");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
