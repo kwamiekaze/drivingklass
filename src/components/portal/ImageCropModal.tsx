@@ -91,7 +91,7 @@ export function ImageCropModal({
 
     setSaving(true);
     try {
-      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels, 512);
+      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels, 800);
       onSave(croppedBlob);
     } catch (error) {
       console.error("Error cropping image:", error);
