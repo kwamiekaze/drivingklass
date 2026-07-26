@@ -48,3 +48,7 @@ verify_jwt = false
 
 [functions.send-road-test-scheduling-emails]
 verify_jwt = true
+
+[functions.notify-admins-submission]
+verify_jwt = false
+
