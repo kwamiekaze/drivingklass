@@ -531,6 +531,12 @@ export function AdminUserProfileModal({
                   <span className="text-muted-foreground text-xs">Purchased Hours</span>
                   <p className="font-medium">{(profile.purchased_hours ?? 0).toFixed(1)}h</p>
                 </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Hours Completed</span>
+                  <p className="font-medium">
+                    {Number((profile as any)?.hours_completed ?? 0).toLocaleString('en-US', { maximumFractionDigits: 1 })}h
+                  </p>
+                </div>
               </div>
 
               {/* Scheduled Sessions Section */}
