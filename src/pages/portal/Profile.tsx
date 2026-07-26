@@ -55,6 +55,7 @@ function ProfileContent() {
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarMediaType, setAvatarMediaType] = useState<"image" | "video">("image");
+  const [avatarFraming, setAvatarFraming] = useState<{ zoom: number; x: number; y: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [permitFile, setPermitFile] = useState<File | null>(null);
