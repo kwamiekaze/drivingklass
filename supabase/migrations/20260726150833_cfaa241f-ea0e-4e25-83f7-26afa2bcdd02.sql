@@ -1,0 +1,4 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS avatar_zoom NUMERIC,
+  ADD COLUMN IF NOT EXISTS avatar_pos_x NUMERIC,
+  ADD COLUMN IF NOT EXISTS avatar_pos_y NUMERIC;
