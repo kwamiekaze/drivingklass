@@ -110,6 +110,9 @@ function ProfileContent() {
         guardian_name: profile?.guardian_name || '',
         guardian_phone: profile?.guardian_phone || '',
         guardian_email: profile?.guardian_email || '',
+        hours_completed:
+          (profile as any)?.hours_completed != null ? String((profile as any).hours_completed) : '',
+        rating: (profile as any)?.rating != null ? String((profile as any).rating) : '',
       });
       setAvatarUrl((profile as any)?.avatar_url || null);
       setAvatarMediaType((profile as any)?.avatar_media_type === "video" ? "video" : "image");
