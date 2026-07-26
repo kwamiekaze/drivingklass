@@ -515,5 +515,6 @@ function StudentProfileContent() {
         </Button>
       </form>
     </div>
+    </>
   );
 }
