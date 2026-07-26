@@ -95,6 +95,22 @@ export default function ReportCardView() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [instructorModalOpen, setInstructorModalOpen] = useState(false);
+  const [instructorProfile, setInstructorProfile] = useState<Partial<Profile> | null>(null);
+
+  useEffect(() => {
+    if (!reportCard?.instructor_id) return;
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('id, first_name, last_name, full_name, email, avatar_url, avatar_media_type')
+      .eq('id', reportCard.instructor_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setInstructorProfile(data as any);
+      });
+    return () => { cancelled = true; };
+  }, [reportCard?.instructor_id]);
 
   // Staff view mode
   const [viewMode, setViewMode] = useState<StaffViewMode>("normal");
