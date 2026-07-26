@@ -403,7 +403,7 @@ function ProfileContent() {
         </Card>
 
         {/* Instructor Stats — editable by the instructor (own profile) or admin/staff */}
-        {(role === 'instructor' || (isStaffOrAdmin && (profile as any)?.avatar_url !== undefined)) && (
+        {role === 'instructor' && (
           <Card className="portal-card">
             <CardHeader className="pb-3 sm:pb-4">
               <CardTitle className="text-base sm:text-lg">Instructor Stats</CardTitle>
