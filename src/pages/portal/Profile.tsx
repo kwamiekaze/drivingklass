@@ -75,6 +75,8 @@ function ProfileContent() {
     guardian_name: '',
     guardian_phone: '',
     guardian_email: '',
+    hours_completed: '',
+    rating: '',
   });
 
   // Form draft hook
