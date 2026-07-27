@@ -16,6 +16,7 @@ import { template as roadTestScheduledInstructor } from './road-test-scheduled-i
 import { template as pendingSlotNotice } from './pending-slot-notice.tsx'
 import { template as adminNewContactSubmission } from './admin-new-contact-submission.tsx'
 import { template as adminNewIntakeSubmission } from './admin-new-intake-submission.tsx'
+import { template as scheduleProposal } from './schedule-proposal.tsx'
 
 
 
@@ -44,4 +45,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'pending-slot-notice': pendingSlotNotice,
   'admin-new-contact-submission': adminNewContactSubmission,
   'admin-new-intake-submission': adminNewIntakeSubmission,
+  'schedule-proposal': scheduleProposal,
 }
