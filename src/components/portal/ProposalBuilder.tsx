@@ -14,6 +14,17 @@ import { Plus, Trash2, Send, Calendar, Info } from "lucide-react";
 import { Profile } from "@/types/portal";
 import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
+import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
+import { format, parseISO } from "date-fns";
+
+function formatTime24to12(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  const h = parseInt(hStr);
+  const m = mStr?.padStart(2, '0') || '00';
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${display}:${m} ${ampm}`;
+}
 
 interface ProposalItem {
   id: string;
@@ -259,14 +270,59 @@ export function ProposalBuilder({
         const { error: iErr } = await supabase.from('schedule_proposal_items').insert(itemRows);
         if (iErr) throw iErr;
 
+        // Resolve package + payment link based on total hours
+        const { totalHours, includesRoadTest } = sumProposalHours(validItems);
+        const pkg = resolvePackageForProposal({ totalHours, includesRoadTest });
+        const packageMsg = `Recommended package: ${pkg.label.replace(/\n/g, ' ')} (${pkg.price}). Complete payment to confirm your slot: ${pkg.squareUrl}`;
+
         await supabase.from('notifications').insert({
           user_id: studentId,
           title: 'New Schedule Proposal',
-          message: `You have a new proposed schedule with ${validItems.length} date(s). Please review and accept or decline.`,
+          message: `You have a new proposed schedule with ${validItems.length} date(s). ${packageMsg}`,
           type: 'schedule',
           severity: 'info',
           link: '/student/proposals',
+          metadata: {
+            proposal_id: proposal.id,
+            package_id: pkg.id,
+            package_label: pkg.label,
+            package_price: pkg.price,
+            payment_url: pkg.squareUrl,
+            total_hours: totalHours,
+          } as any,
         });
+
+        // Send proposal email to student (fire-and-forget, non-blocking)
+        try {
+          const instructorProfile = instructors.find(i => i.id === instructorId);
+          const studentEmail = studentProfile?.email;
+          if (studentEmail) {
+            const emailItems = validItems.map(it => ({
+              dateLabel: format(parseISO(it.date), 'EEE, MMM d, yyyy'),
+              timeLabel: `${formatTime24to12(it.start_time)} – ${formatTime24to12(it.end_time)}`,
+              sessionType: it.session_type === 'testing' ? 'testing' : 'driving',
+            }));
+            supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'schedule-proposal',
+                recipientEmail: studentEmail,
+                idempotencyKey: `schedule-proposal-${proposal.id}`,
+                templateData: {
+                  recipientName: getDisplayName(studentProfile as any, ''),
+                  instructorName: instructorProfile ? getDisplayName(instructorProfile as any, 'Your Instructor') : undefined,
+                  noteToStudent: noteToStudent || undefined,
+                  items: emailItems,
+                  packageLabel: pkg.label,
+                  packageHours: totalHours,
+                  packagePrice: pkg.price,
+                  paymentUrl: pkg.squareUrl,
+                },
+              },
+            }).catch(err => console.warn('[proposal] email dispatch failed', err));
+          }
+        } catch (mailErr) {
+          console.warn('[proposal] email preparation failed', mailErr);
+        }
 
         toast.success(`Proposal sent with ${validItems.length} date(s)`);
       }
