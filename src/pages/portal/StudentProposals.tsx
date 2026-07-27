@@ -14,6 +14,7 @@ import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
+import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
 
 /** Convert "HH:MM" or "HH:MM:SS" (24h) to "h:MM AM/PM" display */
 function formatTime24to12(time: string): string {
