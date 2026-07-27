@@ -275,6 +275,32 @@ function StudentProposalsContent() {
                 </Card>
               )}
 
+              {/* Payment CTA — show for any active/pending/finalized proposal */}
+              {items.length > 0 && !['declined'].includes(selectedProposal.proposal_status) && (() => {
+                const { totalHours, includesRoadTest } = sumProposalHours(items as any);
+                const pkg = resolvePackageForProposal({ totalHours, includesRoadTest });
+                return (
+                  <Card className="border-primary/40 bg-primary/5">
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm font-semibold">
+                          Package: {pkg.label.replace(/\n/g, ' ')} · {pkg.price}
+                        </p>
+                        <span className="text-xs text-muted-foreground">{totalHours} hr</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your slot is confirmed once payment is received.
+                      </p>
+                      <Button asChild className="w-full min-h-[44px] gap-2">
+                        <a href={pkg.squareUrl} target="_blank" rel="noopener noreferrer">
+                          Complete Your Payment
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
               {/* Mode info */}
               {canRespondToProposal(selectedProposal.proposal_status) && (
                 <Card className="border-border/50 bg-muted/30">
