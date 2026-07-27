@@ -184,7 +184,7 @@ export function ProposalBuilder({
 
     setSending(true);
     try {
-      const { data: studentProfile } = await supabase.from('profiles').select('pickup_address, dropoff_address').eq('id', studentId).single();
+      const { data: studentProfile } = await supabase.from('profiles').select('pickup_address, dropoff_address, email, full_name, first_name, last_name').eq('id', studentId).single();
 
       if (isEditing) {
         // Update existing proposal: delete old items, insert new ones, update status
