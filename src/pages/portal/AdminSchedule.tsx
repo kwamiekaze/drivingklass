@@ -290,10 +290,11 @@ function AdminScheduleContent() {
   const blockEvents: CalendarEvent[] = filteredBlocks.map(b => {
     const inst = instructors.find(i => i.id === b.instructor_id);
     const who = b.instructor_id ? getDisplayName(inst, 'Instructor') : 'All instructors';
+    const overrideTag = b.conflict_override ? ' • ⚠ OVERRIDE' : '';
     return {
       id: `block-${b.id}`,
-      title: b.title || 'Unavailable',
-      subtitle: `🚫 ${who}`,
+      title: (b.conflict_override ? '⚠ ' : '') + (b.title || 'Unavailable'),
+      subtitle: `🚫 ${who}${overrideTag}`,
       start: b.starts_at,
       end: b.ends_at,
       color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
