@@ -632,7 +632,34 @@ function AdminScheduleContent() {
                   </span>
                 </label>
 
-                <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
+                {sessionConflictMsg && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                    <div className="font-medium text-destructive">Schedule conflict detected</div>
+                    <div className="text-xs text-destructive/90">{sessionConflictMsg}</div>
+                    {isAdmin && (
+                      <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={sessionOverride}
+                          onChange={e => setSessionOverride(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-primary"
+                        />
+                        <span className="text-xs">
+                          <span className="font-medium">Schedule anyway (override conflict)</span>
+                          <span className="block text-muted-foreground">
+                            This will double-book the selected time. Use only when you're sure.
+                          </span>
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  className="w-full min-h-[44px]"
+                  onClick={handleCreateSession}
+                  disabled={!!sessionConflictMsg && !(isAdmin && sessionOverride)}
+                >
                   {formData.is_pending ? 'Create Pending Slot' : 'Create Session'}
                 </Button>
               </div>
