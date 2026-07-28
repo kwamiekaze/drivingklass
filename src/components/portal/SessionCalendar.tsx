@@ -70,6 +70,10 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDdsLocation, setEditDdsLocation] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("scheduled");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
+  const [editOverride, setEditOverride] = useState(false);
+  const [approveConflictMsg, setApproveConflictMsg] = useState<string | null>(null);
+  const [approveOverride, setApproveOverride] = useState(false);
+  const isAdmin = role === 'admin';
 
   // Fetch session details via RPC
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
