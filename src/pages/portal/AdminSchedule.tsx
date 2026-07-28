@@ -256,6 +256,8 @@ function AdminScheduleContent() {
 
   const resetForm = () => {
     setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "", is_pending: false });
+    setSessionConflictMsg(null);
+    setSessionOverride(false);
   };
 
   const openCreateFromSlot = (date: Date) => {
