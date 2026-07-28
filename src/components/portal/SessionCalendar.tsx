@@ -480,9 +480,24 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const handleApprovePending = async () => {
     if (!selectedSession) return;
     setIsLoading(true);
-    const { error } = await supabase.rpc('approve_pending_session', { _session_id: selectedSession.id });
+    const useOverride = isAdmin && approveOverride;
+    const { error } = await supabase.rpc('approve_pending_session', {
+      _session_id: selectedSession.id,
+      ...(useOverride ? { _override_conflicts: true } : {}),
+    } as any);
     setIsLoading(false);
-    if (error) { toast({ title: "Approve failed", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      const isConflict = /conflict|exclusion/i.test(error.message || '');
+      if (isConflict && isAdmin && !approveOverride) {
+        setApproveConflictMsg(error.message);
+        toast({ title: "Approve blocked", description: "Conflict detected — check the override box to approve anyway.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Approve failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    setApproveConflictMsg(null);
+    setApproveOverride(false);
     toast({ title: "Pending slot approved", description: "Now scheduled." });
     setSelectedSession(null);
     onSessionUpdate?.();
