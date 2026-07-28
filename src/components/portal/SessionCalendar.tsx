@@ -1021,9 +1021,27 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
               </div>
 
               {editConflictWarning && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  {editConflictWarning}
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{editConflictWarning}</span>
+                  </div>
+                  {isAdmin && (
+                    <label className="flex items-start gap-2 mt-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editOverride}
+                        onChange={e => setEditOverride(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                      />
+                      <span className="text-xs text-destructive/90">
+                        <span className="font-medium">Save anyway (override conflict)</span>
+                        <span className="block text-muted-foreground">
+                          This will double-book the selected time. Use only when you're sure.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
             </div>
