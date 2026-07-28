@@ -156,17 +156,26 @@ function AdminScheduleContent() {
     });
     if (conflicts && conflicts.length > 0) {
       const c: any = conflicts[0];
-      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
-      return;
+      const msg = `Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`;
+      setSessionConflictMsg(msg);
+      if (!(isAdmin && sessionOverride)) {
+        if (!isAdmin) toast.error(msg);
+        return;
+      }
+    } else {
+      setSessionConflictMsg(null);
     }
 
+    const useOverride = isAdmin && sessionOverride && !!sessionConflictMsg;
     const rpcName = formData.is_pending ? 'create_pending_session_admin' : 'create_session_admin';
-    const { data: newSession, error } = await supabase.rpc(rpcName as any, {
+    const rpcArgs: Record<string, any> = {
       _student_id: formData.student_id,
       _instructor_id: formData.instructor_id,
       _starts_at: startsAt.toISOString(),
       _duration_minutes: durationMinutes,
-    });
+    };
+    if (useOverride) rpcArgs._override_conflicts = true;
+    const { data: newSession, error } = await supabase.rpc(rpcName as any, rpcArgs as any);
 
     if (error) {
       toast.error(`Failed to create session: ${error.message}`);
