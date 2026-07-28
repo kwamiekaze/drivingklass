@@ -747,12 +747,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                   <div className="flex flex-col sm:flex-row gap-2">
                     {isStaffOrAdmin && selectedSession.status === 'pending' && (
                       <>
-                        <Button className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleApprovePending} disabled={isLoading}>
-                          <CheckCircle className="h-4 w-4" />Approve Pending Slot
-                        </Button>
-                        <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
-                          <XCircle className="h-4 w-4" />Delete Pending
-                        </Button>
+                        <div className="w-full space-y-2">
+                          {approveConflictMsg && (
+                            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                              <div className="font-medium text-destructive">Schedule conflict detected</div>
+                              <div className="text-xs text-destructive/90">{approveConflictMsg}</div>
+                              {isAdmin && (
+                                <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={approveOverride}
+                                    onChange={e => setApproveOverride(e.target.checked)}
+                                    className="mt-0.5 h-4 w-4 accent-primary"
+                                  />
+                                  <span className="text-xs">
+                                    <span className="font-medium">Approve anyway (override conflict)</span>
+                                    <span className="block text-muted-foreground">
+                                      This will double-book the selected time.
+                                    </span>
+                                  </span>
+                                </label>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+                              onClick={handleApprovePending}
+                              disabled={isLoading || (!!approveConflictMsg && !(isAdmin && approveOverride))}
+                            >
+                              <CheckCircle className="h-4 w-4" />Approve Pending Slot
+                            </Button>
+                            <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
+                              <XCircle className="h-4 w-4" />Delete Pending
+                            </Button>
+                          </div>
+                        </div>
                       </>
                     )}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
