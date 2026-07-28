@@ -396,6 +396,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         updatePayload.status = editStatus;
       }
 
+      // Admin override: mark record so the DB trigger allows the overlap
+      if (isAdmin && editOverride && editConflictWarning) {
+        updatePayload.conflict_override = true;
+      }
+
       const previousLocation = (selectedSession as any).dds_location || null;
       const previousStartsAt = selectedSession.starts_at;
       const previousPickupTime = (selectedSession as any).pickup_time || null;
