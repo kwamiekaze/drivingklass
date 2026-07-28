@@ -357,7 +357,8 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         ...(studentConflicts || []).map(() => 'student'),
       ];
 
-      if (conflicts.length > 0) {
+      const hasConflict = conflicts.length > 0;
+      if (hasConflict) {
         const who = [...new Set(conflicts)].join(' and ');
         setEditConflictWarning(`This updated time conflicts with another scheduled session for the ${who}.`);
         if (!(isAdmin && editOverride)) {
@@ -397,7 +398,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       }
 
       // Admin override: mark record so the DB trigger allows the overlap
-      if (isAdmin && editOverride && editConflictWarning) {
+      if (isAdmin && editOverride && hasConflict) {
         updatePayload.conflict_override = true;
       }
 
