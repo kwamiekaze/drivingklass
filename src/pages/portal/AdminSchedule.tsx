@@ -33,7 +33,8 @@ export default function AdminSchedule() {
 }
 
 function AdminScheduleContent() {
-  const { user } = usePortalAuth();
+  const { user, role } = usePortalAuth();
+  const isAdmin = role === 'admin';
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
@@ -44,6 +45,12 @@ function AdminScheduleContent() {
   const [studentPickerOpen, setStudentPickerOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<any | null>(null);
+
+  // Conflict override state (admin only)
+  const [sessionConflictMsg, setSessionConflictMsg] = useState<string | null>(null);
+  const [sessionOverride, setSessionOverride] = useState(false);
+  const [blockConflictMsg, setBlockConflictMsg] = useState<string | null>(null);
+  const [blockOverride, setBlockOverride] = useState(false);
 
   // Filters
   const [filterInstructor, setFilterInstructor] = useState<string>("all");
