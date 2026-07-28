@@ -821,13 +821,39 @@ function AdminScheduleContent() {
                 className="min-h-[44px]"
               />
             </div>
+            {blockConflictMsg && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                <div className="font-medium text-destructive">Schedule conflict detected</div>
+                <div className="text-xs text-destructive/90">{blockConflictMsg}</div>
+                {isAdmin && (
+                  <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={blockOverride}
+                      onChange={e => setBlockOverride(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <span className="text-xs">
+                      <span className="font-medium">Schedule anyway (override conflict)</span>
+                      <span className="block text-muted-foreground">
+                        This will double-book the selected time. Use only when you're sure.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               {editingBlock && (
                 <Button variant="destructive" onClick={handleDeleteBlock} className="gap-2 min-h-[44px]">
                   <Trash2 className="h-4 w-4" /> Delete
                 </Button>
               )}
-              <Button className="flex-1 min-h-[44px]" onClick={handleSaveBlock}>
+              <Button
+                className="flex-1 min-h-[44px]"
+                onClick={handleSaveBlock}
+                disabled={!!blockConflictMsg && !(isAdmin && blockOverride)}
+              >
                 {editingBlock ? 'Save Changes' : 'Create Block'}
               </Button>
             </div>
