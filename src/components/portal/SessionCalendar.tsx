@@ -360,8 +360,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
       if (conflicts.length > 0) {
         const who = [...new Set(conflicts)].join(' and ');
         setEditConflictWarning(`This updated time conflicts with another scheduled session for the ${who}.`);
-        setIsLoading(false);
-        return;
+        if (!(isAdmin && editOverride)) {
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        setEditConflictWarning(null);
       }
 
       // Update session including addresses
