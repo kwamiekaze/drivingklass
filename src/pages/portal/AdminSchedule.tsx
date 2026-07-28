@@ -323,6 +323,8 @@ function AdminScheduleContent() {
   const resetBlockForm = () => {
     setBlockForm({ title: "Unavailable", notes: "", date: "", start_time: "", duration_minutes: "60", instructor_id: "all" });
     setEditingBlock(null);
+    setBlockConflictMsg(null);
+    setBlockOverride(false);
   };
 
   const handleSaveBlock = async () => {
@@ -349,10 +351,22 @@ function AdminScheduleContent() {
       _ends_at: endsAt.toISOString(),
       _exclude_block_id: editingBlock?.id ?? null,
     });
+    let hasConflict = false;
     if (conflicts && conflicts.length > 0) {
       const c: any = conflicts[0];
-      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
-      return;
+      const msg = `Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`;
+      setBlockConflictMsg(msg);
+      hasConflict = true;
+      if (!(isAdmin && blockOverride)) {
+        if (!isAdmin) toast.error(msg);
+        return;
+      }
+    } else {
+      setBlockConflictMsg(null);
+    }
+
+    if (isAdmin && blockOverride && hasConflict) {
+      payload.conflict_override = true;
     }
 
     if (editingBlock) {
