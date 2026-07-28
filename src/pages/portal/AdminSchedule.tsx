@@ -33,7 +33,8 @@ export default function AdminSchedule() {
 }
 
 function AdminScheduleContent() {
-  const { user } = usePortalAuth();
+  const { user, role } = usePortalAuth();
+  const isAdmin = role === 'admin';
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
@@ -44,6 +45,12 @@ function AdminScheduleContent() {
   const [studentPickerOpen, setStudentPickerOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<any | null>(null);
+
+  // Conflict override state (admin only)
+  const [sessionConflictMsg, setSessionConflictMsg] = useState<string | null>(null);
+  const [sessionOverride, setSessionOverride] = useState(false);
+  const [blockConflictMsg, setBlockConflictMsg] = useState<string | null>(null);
+  const [blockOverride, setBlockOverride] = useState(false);
 
   // Filters
   const [filterInstructor, setFilterInstructor] = useState<string>("all");
@@ -149,17 +156,26 @@ function AdminScheduleContent() {
     });
     if (conflicts && conflicts.length > 0) {
       const c: any = conflicts[0];
-      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
-      return;
+      const msg = `Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`;
+      setSessionConflictMsg(msg);
+      if (!(isAdmin && sessionOverride)) {
+        if (!isAdmin) toast.error(msg);
+        return;
+      }
+    } else {
+      setSessionConflictMsg(null);
     }
 
+    const useOverride = isAdmin && sessionOverride && !!sessionConflictMsg;
     const rpcName = formData.is_pending ? 'create_pending_session_admin' : 'create_session_admin';
-    const { data: newSession, error } = await supabase.rpc(rpcName as any, {
+    const rpcArgs: Record<string, any> = {
       _student_id: formData.student_id,
       _instructor_id: formData.instructor_id,
       _starts_at: startsAt.toISOString(),
       _duration_minutes: durationMinutes,
-    });
+    };
+    if (useOverride) rpcArgs._override_conflicts = true;
+    const { data: newSession, error } = await supabase.rpc(rpcName as any, rpcArgs as any);
 
     if (error) {
       toast.error(`Failed to create session: ${error.message}`);
@@ -240,6 +256,8 @@ function AdminScheduleContent() {
 
   const resetForm = () => {
     setFormData({ student_id: "", instructor_id: "", date: "", start_time: "", pickup_time: "", duration_minutes: "120", session_type: "driving", pickup_address: "", dropoff_address: "", note_for_student: "", note_for_instructor: "", dds_location: "", is_pending: false });
+    setSessionConflictMsg(null);
+    setSessionOverride(false);
   };
 
   const openCreateFromSlot = (date: Date) => {
@@ -272,10 +290,11 @@ function AdminScheduleContent() {
   const blockEvents: CalendarEvent[] = filteredBlocks.map(b => {
     const inst = instructors.find(i => i.id === b.instructor_id);
     const who = b.instructor_id ? getDisplayName(inst, 'Instructor') : 'All instructors';
+    const overrideTag = b.conflict_override ? ' • ⚠ OVERRIDE' : '';
     return {
       id: `block-${b.id}`,
-      title: b.title || 'Unavailable',
-      subtitle: `🚫 ${who}`,
+      title: (b.conflict_override ? '⚠ ' : '') + (b.title || 'Unavailable'),
+      subtitle: `🚫 ${who}${overrideTag}`,
       start: b.starts_at,
       end: b.ends_at,
       color: 'bg-muted text-muted-foreground border-l-4 border-muted-foreground/60',
@@ -305,6 +324,8 @@ function AdminScheduleContent() {
   const resetBlockForm = () => {
     setBlockForm({ title: "Unavailable", notes: "", date: "", start_time: "", duration_minutes: "60", instructor_id: "all" });
     setEditingBlock(null);
+    setBlockConflictMsg(null);
+    setBlockOverride(false);
   };
 
   const handleSaveBlock = async () => {
@@ -331,10 +352,22 @@ function AdminScheduleContent() {
       _ends_at: endsAt.toISOString(),
       _exclude_block_id: editingBlock?.id ?? null,
     });
+    let hasConflict = false;
     if (conflicts && conflicts.length > 0) {
       const c: any = conflicts[0];
-      toast.error(`Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`);
-      return;
+      const msg = `Conflict: ${c.label} from ${format(new Date(c.starts_at), 'MMM d h:mm a')} to ${format(new Date(c.ends_at), 'h:mm a')}`;
+      setBlockConflictMsg(msg);
+      hasConflict = true;
+      if (!(isAdmin && blockOverride)) {
+        if (!isAdmin) toast.error(msg);
+        return;
+      }
+    } else {
+      setBlockConflictMsg(null);
+    }
+
+    if (isAdmin && blockOverride && hasConflict) {
+      payload.conflict_override = true;
     }
 
     if (editingBlock) {
@@ -599,7 +632,34 @@ function AdminScheduleContent() {
                   </span>
                 </label>
 
-                <Button className="w-full min-h-[44px]" onClick={handleCreateSession}>
+                {sessionConflictMsg && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                    <div className="font-medium text-destructive">Schedule conflict detected</div>
+                    <div className="text-xs text-destructive/90">{sessionConflictMsg}</div>
+                    {isAdmin && (
+                      <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={sessionOverride}
+                          onChange={e => setSessionOverride(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-primary"
+                        />
+                        <span className="text-xs">
+                          <span className="font-medium">Schedule anyway (override conflict)</span>
+                          <span className="block text-muted-foreground">
+                            This will double-book the selected time. Use only when you're sure.
+                          </span>
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  className="w-full min-h-[44px]"
+                  onClick={handleCreateSession}
+                  disabled={!!sessionConflictMsg && !(isAdmin && sessionOverride)}
+                >
                   {formData.is_pending ? 'Create Pending Slot' : 'Create Session'}
                 </Button>
               </div>
@@ -761,13 +821,39 @@ function AdminScheduleContent() {
                 className="min-h-[44px]"
               />
             </div>
+            {blockConflictMsg && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                <div className="font-medium text-destructive">Schedule conflict detected</div>
+                <div className="text-xs text-destructive/90">{blockConflictMsg}</div>
+                {isAdmin && (
+                  <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={blockOverride}
+                      onChange={e => setBlockOverride(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <span className="text-xs">
+                      <span className="font-medium">Schedule anyway (override conflict)</span>
+                      <span className="block text-muted-foreground">
+                        This will double-book the selected time. Use only when you're sure.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               {editingBlock && (
                 <Button variant="destructive" onClick={handleDeleteBlock} className="gap-2 min-h-[44px]">
                   <Trash2 className="h-4 w-4" /> Delete
                 </Button>
               )}
-              <Button className="flex-1 min-h-[44px]" onClick={handleSaveBlock}>
+              <Button
+                className="flex-1 min-h-[44px]"
+                onClick={handleSaveBlock}
+                disabled={!!blockConflictMsg && !(isAdmin && blockOverride)}
+              >
                 {editingBlock ? 'Save Changes' : 'Create Block'}
               </Button>
             </div>

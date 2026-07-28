@@ -70,6 +70,10 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const [editDdsLocation, setEditDdsLocation] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("scheduled");
   const [editConflictWarning, setEditConflictWarning] = useState<string | null>(null);
+  const [editOverride, setEditOverride] = useState(false);
+  const [approveConflictMsg, setApproveConflictMsg] = useState<string | null>(null);
+  const [approveOverride, setApproveOverride] = useState(false);
+  const isAdmin = role === 'admin';
 
   // Fetch session details via RPC
   const fetchSessionDetails = useCallback(async (sessionId: string) => {
@@ -353,11 +357,16 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         ...(studentConflicts || []).map(() => 'student'),
       ];
 
-      if (conflicts.length > 0) {
+      const hasConflict = conflicts.length > 0;
+      if (hasConflict) {
         const who = [...new Set(conflicts)].join(' and ');
         setEditConflictWarning(`This updated time conflicts with another scheduled session for the ${who}.`);
-        setIsLoading(false);
-        return;
+        if (!(isAdmin && editOverride)) {
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        setEditConflictWarning(null);
       }
 
       // Update session including addresses
@@ -386,6 +395,11 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
         (editStatus === 'scheduled' || editStatus === 'pending')
       ) {
         updatePayload.status = editStatus;
+      }
+
+      // Admin override: mark record so the DB trigger allows the overlap
+      if (isAdmin && editOverride && hasConflict) {
+        updatePayload.conflict_override = true;
       }
 
       const previousLocation = (selectedSession as any).dds_location || null;
@@ -466,9 +480,24 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const handleApprovePending = async () => {
     if (!selectedSession) return;
     setIsLoading(true);
-    const { error } = await supabase.rpc('approve_pending_session', { _session_id: selectedSession.id });
+    const useOverride = isAdmin && approveOverride;
+    const { error } = await supabase.rpc('approve_pending_session', {
+      _session_id: selectedSession.id,
+      ...(useOverride ? { _override_conflicts: true } : {}),
+    } as any);
     setIsLoading(false);
-    if (error) { toast({ title: "Approve failed", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      const isConflict = /conflict|exclusion/i.test(error.message || '');
+      if (isConflict && isAdmin && !approveOverride) {
+        setApproveConflictMsg(error.message);
+        toast({ title: "Approve blocked", description: "Conflict detected — check the override box to approve anyway.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Approve failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    setApproveConflictMsg(null);
+    setApproveOverride(false);
     toast({ title: "Pending slot approved", description: "Now scheduled." });
     setSelectedSession(null);
     onSessionUpdate?.();
@@ -718,12 +747,42 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                   <div className="flex flex-col sm:flex-row gap-2">
                     {isStaffOrAdmin && selectedSession.status === 'pending' && (
                       <>
-                        <Button className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleApprovePending} disabled={isLoading}>
-                          <CheckCircle className="h-4 w-4" />Approve Pending Slot
-                        </Button>
-                        <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
-                          <XCircle className="h-4 w-4" />Delete Pending
-                        </Button>
+                        <div className="w-full space-y-2">
+                          {approveConflictMsg && (
+                            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                              <div className="font-medium text-destructive">Schedule conflict detected</div>
+                              <div className="text-xs text-destructive/90">{approveConflictMsg}</div>
+                              {isAdmin && (
+                                <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={approveOverride}
+                                    onChange={e => setApproveOverride(e.target.checked)}
+                                    className="mt-0.5 h-4 w-4 accent-primary"
+                                  />
+                                  <span className="text-xs">
+                                    <span className="font-medium">Approve anyway (override conflict)</span>
+                                    <span className="block text-muted-foreground">
+                                      This will double-book the selected time.
+                                    </span>
+                                  </span>
+                                </label>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              className="flex-1 min-h-[44px] gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+                              onClick={handleApprovePending}
+                              disabled={isLoading || (!!approveConflictMsg && !(isAdmin && approveOverride))}
+                            >
+                              <CheckCircle className="h-4 w-4" />Approve Pending Slot
+                            </Button>
+                            <Button variant="destructive" className="flex-1 min-h-[44px] gap-2" onClick={handleDeletePending} disabled={isLoading}>
+                              <XCircle className="h-4 w-4" />Delete Pending
+                            </Button>
+                          </div>
+                        </div>
                       </>
                     )}
                     {canGrade(selectedSession) && selectedSession.session_type !== 'testing' && (
@@ -962,9 +1021,27 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
               </div>
 
               {editConflictWarning && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  {editConflictWarning}
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{editConflictWarning}</span>
+                  </div>
+                  {isAdmin && (
+                    <label className="flex items-start gap-2 mt-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editOverride}
+                        onChange={e => setEditOverride(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                      />
+                      <span className="text-xs text-destructive/90">
+                        <span className="font-medium">Save anyway (override conflict)</span>
+                        <span className="block text-muted-foreground">
+                          This will double-book the selected time. Use only when you're sure.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
             </div>

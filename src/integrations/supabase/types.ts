@@ -2028,34 +2028,43 @@ export type Database = {
       }
       schedule_blocks: {
         Row: {
+          conflict_override: boolean
           created_at: string
           created_by: string | null
           ends_at: string
           id: string
           instructor_id: string | null
           notes: string | null
+          overridden_at: string | null
+          overridden_by: string | null
           starts_at: string
           title: string
           updated_at: string
         }
         Insert: {
+          conflict_override?: boolean
           created_at?: string
           created_by?: string | null
           ends_at: string
           id?: string
           instructor_id?: string | null
           notes?: string | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           starts_at: string
           title?: string
           updated_at?: string
         }
         Update: {
+          conflict_override?: boolean
           created_at?: string
           created_by?: string | null
           ends_at?: string
           id?: string
           instructor_id?: string | null
           notes?: string | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           starts_at?: string
           title?: string
           updated_at?: string
@@ -2407,6 +2416,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           completed_by: string | null
+          conflict_override: boolean
           created_at: string
           created_by: string | null
           dds_location: string | null
@@ -2419,6 +2429,8 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          overridden_at: string | null
+          overridden_by: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2439,6 +2451,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
+          conflict_override?: boolean
           created_at?: string
           created_by?: string | null
           dds_location?: string | null
@@ -2451,6 +2464,8 @@ export type Database = {
           instructor_id: string
           note_for_instructor?: string | null
           note_for_student?: string | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           pickup_address?: string | null
           pickup_time?: string | null
           report_card_id?: string | null
@@ -2471,6 +2486,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
+          conflict_override?: boolean
           created_at?: string
           created_by?: string | null
           dds_location?: string | null
@@ -2483,6 +2499,8 @@ export type Database = {
           instructor_id?: string
           note_for_instructor?: string | null
           note_for_student?: string | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           pickup_address?: string | null
           pickup_time?: string | null
           report_card_id?: string | null
@@ -2642,47 +2660,95 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: boolean
       }
-      approve_pending_session: {
-        Args: { _session_id: string }
-        Returns: {
-          cancel_penalty_applied: boolean
-          cancel_penalty_hours: number
-          cancellation_fee_waived: boolean
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
-          cancelled_by_role: string | null
-          completed: boolean | null
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string
-          created_by: string | null
-          dds_location: string | null
-          dropoff_address: string | null
-          duration_minutes: number
-          ends_at: string
-          hours_counted: boolean
-          hours_deducted_at: string | null
-          id: string
-          instructor_id: string
-          note_for_instructor: string | null
-          note_for_student: string | null
-          pickup_address: string | null
-          pickup_time: string | null
-          report_card_id: string | null
-          session_type: string
-          starts_at: string
-          status: string
-          student_id: string
-          suppress_student_notification: boolean
-        }
-        SetofOptions: {
-          from: "*"
-          to: "sessions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      approve_pending_session:
+        | {
+            Args: { _session_id: string }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { _override_conflicts: boolean; _session_id: string }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       can_read_report_card: {
         Args: { p_report_card_id: string }
         Returns: boolean
@@ -2708,6 +2774,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           completed_by: string | null
+          conflict_override: boolean
           created_at: string
           created_by: string | null
           dds_location: string | null
@@ -2720,6 +2787,8 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          overridden_at: string | null
+          overridden_by: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2770,6 +2839,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           completed_by: string | null
+          conflict_override: boolean
           created_at: string
           created_by: string | null
           dds_location: string | null
@@ -2782,6 +2852,8 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          overridden_at: string | null
+          overridden_by: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2825,98 +2897,206 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_pending_session_admin: {
-        Args: {
-          _duration_minutes: number
-          _instructor_id: string
-          _starts_at: string
-          _student_id: string
-        }
-        Returns: {
-          cancel_penalty_applied: boolean
-          cancel_penalty_hours: number
-          cancellation_fee_waived: boolean
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
-          cancelled_by_role: string | null
-          completed: boolean | null
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string
-          created_by: string | null
-          dds_location: string | null
-          dropoff_address: string | null
-          duration_minutes: number
-          ends_at: string
-          hours_counted: boolean
-          hours_deducted_at: string | null
-          id: string
-          instructor_id: string
-          note_for_instructor: string | null
-          note_for_student: string | null
-          pickup_address: string | null
-          pickup_time: string | null
-          report_card_id: string | null
-          session_type: string
-          starts_at: string
-          status: string
-          student_id: string
-          suppress_student_notification: boolean
-        }
-        SetofOptions: {
-          from: "*"
-          to: "sessions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      create_session_admin: {
-        Args: {
-          _duration_minutes: number
-          _instructor_id: string
-          _starts_at: string
-          _student_id: string
-        }
-        Returns: {
-          cancel_penalty_applied: boolean
-          cancel_penalty_hours: number
-          cancellation_fee_waived: boolean
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
-          cancelled_by_role: string | null
-          completed: boolean | null
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string
-          created_by: string | null
-          dds_location: string | null
-          dropoff_address: string | null
-          duration_minutes: number
-          ends_at: string
-          hours_counted: boolean
-          hours_deducted_at: string | null
-          id: string
-          instructor_id: string
-          note_for_instructor: string | null
-          note_for_student: string | null
-          pickup_address: string | null
-          pickup_time: string | null
-          report_card_id: string | null
-          session_type: string
-          starts_at: string
-          status: string
-          student_id: string
-          suppress_student_notification: boolean
-        }
-        SetofOptions: {
-          from: "*"
-          to: "sessions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      create_pending_session_admin:
+        | {
+            Args: {
+              _duration_minutes: number
+              _instructor_id: string
+              _starts_at: string
+              _student_id: string
+            }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              _duration_minutes: number
+              _instructor_id: string
+              _override_conflicts: boolean
+              _starts_at: string
+              _student_id: string
+            }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      create_session_admin:
+        | {
+            Args: {
+              _duration_minutes: number
+              _instructor_id: string
+              _starts_at: string
+              _student_id: string
+            }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              _duration_minutes: number
+              _instructor_id: string
+              _override_conflicts: boolean
+              _starts_at: string
+              _student_id: string
+            }
+            Returns: {
+              cancel_penalty_applied: boolean
+              cancel_penalty_hours: number
+              cancellation_fee_waived: boolean
+              cancellation_reason: string | null
+              cancelled_at: string | null
+              cancelled_by: string | null
+              cancelled_by_role: string | null
+              completed: boolean | null
+              completed_at: string | null
+              completed_by: string | null
+              conflict_override: boolean
+              created_at: string
+              created_by: string | null
+              dds_location: string | null
+              dropoff_address: string | null
+              duration_minutes: number
+              ends_at: string
+              hours_counted: boolean
+              hours_deducted_at: string | null
+              id: string
+              instructor_id: string
+              note_for_instructor: string | null
+              note_for_student: string | null
+              overridden_at: string | null
+              overridden_by: string | null
+              pickup_address: string | null
+              pickup_time: string | null
+              report_card_id: string | null
+              session_type: string
+              starts_at: string
+              status: string
+              student_id: string
+              suppress_student_notification: boolean
+            }
+            SetofOptions: {
+              from: "*"
+              to: "sessions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -3265,6 +3445,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           completed_by: string | null
+          conflict_override: boolean
           created_at: string
           created_by: string | null
           dds_location: string | null
@@ -3277,6 +3458,8 @@ export type Database = {
           instructor_id: string
           note_for_instructor: string | null
           note_for_student: string | null
+          overridden_at: string | null
+          overridden_by: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
