@@ -502,6 +502,25 @@ function AdminProposalsContent() {
                     {finalizing ? 'Finalizing...' : 'Confirm Payment & Finalize Schedule'}
                   </Button>
                 )}
+
+                {/* Close out a proposal without creating sessions */}
+                {['sent', 'revised_and_resent', 'edit_requested', 'under_revision', 'pending_admin_finalize'].includes(selectedProposal.proposal_status) && (
+                  <div className="space-y-1">
+                    <Button
+                      variant="outline"
+                      className="w-full min-h-[44px] gap-2"
+                      onClick={handleMarkFinalizedNoSchedule}
+                      disabled={finalizing}
+                    >
+                      <Check className="h-4 w-4" />
+                      Mark as Finalized (no new sessions)
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Closes this pending proposal without scheduling anything — use when the student is already scheduled.
+                    </p>
+                  </div>
+                )}
+
               </div>
             </div>
           )}
