@@ -158,6 +158,33 @@ function AdminProposalsContent() {
     }
   };
 
+  const handleMarkFinalizedNoSchedule = async () => {
+    if (!selectedProposal) return;
+    setFinalizing(true);
+    try {
+      const { error: iErr } = await supabase
+        .from('schedule_proposal_items')
+        .update({ item_status: 'finalized' })
+        .eq('proposal_id', selectedProposal.id)
+        .in('item_status', ['proposed', 'pending_admin_finalize', 'conflict']);
+      if (iErr) throw iErr;
+
+      const { error: pErr } = await supabase
+        .from('schedule_proposals')
+        .update({ proposal_status: 'finalized', finalized_at: new Date().toISOString() })
+        .eq('id', selectedProposal.id);
+      if (pErr) throw pErr;
+
+      toast.success('Proposal marked as finalized (no new sessions created)');
+      setSelectedProposal(null);
+      fetchProposals();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to mark as finalized');
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
   const handleMarkUnderRevision = async () => {
     if (!selectedProposal) return;
     await supabase
@@ -168,6 +195,7 @@ function AdminProposalsContent() {
     setSelectedProposal(null);
     fetchProposals();
   };
+
 
   const statusColor = (status: string) => {
     switch (status) {
