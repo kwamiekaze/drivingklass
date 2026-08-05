@@ -301,6 +301,9 @@ function AdminProposalsContent() {
   );
 
   const canFinalize = selectedProposal && ['pending_admin_finalize'].includes(selectedProposal.proposal_status);
+  const canFinalizeAndSchedule = selectedProposal && ['sent', 'revised_and_resent', 'pending_admin_finalize', 'edit_requested', 'under_revision', 'partially_finalized', 'partially_scheduled', 'conflict'].includes(selectedProposal.proposal_status);
+  const schedulableItems = items.filter((i) => ['proposed', 'pending_admin_finalize', 'conflict'].includes(i.item_status));
+
   const canEditAndResend = selectedProposal && ['edit_requested', 'under_revision', 'sent', 'revised_and_resent'].includes(selectedProposal.proposal_status);
   const canDirectFinalize = selectedProposal && ['edit_requested', 'under_revision'].includes(selectedProposal.proposal_status);
 
