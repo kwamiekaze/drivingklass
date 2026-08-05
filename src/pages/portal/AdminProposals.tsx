@@ -590,7 +590,67 @@ function AdminProposalsContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Confirm finalize & schedule */}
+      <Dialog open={scheduleConfirmOpen} onOpenChange={(o) => { if (!finalizing) setScheduleConfirmOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Finalize & create sessions?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              This will create {schedulableItems.length} real session{schedulableItems.length === 1 ? '' : 's'} and confirm the schedule for{' '}
+              {selectedProposal ? getDisplayName(selectedProposal.student, 'the student') : 'the student'}. Emails and notifications will be sent.
+            </p>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border p-3">
+              {schedulableItems.map((i) => (
+                <p key={i.id} className="text-xs">
+                  {format(parseISO(i.proposed_date), 'EEE, MMM d, yyyy')} • {formatTime24to12(i.start_time)} – {formatTime24to12(i.end_time)}
+                </p>
+              ))}
+            </div>
+
+            {scheduleConflicts.length > 0 && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 space-y-2">
+                <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {scheduleConflicts.length} conflicting date{scheduleConflicts.length === 1 ? '' : 's'}
+                </p>
+                {scheduleConflicts.map((c) => (
+                  <p key={c.item_id} className="text-xs text-destructive">
+                    {format(parseISO(c.proposed_date), 'EEE, MMM d')} {formatTime24to12(c.start_time)} – {formatTime24to12(c.end_time)} overlaps {c.conflicting_sessions?.length || 1} existing session(s)
+                  </p>
+                ))}
+                {role === 'admin' ? (
+                  <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                    <Checkbox checked={overrideConflicts} onCheckedChange={(v) => setOverrideConflicts(v === true)} className="mt-0.5" />
+                    <span className="text-xs">
+                      Schedule anyway (override conflict)
+                      <span className="block text-muted-foreground">This will double-book the selected time. Use only when you're sure.</span>
+                    </span>
+                  </label>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Only an admin can override scheduling conflicts.</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-1">
+              <Button variant="outline" onClick={() => setScheduleConfirmOpen(false)} disabled={finalizing}>Cancel</Button>
+              <Button
+                onClick={handleFinalizeAndSchedule}
+                disabled={finalizing || (scheduleConflicts.length > 0 && !overrideConflicts)}
+                className="gap-2"
+              >
+                <CalendarCheck className="h-4 w-4" />
+                {finalizing ? 'Scheduling…' : scheduleConflicts.length > 0 ? 'Override & Schedule' : 'Confirm & Schedule'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ProposalBuilder
+
         open={builderOpen}
         onOpenChange={setBuilderOpen}
         onProposalSent={fetchProposals}
