@@ -37,7 +37,7 @@ export default function AdminProposals() {
 }
 
 function AdminProposalsContent() {
-  const { user } = usePortalAuth();
+  const { user, role } = usePortalAuth();
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
@@ -50,6 +50,10 @@ function AdminProposalsContent() {
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
   const [savingItem, setSavingItem] = useState(false);
+  const [scheduleConfirmOpen, setScheduleConfirmOpen] = useState(false);
+  const [scheduleConflicts, setScheduleConflicts] = useState<any[]>([]);
+  const [overrideConflicts, setOverrideConflicts] = useState(false);
+
 
   const startEditItem = (item: any) => {
     setEditingItemId(item.id);
