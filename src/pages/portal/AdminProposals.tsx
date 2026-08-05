@@ -547,7 +547,25 @@ function AdminProposalsContent() {
                   </Button>
                 )}
 
+                {/* Finalize AND create the real sessions */}
+                {canFinalizeAndSchedule && schedulableItems.length > 0 && (
+                  <div className="space-y-1">
+                    <Button
+                      className="w-full min-h-[44px] gap-2"
+                      onClick={openScheduleConfirm}
+                      disabled={finalizing}
+                    >
+                      <CalendarCheck className="h-4 w-4" />
+                      Mark as Finalized (schedule new sessions)
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Creates real sessions from the dates below and confirms the schedule.
+                    </p>
+                  </div>
+                )}
+
                 {/* Close out a proposal without creating sessions */}
+
                 {['sent', 'revised_and_resent', 'edit_requested', 'under_revision', 'pending_admin_finalize'].includes(selectedProposal.proposal_status) && (
                   <div className="space-y-1">
                     <Button
