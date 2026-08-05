@@ -328,28 +328,68 @@ async function handleDecline(supabase: any, userId: string, userRole: string, pr
   })
 }
 
-async function handleFinalize(supabase: any, userId: string, userRole: string, proposalId: string, targetItemStatus: string) {
+async function handleFinalize(
+  supabase: any,
+  userId: string,
+  userRole: string,
+  proposalId: string,
+  targetItemStatus: string | string[],
+  opts: { override?: boolean } = {},
+) {
   if (!['admin', 'staff'].includes(userRole)) throw new Error('Only admins can finalize proposals')
+  const statuses = Array.isArray(targetItemStatus) ? targetItemStatus : [targetItemStatus]
+  const override = opts.override === true
+  const isAdminSchedule = Array.isArray(targetItemStatus)
 
   const { data: proposal } = await supabase.from('schedule_proposals').select('*').eq('id', proposalId).single()
   if (!proposal) throw new Error('Proposal not found')
+
+  if (isAdminSchedule && ['finalized', 'revised_and_finalized', 'auto_scheduled', 'declined'].includes(proposal.proposal_status)) {
+    throw new Error('This proposal can no longer be finalized')
+  }
 
   const { data: items } = await supabase
     .from('schedule_proposal_items')
     .select('*')
     .eq('proposal_id', proposalId)
-    .eq('item_status', targetItemStatus)
+    .in('item_status', statuses)
     .order('proposed_date', { ascending: true })
     .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No items to finalize')
+
+  // Admin flow: pre-check every date before creating anything, so nothing is
+  // half-scheduled when conflicts exist and no override was given.
+  if (isAdminSchedule && !override) {
+    const conflictDetails: any[] = []
+    for (const item of items) {
+      const { conflicts: found } = await findConflicts(supabase, item, proposal)
+      if (found.length > 0) {
+        conflictDetails.push({
+          item_id: item.id,
+          proposed_date: item.proposed_date,
+          start_time: item.start_time,
+          end_time: item.end_time,
+          conflicting_sessions: found.map((c: any) => ({ id: c.id, starts_at: c.starts_at, ends_at: c.ends_at, status: c.status })),
+        })
+      }
+    }
+    if (conflictDetails.length > 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        conflict_detected: true,
+        conflicts: conflictDetails,
+        total_items: items.length,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
 
   let scheduled = 0
   let conflicts = 0
   const createdSessions: any[] = []
 
   for (const item of items) {
-    const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
+    const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId, override);
 
     if (conflict || !session) {
       await supabase.from('schedule_proposal_items')
@@ -366,8 +406,9 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
     createdSessions.push({ session, item })
   }
 
-  const finalStatus = targetItemStatus === 'proposed' ? 'revised_and_finalized' : 
+  const finalStatus = (!isAdminSchedule && targetItemStatus === 'proposed') ? 'revised_and_finalized' : 
     (conflicts > 0 && scheduled > 0 ? 'partially_finalized' : scheduled > 0 ? 'finalized' : 'conflict')
+
 
   await supabase.from('schedule_proposals')
     .update({ proposal_status: finalStatus, finalized_at: new Date().toISOString() })
