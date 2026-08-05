@@ -132,30 +132,35 @@ Deno.serve(async (req) => {
  * Create a real session from a proposal item, using exact timezone-aware timestamps.
  * Returns the created session or null if conflict/error.
  */
+async function findConflicts(supabase: any, item: any, proposal: any) {
+  const startsAtISO = toEasternISO(item.proposed_date, item.start_time);
+  const endsAtISO = toEasternISO(item.proposed_date, item.end_time);
+  const { data } = await supabase
+    .from('sessions')
+    .select('id, starts_at, ends_at, status')
+    .neq('status', 'cancelled')
+    .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
+    .lt('starts_at', endsAtISO)
+    .gt('ends_at', startsAtISO)
+  return { startsAtISO, endsAtISO, conflicts: data || [] };
+}
+
 async function createSessionFromItem(
   supabase: any,
   item: any,
   proposal: any,
   createdBy: string,
+  override = false,
 ): Promise<{ session: any | null; conflict: boolean; error?: string }> {
-  const startsAtISO = toEasternISO(item.proposed_date, item.start_time);
-  const endsAtISO = toEasternISO(item.proposed_date, item.end_time);
+  const { startsAtISO, endsAtISO, conflicts } = await findConflicts(supabase, item, proposal);
 
-  console.log(`[schedule] Item ${item.id}: proposed_date=${item.proposed_date} start=${item.start_time} end=${item.end_time} -> starts_at=${startsAtISO} ends_at=${endsAtISO}`);
+  console.log(`[schedule] Item ${item.id}: proposed_date=${item.proposed_date} start=${item.start_time} end=${item.end_time} -> starts_at=${startsAtISO} ends_at=${endsAtISO} override=${override}`);
 
-  // Check conflicts using the exact timestamps
-  const { data: conflicts } = await supabase
-    .from('sessions')
-    .select('id')
-    .neq('status', 'cancelled')
-    .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
-    .lt('starts_at', endsAtISO)
-    .gt('ends_at', startsAtISO)
-
-  if (conflicts && conflicts.length > 0) {
+  if (conflicts.length > 0 && !override) {
     return { session: null, conflict: true, error: 'Time slot conflict with existing session' };
   }
 
+  const didOverride = conflicts.length > 0 && override;
   const durationMinutes = item.duration_minutes || 120;
 
   const { data: session, error: sErr } = await supabase
@@ -171,9 +176,13 @@ async function createSessionFromItem(
       pickup_address: item.pickup_address,
       dropoff_address: item.dropoff_address,
       created_by: createdBy,
+      conflict_override: didOverride,
+      overridden_by: didOverride ? createdBy : null,
+      overridden_at: didOverride ? new Date().toISOString() : null,
     })
     .select()
     .single()
+
 
   if (sErr) {
     console.error(`[schedule] Failed to create session for item ${item.id}:`, sErr.message);
