@@ -106,6 +106,16 @@ Deno.serve(async (req) => {
       return await handleFinalize(supabase, user.id, userRole, proposal_id, 'pending_admin_finalize')
     } else if (action === 'finalize_edited') {
       return await handleFinalize(supabase, user.id, userRole, proposal_id, 'proposed')
+    } else if (action === 'admin_finalize_and_schedule') {
+      if (!['admin', 'staff'].includes(userRole)) throw new Error('Only admins can finalize and schedule proposals')
+      return await handleFinalize(
+        supabase,
+        user.id,
+        userRole,
+        proposal_id,
+        ['proposed', 'pending_admin_finalize', 'conflict'],
+        { override: body.override === true },
+      )
     } else {
       throw new Error('Invalid action')
     }
