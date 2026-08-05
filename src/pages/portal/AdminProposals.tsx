@@ -189,6 +189,43 @@ function AdminProposalsContent() {
     }
   };
 
+  const openScheduleConfirm = () => {
+    setScheduleConflicts([]);
+    setOverrideConflicts(false);
+    setScheduleConfirmOpen(true);
+  };
+
+  const handleFinalizeAndSchedule = async () => {
+    if (!selectedProposal) return;
+    setFinalizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('handle-proposal-action', {
+        body: {
+          action: 'admin_finalize_and_schedule',
+          proposal_id: selectedProposal.id,
+          override: overrideConflicts,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.conflict_detected) {
+        setScheduleConflicts(data.conflicts || []);
+        toast.error(`${data.conflicts?.length || 0} date(s) conflict with existing sessions`);
+        return;
+      }
+      toast.success(`${data.scheduled} session(s) created and schedule finalized${data.conflicts > 0 ? `, ${data.conflicts} conflict(s)` : ''}`);
+      setScheduleConfirmOpen(false);
+      setSelectedProposal(null);
+      fetchProposals();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to finalize and schedule');
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
+
+
   const handleMarkUnderRevision = async () => {
     if (!selectedProposal) return;
     await supabase
