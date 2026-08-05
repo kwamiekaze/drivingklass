@@ -106,6 +106,16 @@ Deno.serve(async (req) => {
       return await handleFinalize(supabase, user.id, userRole, proposal_id, 'pending_admin_finalize')
     } else if (action === 'finalize_edited') {
       return await handleFinalize(supabase, user.id, userRole, proposal_id, 'proposed')
+    } else if (action === 'admin_finalize_and_schedule') {
+      if (!['admin', 'staff'].includes(userRole)) throw new Error('Only admins can finalize and schedule proposals')
+      return await handleFinalize(
+        supabase,
+        user.id,
+        userRole,
+        proposal_id,
+        ['proposed', 'pending_admin_finalize', 'conflict'],
+        { override: body.override === true },
+      )
     } else {
       throw new Error('Invalid action')
     }
@@ -122,30 +132,35 @@ Deno.serve(async (req) => {
  * Create a real session from a proposal item, using exact timezone-aware timestamps.
  * Returns the created session or null if conflict/error.
  */
+async function findConflicts(supabase: any, item: any, proposal: any) {
+  const startsAtISO = toEasternISO(item.proposed_date, item.start_time);
+  const endsAtISO = toEasternISO(item.proposed_date, item.end_time);
+  const { data } = await supabase
+    .from('sessions')
+    .select('id, starts_at, ends_at, status')
+    .neq('status', 'cancelled')
+    .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
+    .lt('starts_at', endsAtISO)
+    .gt('ends_at', startsAtISO)
+  return { startsAtISO, endsAtISO, conflicts: data || [] };
+}
+
 async function createSessionFromItem(
   supabase: any,
   item: any,
   proposal: any,
   createdBy: string,
+  override = false,
 ): Promise<{ session: any | null; conflict: boolean; error?: string }> {
-  const startsAtISO = toEasternISO(item.proposed_date, item.start_time);
-  const endsAtISO = toEasternISO(item.proposed_date, item.end_time);
+  const { startsAtISO, endsAtISO, conflicts } = await findConflicts(supabase, item, proposal);
 
-  console.log(`[schedule] Item ${item.id}: proposed_date=${item.proposed_date} start=${item.start_time} end=${item.end_time} -> starts_at=${startsAtISO} ends_at=${endsAtISO}`);
+  console.log(`[schedule] Item ${item.id}: proposed_date=${item.proposed_date} start=${item.start_time} end=${item.end_time} -> starts_at=${startsAtISO} ends_at=${endsAtISO} override=${override}`);
 
-  // Check conflicts using the exact timestamps
-  const { data: conflicts } = await supabase
-    .from('sessions')
-    .select('id')
-    .neq('status', 'cancelled')
-    .or(`instructor_id.eq.${proposal.instructor_id},student_id.eq.${proposal.student_id}`)
-    .lt('starts_at', endsAtISO)
-    .gt('ends_at', startsAtISO)
-
-  if (conflicts && conflicts.length > 0) {
+  if (conflicts.length > 0 && !override) {
     return { session: null, conflict: true, error: 'Time slot conflict with existing session' };
   }
 
+  const didOverride = conflicts.length > 0 && override;
   const durationMinutes = item.duration_minutes || 120;
 
   const { data: session, error: sErr } = await supabase
@@ -161,9 +176,13 @@ async function createSessionFromItem(
       pickup_address: item.pickup_address,
       dropoff_address: item.dropoff_address,
       created_by: createdBy,
+      conflict_override: didOverride,
+      overridden_by: didOverride ? createdBy : null,
+      overridden_at: didOverride ? new Date().toISOString() : null,
     })
     .select()
     .single()
+
 
   if (sErr) {
     console.error(`[schedule] Failed to create session for item ${item.id}:`, sErr.message);
@@ -309,28 +328,68 @@ async function handleDecline(supabase: any, userId: string, userRole: string, pr
   })
 }
 
-async function handleFinalize(supabase: any, userId: string, userRole: string, proposalId: string, targetItemStatus: string) {
+async function handleFinalize(
+  supabase: any,
+  userId: string,
+  userRole: string,
+  proposalId: string,
+  targetItemStatus: string | string[],
+  opts: { override?: boolean } = {},
+) {
   if (!['admin', 'staff'].includes(userRole)) throw new Error('Only admins can finalize proposals')
+  const statuses = Array.isArray(targetItemStatus) ? targetItemStatus : [targetItemStatus]
+  const override = opts.override === true
+  const isAdminSchedule = Array.isArray(targetItemStatus)
 
   const { data: proposal } = await supabase.from('schedule_proposals').select('*').eq('id', proposalId).single()
   if (!proposal) throw new Error('Proposal not found')
+
+  if (isAdminSchedule && ['finalized', 'revised_and_finalized', 'auto_scheduled', 'declined'].includes(proposal.proposal_status)) {
+    throw new Error('This proposal can no longer be finalized')
+  }
 
   const { data: items } = await supabase
     .from('schedule_proposal_items')
     .select('*')
     .eq('proposal_id', proposalId)
-    .eq('item_status', targetItemStatus)
+    .in('item_status', statuses)
     .order('proposed_date', { ascending: true })
     .order('start_time', { ascending: true })
 
   if (!items || items.length === 0) throw new Error('No items to finalize')
+
+  // Admin flow: pre-check every date before creating anything, so nothing is
+  // half-scheduled when conflicts exist and no override was given.
+  if (isAdminSchedule && !override) {
+    const conflictDetails: any[] = []
+    for (const item of items) {
+      const { conflicts: found } = await findConflicts(supabase, item, proposal)
+      if (found.length > 0) {
+        conflictDetails.push({
+          item_id: item.id,
+          proposed_date: item.proposed_date,
+          start_time: item.start_time,
+          end_time: item.end_time,
+          conflicting_sessions: found.map((c: any) => ({ id: c.id, starts_at: c.starts_at, ends_at: c.ends_at, status: c.status })),
+        })
+      }
+    }
+    if (conflictDetails.length > 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        conflict_detected: true,
+        conflicts: conflictDetails,
+        total_items: items.length,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
 
   let scheduled = 0
   let conflicts = 0
   const createdSessions: any[] = []
 
   for (const item of items) {
-    const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId);
+    const { session, conflict, error } = await createSessionFromItem(supabase, item, proposal, userId, override);
 
     if (conflict || !session) {
       await supabase.from('schedule_proposal_items')
@@ -347,8 +406,9 @@ async function handleFinalize(supabase: any, userId: string, userRole: string, p
     createdSessions.push({ session, item })
   }
 
-  const finalStatus = targetItemStatus === 'proposed' ? 'revised_and_finalized' : 
+  const finalStatus = (!isAdminSchedule && targetItemStatus === 'proposed') ? 'revised_and_finalized' : 
     (conflicts > 0 && scheduled > 0 ? 'partially_finalized' : scheduled > 0 ? 'finalized' : 'conflict')
+
 
   await supabase.from('schedule_proposals')
     .update({ proposal_status: finalStatus, finalized_at: new Date().toISOString() })
