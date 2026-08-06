@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { profileFirstName, guardianFirstName } from "@/lib/nameUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

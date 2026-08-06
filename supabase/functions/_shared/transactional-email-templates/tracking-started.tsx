@@ -6,6 +6,7 @@ import { brand, SITE, SITE_URL, SUPPORT_PHONE } from './_shared.ts'
 
 interface Props {
   studentName?: string
+  guardianName?: string
   sessionDateLabel?: string
   sessionTimeLabel?: string
   intervalMinutes?: number
@@ -14,6 +15,7 @@ interface Props {
 
 const Email = ({
   studentName = 'the student',
+  guardianName,
   sessionDateLabel = '',
   sessionTimeLabel = '',
   intervalMinutes = 30,
@@ -25,6 +27,7 @@ const Email = ({
     <Body style={brand.main}>
       <Container style={brand.container}>
         <Heading style={brand.h1}>Live lesson tracking started</Heading>
+        <Text style={brand.text}>Hi {guardianName || 'there'},</Text>
         <Text style={brand.text}>
           The driving lesson for <strong>{studentName}</strong> is now in progress and live tracking is enabled.
         </Text>

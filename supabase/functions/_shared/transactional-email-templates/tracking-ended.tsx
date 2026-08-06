@@ -6,16 +6,18 @@ import { brand, SITE, SITE_URL, SUPPORT_PHONE } from './_shared.ts'
 
 interface Props {
   studentName?: string
+  guardianName?: string
   endedAtLabel?: string
 }
 
-const Email = ({ studentName = 'the student', endedAtLabel = 'just now' }: Props) => (
+const Email = ({ studentName = 'the student', guardianName, endedAtLabel = 'just now' }: Props) => (
   <Html>
     <Head />
     <Preview>Live lesson tracking has ended for {studentName}</Preview>
     <Body style={brand.main}>
       <Container style={brand.container}>
-        <Heading style={brand.h1}>Live tracking ended</Heading>
+        <Heading style={brand.h1}>Live lesson tracking ended</Heading>
+        <Text style={brand.text}>Hi {guardianName || 'there'},</Text>
         <Text style={brand.text}>
           Live tracking for <strong>{studentName}</strong>'s driving lesson has ended ({endedAtLabel}). No further updates will be sent.
         </Text>
