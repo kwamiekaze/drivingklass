@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle, Send } from "lucide-react";
+import { Calendar, FileText, Users, CheckCircle, Clock, Plus, XCircle, Send, AlertTriangle } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { CancelConfirmationModal } from "@/components/portal/CancelConfirmationModal";
 import { ProposalBuilder } from "@/components/portal/ProposalBuilder";
@@ -23,6 +23,7 @@ import { LightModeBackground } from "@/components/LightModeBackground";
 import { useToast } from "@/hooks/use-toast";
 import { StudentFullScheduleSection } from "@/components/portal/StudentFullScheduleSection";
 import { RoadTestResultModal } from "@/components/portal/RoadTestResultModal";
+import { PartialCompleteModal } from "@/components/portal/PartialCompleteModal";
 
 export default function InstructorDashboard() {
   return (
@@ -374,6 +375,7 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
   const { toast } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [roadTestOpen, setRoadTestOpen] = useState(false);
+  const [partialOpen, setPartialOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const isTesting = session.session_type === 'testing';
 
@@ -476,6 +478,16 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
               </Button>
               <Button
                 size="sm"
+                variant="outline"
+                className="gap-2 flex-1 sm:flex-initial min-h-[40px] border-amber-500/60 text-amber-700 dark:text-amber-300"
+                disabled={isLoading}
+                onClick={() => setPartialOpen(true)}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Mark Partially Complete
+              </Button>
+              <Button
+                size="sm"
                 variant="destructive"
                 className="gap-2 flex-1 sm:flex-initial min-h-[40px]"
                 onClick={() => setCancelOpen(true)}
@@ -487,6 +499,29 @@ function NeedingReportCard({ session, existingReport, onUpdate }: { session: Ses
           )}
         </div>
       </div>
+      <PartialCompleteModal
+        open={partialOpen}
+        onOpenChange={setPartialOpen}
+        studentName={getDisplayName(session.student, 'Student')}
+        scheduledMinutes={session.duration_minutes}
+        isLoading={isLoading}
+        onConfirm={async (reason, actualMinutes) => {
+          setIsLoading(true);
+          try {
+            const { error } = await supabase.rpc('partially_complete_session', {
+              _session_id: session.id,
+              _reason: reason,
+              _actual_minutes: actualMinutes,
+            } as any);
+            if (error) throw error;
+            toast({ title: "Marked Partially Complete", description: "The student has been notified and hours were credited." });
+            setPartialOpen(false);
+            onUpdate();
+          } catch (e: any) {
+            toast({ title: "Error", description: e.message || "Failed to update session", variant: "destructive" });
+          } finally { setIsLoading(false); }
+        }}
+      />
       <CancelConfirmationModal
         open={cancelOpen}
         onOpenChange={setCancelOpen}
