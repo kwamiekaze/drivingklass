@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { profileFirstName } from "@/lib/nameUtils";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent } from "@/components/ui/card";
@@ -220,7 +221,7 @@ function AdminScheduleContent() {
         .maybeSingle();
       const recipientEmail = (studentProfile as any)?.email;
       if (recipientEmail) {
-        const recipientName = (studentProfile as any)?.first_name || (studentProfile as any)?.full_name || 'there';
+        const recipientName = profileFirstName(studentProfile as any) || 'there';
         const dateLabel = format(startsAt, 'EEEE, MMMM d, yyyy');
         const timeLabel = format(startsAt, 'h:mm a');
         const pickupTimeLabel = formData.session_type === 'testing' && formData.pickup_time

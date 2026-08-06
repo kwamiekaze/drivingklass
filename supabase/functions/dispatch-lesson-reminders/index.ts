@@ -1,5 +1,6 @@
 // Cron-invoked: find upcoming sessions in 24h and 1h windows and email students.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { profileFirstName } from '../_shared/names.ts'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
@@ -51,10 +52,10 @@ Deno.serve(async (_req) => {
           recipientEmail: stu.email,
           idempotencyKey: `reminder-${s.id}-${w.kind}`,
           templateData: {
-            recipientName: stu.first_name || stu.full_name || '',
+            recipientName: profileFirstName(stu as any),
             dateLabel: date,
             timeLabel: time,
-            instructorName: inst?.first_name || inst?.full_name || '',
+            instructorName: profileFirstName(inst as any),
             pickupAddress: s.pickup_address || undefined,
             dropoffAddress: s.dropoff_address || undefined,
             durationMinutes: s.duration_minutes,

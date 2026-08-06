@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { firstNameFrom } from "../_shared/names.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -274,7 +275,7 @@ serve(async (req: Request): Promise<Response> => {
           templateName: "intake-converted",
           recipientEmail: email,
           idempotencyKey: `intake-converted-${profile.id}`,
-          templateData: { recipientName: first_name || sub.full_name || "" },
+          templateData: { recipientName: first_name || firstNameFrom(sub.full_name) },
         }),
       });
     } catch (e) {
@@ -291,7 +292,7 @@ serve(async (req: Request): Promise<Response> => {
           templateName: "update-addresses",
           recipientEmail: email,
           idempotencyKey: `update-addresses-${profile.id}`,
-          templateData: { recipientName: first_name || sub.full_name || "", profileUrl },
+          templateData: { recipientName: first_name || firstNameFrom(sub.full_name), profileUrl },
         }),
       });
     } catch (e) {

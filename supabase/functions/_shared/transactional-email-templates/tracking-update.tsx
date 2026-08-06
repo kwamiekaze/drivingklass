@@ -6,6 +6,7 @@ import { brand, SITE, SITE_URL, SUPPORT_PHONE } from './_shared.ts'
 
 interface Props {
   studentName?: string
+  guardianName?: string
   sessionStatus?: string
   lastUpdatedLabel?: string
   intervalMinutes?: number
@@ -14,6 +15,7 @@ interface Props {
 
 const Email = ({
   studentName = 'the student',
+  guardianName,
   sessionStatus = 'in progress',
   lastUpdatedLabel = 'just now',
   intervalMinutes = 30,
@@ -25,6 +27,7 @@ const Email = ({
     <Body style={brand.main}>
       <Container style={brand.container}>
         <Heading style={brand.h1}>Location update</Heading>
+        <Text style={brand.text}>Hi {guardianName || 'there'},</Text>
         <Text style={brand.text}>
           Here's the latest tracking update for <strong>{studentName}</strong>'s driving lesson.
         </Text>

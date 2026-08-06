@@ -1,5 +1,6 @@
 // Caller-authenticated function for staff/admin: sends intake-converted or intake-accepted emails.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { greetingName } from '../_shared/names.ts'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }
 
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       const prefs = (p.email_prefs as any) || {}
       if (prefs.intake_status === false) return new Response(JSON.stringify({ skip: 'pref off' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       recipientEmail = p.email
-      recipientName = recipientName || p.first_name || p.full_name || ''
+      recipientName = greetingName(recipientName, p.first_name, p.full_name)
     }
 
     const r = await fetch(`${url}/functions/v1/send-transactional-email`, {

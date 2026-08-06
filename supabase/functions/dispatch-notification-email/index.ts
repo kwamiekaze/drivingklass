@@ -1,6 +1,7 @@
 // Dispatch an email for a freshly inserted notification (if the user enabled it).
 // Called by a DB trigger via pg_net.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { greetingName, profileFirstName } from '../_shared/names.ts'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     const prefs = (profile.email_prefs as any) || {}
     if (prefs[prefKey] === false) return new Response(JSON.stringify({ skip: 'pref off' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    const recipientName = profile.first_name || profile.full_name || ''
+    const recipientName = profileFirstName(profile as any)
 
     let templateName = ''
     let templateData: Record<string, any> = { recipientName }
@@ -70,8 +71,8 @@ Deno.serve(async (req) => {
         audience: 'student',
         dateLabel: date,
         timeLabel: time,
-        instructorName: inst?.first_name || inst?.full_name || '',
-        studentName: stud?.first_name || stud?.full_name || '',
+        instructorName: profileFirstName(inst as any),
+        studentName: profileFirstName(stud as any),
         minutesCompleted: s.actual_minutes ?? s.duration_minutes ?? undefined,
         scheduledMinutes: s.duration_minutes ?? undefined,
         reason: s.partial_reason || undefined,
@@ -102,8 +103,8 @@ Deno.serve(async (req) => {
         dateLabel: date,
         timeLabel: time,
         durationMinutes: s.duration_minutes,
-        instructorName: inst?.first_name || inst?.full_name || '',
-        studentName: stud?.first_name || stud?.full_name || '',
+        instructorName: profileFirstName(inst as any),
+        studentName: profileFirstName(stud as any),
         pickupAddress: s.pickup_address || undefined,
         reason: s.cancellation_reason || undefined,
         cancelledBy: s.cancelled_by_role || undefined,
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
           .eq('id', notif.report_card_id).maybeSingle()
         if (rc) {
           const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', rc.instructor_id).maybeSingle()
-          templateData.instructorName = inst?.first_name || inst?.full_name || ''
+          templateData.instructorName = profileFirstName(inst as any)
           if (rc.is_public && rc.public_share_slug) {
             const siteUrl = Deno.env.get('SITE_URL') || 'https://drivingklass.com'
             templateData.publicUrl = `${siteUrl}/report/public/${rc.public_share_slug}`

@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
+import { profileFirstName, guardianFirstName } from "@/lib/nameUtils";
 import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
 import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 import { TIME_SPLIT_CATEGORIES, TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
@@ -442,8 +443,9 @@ function ReportCardFormContent() {
                 recipientEmail: guardianEmail,
                 idempotencyKey: `report-${savedId}-guardian`,
                 templateData: {
-                  recipientName: 'Guardian',
-                  instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
+                  recipientName: guardianFirstName(session.student as any),
+                  studentName: profileFirstName(session.student as any),
+                  instructorName: profileFirstName(session.instructor as any),
                   reportUrl: publicUrl,
                   publicUrl: publicSlug ? publicUrl : undefined,
                   accessCode: enablingPublic ? trimmedCode : undefined,

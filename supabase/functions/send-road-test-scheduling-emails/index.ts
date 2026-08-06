@@ -2,6 +2,7 @@
 // and log both sends to public.road_test_emails.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { profileFirstName } from '../_shared/names.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
@@ -44,6 +45,8 @@ Deno.serve(async (req) => {
   const name = (p: any) => p?.full_name || [p?.first_name, p?.last_name].filter(Boolean).join(' ') || 'there'
   const studentName = name(student)
   const instructorName = name(instructor)
+  const studentFirstName = profileFirstName(student as any)
+  const instructorFirstName = profileFirstName(instructor as any)
   const ddsLocation: string = session.dds_location
   const cityLabel = ddsLocation.split(' - ')[0] || ''
 
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
     results.student = await send(
       'road-test-scheduled-student',
       student.email,
-      { studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel },
+      { studentName: studentFirstName || studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel },
       'Your DrivingKlass Road Test — How to Schedule on DDS 2 GO',
     )
   } else {
@@ -115,7 +118,7 @@ Deno.serve(async (req) => {
     results.instructor = await send(
       'road-test-scheduled-instructor',
       instructor.email,
-      { instructorName, studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel, cityLabel },
+      { instructorName: instructorFirstName || instructorName, studentName, ddsLocation, dateLabel, timeLabel, pickupTimeLabel, cityLabel },
       `Road Test Scheduled: ${studentName} — ${dateLabel} ${timeLabel} ${cityLabel}`,
     )
   } else {
