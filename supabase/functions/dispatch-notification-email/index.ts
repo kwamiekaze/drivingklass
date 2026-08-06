@@ -1,6 +1,7 @@
 // Dispatch an email for a freshly inserted notification (if the user enabled it).
 // Called by a DB trigger via pg_net.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { greetingName, profileFirstName } from '../_shared/names.ts'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     const prefs = (profile.email_prefs as any) || {}
     if (prefs[prefKey] === false) return new Response(JSON.stringify({ skip: 'pref off' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    const recipientName = profile.first_name || profile.full_name || ''
+    const recipientName = profileFirstName(profile as any)
 
     let templateName = ''
     let templateData: Record<string, any> = { recipientName }
