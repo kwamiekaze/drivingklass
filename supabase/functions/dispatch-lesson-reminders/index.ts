@@ -1,5 +1,6 @@
 // Cron-invoked: find upcoming sessions in 24h and 1h windows and email students.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { profileFirstName } from '../_shared/names.ts'
 
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
