@@ -275,7 +275,7 @@ serve(async (req: Request): Promise<Response> => {
           templateName: "intake-converted",
           recipientEmail: email,
           idempotencyKey: `intake-converted-${profile.id}`,
-          templateData: { recipientName: first_name || sub.full_name || "" },
+          templateData: { recipientName: first_name || firstNameFrom(sub.full_name) },
         }),
       });
     } catch (e) {
@@ -292,7 +292,7 @@ serve(async (req: Request): Promise<Response> => {
           templateName: "update-addresses",
           recipientEmail: email,
           idempotencyKey: `update-addresses-${profile.id}`,
-          templateData: { recipientName: first_name || sub.full_name || "", profileUrl },
+          templateData: { recipientName: first_name || firstNameFrom(sub.full_name), profileUrl },
         }),
       });
     } catch (e) {
