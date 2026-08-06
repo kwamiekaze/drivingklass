@@ -308,8 +308,8 @@ export function ProposalBuilder({
                 recipientEmail: studentEmail,
                 idempotencyKey: `schedule-proposal-${proposal.id}`,
                 templateData: {
-                  recipientName: getDisplayName(studentProfile as any, ''),
-                  instructorName: instructorProfile ? getDisplayName(instructorProfile as any, 'Your Instructor') : undefined,
+                  recipientName: profileFirstName(studentProfile as any),
+                  instructorName: instructorProfile ? (profileFirstName(instructorProfile as any) || 'Your Instructor') : undefined,
                   noteToStudent: noteToStudent || undefined,
                   items: emailItems,
                   packageLabel: pkg.label,

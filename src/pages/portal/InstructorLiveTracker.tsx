@@ -23,7 +23,7 @@ interface SessionRow {
   ends_at: string;
   status: string;
   student_id: string;
-  student: { id: string; first_name: string | null; last_name: string | null; full_name: string | null; email: string | null; guardian_email: string | null } | null;
+  student: { id: string; first_name: string | null; last_name: string | null; full_name: string | null; email: string | null; guardian_email: string | null; guardian_name?: string | null } | null;
 }
 
 interface TrackingRow {
@@ -63,7 +63,7 @@ function InstructorLiveTrackerContent() {
     const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const { data: sessRows } = await supabase
       .from("sessions")
-      .select("id, starts_at, ends_at, status, student_id, student:profiles!sessions_student_id_fkey(id, first_name, last_name, full_name, email, guardian_email)")
+      .select("id, starts_at, ends_at, status, student_id, student:profiles!sessions_student_id_fkey(id, first_name, last_name, full_name, email, guardian_email, guardian_name)")
       .eq("instructor_id", user.id)
       .in("status", ["scheduled", "in_progress"])
       .gte("ends_at", nowMinus1h)
@@ -131,10 +131,10 @@ function SessionTrackerCard({
   reload: () => Promise<void>;
   toast: ReturnType<typeof useToast>["toast"];
 }) {
-  const studentName = session.student?.full_name
-    || [session.student?.first_name, session.student?.last_name].filter(Boolean).join(" ")
+  const studentName = profileFirstName(session.student as any)
     || session.student?.email
     || "Student";
+  const guardianName = guardianFirstName(session.student as any);
   const [guardianEmail, setGuardianEmail] = useState<string>(tracking?.guardian_email || session.student?.guardian_email || "");
   const [interval, setInterval] = useState<15 | 30 | 60>((tracking?.update_interval_minutes as any) || 30);
   const [permission, setPermission] = useState<"unknown" | "granted" | "denied">("unknown");
@@ -232,6 +232,7 @@ function SessionTrackerCard({
             idempotencyKey: `tracking-started-${inserted.id}`,
             templateData: {
               studentName,
+              guardianName,
               sessionDateLabel: format(new Date(session.starts_at), "MMM d, yyyy"),
               sessionTimeLabel: format(new Date(session.starts_at), "h:mm a"),
               intervalMinutes: interval,
@@ -265,7 +266,7 @@ function SessionTrackerCard({
             templateName: "tracking-ended",
             recipientEmail: tracking.guardian_email,
             idempotencyKey: `tracking-ended-${tracking.id}`,
-            templateData: { studentName, endedAtLabel: "just now" },
+            templateData: { studentName, guardianName, endedAtLabel: "just now" },
           },
         });
       } catch { /* non-fatal */ }

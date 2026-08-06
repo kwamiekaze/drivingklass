@@ -220,7 +220,7 @@ function AdminScheduleContent() {
         .maybeSingle();
       const recipientEmail = (studentProfile as any)?.email;
       if (recipientEmail) {
-        const recipientName = (studentProfile as any)?.first_name || (studentProfile as any)?.full_name || 'there';
+        const recipientName = profileFirstName(studentProfile as any) || 'there';
         const dateLabel = format(startsAt, 'EEEE, MMMM d, yyyy');
         const timeLabel = format(startsAt, 'h:mm a');
         const pickupTimeLabel = formData.session_type === 'testing' && formData.pickup_time
