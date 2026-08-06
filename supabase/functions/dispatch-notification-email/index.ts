@@ -71,8 +71,8 @@ Deno.serve(async (req) => {
         audience: 'student',
         dateLabel: date,
         timeLabel: time,
-        instructorName: inst?.first_name || inst?.full_name || '',
-        studentName: stud?.first_name || stud?.full_name || '',
+        instructorName: profileFirstName(inst as any),
+        studentName: profileFirstName(stud as any),
         minutesCompleted: s.actual_minutes ?? s.duration_minutes ?? undefined,
         scheduledMinutes: s.duration_minutes ?? undefined,
         reason: s.partial_reason || undefined,
@@ -103,8 +103,8 @@ Deno.serve(async (req) => {
         dateLabel: date,
         timeLabel: time,
         durationMinutes: s.duration_minutes,
-        instructorName: inst?.first_name || inst?.full_name || '',
-        studentName: stud?.first_name || stud?.full_name || '',
+        instructorName: profileFirstName(inst as any),
+        studentName: profileFirstName(stud as any),
         pickupAddress: s.pickup_address || undefined,
         reason: s.cancellation_reason || undefined,
         cancelledBy: s.cancelled_by_role || undefined,
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
           .eq('id', notif.report_card_id).maybeSingle()
         if (rc) {
           const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', rc.instructor_id).maybeSingle()
-          templateData.instructorName = inst?.first_name || inst?.full_name || ''
+          templateData.instructorName = profileFirstName(inst as any)
           if (rc.is_public && rc.public_share_slug) {
             const siteUrl = Deno.env.get('SITE_URL') || 'https://drivingklass.com'
             templateData.publicUrl = `${siteUrl}/report/public/${rc.public_share_slug}`
