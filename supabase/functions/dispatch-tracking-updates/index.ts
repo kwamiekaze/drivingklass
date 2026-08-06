@@ -3,6 +3,7 @@
 // Invoked by pg_cron every ~5 minutes.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { profileFirstName, guardianFirstName } from '../_shared/names.ts'
 
 const SITE_URL = 'https://drivingklass.com'
 
@@ -41,9 +42,10 @@ Deno.serve(async (req) => {
     const dueAt = lastMs + interval * 60_000
     if (Date.now() < dueAt) continue
 
-    // Look up student first name via profiles
-    const { data: sp } = await supabase.from('profiles').select('first_name, full_name').eq('id', r.student_id).maybeSingle()
-    const studentName = sp?.first_name || (sp?.full_name?.split(' ')?.[0]) || 'your student'
+    // Look up student first name + guardian name via profiles
+    const { data: sp } = await supabase.from('profiles').select('first_name, full_name, guardian_name').eq('id', r.student_id).maybeSingle()
+    const studentName = profileFirstName(sp as any) || 'your student'
+    const guardianName = guardianFirstName(sp as any)
 
     // Look up latest tracking snapshot for label
     const { data: t } = await supabase.from('session_tracking').select('last_location_at, tracking_token').eq('id', r.id).maybeSingle()
