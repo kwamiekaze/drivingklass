@@ -7,6 +7,7 @@ import { brand, SITE, SITE_URL, SUPPORT_PHONE } from './_shared.ts'
 interface Props {
   recipientName?: string
   instructorName?: string
+  studentName?: string
   reportUrl?: string
   dateLabel?: string
   accessCode?: string
@@ -14,8 +15,11 @@ interface Props {
   isGuardian?: boolean
 }
 
-const Email = ({ recipientName, instructorName, reportUrl, dateLabel, accessCode, publicUrl, isGuardian }: Props) => {
+const Email = ({ recipientName, instructorName, studentName, reportUrl, dateLabel, accessCode, publicUrl, isGuardian }: Props) => {
   const primaryUrl = publicUrl || reportUrl || `${SITE_URL}/login`
+  const subject = isGuardian
+    ? `a report card for ${studentName || 'your student'}`
+    : 'your report card'
   return (
     <Html>
       <Head />
@@ -25,10 +29,9 @@ const Email = ({ recipientName, instructorName, reportUrl, dateLabel, accessCode
           <Heading style={brand.h1}>Your report card is ready</Heading>
           <Text style={brand.text}>Hi {recipientName || 'there'},</Text>
           <Text style={brand.text}>
-            {instructorName || 'Your instructor'} just submitted {isGuardian ? 'a report card for your student' : 'your report card'}
+            {instructorName || 'Your instructor'} just submitted {subject}
             {dateLabel ? ` for the lesson on ${dateLabel}` : ''}. Tap the button below to open it.
           </Text>
-          <Button style={brand.button} href={primaryUrl}>Open report card</Button>
           {accessCode && (
             <Section style={{ marginTop: 16, marginBottom: 16, padding: 12, border: '1px dashed #c8a96a', borderRadius: 8 }}>
               <Text style={{ ...brand.text, margin: 0 }}>Access code (required to view):</Text>

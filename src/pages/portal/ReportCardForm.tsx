@@ -442,8 +442,9 @@ function ReportCardFormContent() {
                 recipientEmail: guardianEmail,
                 idempotencyKey: `report-${savedId}-guardian`,
                 templateData: {
-                  recipientName: 'Guardian',
-                  instructorName: (session.instructor as any)?.first_name || (session.instructor as any)?.full_name || '',
+                  recipientName: guardianFirstName(session.student as any),
+                  studentName: profileFirstName(session.student as any),
+                  instructorName: profileFirstName(session.instructor as any),
                   reportUrl: publicUrl,
                   publicUrl: publicSlug ? publicUrl : undefined,
                   accessCode: enablingPublic ? trimmedCode : undefined,
