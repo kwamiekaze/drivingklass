@@ -30,6 +30,7 @@ import { RoadTestSentEmails } from "./RoadTestSentEmails";
 import { PartialCompleteModal } from "./PartialCompleteModal";
 import { SessionContactActions } from "./SessionContactActions";
 import { SessionSkillChips } from "./SessionSkillChips";
+import { usePreviousAccessCode } from "@/hooks/usePreviousAccessCode";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -46,6 +47,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const { toast } = useToast();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
+  const { previousCode: previousStudentCode } = usePreviousAccessCode(sessionDetails?.student_id);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -699,6 +701,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                     <div className="p-3 bg-muted/40 rounded-lg space-y-2">
                       <p className="text-sm font-medium">Skill Summary</p>
                       <SessionSkillChips studentId={sessionDetails.student_id} />
+                      {previousStudentCode && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Previous code for this student:{' '}
+                          <span className="font-mono font-semibold text-foreground">{previousStudentCode}</span>
+                        </p>
+                      )}
                     </div>
                   )}
 
