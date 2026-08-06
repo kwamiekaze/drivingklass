@@ -61,12 +61,14 @@ export function TimeSplitChart({ entries, className }: Props) {
           />
         ))}
       </div>
-      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
         {valid.map(e => (
-          <div key={e.key} className="flex items-center gap-1.5 text-xs">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLORS[e.key] || '#888' }} />
-            <span className="text-foreground truncate">{e.label}</span>
-            <span className="ml-auto text-muted-foreground">{e.minutes}m · {pctByKey[e.key]}%</span>
+          <div key={e.key} className="flex items-center gap-2 min-h-[26px] text-[11px] sm:text-xs">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: COLORS[e.key] || '#888' }} />
+            <span className="text-foreground min-w-0 flex-1 leading-tight [text-wrap:balance]">{e.label}</span>
+            <span className="shrink-0 whitespace-nowrap tabular-nums text-muted-foreground">
+              {e.minutes}m · {pctByKey[e.key]}%
+            </span>
           </div>
         ))}
       </div>
