@@ -2406,6 +2406,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          actual_minutes: number | null
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
           cancellation_fee_waived: boolean
@@ -2431,6 +2432,7 @@ export type Database = {
           note_for_student: string | null
           overridden_at: string | null
           overridden_by: string | null
+          partial_reason: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2441,6 +2443,7 @@ export type Database = {
           suppress_student_notification: boolean
         }
         Insert: {
+          actual_minutes?: number | null
           cancel_penalty_applied?: boolean
           cancel_penalty_hours?: number
           cancellation_fee_waived?: boolean
@@ -2466,6 +2469,7 @@ export type Database = {
           note_for_student?: string | null
           overridden_at?: string | null
           overridden_by?: string | null
+          partial_reason?: string | null
           pickup_address?: string | null
           pickup_time?: string | null
           report_card_id?: string | null
@@ -2476,6 +2480,7 @@ export type Database = {
           suppress_student_notification?: boolean
         }
         Update: {
+          actual_minutes?: number | null
           cancel_penalty_applied?: boolean
           cancel_penalty_hours?: number
           cancellation_fee_waived?: boolean
@@ -2501,6 +2506,7 @@ export type Database = {
           note_for_student?: string | null
           overridden_at?: string | null
           overridden_by?: string | null
+          partial_reason?: string | null
           pickup_address?: string | null
           pickup_time?: string | null
           report_card_id?: string | null
@@ -2664,6 +2670,7 @@ export type Database = {
         | {
             Args: { _session_id: string }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -2689,6 +2696,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -2708,6 +2716,7 @@ export type Database = {
         | {
             Args: { _override_conflicts: boolean; _session_id: string }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -2733,6 +2742,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -2764,6 +2774,7 @@ export type Database = {
       cancel_session: {
         Args: { _reason: string; _session_id: string }
         Returns: {
+          actual_minutes: number | null
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
           cancellation_fee_waived: boolean
@@ -2789,6 +2800,7 @@ export type Database = {
           note_for_student: string | null
           overridden_at: string | null
           overridden_by: string | null
+          partial_reason: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2829,6 +2841,7 @@ export type Database = {
       complete_session: {
         Args: { _session_id: string; _via?: string }
         Returns: {
+          actual_minutes: number | null
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
           cancellation_fee_waived: boolean
@@ -2854,6 +2867,7 @@ export type Database = {
           note_for_student: string | null
           overridden_at: string | null
           overridden_by: string | null
+          partial_reason: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
@@ -2906,6 +2920,7 @@ export type Database = {
               _student_id: string
             }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -2931,6 +2946,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -2956,6 +2972,7 @@ export type Database = {
               _student_id: string
             }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -2981,6 +2998,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -3006,6 +3024,7 @@ export type Database = {
               _student_id: string
             }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -3031,6 +3050,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -3056,6 +3076,7 @@ export type Database = {
               _student_id: string
             }
             Returns: {
+              actual_minutes: number | null
               cancel_penalty_applied: boolean
               cancel_penalty_hours: number
               cancellation_fee_waived: boolean
@@ -3081,6 +3102,7 @@ export type Database = {
               note_for_student: string | null
               overridden_at: string | null
               overridden_by: string | null
+              partial_reason: string | null
               pickup_address: string | null
               pickup_time: string | null
               report_card_id: string | null
@@ -3288,18 +3310,21 @@ export type Database = {
       get_session_details: {
         Args: { p_session_id: string }
         Returns: {
+          actual_minutes: number
           cancellation_reason: string
           completed: boolean
           completed_at: string
           dropoff_address: string
           duration_minutes: number
           ends_at: string
+          guardian_name: string
           guardian_phone: string
           instructor_email: string
           instructor_id: string
           instructor_name: string
           note_for_instructor: string
           note_for_student: string
+          partial_reason: string
           pickup_address: string
           report_card_id: string
           session_id: string
@@ -3368,6 +3393,52 @@ export type Database = {
         }
         Returns: number
       }
+      partially_complete_session: {
+        Args: { _actual_minutes?: number; _reason: string; _session_id: string }
+        Returns: {
+          actual_minutes: number | null
+          cancel_penalty_applied: boolean
+          cancel_penalty_hours: number
+          cancellation_fee_waived: boolean
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          conflict_override: boolean
+          created_at: string
+          created_by: string | null
+          dds_location: string | null
+          dropoff_address: string | null
+          duration_minutes: number
+          ends_at: string
+          hours_counted: boolean
+          hours_deducted_at: string | null
+          id: string
+          instructor_id: string
+          note_for_instructor: string | null
+          note_for_student: string | null
+          overridden_at: string | null
+          overridden_by: string | null
+          partial_reason: string | null
+          pickup_address: string | null
+          pickup_time: string | null
+          report_card_id: string | null
+          session_type: string
+          starts_at: string
+          status: string
+          student_id: string
+          suppress_student_notification: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -3435,6 +3506,7 @@ export type Database = {
           _session_id: string
         }
         Returns: {
+          actual_minutes: number | null
           cancel_penalty_applied: boolean
           cancel_penalty_hours: number
           cancellation_fee_waived: boolean
@@ -3460,6 +3532,7 @@ export type Database = {
           note_for_student: string | null
           overridden_at: string | null
           overridden_by: string | null
+          partial_reason: string | null
           pickup_address: string | null
           pickup_time: string | null
           report_card_id: string | null
