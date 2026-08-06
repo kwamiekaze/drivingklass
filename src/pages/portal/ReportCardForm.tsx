@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Session, ReportCard, RATING_CATEGORIES, ReportCardStatus } from "@/types/portal";
+import { profileFirstName, guardianFirstName } from "@/lib/nameUtils";
 import { SkillHighlightsEditor, type SkillHighlightItem } from "@/components/portal/SkillHighlightsEditor";
 import { SKILL_KEYS } from "@/lib/reportCardGraphData";
 import { TIME_SPLIT_CATEGORIES, TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";

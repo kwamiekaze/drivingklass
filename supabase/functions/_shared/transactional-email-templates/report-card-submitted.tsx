@@ -32,6 +32,7 @@ const Email = ({ recipientName, instructorName, studentName, reportUrl, dateLabe
             {instructorName || 'Your instructor'} just submitted {subject}
             {dateLabel ? ` for the lesson on ${dateLabel}` : ''}. Tap the button below to open it.
           </Text>
+          <Button style={brand.button} href={primaryUrl}>Open report card</Button>
           {accessCode && (
             <Section style={{ marginTop: 16, marginBottom: 16, padding: 12, border: '1px dashed #c8a96a', borderRadius: 8 }}>
               <Text style={{ ...brand.text, margin: 0 }}>Access code (required to view):</Text>
