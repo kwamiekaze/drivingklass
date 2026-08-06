@@ -27,6 +27,10 @@ import { FullCalendarView, CalendarEvent, CalendarViewMode } from "./FullCalenda
 import { LatestReportSnapshot } from "./LatestReportSnapshot";
 import { DdsLocationPicker } from "./DdsLocationPicker";
 import { RoadTestSentEmails } from "./RoadTestSentEmails";
+import { PartialCompleteModal } from "./PartialCompleteModal";
+import { SessionContactActions } from "./SessionContactActions";
+import { SessionSkillChips } from "./SessionSkillChips";
+import { usePreviousAccessCode } from "@/hooks/usePreviousAccessCode";
 
 interface SessionCalendarProps {
   sessions: Session[];
@@ -43,10 +47,12 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const { toast } = useToast();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
+  const { previousCode: previousStudentCode } = usePreviousAccessCode(sessionDetails?.student_id);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [partialDialogOpen, setPartialDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [noteForStudent, setNoteForStudent] = useState("");
@@ -459,6 +465,29 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     if (isStaffOrAdmin) return true;
     return false;
   };
+  const canPartialComplete = (session: Session) => canComplete(session);
+
+  const handlePartialComplete = async (reason: string, actualMinutes: number) => {
+    if (!selectedSession) return;
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc('partially_complete_session', {
+        _session_id: selectedSession.id,
+        _reason: reason,
+        _actual_minutes: actualMinutes,
+      } as any);
+      if (error) throw error;
+      toast({ title: "Marked Partially Complete", description: "The student has been notified and hours were credited." });
+      setPartialDialogOpen(false);
+      setSelectedSession(null);
+      onSessionUpdate?.();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to update session", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const canGrade = (session: Session) => {
     if (session.session_type === 'testing') return false;
     if (session.report_card_id) return false;
@@ -471,6 +500,7 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
   const getStatusBadge = (session: Session) => {
     switch (session.status) {
       case 'completed': return <Badge className="bg-green-500 gap-1"><CheckCircle className="h-3 w-3" />Completed</Badge>;
+      case 'partially_completed': return <Badge className="bg-amber-500 text-white gap-1"><AlertTriangle className="h-3 w-3" />Partially Complete</Badge>;
       case 'cancelled': return <Badge variant="secondary" className="bg-gray-500 text-white gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
       case 'pending': return <Badge variant="outline" className="border-2 border-dashed border-amber-500 text-amber-700 dark:text-amber-300 gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
       default: return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Scheduled</Badge>;
@@ -645,13 +675,54 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                             <a href={`tel:${sessionDetails.student_phone}`} className="font-medium text-primary hover:underline">{sessionDetails.student_phone}</a>
                           </div>
                         )}
-                        {sessionDetails.guardian_phone && (
+                        {(sessionDetails.guardian_phone || sessionDetails.guardian_name) && (
                           <div>
                             <p className="text-xs text-muted-foreground">Guardian/Emergency</p>
-                            <a href={`tel:${sessionDetails.guardian_phone}`} className="font-medium text-primary hover:underline">{sessionDetails.guardian_phone}</a>
+                            {sessionDetails.guardian_name && (
+                              <p className="font-medium text-sm">{sessionDetails.guardian_name}</p>
+                            )}
+                            {sessionDetails.guardian_phone && (
+                              <a href={`tel:${sessionDetails.guardian_phone}`} className="font-medium text-primary hover:underline">{sessionDetails.guardian_phone}</a>
+                            )}
                           </div>
                         )}
                       </div>
+                      {(isStaffOrAdmin || userRole === 'instructor') && (
+                        <SessionContactActions
+                          studentPhone={sessionDetails.student_phone}
+                          guardianPhone={sessionDetails.guardian_phone}
+                          className="pt-1"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id && (
+                    <div className="p-3 bg-muted/40 rounded-lg space-y-2">
+                      <p className="text-sm font-medium">Skill Summary</p>
+                      <SessionSkillChips studentId={sessionDetails.student_id} />
+                      {previousStudentCode && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Previous code for this student:{' '}
+                          <span className="font-mono font-semibold text-foreground">{previousStudentCode}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {sessionDetails.status === 'partially_completed' && (
+                    <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                      <p className="text-sm font-medium flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                        <AlertTriangle className="h-4 w-4" />Partially Complete
+                      </p>
+                      {typeof sessionDetails.actual_minutes === 'number' && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {sessionDetails.actual_minutes} of {sessionDetails.duration_minutes} minutes completed
+                        </p>
+                      )}
+                      {sessionDetails.partial_reason && (
+                        <p className="text-sm text-muted-foreground mt-1">{sessionDetails.partial_reason}</p>
+                      )}
                     </div>
                   )}
 
@@ -800,6 +871,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                         <CheckCircle className="h-4 w-4" />Mark Completed
                       </Button>
                     )}
+                    {canPartialComplete(selectedSession) && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setPartialDialogOpen(true)}
+                        className="flex-1 min-h-[44px] gap-2 border-amber-500/60 text-amber-700 dark:text-amber-300"
+                      >
+                        <AlertTriangle className="h-4 w-4" />Mark Partially Complete
+                      </Button>
+                    )}
                     {isStaffOrAdmin && (
                       <Button variant="outline" onClick={() => openEditDialog(selectedSession)} className="flex-1 min-h-[44px] gap-2">
                         <Pencil className="h-4 w-4" />Edit Session
@@ -818,6 +898,15 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
                   </div>
 
                   {/* Latest Report Snapshot for coaching - admin/instructor only */}
+                  <PartialCompleteModal
+                    open={partialDialogOpen}
+                    onOpenChange={setPartialDialogOpen}
+                    studentName={sessionDetails.student_name || undefined}
+                    scheduledMinutes={selectedSession.duration_minutes}
+                    isLoading={isLoading}
+                    onConfirm={handlePartialComplete}
+                  />
+
                   {(isStaffOrAdmin || userRole === 'instructor') && sessionDetails.student_id && (
                     <LatestReportSnapshot
                       studentId={sessionDetails.student_id}
@@ -1090,6 +1179,7 @@ function generateTimeOptions() {
 
 function getCalendarColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500/20 text-red-700 dark:text-red-300";
+  if (session.status === 'partially_completed') return "bg-amber-500/25 text-amber-800 dark:text-amber-200";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500/20 text-green-700 dark:text-green-300";
   if (session.status === 'pending') return "bg-transparent text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
@@ -1098,6 +1188,7 @@ function getCalendarColor(session: Session): string {
 
 function getDotColor(session: Session): string {
   if (session.status === 'cancelled') return "bg-red-500";
+  if (session.status === 'partially_completed') return "bg-amber-500";
   if (session.status === 'completed' || session.report_card_id) return "bg-green-500";
   if (session.status === 'pending') return "bg-amber-400 ring-2 ring-amber-500";
   if (session.session_type === 'testing') return "bg-amber-500";

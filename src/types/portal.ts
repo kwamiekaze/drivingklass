@@ -51,8 +51,10 @@ export interface Session {
   instructor_id: string;
   starts_at: string;
   ends_at: string;
-  status: 'scheduled' | 'cancelled' | 'completed' | 'pending';
+  status: 'scheduled' | 'cancelled' | 'completed' | 'pending' | 'partially_completed';
   session_type: SessionType;
+  partial_reason?: string | null;
+  actual_minutes?: number | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancelled_by_role: 'student' | 'instructor' | 'staff' | 'admin' | null;
@@ -91,7 +93,7 @@ export interface SessionDetails {
   starts_at: string;
   ends_at: string;
   duration_minutes: number;
-  status: 'scheduled' | 'cancelled' | 'completed' | 'pending';
+  status: 'scheduled' | 'cancelled' | 'completed' | 'pending' | 'partially_completed';
   student_id: string;
   instructor_id: string;
   student_name: string;
@@ -99,7 +101,10 @@ export interface SessionDetails {
   student_email: string | null;
   instructor_email: string | null;
   student_phone: string | null;
+  guardian_name: string | null;
   guardian_phone: string | null;
+  partial_reason: string | null;
+  actual_minutes: number | null;
   note_for_student: string | null;
   note_for_instructor: string | null;
   cancellation_reason: string | null;

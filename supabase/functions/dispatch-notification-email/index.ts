@@ -15,6 +15,7 @@ const TYPE_TO_PREF: Record<string, string> = {
   session_cancelled: 'lesson_cancelled',
   report_card: 'report_card',
   report_card_posted: 'report_card',
+  session_partially_completed: 'lesson_scheduled',
 }
 
 function fmtDateTime(iso: string) {
@@ -52,7 +53,30 @@ Deno.serve(async (req) => {
     let templateName = ''
     let templateData: Record<string, any> = { recipientName }
 
-    if (prefKey === 'lesson_scheduled' || prefKey === 'lesson_cancelled') {
+    const isPartial = notif.type === 'session_partially_completed'
+
+    if (isPartial) {
+      if (!notif.session_id) return new Response(JSON.stringify({ skip: 'no session' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const { data: s } = await supabase.from('sessions').select('*').eq('id', notif.session_id).maybeSingle()
+      if (!s) return new Response(JSON.stringify({ skip: 'session missing' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      // Only the student gets the partially-complete email.
+      if (notif.user_id !== s.student_id) return new Response(JSON.stringify({ skip: 'not student' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const { date, time } = fmtDateTime(s.starts_at)
+      const { data: inst } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.instructor_id).maybeSingle()
+      const { data: stud } = await supabase.from('profiles').select('first_name,full_name').eq('id', s.student_id).maybeSingle()
+      templateName = 'lesson-partially-completed'
+      templateData = {
+        ...templateData,
+        audience: 'student',
+        dateLabel: date,
+        timeLabel: time,
+        instructorName: inst?.first_name || inst?.full_name || '',
+        studentName: stud?.first_name || stud?.full_name || '',
+        minutesCompleted: s.actual_minutes ?? s.duration_minutes ?? undefined,
+        scheduledMinutes: s.duration_minutes ?? undefined,
+        reason: s.partial_reason || undefined,
+      }
+    } else if (prefKey === 'lesson_scheduled' || prefKey === 'lesson_cancelled') {
       if (!notif.session_id) return new Response(JSON.stringify({ skip: 'no session' }), { status: 200 })
       const { data: s } = await supabase.from('sessions').select('*').eq('id', notif.session_id).maybeSingle()
       if (!s) return new Response(JSON.stringify({ skip: 'session missing' }), { status: 200 })
