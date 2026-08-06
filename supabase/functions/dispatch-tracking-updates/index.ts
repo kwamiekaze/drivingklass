@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
           idempotencyKey: `tracking-update-${r.id}-${Math.floor(Date.now() / 60000)}`,
           templateData: {
             studentName,
+            guardianName,
             sessionStatus: sess.status,
             lastUpdatedLabel,
             intervalMinutes: interval,
