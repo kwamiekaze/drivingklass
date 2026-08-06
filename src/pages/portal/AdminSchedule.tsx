@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { profileFirstName } from "@/lib/nameUtils";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent } from "@/components/ui/card";
