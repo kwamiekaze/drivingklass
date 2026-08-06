@@ -441,8 +441,8 @@ async function handleFinalize(
   // Send scheduled-lesson emails to both student and instructor for each newly created session
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const studentName = studentProfile?.first_name || studentProfile?.full_name || ''
-  const instructorName = instructorProfile?.first_name || instructorProfile?.full_name || ''
+  const studentName = profileFirstName(studentProfile as any)
+  const instructorName = profileFirstName(instructorProfile as any)
   const studentEmailOn = (studentProfile?.email_prefs as any)?.lesson_scheduled !== false
   const instructorEmailOn = (instructorProfile?.email_prefs as any)?.lesson_scheduled !== false
 
