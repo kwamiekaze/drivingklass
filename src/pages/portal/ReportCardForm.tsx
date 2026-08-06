@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { usePreviousAccessCode } from "@/hooks/usePreviousAccessCode";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -94,6 +95,7 @@ function ReportCardFormContent() {
   const [shareShowGraph, setShareShowGraph] = useState<boolean>(false);
   const [shareSendToGuardian, setShareSendToGuardian] = useState<boolean>(false);
   const [guardianEmail, setGuardianEmail] = useState<string>("");
+  const { previousCode } = usePreviousAccessCode(session?.student_id, id);
 
   // Time spent during lesson (minutes per category)
   const [includeTimeSpent, setIncludeTimeSpent] = useState<boolean>(false);
@@ -884,6 +886,22 @@ function ReportCardFormContent() {
               />
               {shareAccessCode.trim().length > 0 && shareAccessCode.trim().length < 4 && (
                 <p className="text-[11px] text-red-500">Must be at least 4 characters.</p>
+              )}
+              {previousCode && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Previous code for this student: <span className="font-mono font-semibold text-foreground">{previousCode}</span>
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => setShareAccessCode(previousCode)}
+                  >
+                    Use previous code
+                  </Button>
+                </div>
               )}
             </div>
 
