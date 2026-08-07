@@ -153,7 +153,7 @@ export default function RoadTestResultView() {
 
           // Mark viewed when the owning student opens their road test report
           // (the RPC re-enforces this server-side; staff previews never count).
-          const rcId = reportCardId || (await getReportCardIdForSession(sessionId));
+          const rcId = reportCardId || viewedReportCardId;
           if (rcId && user.id === result.student_id) {
             supabase
               .rpc("mark_report_card_viewed", { p_report_card_id: rcId, p_via: "student" })
