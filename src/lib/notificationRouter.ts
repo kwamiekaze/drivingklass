@@ -6,6 +6,19 @@ interface ResolvedRoute {
 }
 
 /**
+ * Some historic notifications stored a link that only makes sense for one role
+ * (e.g. '/instructor' on a student's row). Reject any link whose role prefix
+ * doesn't match the current viewer so we never navigate to a 404 / denied page.
+ */
+function isLinkAllowedForRole(link: string, role: UserRole | null): boolean {
+  const isStaff = role === "admin" || role === "staff";
+  if (link.startsWith("/admin")) return isStaff;
+  if (link.startsWith("/instructor")) return role === "instructor" || isStaff;
+  if (link.startsWith("/student")) return role === "student" || isStaff;
+  return true;
+}
+
+/**
  * Resolves a notification to the correct route based on type, entity, and user role
  */
 export function resolveNotificationRoute(
@@ -14,27 +27,28 @@ export function resolveNotificationRoute(
 ): ResolvedRoute {
   const { type, session_id, report_card_id, link, metadata } = notification;
 
-  // If there's a custom link, prefer it
-  if (link) {
+  // Prefer a stored link, but only when it's valid for this role
+  if (link && isLinkAllowedForRole(link, userRole)) {
     return { path: link };
   }
 
   // Get the base dashboard path for the role
   const dashboardPath = getDashboardPath(userRole);
+  const isStaff = userRole === "admin" || userRole === "staff";
 
   // Route based on notification type
   switch (type) {
     case 'report_card':
     case 'report_card_posted':
+    case 'report_card_viewed':
       if (report_card_id) {
-        // Route through splash for student/instructor, direct for admin/staff
-        if (userRole === 'student' || userRole === 'instructor') {
+        // Route through splash for the student, direct for everyone else
+        if (userRole === 'student') {
           return { path: `/report-cards/open/${report_card_id}` };
         }
         return { path: `/report-cards/${report_card_id}` };
       }
-      // Fallback to reports tab
-      if (userRole === 'admin' || userRole === 'staff') {
+      if (isStaff) {
         return { path: '/admin/report-cards' };
       }
       return { path: dashboardPath };
@@ -44,32 +58,55 @@ export function resolveNotificationRoute(
       if (report_card_id) {
         return { path: `/report-cards/${report_card_id}`, params: { focus: 'feedback' } };
       }
-      if (userRole === 'admin' || userRole === 'staff') {
+      if (isStaff) {
         return { path: '/admin/feedback' };
       }
       return { path: dashboardPath };
 
     case 'session_created':
     case 'session_scheduled':
+    case 'session_assigned':
     case 'session_cancelled':
     case 'session_rescheduled':
     case 'session_completed':
+    case 'session_partially_completed':
+    case 'session_updated':
     case 'schedule':
-      // For session notifications, route to schedule/calendar
-      if (userRole === 'admin' || userRole === 'staff') {
-        return { 
+      if (isStaff) {
+        return {
           path: '/admin/schedule',
-          params: session_id ? { sessionId: session_id } : undefined
+          params: session_id ? { sessionId: session_id } : undefined,
         };
       }
-      // Students and instructors go to their dashboard (which has calendar)
-      return { path: dashboardPath };
+      if (userRole === 'instructor') {
+        return {
+          path: '/instructor/schedule',
+          params: session_id ? { sessionId: session_id } : undefined,
+        };
+      }
+      // Students land on their dashboard calendar, focused on the session
+      return {
+        path: dashboardPath,
+        params: session_id ? { sessionId: session_id } : undefined,
+      };
+
+    case 'proposal':
+    case 'proposal_created':
+    case 'proposal_accepted':
+    case 'proposal_declined':
+    case 'proposal_edit_requested': {
+      const proposalId = (metadata as Record<string, unknown>)?.proposal_id as string | undefined;
+      if (isStaff || userRole === 'instructor') {
+        return { path: '/admin/proposals', params: proposalId ? { focus: proposalId } : undefined };
+      }
+      return { path: '/student/proposals', params: proposalId ? { focus: proposalId } : undefined };
+    }
 
     case 'approval':
-      // Only admin/staff should get approval notifications
-      if (userRole === 'admin' || userRole === 'staff') {
+      // Admin/staff get the approvals queue; a student's own approval goes home
+      if (isStaff) {
         const userId = (metadata as Record<string, unknown>)?.user_id as string | undefined;
-        return { 
+        return {
           path: '/admin/approvals',
           params: userId ? { focus: userId } : undefined
         };
@@ -77,17 +114,20 @@ export function resolveNotificationRoute(
       return { path: dashboardPath };
 
     case 'rejection':
-      return { path: '/rejected' };
+      return { path: userRole === 'student' ? '/rejected' : dashboardPath };
 
-    case 'intake_submitted':
-      // Admin/staff sees this in approvals
-      if (userRole === 'admin' || userRole === 'staff') {
-        return { path: '/admin/approvals' };
+    case 'intake_submitted': {
+      const studentId = (metadata as Record<string, unknown>)?.user_id as string | undefined;
+      if (isStaff) {
+        return { path: '/admin/approvals', params: studentId ? { focus: studentId } : undefined };
       }
-      return { path: dashboardPath };
+      return { path: userRole === 'student' ? '/profile' : dashboardPath };
+    }
 
     case 'message':
-      // Future: Route to messages/chat when implemented
+      if (isStaff) {
+        return { path: '/admin/messages' };
+      }
       return { path: dashboardPath };
 
     case 'system':

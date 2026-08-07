@@ -110,6 +110,7 @@ export default function RoadTestResultView() {
 
         // Get report_card for sharing state
         const reportCardId = session?.report_card_id || null;
+        let resolvedReportCardId: string | null = reportCardId;
         let sharingState = { isPublic: false, publicSlug: null as string | null };
         if (reportCardId) {
           const { data: rcRow } = await supabase
@@ -131,6 +132,7 @@ export default function RoadTestResultView() {
             .eq("session_id", sessionId)
             .single();
           if (rcRow) {
+            resolvedReportCardId = rcRow.id;
             sharingState = {
               isPublic: rcRow.is_public || false,
               publicSlug: rcRow.public_share_slug || null,
@@ -145,11 +147,22 @@ export default function RoadTestResultView() {
             session_ends_at: session?.ends_at || null,
             student_name: getName(studentRes.data),
             instructor_name: getName(instrRes.data),
-            report_card_id: reportCardId || null,
+            report_card_id: resolvedReportCardId,
           });
           setSessionNumber(num);
           setIsPublic(sharingState.isPublic);
           setPublicSlug(sharingState.publicSlug);
+
+          // Mark viewed when the owning student opens their road test report
+          // (the RPC re-enforces this server-side; staff previews never count).
+          const rcId = resolvedReportCardId;
+          if (rcId && user.id === result.student_id) {
+            supabase
+              .rpc("mark_report_card_viewed", { p_report_card_id: rcId, p_via: "student" })
+              .then(({ error: rpcErr }) => {
+                if (rpcErr) console.warn("mark_report_card_viewed failed", rpcErr);
+              }, () => {});
+          }
         }
       } catch (err) {
         console.error("Error loading road test result:", err);

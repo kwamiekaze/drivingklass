@@ -31,7 +31,7 @@ interface PortalLayoutProps {
 
 export function PortalLayout({ children }: PortalLayoutProps) {
   const { profile, role, signOut } = usePortalAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, hasMore, loadingMore, loadMore } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -110,8 +110,11 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 sm:w-80 bg-popover border z-50">
-                <DropdownMenuLabel className="flex justify-between items-center">
+              <DropdownMenuContent
+                align="end"
+                className="w-[min(92vw,20rem)] bg-popover border z-50 p-0 flex flex-col max-h-[min(70vh,600px)]"
+              >
+                <DropdownMenuLabel className="flex justify-between items-center gap-2 shrink-0 sticky top-0 bg-popover border-b px-3 py-2 z-10">
                   <span className="text-sm">{t('common.notifications')}</span>
                   {unreadCount > 0 && (
                     <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
@@ -119,41 +122,65 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     </Button>
                   )}
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground text-sm">
-                    {t('common.noNotifications')}
-                  </div>
-                ) : (
-                  notifications.slice(0, 5).map((notif) => {
-                    const handleNotificationClick = () => {
-                      // Mark as read immediately (optimistic)
-                      markAsRead(notif.id);
-                      
-                      // Resolve the route based on notification type and user role
-                      const resolved = resolveNotificationRoute(notif, role as UserRole);
-                      const targetUrl = buildNotificationUrl(resolved);
-                      navigate(targetUrl);
-                    };
+                <div
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      {t('common.noNotifications')}
+                    </div>
+                  ) : (
+                    <>
+                      {notifications.map((notif) => {
+                        const handleNotificationClick = () => {
+                          // Mark as read immediately (optimistic)
+                          markAsRead(notif.id);
 
-                    return (
-                      <DropdownMenuItem 
-                        key={notif.id}
-                        onClick={handleNotificationClick}
-                        className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
-                      >
-                        <div className="flex items-center gap-2 w-full">
-                          <span className="font-medium text-sm truncate flex-1">{notif.title}</span>
-                          {!notif.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                          // Resolve the route based on notification type and user role
+                          const resolved = resolveNotificationRoute(notif, role as UserRole);
+                          const targetUrl = buildNotificationUrl(resolved);
+                          navigate(targetUrl);
+                        };
+
+                        return (
+                          <DropdownMenuItem
+                            key={notif.id}
+                            onClick={handleNotificationClick}
+                            className={cn("flex flex-col items-start gap-1 p-3 cursor-pointer", !notif.read && "bg-muted/50")}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <span className="font-medium text-sm truncate flex-1">{notif.title}</span>
+                              {!notif.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                            </div>
+                            <span className="text-xs text-muted-foreground line-clamp-2">{notif.message}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(notif.created_at), 'MMM d, h:mm a')}
+                            </span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      {hasMore && (
+                        <div className="p-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs"
+                            disabled={loadingMore}
+                            onSelect={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              loadMore();
+                            }}
+                          >
+                            {loadingMore ? 'Loading…' : 'Load more'}
+                          </Button>
                         </div>
-                        <span className="text-xs text-muted-foreground line-clamp-2">{notif.message}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(notif.created_at), 'MMM d, h:mm a')}
-                        </span>
-                      </DropdownMenuItem>
-                    );
-                  })
-                )}
+                      )}
+                    </>
+                  )}
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 
