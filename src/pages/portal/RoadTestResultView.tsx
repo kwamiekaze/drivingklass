@@ -147,7 +147,7 @@ export default function RoadTestResultView() {
             session_ends_at: session?.ends_at || null,
             student_name: getName(studentRes.data),
             instructor_name: getName(instrRes.data),
-            report_card_id: reportCardId || null,
+            report_card_id: resolvedReportCardId,
           });
           setSessionNumber(num);
           setIsPublic(sharingState.isPublic);
