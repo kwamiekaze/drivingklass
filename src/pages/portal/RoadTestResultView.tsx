@@ -150,6 +150,17 @@ export default function RoadTestResultView() {
           setSessionNumber(num);
           setIsPublic(sharingState.isPublic);
           setPublicSlug(sharingState.publicSlug);
+
+          // Mark viewed when the owning student opens their road test report
+          // (the RPC re-enforces this server-side; staff previews never count).
+          const rcId = reportCardId || (await getReportCardIdForSession(sessionId));
+          if (rcId && user.id === result.student_id) {
+            supabase
+              .rpc("mark_report_card_viewed", { p_report_card_id: rcId, p_via: "student" })
+              .then(({ error: rpcErr }) => {
+                if (rpcErr) console.warn("mark_report_card_viewed failed", rpcErr);
+              }, () => {});
+          }
         }
       } catch (err) {
         console.error("Error loading road test result:", err);
