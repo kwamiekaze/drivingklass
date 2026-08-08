@@ -182,17 +182,19 @@ export default function ReportCardView() {
         }
 
         setReportCard(rc);
-        // Mark as viewed when the owning student opens it (fire-and-forget).
-        // Guard only on student_id === user.id — role may not be hydrated yet,
-        // and the RPC enforces the same constraint server-side.
-        if (user?.id && rc.student_id === user.id) {
+        // Log the view (fire-and-forget). The RPC resolves the viewer type
+        // server-side: owning student counts as a real view, instructor/admin
+        // previews are logged separately and never mark the card as viewed.
+        if (user?.id) {
           supabase.rpc('mark_report_card_viewed', {
             p_report_card_id: rc.id,
             p_via: 'student',
+            p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
           }).then(({ error: rpcErr }) => {
             if (rpcErr) console.warn('mark_report_card_viewed failed', rpcErr);
           }, () => {});
         }
+
 
         // Fetch session number
         if (rc.session_id && rc.student_id) {
