@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.mark_report_card_viewed(uuid, text);

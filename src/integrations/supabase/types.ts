@@ -3427,19 +3427,14 @@ export type Database = {
           template_name: string
         }[]
       }
-      mark_report_card_viewed:
-        | {
-            Args: { p_report_card_id: string; p_via?: string }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_report_card_id: string
-              p_user_agent?: string
-              p_via?: string
-            }
-            Returns: undefined
-          }
+      mark_report_card_viewed: {
+        Args: {
+          p_report_card_id: string
+          p_user_agent?: string
+          p_via?: string
+        }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
