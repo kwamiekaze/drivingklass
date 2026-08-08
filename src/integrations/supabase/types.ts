@@ -1716,6 +1716,44 @@ export type Database = {
           },
         ]
       }
+      report_card_views: {
+        Row: {
+          id: string
+          report_card_id: string
+          user_agent: string | null
+          via: string
+          viewed_at: string
+          viewer_type: string
+          viewer_user_id: string | null
+        }
+        Insert: {
+          id?: string
+          report_card_id: string
+          user_agent?: string | null
+          via: string
+          viewed_at?: string
+          viewer_type: string
+          viewer_user_id?: string | null
+        }
+        Update: {
+          id?: string
+          report_card_id?: string
+          user_agent?: string | null
+          via?: string
+          viewed_at?: string
+          viewer_type?: string
+          viewer_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_card_views_report_card_id_fkey"
+            columns: ["report_card_id"]
+            isOneToOne: false
+            referencedRelation: "report_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_cards: {
         Row: {
           acceleration: number | null
@@ -3307,6 +3345,15 @@ export type Database = {
           view_count: number
         }[]
       }
+      get_report_card_view_log: {
+        Args: { p_report_card_id: string }
+        Returns: {
+          via: string
+          viewed_at: string
+          viewer_name: string
+          viewer_type: string
+        }[]
+      }
       get_session_details: {
         Args: { p_session_id: string }
         Returns: {
@@ -3380,10 +3427,19 @@ export type Database = {
           template_name: string
         }[]
       }
-      mark_report_card_viewed: {
-        Args: { p_report_card_id: string; p_via?: string }
-        Returns: undefined
-      }
+      mark_report_card_viewed:
+        | {
+            Args: { p_report_card_id: string; p_via?: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_report_card_id: string
+              p_user_agent?: string
+              p_via?: string
+            }
+            Returns: undefined
+          }
       move_to_dlq: {
         Args: {
           dlq_name: string
