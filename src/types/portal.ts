@@ -125,6 +125,12 @@ export interface ReportCard {
   instructor_id: string;
   report_card_status: ReportCardStatus;
   submitted_at: string | null;
+  first_viewed_at?: string | null;
+  last_viewed_at?: string | null;
+  first_viewed_via?: string | null;
+  student_view_count?: number | null;
+  public_view_count?: number | null;
+
   lesson_audio_url: string | null; // legacy public URL
   audio_path?: string | null; // canonical private storage path
   audio_mime?: string | null;

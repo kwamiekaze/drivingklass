@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { SkillHighlightsDisplay } from "@/components/portal/SkillHighlightsDisplay";
+import { ReportCardViewLog } from "@/components/portal/ReportCardViewLog";
 import { TimeSplitChart, type TimeSplitEntry } from "@/components/portal/TimeSplitChart";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,17 +182,19 @@ export default function ReportCardView() {
         }
 
         setReportCard(rc);
-        // Mark as viewed when the owning student opens it (fire-and-forget).
-        // Guard only on student_id === user.id — role may not be hydrated yet,
-        // and the RPC enforces the same constraint server-side.
-        if (user?.id && rc.student_id === user.id) {
+        // Log the view (fire-and-forget). The RPC resolves the viewer type
+        // server-side: owning student counts as a real view, instructor/admin
+        // previews are logged separately and never mark the card as viewed.
+        if (user?.id) {
           supabase.rpc('mark_report_card_viewed', {
             p_report_card_id: rc.id,
             p_via: 'student',
+            p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
           }).then(({ error: rpcErr }) => {
             if (rpcErr) console.warn('mark_report_card_viewed failed', rpcErr);
           }, () => {});
         }
+
 
         // Fetch session number
         if (rc.session_id && rc.student_id) {
@@ -541,55 +544,10 @@ export default function ReportCardView() {
             )}
 
             {/* View status (staff/instructor in normal mode) */}
-            {isStaff && viewMode === "normal" && (() => {
-              const studentViews = reportCard.student_view_count || 0;
-              const publicViews = reportCard.public_view_count || 0;
-              const totalViews = studentViews + publicViews;
-              const anyViewed = totalViews > 0 || !!reportCard.first_viewed_at;
-              const fmt = (d?: string | null) => d ? format(parseISO(d), 'MMM d, yyyy h:mm a') : null;
-              return (
-                <div className={`p-3 rounded-lg border text-sm space-y-2 ${
-                  anyViewed
-                    ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300"
-                    : "bg-muted/40 border-border text-muted-foreground"
-                }`}>
-                  {!anyViewed && <span>👀 Not yet viewed.</span>}
-                  {studentViews > 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                      <span className="font-medium">✅ Viewed by {reportCard.student_name} (student login)</span>
-                      <span className="text-xs">
-                        {studentViews} view{studentViews === 1 ? '' : 's'}
-                        {reportCard.student_first_viewed_at && ` · First ${fmt(reportCard.student_first_viewed_at)}`}
-                        {studentViews > 1 && reportCard.student_last_viewed_at && ` · Last ${fmt(reportCard.student_last_viewed_at)}`}
-                      </span>
-                    </div>
-                  )}
-                  {publicViews > 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                      <span className="font-medium">🔗 Viewed via access code</span>
-                      <span className="text-xs">
-                        {publicViews} view{publicViews === 1 ? '' : 's'}
-                        {reportCard.public_first_viewed_at && ` · First ${fmt(reportCard.public_first_viewed_at)}`}
-                        {publicViews > 1 && reportCard.public_last_viewed_at && ` · Last ${fmt(reportCard.public_last_viewed_at)}`}
-                      </span>
-                    </div>
-                  )}
-                  {/* Legacy fallback if old views exist before per-channel tracking */}
-                  {totalViews === 0 && reportCard.first_viewed_at && (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                      <span className="font-medium">
-                        ✅ Viewed{reportCard.first_viewed_via === 'public' ? ' via access code' : ` by ${reportCard.student_name}`}
-                      </span>
-                      <span className="text-xs">
-                        First {fmt(reportCard.first_viewed_at)}
-                        {reportCard.view_count && reportCard.view_count > 1 && reportCard.last_viewed_at
-                          ? ` · Last ${fmt(reportCard.last_viewed_at)} · ${reportCard.view_count} views` : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {isStaff && viewMode === "normal" && (
+              <ReportCardViewLog reportCardId={reportCard.id} />
+            )}
+
 
 
 
