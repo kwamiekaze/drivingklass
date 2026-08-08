@@ -275,6 +275,20 @@ function AdminReportCardsContent() {
                       </Badge>
                     )}
                     <ReportCardStatusBadge status={rc.report_card_status || 'completed'} />
+                    {(() => {
+                      const views = (rc.student_view_count || 0) + (rc.public_view_count || 0);
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${views > 0 ? 'border-green-500/40 text-green-700 dark:text-green-300' : 'text-muted-foreground'}`}
+                          title={rc.first_viewed_at ? `First viewed ${format(parseISO(rc.first_viewed_at), 'MMM d, yyyy h:mm a')}` : undefined}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          {views > 0 ? `Viewed ${views}x` : 'Not viewed'}
+                        </Badge>
+                      );
+                    })()}
+
                     <div className="hidden xs:flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                       {format(parseISO(rc.created_at!), 'MMM d, yyyy')}
