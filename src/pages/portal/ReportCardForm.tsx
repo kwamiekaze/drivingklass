@@ -152,6 +152,8 @@ function ReportCardFormContent() {
     setShareAccessCode(record.public_access_code || "");
     setShareShowGraph(!!record.show_graph_publicly);
     setShareSendToGuardian(!!record.public_send_to_guardian);
+
+    // Legacy path: derive time-spent state from the persisted time_split column.
     if (record.time_split && Array.isArray(record.time_split) && record.time_split.length > 0) {
       const enabled: Record<string, boolean> = {};
       const minutes: Record<string, number | ''> = {};
@@ -162,7 +164,23 @@ function ReportCardFormContent() {
       setTimeSplitMinutes(minutes);
       setIncludeTimeSpent(true);
     }
+
+    // Newer path: full UI draft state (wins over the legacy derivation when present).
+    const ds = record.draft_state;
+    if (ds && typeof ds === 'object' && !Array.isArray(ds)) {
+      if (typeof ds.includeTimeSpent === 'boolean') setIncludeTimeSpent(ds.includeTimeSpent);
+      if (ds.timeSplitEnabled && typeof ds.timeSplitEnabled === 'object') {
+        setTimeSplitEnabled(ds.timeSplitEnabled as Record<string, boolean>);
+      }
+      if (ds.timeSplitMinutes && typeof ds.timeSplitMinutes === 'object') {
+        setTimeSplitMinutes(ds.timeSplitMinutes as Record<string, number | ''>);
+      }
+      if (typeof ds.shareAccessCode === 'string') setShareAccessCode(ds.shareAccessCode);
+      if (typeof ds.shareShowGraph === 'boolean') setShareShowGraph(ds.shareShowGraph);
+      if (typeof ds.shareSendToGuardian === 'boolean') setShareSendToGuardian(ds.shareSendToGuardian);
+    }
   };
+
 
   const loadGuardianEmail = async (studentId: string) => {
     const { data } = await supabase.from('profiles').select('guardian_email').eq('id', studentId).maybeSingle();
