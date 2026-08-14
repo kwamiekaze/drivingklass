@@ -300,16 +300,40 @@ function ReportCardFormContent() {
     setFormData(prev => ({ ...prev, [key]: value[0] }));
   };
 
+  // Full snapshot of every piece of form state that a draft must remember.
+  const draftSnapshot = useMemo(() => ({
+    ...formData,
+    strongest: highlightStrongest,
+    mostImproved: highlightMostImproved,
+    focusAreas: highlightFocusAreas,
+    includeTimeSpent,
+    timeSplitEnabled,
+    timeSplitMinutes,
+    shareAccessCode,
+    shareShowGraph,
+    shareSendToGuardian,
+  }), [formData, highlightStrongest, highlightMostImproved, highlightFocusAreas,
+    includeTimeSpent, timeSplitEnabled, timeSplitMinutes, shareAccessCode, shareShowGraph, shareSendToGuardian]);
+
+  const draftSnapshotRef = useRef(draftSnapshot);
+  draftSnapshotRef.current = draftSnapshot;
+
   // Auto-save logic
   const performAutoSave = useCallback(async () => {
     if (!session || !user) return;
 
-    const serialized = JSON.stringify(formData);
+    const serialized = JSON.stringify(draftSnapshot);
     if (serialized === lastSavedRef.current) return;
 
     setAutoSaveStatus('saving');
 
     try {
+      const timeSplitDraft: TimeSplitEntry[] = includeTimeSpent
+        ? TIME_SPLIT_CATEGORIES
+            .filter(c => timeSplitEnabled[c.key] && Number(timeSplitMinutes[c.key]) > 0)
+            .map(c => ({ key: c.key, label: c.label, minutes: Number(timeSplitMinutes[c.key]) || 0 }))
+        : [];
+
       const reportDataBase = {
         ...formData,
         session_id: session.id,
@@ -318,6 +342,18 @@ function ReportCardFormContent() {
         strongest_skills: JSON.parse(JSON.stringify(highlightStrongest)),
         most_improved_skills: JSON.parse(JSON.stringify(highlightMostImproved)),
         focus_areas: JSON.parse(JSON.stringify(highlightFocusAreas)),
+        time_split: timeSplitDraft.length ? (JSON.parse(JSON.stringify(timeSplitDraft)) as any) : null,
+        show_graph_publicly: shareShowGraph,
+        public_send_to_guardian: shareSendToGuardian,
+        public_access_code: shareAccessCode.trim() || null,
+        draft_state: JSON.parse(JSON.stringify({
+          includeTimeSpent,
+          timeSplitEnabled,
+          timeSplitMinutes,
+          shareAccessCode,
+          shareShowGraph,
+          shareSendToGuardian,
+        })) as any,
       };
 
       if (draftId) {
@@ -345,24 +381,49 @@ function ReportCardFormContent() {
       console.error('Auto-save failed:', err);
       setAutoSaveStatus('idle');
     }
-  }, [formData, session, user, draftId]);
+  }, [formData, session, user, draftId, draftSnapshot, highlightStrongest, highlightMostImproved,
+    highlightFocusAreas, includeTimeSpent, timeSplitEnabled, timeSplitMinutes,
+    shareAccessCode, shareShowGraph, shareSendToGuardian]);
 
-  // Debounced auto-save on form changes
+  const performAutoSaveRef = useRef(performAutoSave);
+  performAutoSaveRef.current = performAutoSave;
+
+  // Debounced auto-save on any form change
   useEffect(() => {
-    if (loading || !session) return;
+    if (loading || !session || isCompletedRef.current) return;
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
     autoSaveTimerRef.current = setTimeout(() => {
-      performAutoSave();
+      performAutoSaveRef.current();
     }, 3000);
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [formData, loading, session, performAutoSave]);
+  }, [draftSnapshot, loading, session]);
+
+  // Safety net: flush the draft when the tab is hidden or closed.
+  useEffect(() => {
+    if (loading || !session) return;
+    const flush = () => {
+      if (JSON.stringify(draftSnapshotRef.current) === lastSavedRef.current) return;
+      performAutoSaveRef.current();
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+    };
+  }, [loading, session]);
+
+
 
   // Save draft manually
   const handleSaveDraft = async () => {
