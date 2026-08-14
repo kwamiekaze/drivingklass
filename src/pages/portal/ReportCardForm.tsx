@@ -390,7 +390,7 @@ function ReportCardFormContent() {
 
   // Debounced auto-save on any form change
   useEffect(() => {
-    if (loading || !session || isCompletedRef.current) return;
+    if (loading || !session) return;
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
