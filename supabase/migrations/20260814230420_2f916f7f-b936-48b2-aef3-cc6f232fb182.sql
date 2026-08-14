@@ -1,0 +1,1 @@
+ALTER TABLE public.report_cards ADD COLUMN IF NOT EXISTS draft_state jsonb;

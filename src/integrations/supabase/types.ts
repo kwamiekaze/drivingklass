@@ -1768,6 +1768,7 @@ export type Database = {
           changing_lanes: number | null
           created_at: string | null
           distractions: number | null
+          draft_state: Json | null
           first_viewed_at: string | null
           first_viewed_via: string | null
           focus_areas: Json | null
@@ -1831,6 +1832,7 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          draft_state?: Json | null
           first_viewed_at?: string | null
           first_viewed_via?: string | null
           focus_areas?: Json | null
@@ -1894,6 +1896,7 @@ export type Database = {
           changing_lanes?: number | null
           created_at?: string | null
           distractions?: number | null
+          draft_state?: Json | null
           first_viewed_at?: string | null
           first_viewed_via?: string | null
           focus_areas?: Json | null
