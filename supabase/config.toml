@@ -55,3 +55,6 @@ verify_jwt = false
 
 [functions.admin-marketing-campaign]
 verify_jwt = true
+
+[functions.admin-account-links]
+verify_jwt = true
