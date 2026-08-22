@@ -313,6 +313,16 @@ export function ImportedLeadsPanel() {
                         )}
                         <span className="font-medium text-sm truncate">{studentName(r)}</span>
                         {r.import_source && <Badge variant="secondary" className="text-[10px]">DriveScout / All N 1</Badge>}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${consent[r.id] === 'granted'
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                            : consent[r.id] === 'revoked'
+                              ? 'bg-red-500/10 text-red-700 dark:text-red-400'
+                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}
+                        >
+                          consent: {consent[r.id] || 'unknown'}
+                        </Badge>
                         {r.start_date && <span className="text-xs text-muted-foreground">Start {r.start_date}</span>}
                       </div>
                       <div className="text-xs text-muted-foreground space-y-0.5">
