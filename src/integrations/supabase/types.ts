@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_links: {
+        Row: {
+          alias_user_id: string
+          canonical_user_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          alias_user_id: string
+          canonical_user_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          alias_user_id?: string
+          canonical_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -2937,6 +2961,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acting_user_id: { Args: never; Returns: string }
       admin_search_leads: {
         Args: {
           p_dir?: string
@@ -3126,6 +3151,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      canonical_user_id: { Args: { _uid: string }; Returns: string }
       check_game_username_available: {
         Args: { _username: string }
         Returns: boolean
