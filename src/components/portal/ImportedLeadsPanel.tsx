@@ -123,6 +123,7 @@ export function ImportedLeadsPanel() {
         if (cancelled) return;
         setRows(data);
         setTotal(data.length ? Number(data[0].total_count) : 0);
+        void loadConsent(data.map((r) => r.id));
       })
       .catch((e: unknown) => {
         if (cancelled) return;
