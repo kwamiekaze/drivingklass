@@ -53,6 +53,49 @@ export function ImportedLeadsPanel() {
   const [selected, setSelected] = useState<Record<string, ImportedLeadRow>>({});
   const [audience, setAudience] = useState<Audience>('both');
   const [selectingAll, setSelectingAll] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerLeadIds, setComposerLeadIds] = useState<string[]>([]);
+  const [consent, setConsent] = useState<Record<string, string>>({});
+  const [consentBusy, setConsentBusy] = useState(false);
+
+  const loadConsent = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    const { data } = await supabase.from('leads').select('id, email_consent_status').in('id', ids);
+    if (data) {
+      setConsent((prev) => ({
+        ...prev,
+        ...Object.fromEntries(data.map((r) => [r.id, r.email_consent_status || 'unknown'])),
+      }));
+    }
+  }, []);
+
+  const setConsentFor = async (ids: string[], status: 'granted' | 'revoked' | 'unknown') => {
+    setConsentBusy(true);
+    try {
+      const { error } = await supabase.rpc('admin_set_lead_consent', {
+        p_lead_ids: ids,
+        p_status: status,
+        p_source: 'admin_bulk_action',
+      });
+      if (error) throw error;
+      setConsent((prev) => ({ ...prev, ...Object.fromEntries(ids.map((id) => [id, status])) }));
+      toast({ title: `Consent set to "${status}" for ${ids.length} lead${ids.length === 1 ? '' : 's'}` });
+    } catch (e) {
+      toast({ title: 'Could not update consent', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setConsentBusy(false);
+    }
+  };
+
+  const openComposer = (ids: string[]) => {
+    if (!ids.length) {
+      toast({ title: 'Select at least one lead first', variant: 'destructive' });
+      return;
+    }
+    setComposerLeadIds(ids);
+    setComposerOpen(true);
+  };
+
 
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 350);
