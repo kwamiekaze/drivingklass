@@ -290,8 +290,6 @@ export function ImportedLeadsPanel() {
               </p>
             </div>
           )}
-            </div>
-          )}
         </CardContent>
       </Card>
 
