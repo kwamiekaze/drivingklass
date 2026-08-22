@@ -3609,13 +3609,6 @@ export type Database = {
       }
       round_up_to_30min: { Args: { ts: string }; Returns: string }
       set_game_username: { Args: { _username: string }; Returns: string }
-      tmp_import_drivescout_leads: {
-        Args: { p_rows: Json }
-        Returns: {
-          inserted: number
-          updated: number
-        }[]
-      }
       try_uuid: { Args: { p_text: string }; Returns: string }
       update_session_notes: {
         Args: {
