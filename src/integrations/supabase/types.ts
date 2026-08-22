@@ -230,6 +230,162 @@ export type Database = {
         }
         Relationships: []
       }
+      email_campaign_recipients: {
+        Row: {
+          attempts: number
+          campaign_id: string
+          created_at: string
+          display_name: string | null
+          email: string
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          provider_message_id: string | null
+          recipient_type: string
+          sent_at: string | null
+          skip_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          campaign_id: string
+          created_at?: string
+          display_name?: string | null
+          email: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          recipient_type: string
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          campaign_id?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          recipient_type?: string
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_recipients_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          audience: string
+          body_html: string | null
+          body_text: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          filter_snapshot: Json
+          from_email: string
+          from_name: string
+          id: string
+          idempotency_key: string | null
+          is_test: boolean
+          last_error: string | null
+          name: string | null
+          provider: string
+          provider_broadcast_id: string | null
+          reply_to: string
+          sent_count: number
+          skipped_count: number
+          started_at: string | null
+          status: string
+          subject: string
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          body_html?: string | null
+          body_text: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          filter_snapshot?: Json
+          from_email: string
+          from_name: string
+          id?: string
+          idempotency_key?: string | null
+          is_test?: boolean
+          last_error?: string | null
+          name?: string | null
+          provider?: string
+          provider_broadcast_id?: string | null
+          reply_to: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          subject: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          body_html?: string | null
+          body_text?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          filter_snapshot?: Json
+          from_email?: string
+          from_name?: string
+          id?: string
+          idempotency_key?: string | null
+          is_test?: boolean
+          last_error?: string | null
+          name?: string | null
+          provider?: string
+          provider_broadcast_id?: string | null
+          reply_to?: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -936,6 +1092,10 @@ export type Database = {
           created_by: string | null
           dob: string | null
           email: string | null
+          email_consent_source: string | null
+          email_consent_status: string
+          email_consent_updated_at: string | null
+          email_consent_updated_by: string | null
           full_name: string | null
           guardian_email: string | null
           guardian_first_name: string | null
@@ -973,6 +1133,10 @@ export type Database = {
           created_by?: string | null
           dob?: string | null
           email?: string | null
+          email_consent_source?: string | null
+          email_consent_status?: string
+          email_consent_updated_at?: string | null
+          email_consent_updated_by?: string | null
           full_name?: string | null
           guardian_email?: string | null
           guardian_first_name?: string | null
@@ -1010,6 +1174,10 @@ export type Database = {
           created_by?: string | null
           dob?: string | null
           email?: string | null
+          email_consent_source?: string | null
+          email_consent_status?: string
+          email_consent_updated_at?: string | null
+          email_consent_updated_by?: string | null
           full_name?: string | null
           guardian_email?: string | null
           guardian_first_name?: string | null
@@ -1112,6 +1280,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketing_settings: {
+        Row: {
+          business_address: string | null
+          business_name: string | null
+          created_at: string
+          domain_verified: boolean
+          from_email: string
+          from_name: string
+          id: number
+          marketing_domain: string
+          reply_to: string
+          updated_at: string
+        }
+        Insert: {
+          business_address?: string | null
+          business_name?: string | null
+          created_at?: string
+          domain_verified?: boolean
+          from_email?: string
+          from_name?: string
+          id?: number
+          marketing_domain?: string
+          reply_to?: string
+          updated_at?: string
+        }
+        Update: {
+          business_address?: string | null
+          business_name?: string | null
+          created_at?: string
+          domain_verified?: boolean
+          from_email?: string
+          from_name?: string
+          id?: number
+          marketing_domain?: string
+          reply_to?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       media_uploads: {
         Row: {
@@ -2759,6 +2966,10 @@ export type Database = {
           student_last_name: string
           total_count: number
         }[]
+      }
+      admin_set_lead_consent: {
+        Args: { p_lead_ids: string[]; p_source?: string; p_status: string }
+        Returns: number
       }
       apply_session_hour_deduction: {
         Args: { p_session_id: string }
