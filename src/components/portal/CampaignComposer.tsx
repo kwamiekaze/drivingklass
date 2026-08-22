@@ -38,8 +38,8 @@ async function callCampaign(payload: Record<string, unknown>) {
 export function CampaignComposer({ open, onOpenChange, leadIds, defaultAudience = 'both' }: Props) {
   const { toast } = useToast();
   const [audience, setAudience] = useState<CampaignAudience>(defaultAudience);
-  const [subject, setSubject] = useState(GAME_INVITE_PRESET.subject);
-  const [bodyText, setBodyText] = useState(GAME_INVITE_PRESET.body);
+  const [subject, setSubject] = useState<string>(GAME_INVITE_PRESET.subject);
+  const [bodyText, setBodyText] = useState<string>(GAME_INVITE_PRESET.body);
   const [readiness, setReadiness] = useState<CampaignReadiness | null>(null);
   const [counts, setCounts] = useState<CampaignCounts | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
