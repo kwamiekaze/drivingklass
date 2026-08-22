@@ -376,6 +376,15 @@ export function ImportedLeadsPanel() {
           </Button>
         </div>
       </div>
+
+      <CampaignHistoryPanel />
+
+      <CampaignComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        leadIds={composerLeadIds}
+        defaultAudience={audience}
+      />
     </div>
   );
 }
