@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.admin_search_leads(text, text, text, text, integer, integer) FROM anon;
+GRANT EXECUTE ON FUNCTION public.admin_search_leads(text, text, text, text, integer, integer) TO authenticated, service_role;
