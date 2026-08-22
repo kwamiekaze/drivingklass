@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_links: {
+        Row: {
+          alias_user_id: string
+          canonical_user_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          alias_user_id: string
+          canonical_user_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          alias_user_id?: string
+          canonical_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      account_merge_log: {
+        Row: {
+          created_at: string
+          id: string
+          moved: Json
+          performed_by: string | null
+          source_user_id: string
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          moved?: Json
+          performed_by?: string | null
+          source_user_id: string
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          moved?: Json
+          performed_by?: string | null
+          source_user_id?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -2937,6 +2988,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acting_user_id: { Args: never; Returns: string }
       admin_search_leads: {
         Args: {
           p_dir?: string
@@ -3126,6 +3178,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      canonical_user_id: { Args: { _uid: string }; Returns: string }
       check_game_username_available: {
         Args: { _username: string }
         Returns: boolean
@@ -3705,6 +3758,10 @@ export type Database = {
           p_via?: string
         }
         Returns: undefined
+      }
+      merge_student_account: {
+        Args: { p_source_user_id: string; p_target_user_id: string }
+        Returns: Json
       }
       move_to_dlq: {
         Args: {

@@ -30,11 +30,20 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Resolve the canonical student account for any auth user. A secondary
+  // (alias) login returns the primary account's id so the UI shows the same data.
+  const resolveCanonicalId = async (userId: string): Promise<string> => {
+    const { data, error } = await supabase.rpc('canonical_user_id', { _uid: userId });
+    if (error || !data) return userId;
+    return data as string;
+  };
+
   const fetchProfile = async (userId: string) => {
+    const canonicalId = await resolveCanonicalId(userId);
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', canonicalId)
       .maybeSingle();
     
     if (profileData) {
@@ -43,16 +52,18 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchRole = async (userId: string) => {
+    const canonicalId = await resolveCanonicalId(userId);
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', userId)
+      .eq('user_id', canonicalId)
       .maybeSingle();
     
     if (roleData) {
       setRole(roleData.role as UserRole);
     }
   };
+
 
   const refetchProfile = async () => {
     if (user?.id) {
