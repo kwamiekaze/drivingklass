@@ -265,12 +265,31 @@ export function ImportedLeadsPanel() {
                 <Button size="sm" variant="outline" onClick={copyRecipients}>
                   <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy addresses
                 </Button>
+                <Button size="sm" onClick={() => openComposer(selectedRows.map((r) => r.id))}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Campaign composer
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Marketing consent (audited):
+                </span>
+                <Button size="sm" variant="outline" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'granted')}>Mark consented</Button>
+                <Button size="sm" variant="outline" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'revoked')}>Mark revoked</Button>
+                <Button size="sm" variant="ghost" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'unknown')}>Reset to unknown</Button>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} eligible</Badge>
+                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} addressable</Badge>
                 <Badge variant="outline">{recipients.duplicates} duplicate</Badge>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">{recipients.invalid} invalid</Badge>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Import is never treated as consent — only contacts explicitly marked as consented are included in a live campaign.
+              </p>
+            </div>
+          )}
             </div>
           )}
         </CardContent>
