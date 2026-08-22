@@ -273,7 +273,6 @@ Deno.serve(async (req) => {
           await admin.from('email_campaign_recipients').update({
             status: 'sent', provider_message_id: messageId, sent_at: new Date().toISOString(), error_message: null,
           }).eq('id', r.id)
-          await admin.rpc('noop_missing', {}).catch?.(() => {})
         } catch (e) {
           await admin.from('email_campaign_recipients').update({
             status: 'failed', error_message: (e as Error).message,
