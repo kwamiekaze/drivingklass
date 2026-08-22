@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Clock, Save, Loader2, FileImage, AlertTriangle, Calendar, Shield, ClipboardList, CheckCircle, XCircle, Star, FileText, BarChart3, GitMerge } from "lucide-react";
 import { getDisplayName, getProfileInitials } from "@/lib/profileUtils";
 import { cn } from "@/lib/utils";
 import { Profile } from "@/types/portal";
@@ -18,6 +18,8 @@ import { SessionTypeBadge } from "./SessionTypeBadge";
 import { format, parseISO, isAfter } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { StudentProgressSection } from "./StudentProgressSection";
+import { SecondaryEmailsSection } from "./SecondaryEmailsSection";
+import { MergeAccountDialog } from "./MergeAccountDialog";
 
 interface AdminUserProfileModalProps {
   open: boolean;
@@ -66,6 +68,7 @@ export function AdminUserProfileModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [permitViewerOpen, setPermitViewerOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [studentSessions, setStudentSessions] = useState<StudentSession[]>([]);
   const [assignedInstructors, setAssignedInstructors] = useState<AssignedInstructor[]>([]);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
@@ -755,6 +758,20 @@ export function AdminUserProfileModal({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Merge Account Dialog */}
+      {profile && (
+        <MergeAccountDialog
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          sourceUserId={profile.id}
+          sourceLabel={getDisplayName(profile, profile.email || 'this account')}
+          onMerged={() => {
+            onOpenChange(false);
+            onProfileUpdated?.();
+          }}
+        />
+      )}
 
       {/* Permit Viewer Modal */}
       {profile && (
