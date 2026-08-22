@@ -8,8 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { buildRecipientList, isValidEmail, type Audience } from '@/lib/leadRecipients';
+import { CampaignComposer, CampaignHistoryPanel } from '@/components/portal/CampaignComposer';
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown,
+  Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown, Sparkles, ShieldCheck,
 } from 'lucide-react';
 
 export interface ImportedLeadRow {
@@ -52,6 +53,49 @@ export function ImportedLeadsPanel() {
   const [selected, setSelected] = useState<Record<string, ImportedLeadRow>>({});
   const [audience, setAudience] = useState<Audience>('both');
   const [selectingAll, setSelectingAll] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerLeadIds, setComposerLeadIds] = useState<string[]>([]);
+  const [consent, setConsent] = useState<Record<string, string>>({});
+  const [consentBusy, setConsentBusy] = useState(false);
+
+  const loadConsent = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    const { data } = await supabase.from('leads').select('id, email_consent_status').in('id', ids);
+    if (data) {
+      setConsent((prev) => ({
+        ...prev,
+        ...Object.fromEntries(data.map((r) => [r.id, r.email_consent_status || 'unknown'])),
+      }));
+    }
+  }, []);
+
+  const setConsentFor = async (ids: string[], status: 'granted' | 'revoked' | 'unknown') => {
+    setConsentBusy(true);
+    try {
+      const { error } = await supabase.rpc('admin_set_lead_consent', {
+        p_lead_ids: ids,
+        p_status: status,
+        p_source: 'admin_bulk_action',
+      });
+      if (error) throw error;
+      setConsent((prev) => ({ ...prev, ...Object.fromEntries(ids.map((id) => [id, status])) }));
+      toast({ title: `Consent set to "${status}" for ${ids.length} lead${ids.length === 1 ? '' : 's'}` });
+    } catch (e) {
+      toast({ title: 'Could not update consent', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setConsentBusy(false);
+    }
+  };
+
+  const openComposer = (ids: string[]) => {
+    if (!ids.length) {
+      toast({ title: 'Select at least one lead first', variant: 'destructive' });
+      return;
+    }
+    setComposerLeadIds(ids);
+    setComposerOpen(true);
+  };
+
 
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 350);
@@ -79,6 +123,7 @@ export function ImportedLeadsPanel() {
         if (cancelled) return;
         setRows(data);
         setTotal(data.length ? Number(data[0].total_count) : 0);
+        void loadConsent(data.map((r) => r.id));
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -86,7 +131,7 @@ export function ImportedLeadsPanel() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [fetchPage, toast]);
+  }, [fetchPage, toast, loadConsent]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const selectedRows = useMemo(() => Object.values(selected), [selected]);
@@ -200,6 +245,10 @@ export function ImportedLeadsPanel() {
               {selectingAll && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
               Select all {total} filtered
             </Button>
+            <Button size="sm" variant="outline" disabled={selectingAll || !total}
+              onClick={async () => { await selectAllFiltered(); }}>
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Select all filtered for a campaign
+            </Button>
             {selectedRows.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setSelected({})}>Clear selection ({selectedRows.length})</Button>
             )}
@@ -220,12 +269,29 @@ export function ImportedLeadsPanel() {
                 <Button size="sm" variant="outline" onClick={copyRecipients}>
                   <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy addresses
                 </Button>
+                <Button size="sm" onClick={() => openComposer(selectedRows.map((r) => r.id))}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Campaign composer
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Marketing consent (audited):
+                </span>
+                <Button size="sm" variant="outline" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'granted')}>Mark consented</Button>
+                <Button size="sm" variant="outline" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'revoked')}>Mark revoked</Button>
+                <Button size="sm" variant="ghost" disabled={consentBusy}
+                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'unknown')}>Reset to unknown</Button>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} eligible</Badge>
+                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} addressable</Badge>
                 <Badge variant="outline">{recipients.duplicates} duplicate</Badge>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">{recipients.invalid} invalid</Badge>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Import is never treated as consent — only contacts explicitly marked as consented are included in a live campaign.
+              </p>
             </div>
           )}
         </CardContent>
@@ -251,6 +317,16 @@ export function ImportedLeadsPanel() {
                         )}
                         <span className="font-medium text-sm truncate">{studentName(r)}</span>
                         {r.import_source && <Badge variant="secondary" className="text-[10px]">DriveScout / All N 1</Badge>}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${consent[r.id] === 'granted'
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                            : consent[r.id] === 'revoked'
+                              ? 'bg-red-500/10 text-red-700 dark:text-red-400'
+                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}
+                        >
+                          consent: {consent[r.id] || 'unknown'}
+                        </Badge>
                         {r.start_date && <span className="text-xs text-muted-foreground">Start {r.start_date}</span>}
                       </div>
                       <div className="text-xs text-muted-foreground space-y-0.5">
@@ -278,6 +354,10 @@ export function ImportedLeadsPanel() {
                           <a href={`tel:${r.phone.replace(/[^\d+]/g, '')}`} aria-label="Call student"><Phone className="h-3.5 w-3.5" /></a>
                         </Button>
                       )}
+                      <Button size="sm" variant="ghost" className="h-8" aria-label="Compose campaign for this lead"
+                        onClick={() => openComposer([r.id])}>
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
                 );
@@ -300,6 +380,15 @@ export function ImportedLeadsPanel() {
           </Button>
         </div>
       </div>
+
+      <CampaignHistoryPanel />
+
+      <CampaignComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        leadIds={composerLeadIds}
+        defaultAudience={audience}
+      />
     </div>
   );
 }
