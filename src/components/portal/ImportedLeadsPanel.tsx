@@ -8,8 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { buildRecipientList, isValidEmail, type Audience } from '@/lib/leadRecipients';
+import { CampaignComposer, CampaignHistoryPanel } from '@/components/portal/CampaignComposer';
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown,
+  Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown, Sparkles, ShieldCheck,
 } from 'lucide-react';
 
 export interface ImportedLeadRow {
