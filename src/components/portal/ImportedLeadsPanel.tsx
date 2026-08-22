@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { buildRecipientList, isValidEmail, type Audience } from '@/lib/leadRecipients';
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown,
 } from 'lucide-react';
@@ -34,37 +35,8 @@ export interface ImportedLeadRow {
 
 type SortKey = 'source_index' | 'start_date' | 'student_name';
 type SourceFilter = 'all' | 'imported' | 'manual';
-type Audience = 'student' | 'guardian' | 'both';
 
 const PAGE_SIZE = 50;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-export const isValidEmail = (v: string | null | undefined) =>
-  !!v && EMAIL_RE.test(v.trim());
-
-/** Case-insensitive dedupe of a recipient list. Returns eligible + counts. */
-export function buildRecipientList(rows: ImportedLeadRow[], audience: Audience) {
-  const seen = new Set<string>();
-  const eligible: string[] = [];
-  let duplicates = 0;
-  let invalid = 0;
-
-  const consider = (raw: string | null) => {
-    const value = (raw || '').trim();
-    if (!value) return;
-    if (!isValidEmail(value)) { invalid += 1; return; }
-    const key = value.toLowerCase();
-    if (seen.has(key)) { duplicates += 1; return; }
-    seen.add(key);
-    eligible.push(value);
-  };
-
-  for (const r of rows) {
-    if (audience === 'student' || audience === 'both') consider(r.email);
-    if (audience === 'guardian' || audience === 'both') consider(r.guardian_email);
-  }
-  return { eligible, duplicates, invalid };
-}
 
 export function ImportedLeadsPanel() {
   const { toast } = useToast();
