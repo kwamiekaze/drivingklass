@@ -938,10 +938,14 @@ export type Database = {
           email: string | null
           full_name: string | null
           guardian_email: string | null
+          guardian_first_name: string | null
+          guardian_last_name: string | null
           guardian_name: string | null
           guardian_phone: string | null
           home_address: string | null
           id: string
+          import_key: string | null
+          import_source: string | null
           lead_status: string | null
           next_follow_up_at: string | null
           notes: string | null
@@ -951,8 +955,13 @@ export type Database = {
           phone: string | null
           pickup_locations: string | null
           raw_text: string | null
+          source_index: number | null
+          source_page: number | null
           source_type: string | null
+          start_date: string | null
           status: string | null
+          student_first_name: string | null
+          student_last_name: string | null
           updated_at: string | null
         }
         Insert: {
@@ -966,10 +975,14 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          import_key?: string | null
+          import_source?: string | null
           lead_status?: string | null
           next_follow_up_at?: string | null
           notes?: string | null
@@ -979,8 +992,13 @@ export type Database = {
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          source_index?: number | null
+          source_page?: number | null
           source_type?: string | null
+          start_date?: string | null
           status?: string | null
+          student_first_name?: string | null
+          student_last_name?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -994,10 +1012,14 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           home_address?: string | null
           id?: string
+          import_key?: string | null
+          import_source?: string | null
           lead_status?: string | null
           next_follow_up_at?: string | null
           notes?: string | null
@@ -1007,8 +1029,13 @@ export type Database = {
           phone?: string | null
           pickup_locations?: string | null
           raw_text?: string | null
+          source_index?: number | null
+          source_page?: number | null
           source_type?: string | null
+          start_date?: string | null
           status?: string | null
+          student_first_name?: string | null
+          student_last_name?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2703,6 +2730,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_search_leads: {
+        Args: {
+          p_dir?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_sort?: string
+          p_source?: string
+        }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          guardian_email: string
+          guardian_first_name: string
+          guardian_last_name: string
+          guardian_name: string
+          guardian_phone: string
+          id: string
+          import_source: string
+          lead_status: string
+          phone: string
+          source_index: number
+          source_page: number
+          start_date: string
+          student_first_name: string
+          student_last_name: string
+          total_count: number
+        }[]
+      }
       apply_session_hour_deduction: {
         Args: { p_session_id: string }
         Returns: boolean
