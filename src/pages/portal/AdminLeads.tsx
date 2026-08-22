@@ -677,16 +677,26 @@ function AdminLeadsContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
           <TabsTrigger value="list" className="gap-1.5 text-sm">
             <Users className="h-4 w-4" />
             Leads List
+          </TabsTrigger>
+          <TabsTrigger value="imported" className="gap-1.5 text-sm">
+            <Download className="h-4 w-4" />
+            Imported
           </TabsTrigger>
           <TabsTrigger value="add" className="gap-1.5 text-sm">
             <Plus className="h-4 w-4" />
             Add Lead
           </TabsTrigger>
         </TabsList>
+
+        {/* Imported leads (server-side search + pagination) */}
+        <TabsContent value="imported" className="mt-4">
+          <ImportedLeadsPanel />
+        </TabsContent>
+
 
         {/* Leads List Tab */}
         <TabsContent value="list" className="mt-4">
