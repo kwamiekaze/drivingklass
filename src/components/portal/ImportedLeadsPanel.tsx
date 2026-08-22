@@ -245,6 +245,10 @@ export function ImportedLeadsPanel() {
               {selectingAll && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
               Select all {total} filtered
             </Button>
+            <Button size="sm" variant="outline" disabled={selectingAll || !total}
+              onClick={async () => { await selectAllFiltered(); }}>
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Select all filtered for a campaign
+            </Button>
             {selectedRows.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setSelected({})}>Clear selection ({selectedRows.length})</Button>
             )}
