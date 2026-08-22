@@ -707,7 +707,33 @@ export function AdminUserProfileModal({
                 )}
               </div>
 
+              {/* Secondary Emails (aliases) */}
+              <SecondaryEmailsSection userId={profile.id} />
+
+              {/* Merge pending account into an approved one */}
+              {profile.approval_status === 'pending' && (
+                <div className="space-y-2 rounded-xl border p-3">
+                  <div className="flex items-center gap-2">
+                    <GitMerge className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-semibold">Duplicate account?</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Move all of this pending account's records into an existing approved student
+                    account. Nothing is deleted and this email keeps working.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => setMergeOpen(true)}
+                  >
+                    <GitMerge className="h-4 w-4" />
+                    Merge into existing account
+                  </Button>
+                </div>
+              )}
+
               {/* Save Button */}
+
               <Button
                 onClick={handleSave}
                 disabled={saving}
