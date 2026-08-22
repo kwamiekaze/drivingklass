@@ -131,7 +131,7 @@ export function ImportedLeadsPanel() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [fetchPage, toast]);
+  }, [fetchPage, toast, loadConsent]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const selectedRows = useMemo(() => Object.values(selected), [selected]);
