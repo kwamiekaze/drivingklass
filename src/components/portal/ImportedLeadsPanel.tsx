@@ -350,6 +350,10 @@ export function ImportedLeadsPanel() {
                           <a href={`tel:${r.phone.replace(/[^\d+]/g, '')}`} aria-label="Call student"><Phone className="h-3.5 w-3.5" /></a>
                         </Button>
                       )}
+                      <Button size="sm" variant="ghost" className="h-8" aria-label="Compose campaign for this lead"
+                        onClick={() => openComposer([r.id])}>
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
                 );
