@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      account_merge_log: {
+        Row: {
+          created_at: string
+          id: string
+          moved: Json
+          performed_by: string | null
+          source_user_id: string
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          moved?: Json
+          performed_by?: string | null
+          source_user_id: string
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          moved?: Json
+          performed_by?: string | null
+          source_user_id?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -3731,6 +3758,10 @@ export type Database = {
           p_via?: string
         }
         Returns: undefined
+      }
+      merge_student_account: {
+        Args: { p_source_user_id: string; p_target_user_id: string }
+        Returns: Json
       }
       move_to_dlq: {
         Args: {
