@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Send, Calendar, Info } from "lucide-react";
 import { Profile } from "@/types/portal";
 import { getDisplayName } from "@/lib/profileUtils";
+import { ProfileCombobox } from "@/components/portal/ProfileCombobox";
+
 import { toast } from "sonner";
 import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
 import { format, parseISO } from "date-fns";
