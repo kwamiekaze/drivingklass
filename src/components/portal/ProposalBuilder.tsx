@@ -358,26 +358,27 @@ export function ProposalBuilder({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-sm">Student</Label>
-              <Select value={studentId} onValueChange={setStudentId} disabled={isEditing}>
-                <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select student" /></SelectTrigger>
-                <SelectContent className="bg-popover border z-50 max-h-[200px]">
-                  {students.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{getDisplayName(s, 'Unknown')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProfileCombobox
+                people={students}
+                value={studentId}
+                onChange={setStudentId}
+                disabled={isEditing}
+                placeholder="Select student"
+                emptyText="No students found"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm">Instructor</Label>
-              <Select value={instructorId} onValueChange={setInstructorId} disabled={role === 'instructor' || isEditing}>
-                <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select instructor" /></SelectTrigger>
-                <SelectContent className="bg-popover border z-50 max-h-[200px]">
-                  {instructors.map(i => (
-                    <SelectItem key={i.id} value={i.id}>{getDisplayName(i, 'Unknown')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProfileCombobox
+                people={instructors}
+                value={instructorId}
+                onChange={setInstructorId}
+                disabled={role === 'instructor' || isEditing}
+                placeholder="Select instructor"
+                emptyText="No instructors found"
+              />
             </div>
+
           </div>
 
           {/* Student Availability Helper */}
