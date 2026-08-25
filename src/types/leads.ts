@@ -74,3 +74,31 @@ export interface ParsedLeadData {
   dob: string;
   age: number | null;
 }
+
+/** Row shape returned by the admin_search_leads RPC (admin/staff only). */
+export interface ImportedLeadRow {
+  id: string;
+  created_at: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  student_first_name: string | null;
+  student_last_name: string | null;
+  guardian_name: string | null;
+  guardian_first_name: string | null;
+  guardian_last_name: string | null;
+  guardian_email: string | null;
+  guardian_phone: string | null;
+  start_date: string | null;
+  source_page: number | null;
+  source_index: number | null;
+  import_source: string | null;
+  import_key: string | null;
+  source_status: string | null;
+  source_location: string | null;
+  source_zone: string | null;
+  source_account_created_on: string | null;
+  lead_status: string | null;
+  notes: string | null;
+  total_count: number;
+}
