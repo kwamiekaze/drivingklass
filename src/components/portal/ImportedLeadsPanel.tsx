@@ -6,35 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { buildRecipientList, isValidEmail, type Audience } from '@/lib/leadRecipients';
-import { CampaignComposer, CampaignHistoryPanel } from '@/components/portal/CampaignComposer';
+import { LeadImportDialog } from '@/components/portal/LeadImportDialog';
+import { LeadFormDialog } from '@/components/portal/LeadFormDialog';
+import type { ImportedLeadRow } from '@/types/leads';
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, Mail, Phone, Copy, Users, ArrowUpDown, Sparkles, ShieldCheck,
+  Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, Phone, Copy, Users, ArrowUpDown,
+  FileUp, Plus, Pencil,
 } from 'lucide-react';
 
-export interface ImportedLeadRow {
-  id: string;
-  created_at: string;
-  full_name: string | null;
-  email: string | null;
-  phone: string | null;
-  student_first_name: string | null;
-  student_last_name: string | null;
-  guardian_name: string | null;
-  guardian_first_name: string | null;
-  guardian_last_name: string | null;
-  guardian_email: string | null;
-  guardian_phone: string | null;
-  start_date: string | null;
-  source_page: number | null;
-  source_index: number | null;
-  import_source: string | null;
-  lead_status: string | null;
-  total_count: number;
-}
+export type { ImportedLeadRow } from '@/types/leads';
 
-type SortKey = 'source_index' | 'start_date' | 'student_name';
+type SortKey = 'default' | 'source_index' | 'start_date' | 'student_name';
 type SourceFilter = 'all' | 'imported' | 'manual';
 
 const PAGE_SIZE = 50;
@@ -46,63 +31,25 @@ export function ImportedLeadsPanel() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [source, setSource] = useState<SourceFilter>('imported');
-  const [sort, setSort] = useState<SortKey>('source_index');
-  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
+  const [sort, setSort] = useState<SortKey>('default');
+  const [dir, setDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<Record<string, ImportedLeadRow>>({});
   const [audience, setAudience] = useState<Audience>('both');
   const [selectingAll, setSelectingAll] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [composerLeadIds, setComposerLeadIds] = useState<string[]>([]);
-  const [consent, setConsent] = useState<Record<string, string>>({});
-  const [consentBusy, setConsentBusy] = useState(false);
-
-  const loadConsent = useCallback(async (ids: string[]) => {
-    if (!ids.length) return;
-    const { data } = await supabase.from('leads').select('id, email_consent_status').in('id', ids);
-    if (data) {
-      setConsent((prev) => ({
-        ...prev,
-        ...Object.fromEntries(data.map((r) => [r.id, r.email_consent_status || 'unknown'])),
-      }));
-    }
-  }, []);
-
-  const setConsentFor = async (ids: string[], status: 'granted' | 'revoked' | 'unknown') => {
-    setConsentBusy(true);
-    try {
-      const { error } = await supabase.rpc('admin_set_lead_consent', {
-        p_lead_ids: ids,
-        p_status: status,
-        p_source: 'admin_bulk_action',
-      });
-      if (error) throw error;
-      setConsent((prev) => ({ ...prev, ...Object.fromEntries(ids.map((id) => [id, status])) }));
-      toast({ title: `Consent set to "${status}" for ${ids.length} lead${ids.length === 1 ? '' : 's'}` });
-    } catch (e) {
-      toast({ title: 'Could not update consent', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setConsentBusy(false);
-    }
-  };
-
-  const openComposer = (ids: string[]) => {
-    if (!ids.length) {
-      toast({ title: 'Select at least one lead first', variant: 'destructive' });
-      return;
-    }
-    setComposerLeadIds(ids);
-    setComposerOpen(true);
-  };
-
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<ImportedLeadRow | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 350);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const fetchPage = useCallback(async (opts?: { limit?: number; offset?: number; silent?: boolean }) => {
+  const fetchPage = useCallback(async (opts?: { limit?: number; offset?: number }) => {
     const { data, error } = await supabase.rpc('admin_search_leads', {
       p_search: search.trim() || null,
       p_source: source === 'all' ? null : source,
@@ -123,7 +70,6 @@ export function ImportedLeadsPanel() {
         if (cancelled) return;
         setRows(data);
         setTotal(data.length ? Number(data[0].total_count) : 0);
-        void loadConsent(data.map((r) => r.id));
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -131,7 +77,9 @@ export function ImportedLeadsPanel() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [fetchPage, toast, loadConsent]);
+  }, [fetchPage, toast, reloadKey]);
+
+  const reload = () => setReloadKey((k) => k + 1);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const selectedRows = useMemo(() => Object.values(selected), [selected]);
@@ -161,9 +109,9 @@ export function ImportedLeadsPanel() {
       const collected: ImportedLeadRow[] = [];
       const limit = 200;
       for (let offset = 0; offset < total; offset += limit) {
-        const chunk = await fetchPage({ limit, offset });
-        collected.push(...chunk);
-        if (chunk.length < limit) break;
+        const chunkRows = await fetchPage({ limit, offset });
+        collected.push(...chunkRows);
+        if (chunkRows.length < limit) break;
       }
       setSelected(Object.fromEntries(collected.map((r) => [r.id, r])));
       toast({ title: `Selected ${collected.length} leads` });
@@ -192,24 +140,41 @@ export function ImportedLeadsPanel() {
   const guardianName = (r: ImportedLeadRow) =>
     [r.guardian_first_name, r.guardian_last_name].filter(Boolean).join(' ') || r.guardian_name || '';
 
+  const detail = (label: string, value: string | number | null | undefined) => (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs truncate">{value === null || value === undefined || value === '' ? '—' : String(value)}</p>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <Card className="portal-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            Imported Leads
-          </CardTitle>
-          <CardDescription>
-            Searchable, paginated view of every lead. Source order (index 1 = most recent signup) is the default sort.
-          </CardDescription>
+        <CardHeader className="pb-3 flex-row items-start justify-between space-y-0 gap-2">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              Imported Leads
+            </CardTitle>
+            <CardDescription>
+              Searchable, paginated view of every lead. Default order: newest start date, then newest source account date, then upload order.
+            </CardDescription>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Import leads</span>
+            </Button>
+            <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Plus className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Add lead</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search student or guardian name, email, phone..."
+              placeholder="Search student or guardian name, email, phone, location..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -218,7 +183,7 @@ export function ImportedLeadsPanel() {
             <Select value={source} onValueChange={(v) => { setSource(v as SourceFilter); setPage(0); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="imported">DriveScout / All N 1 imported</SelectItem>
+                <SelectItem value="imported">Imported leads</SelectItem>
                 <SelectItem value="manual">Manually added leads</SelectItem>
                 <SelectItem value="all">All leads</SelectItem>
               </SelectContent>
@@ -226,7 +191,8 @@ export function ImportedLeadsPanel() {
             <Select value={sort} onValueChange={(v) => { setSort(v as SortKey); setPage(0); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="source_index">Sort: source order</SelectItem>
+                <SelectItem value="default">Sort: start date, then source date</SelectItem>
+                <SelectItem value="source_index">Sort: upload order</SelectItem>
                 <SelectItem value="start_date">Sort: start date</SelectItem>
                 <SelectItem value="student_name">Sort: student name</SelectItem>
               </SelectContent>
@@ -245,10 +211,6 @@ export function ImportedLeadsPanel() {
               {selectingAll && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
               Select all {total} filtered
             </Button>
-            <Button size="sm" variant="outline" disabled={selectingAll || !total}
-              onClick={async () => { await selectAllFiltered(); }}>
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Select all filtered for a campaign
-            </Button>
             {selectedRows.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setSelected({})}>Clear selection ({selectedRows.length})</Button>
             )}
@@ -257,7 +219,7 @@ export function ImportedLeadsPanel() {
           {selectedRows.length > 0 && (
             <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">Recipients from {selectedRows.length} selected lead{selectedRows.length === 1 ? '' : 's'}:</span>
+                <span className="text-sm font-medium">Contacts from {selectedRows.length} selected lead{selectedRows.length === 1 ? '' : 's'}:</span>
                 <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
                   <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -269,29 +231,12 @@ export function ImportedLeadsPanel() {
                 <Button size="sm" variant="outline" onClick={copyRecipients}>
                   <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy addresses
                 </Button>
-                <Button size="sm" onClick={() => openComposer(selectedRows.map((r) => r.id))}>
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Campaign composer
-                </Button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Marketing consent (audited):
-                </span>
-                <Button size="sm" variant="outline" disabled={consentBusy}
-                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'granted')}>Mark consented</Button>
-                <Button size="sm" variant="outline" disabled={consentBusy}
-                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'revoked')}>Mark revoked</Button>
-                <Button size="sm" variant="ghost" disabled={consentBusy}
-                  onClick={() => setConsentFor(selectedRows.map((r) => r.id), 'unknown')}>Reset to unknown</Button>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} addressable</Badge>
                 <Badge variant="outline">{recipients.duplicates} duplicate</Badge>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">{recipients.invalid} invalid</Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Import is never treated as consent — only contacts explicitly marked as consented are included in a live campaign.
-              </p>
             </div>
           )}
         </CardContent>
@@ -308,58 +253,79 @@ export function ImportedLeadsPanel() {
               {rows.map((r) => {
                 const gName = guardianName(r);
                 return (
-                  <div key={r.id} className="p-3 sm:p-4 flex items-start gap-3">
-                    <Checkbox className="mt-1" checked={!!selected[r.id]} onCheckedChange={() => toggleRow(r)} />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {r.source_index != null && (
-                          <Badge variant="outline" className="font-mono text-[10px]">#{r.source_index}</Badge>
-                        )}
-                        <span className="font-medium text-sm truncate">{studentName(r)}</span>
-                        {r.import_source && <Badge variant="secondary" className="text-[10px]">DriveScout / All N 1</Badge>}
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${consent[r.id] === 'granted'
-                            ? 'bg-green-500/10 text-green-700 dark:text-green-400'
-                            : consent[r.id] === 'revoked'
-                              ? 'bg-red-500/10 text-red-700 dark:text-red-400'
-                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}
-                        >
-                          consent: {consent[r.id] || 'unknown'}
-                        </Badge>
-                        {r.start_date && <span className="text-xs text-muted-foreground">Start {r.start_date}</span>}
+                  <Collapsible
+                    key={r.id}
+                    open={!!expanded[r.id]}
+                    onOpenChange={(v) => setExpanded((p) => ({ ...p, [r.id]: v }))}
+                  >
+                    <div className="p-3 sm:p-4 flex items-start gap-3">
+                      <Checkbox className="mt-1" checked={!!selected[r.id]} onCheckedChange={() => toggleRow(r)} />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {r.source_index != null && (
+                            <Badge variant="outline" className="font-mono text-[10px]">#{r.source_index}</Badge>
+                          )}
+                          <span className="font-medium text-sm truncate">{studentName(r)}</span>
+                          {r.import_source && <Badge variant="secondary" className="text-[10px]">{r.import_source}</Badge>}
+                          {r.start_date && <span className="text-xs text-muted-foreground">Start {r.start_date}</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          {r.email && <p className="truncate">Student: {r.email}{r.phone ? ` · ${r.phone}` : ''}</p>}
+                          {(gName || r.guardian_email || r.guardian_phone) && (
+                            <p className="truncate">
+                              Guardian{gName ? ` (${gName})` : ''}: {r.guardian_email || '—'}{r.guardian_phone ? ` · ${r.guardian_phone}` : ''}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        {r.email && <p className="truncate">Student: {r.email}{r.phone ? ` · ${r.phone}` : ''}</p>}
-                        {(gName || r.guardian_email || r.guardian_phone) && (
-                          <p className="truncate">
-                            Guardian{gName ? ` (${gName})` : ''}: {r.guardian_email || '—'}{r.guardian_phone ? ` · ${r.guardian_phone}` : ''}
-                          </p>
+                      <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
+                        {isValidEmail(r.email) && (
+                          <Button asChild size="sm" variant="outline" className="h-8">
+                            <a href={`mailto:${r.email}`} aria-label="Email student"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Student</span></a>
+                          </Button>
                         )}
+                        {isValidEmail(r.guardian_email) && (
+                          <Button asChild size="sm" variant="outline" className="h-8">
+                            <a href={`mailto:${r.guardian_email}`} aria-label="Email guardian"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Guardian</span></a>
+                          </Button>
+                        )}
+                        {r.phone && (
+                          <Button asChild size="sm" variant="ghost" className="h-8">
+                            <a href={`tel:${r.phone.replace(/[^\d+]/g, '')}`} aria-label="Call student"><Phone className="h-3.5 w-3.5" /></a>
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8" aria-label="Edit lead"
+                          onClick={() => { setEditing(r); setFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <CollapsibleTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8" aria-label="Show lead details">
+                            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded[r.id] ? 'rotate-180' : ''}`} />
+                          </Button>
+                        </CollapsibleTrigger>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
-                      {isValidEmail(r.email) && (
-                        <Button asChild size="sm" variant="outline" className="h-8">
-                          <a href={`mailto:${r.email}`} aria-label="Email student"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Student</span></a>
-                        </Button>
-                      )}
-                      {isValidEmail(r.guardian_email) && (
-                        <Button asChild size="sm" variant="outline" className="h-8">
-                          <a href={`mailto:${r.guardian_email}`} aria-label="Email guardian"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Guardian</span></a>
-                        </Button>
-                      )}
-                      {r.phone && (
-                        <Button asChild size="sm" variant="ghost" className="h-8">
-                          <a href={`tel:${r.phone.replace(/[^\d+]/g, '')}`} aria-label="Call student"><Phone className="h-3.5 w-3.5" /></a>
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="h-8" aria-label="Compose campaign for this lead"
-                        onClick={() => openComposer([r.id])}>
-                        <Sparkles className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
+                    <CollapsibleContent>
+                      <div className="px-3 pb-4 sm:px-4 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/20">
+                        {detail('Student first', r.student_first_name)}
+                        {detail('Student last', r.student_last_name)}
+                        {detail('Student phone', r.phone)}
+                        {detail('Student email', r.email)}
+                        {detail('Guardian first', r.guardian_first_name)}
+                        {detail('Guardian last', r.guardian_last_name)}
+                        {detail('Guardian phone', r.guardian_phone)}
+                        {detail('Guardian email', r.guardian_email)}
+                        {detail('Start date', r.start_date)}
+                        {detail('Source status', r.source_status)}
+                        {detail('Source location', r.source_location)}
+                        {detail('Source zone', r.source_zone)}
+                        {detail('Account created on', r.source_account_created_on)}
+                        {detail('Import source', r.import_source)}
+                        {detail('Import key', r.import_key)}
+                        {detail('Source page / index', [r.source_page, r.source_index].filter((v) => v != null).join(' / '))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })}
             </div>
@@ -381,14 +347,8 @@ export function ImportedLeadsPanel() {
         </div>
       </div>
 
-      <CampaignHistoryPanel />
-
-      <CampaignComposer
-        open={composerOpen}
-        onOpenChange={setComposerOpen}
-        leadIds={composerLeadIds}
-        defaultAudience={audience}
-      />
+      <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={reload} />
+      <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} lead={editing} onSaved={reload} />
     </div>
   );
 }
