@@ -53,7 +53,7 @@ verify_jwt = true
 verify_jwt = false
 
 
-[functions.admin-marketing-campaign]
+[functions.admin-import-leads]
 verify_jwt = true
 
 [functions.admin-account-links]
