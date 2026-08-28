@@ -10,6 +10,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { LeadImportDialog } from '@/components/portal/LeadImportDialog';
 import { LeadFormDialog } from '@/components/portal/LeadFormDialog';
+import {
+  DEFAULT_FILTERS, IMPORTED_BADGE, buildSearchParams, describeFilters, filtersAreDefault,
+  type LeadFilterState, type LeadSortKey, type LeadSourceFilter,
+} from '@/lib/leadFilters';
 import type { ImportedLeadRow } from '@/types/leads';
 import {
   Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, Phone, Users, ArrowUpDown,
@@ -18,60 +22,15 @@ import {
 
 export type { ImportedLeadRow } from '@/types/leads';
 
-type SortKey = 'default' | 'source_index' | 'start_date' | 'student_name' | 'source_account_created_on';
-type SourceFilter = 'all' | 'imported' | 'manual';
+type SortKey = LeadSortKey;
+type SourceFilter = LeadSourceFilter;
 
 const PAGE_SIZE = 50;
 const ANY = '__any__';
 
-/** Neutral label shown for every imported row — never the upstream source value. */
-export const IMPORTED_BADGE = 'Imported roster';
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const isEmail = (v: string | null | undefined): boolean => !!v && EMAIL_RE.test(v.trim());
 
-export interface LeadFilterState {
-  search: string;
-  source: SourceFilter;
-  sort: SortKey;
-  dir: 'asc' | 'desc';
-  startFrom: string;
-  startTo: string;
-  status: string;
-  zone: string;
-}
-
-export const DEFAULT_FILTERS: LeadFilterState = {
-  search: '',
-  source: 'imported',
-  sort: 'default',
-  dir: 'desc',
-  startFrom: '',
-  startTo: '',
-  status: '',
-  zone: '',
-};
-
-/** Compact human summary of the filters currently narrowing the list. */
-export function describeFilters(f: LeadFilterState): string[] {
-  const out: string[] = [];
-  if (f.search.trim()) out.push(`Search: "${f.search.trim()}"`);
-  if (f.source === 'imported') out.push('Imported roster only');
-  if (f.source === 'manual') out.push('Manually added only');
-  if (f.startFrom && f.startTo) out.push(`Source start date ${f.startFrom} → ${f.startTo}`);
-  else if (f.startFrom) out.push(`Source start date from ${f.startFrom}`);
-  else if (f.startTo) out.push(`Source start date to ${f.startTo}`);
-  if (f.status) out.push(`Status: ${f.status}`);
-  if (f.zone) out.push(`Zone: ${f.zone}`);
-  return out;
-}
-
-export const filtersAreDefault = (f: LeadFilterState): boolean =>
-  f.search === DEFAULT_FILTERS.search &&
-  f.source === DEFAULT_FILTERS.source &&
-  f.sort === DEFAULT_FILTERS.sort &&
-  f.dir === DEFAULT_FILTERS.dir &&
-  !f.startFrom && !f.startTo && !f.status && !f.zone;
 
 export function ImportedLeadsPanel() {
   const { toast } = useToast();
