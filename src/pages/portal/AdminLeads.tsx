@@ -49,6 +49,7 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Lead, LeadNote, LeadActivity, LeadPipelineStatus, ParsedLeadData } from '@/types/leads';
+import { effectiveAddedDate, effectiveAddedIsDateOnly, sortByEffectiveAddedDesc } from '@/lib/leadDates';
 import { parseLeadData, getMissingFields } from '@/lib/leadParser';
 import { 
   logLeadActivity, 
@@ -594,6 +595,8 @@ function AdminLeadsContent() {
 
   // Filter leads
   const filteredLeads = useMemo(() => {
+    const compareRecent = (a: Lead, b: Lead) =>
+      sortByEffectiveAddedDesc([a, b])[0] === a ? -1 : 1;
     return leads.filter(lead => {
       // Status filter
       const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
@@ -650,7 +653,7 @@ function AdminLeadsContent() {
       }
       
       return matchesStatus && matchesSearch && matchesPermitDate && matchesFollowUp && matchesMissingInfo;
-    });
+    }).sort(compareRecent);
   }, [leads, statusFilter, searchQuery, permitIssueDateFrom, permitIssueDateTo, followUpFilter, missingInfoFilters]);
 
   const toggleMissingFilter = (filter: MissingInfoFilter) => {
@@ -1413,7 +1416,7 @@ Birthday: 01/15/2008
               <SheetHeader className="mb-4">
                 <SheetTitle className="text-xl">{selectedLead.full_name || 'Unknown Lead'}</SheetTitle>
                 <SheetDescription>
-                  Added {format(new Date(selectedLead.created_at), 'MMM d, yyyy h:mm a')}
+                  Added {format(effectiveAddedDate(selectedLead), effectiveAddedIsDateOnly(selectedLead) ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a')}
                 </SheetDescription>
               </SheetHeader>
 
@@ -1903,7 +1906,7 @@ function LeadCard({ lead, onOpen, onDelete, onStatusChange, onCopy }: LeadCardPr
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t">
         <span className="text-xs text-muted-foreground">
-          Added {format(new Date(lead.created_at), 'MMM d, yyyy')}
+          Added {format(effectiveAddedDate(lead), 'MMM d, yyyy')}
         </span>
         <div className="flex gap-1">
           <Button
