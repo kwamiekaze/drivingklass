@@ -171,7 +171,7 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{lead ? 'Edit lead' : 'Add lead'}</DialogTitle>
-          <DialogDescription>Admin only. Student name and start date are required.</DialogDescription>
+          <DialogDescription>Admin only. Student name and source start date are required.</DialogDescription>
         </DialogHeader>
 
         {errors.length > 0 && (
@@ -188,7 +188,7 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
               {field('Last name', 'student_last_name')}
               {field('Phone', 'phone')}
               {field('Email', 'email')}
-              {field('Start date', 'start_date', 'date')}
+              {field('Source start date', 'start_date', 'date')}
             </div>
           </div>
           <div>
@@ -201,18 +201,21 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium mb-2">Source metadata</p>
+            <p className="text-sm font-medium mb-2">Source details</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Record type: {form.import_source ? 'Imported roster' : 'Manually added'}
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {field('Import source', 'import_source')}
-              {field('Import key', 'import_key')}
+              {field('Source record key', 'import_key')}
               {field('Source status', 'source_status')}
               {field('Source location', 'source_location')}
               {field('Source zone', 'source_zone')}
-              {field('Account created on', 'source_account_created_on', 'date')}
+              {field('Source account-created date', 'source_account_created_on', 'date')}
               {field('Source page', 'source_page')}
               {field('Source index', 'source_index')}
             </div>
           </div>
+
         </div>
 
         <DialogFooter>
