@@ -686,8 +686,9 @@ function AdminLeadsContent() {
           </TabsTrigger>
           <TabsTrigger value="imported" className="gap-1.5 text-sm">
             <Download className="h-4 w-4" />
-            Imported
+            Student Leads
           </TabsTrigger>
+
           <TabsTrigger value="add" className="gap-1.5 text-sm">
             <Plus className="h-4 w-4" />
             Add Lead

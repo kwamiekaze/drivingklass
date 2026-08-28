@@ -287,13 +287,28 @@ export const nameKey = (first?: string, last?: string) =>
 export const phoneKey = (phone?: string) => normalizeText(phone).replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
 
 /**
+ * Value used for the `email` match strategy. The student name is folded into
+ * the key so a shared family email address can never merge two different
+ * students. An existing record with no name at all uses the bare address so it
+ * can still be completed by a later import.
+ */
+export const emailKey = (email?: string, first?: string, last?: string) =>
+  `${normalizeText(email).toLowerCase()}|${nameKey(first, last)}`
+
+/**
  * Ordered dedupe keys for a row: import_key first, then normalized student
- * email, then the conservative name+phone fallback (only when BOTH exist).
+ * email scoped to the student name, then the conservative name+phone fallback
+ * (only when BOTH exist).
  */
 export function matchKeysFor(fields: CanonicalLead): MatchKey[] {
   const keys: MatchKey[] = []
   if (fields.import_key) keys.push({ strategy: 'import_key', value: fields.import_key })
-  if (fields.email) keys.push({ strategy: 'email', value: fields.email.toLowerCase() })
+  if (fields.email) {
+    keys.push({
+      strategy: 'email',
+      value: emailKey(fields.email, fields.student_first_name, fields.student_last_name),
+    })
+  }
   const n = nameKey(fields.student_first_name, fields.student_last_name)
   const p = phoneKey(fields.phone)
   if (n && p && fields.student_first_name && fields.student_last_name) {
@@ -301,6 +316,7 @@ export function matchKeysFor(fields: CanonicalLead): MatchKey[] {
   }
   return keys
 }
+
 
 // ---------------------------------------------------------------- diffing
 

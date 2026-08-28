@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   applyDiffs, changedFields, countRows, mapHeaders, matchKeysFor, normalizeDate, normalizeEmail,
-  normalizePhone, normalizeRow, planImport,
+  normalizePhone, normalizeRow, planImport, emailKey,
   type ExistingLead, type MatchKey, type NormalizedRow, type PlannedRow,
 } from '@/lib/leadImport';
 
@@ -94,7 +94,9 @@ describe('row validation', () => {
 describe('dedupe matching', () => {
   it('prefers import_key, then email, then a conservative name+phone', () => {
     expect(matchKeysFor({ import_key: 'K1', email: 'a@b.com' })[0]).toEqual({ strategy: 'import_key', value: 'K1' });
-    expect(matchKeysFor({ email: 'A@B.com' })[0]).toEqual({ strategy: 'email', value: 'a@b.com' });
+    expect(matchKeysFor({ email: 'A@B.com' })[0]).toEqual({ strategy: 'email', value: 'a@b.com|' });
+    expect(matchKeysFor({ email: 'A@B.com', student_first_name: 'Ada', student_last_name: 'Lovelace' })[0])
+      .toEqual({ strategy: 'email', value: 'a@b.com|ada lovelace' });
     const nameOnly = matchKeysFor({ student_first_name: 'Ada', student_last_name: 'Lovelace', phone: '(404) 555-0123' });
     expect(nameOnly).toEqual([{ strategy: 'name_phone', value: 'ada lovelace|4045550123' }]);
     // no phone, or no last name -> no fallback key (never merge ambiguous people)
@@ -111,7 +113,7 @@ describe('dedupe matching', () => {
       good(2, { email: 'a@b.com' }),
       good(3, { email: 'many@b.com' }),
     ];
-    const lookup = (k: MatchKey) => (k.value === 'many@b.com' ? ['id1', 'id2'] : []);
+    const lookup = (k: MatchKey) => (k.value.startsWith('many@b.com') ? ['id1', 'id2'] : []);
     const planned = planImport(rows, lookup);
     expect(planned[0].action).toBe('new');
     expect(planned[1].action).toBe('duplicate');
@@ -123,11 +125,11 @@ describe('dedupe matching', () => {
       id: 'lead-1', import_key: null, email: 'a@b.com', phone: '(404) 555-0123',
       student_first_name: 'Ada', student_last_name: 'Lovelace',
       guardian_first_name: null, guardian_last_name: null, guardian_email: null, guardian_phone: null,
-      start_date: '2026-01-01', source_page: null, source_index: 7, import_source: 'DriveScout',
+      start_date: '2026-01-01', source_page: null, source_index: 7, import_source: 'imported_student_roster',
       source_status: null, source_location: null, source_zone: null, source_account_created_on: null,
     };
-    const unchangedRow = good(1, { email: 'a@b.com', phone: '4045550123', source_index: '7', import_source: 'DriveScout' });
-    const changedRow = good(2, { email: 'a@b.com', phone: '4045550123', source_index: '7', import_source: 'DriveScout', source_zone: 'North' });
+    const unchangedRow = good(1, { email: 'a@b.com', phone: '4045550123', source_index: '7', import_source: 'imported_student_roster' });
+    const changedRow = good(2, { email: 'a@b.com', phone: '4045550123', source_index: '7', import_source: 'imported_student_roster', source_zone: 'North' });
 
     const build = (r: NormalizedRow): PlannedRow[] =>
       applyDiffs(planImport([r], (k) => (k.strategy === 'email' ? ['lead-1'] : [])), new Map([['lead-1', existing]]));
@@ -152,7 +154,7 @@ describe('dedupe matching', () => {
 });
 
 describe('dry-run vs commit behaviour', () => {
-  const lookup = (k: MatchKey) => (k.value === 'known@b.com' ? ['lead-9'] : []);
+  const lookup = (k: MatchKey) => (k.value.startsWith('known@b.com') ? ['lead-9'] : []);
   const existing: ExistingLead = {
     id: 'lead-9', import_key: null, email: 'known@b.com', phone: null,
     student_first_name: 'Grace', student_last_name: 'Hopper',
@@ -185,5 +187,50 @@ describe('dry-run vs commit behaviour', () => {
       new Map([['lead-9', { ...existing, start_date: '2026-02-01' }]]),
     );
     expect(rerun[0].action).toBe('unchanged');
+  });
+});
+
+describe('duplicate protection', () => {
+  const base = (n: number, extra: Record<string, unknown> = {}): NormalizedRow =>
+    normalizeRow({ row_number: n, values: { start_date: '2026-01-01', ...extra } });
+
+  it('never merges two different students that share one family email', () => {
+    const shared = 'family@example.com';
+    const sibling: ExistingLead = {
+      id: 'lead-sib', import_key: null, email: shared, phone: null,
+      student_first_name: 'Ada', student_last_name: 'Lovelace',
+      guardian_first_name: null, guardian_last_name: null, guardian_email: null, guardian_phone: null,
+      start_date: '2026-01-01', source_page: null, source_index: null, import_source: null,
+      source_status: null, source_location: null, source_zone: null, source_account_created_on: null,
+    };
+    // Index the existing sibling the way the edge function does.
+    const index = new Map<string, string[]>([
+      [`email:${emailKey(sibling.email!, sibling.student_first_name!, sibling.student_last_name!)}`, ['lead-sib']],
+    ]);
+    const lookup = (k: MatchKey) => index.get(`${k.strategy}:${k.value}`) ?? [];
+
+    const other = base(1, { student_first_name: 'Charles', student_last_name: 'Babbage', email: shared });
+    const same = base(2, { student_first_name: 'Ada', student_last_name: 'Lovelace', email: shared });
+
+    expect(planImport([other], lookup)[0]).toMatchObject({ action: 'new', match_id: null });
+    expect(planImport([same], lookup)[0]).toMatchObject({ match_id: 'lead-sib', matched_by: 'email' });
+  });
+
+  it('treats two rows with the same import key as one lead (second row is a duplicate)', () => {
+    const rows = [
+      base(1, { student_first_name: 'Ada', student_last_name: 'Lovelace', import_key: 'imported_student_roster:5' }),
+      base(2, { student_first_name: 'Ada', student_last_name: 'Lovelace', import_key: 'imported_student_roster:5' }),
+    ];
+    const planned = planImport(rows, () => []);
+    expect(planned[0].action).toBe('new');
+    expect(planned[1].action).toBe('duplicate');
+  });
+
+  it('skips and reports ambiguous multi-hit matches instead of merging', () => {
+    const rows = [base(1, { student_first_name: 'Ada', student_last_name: 'Lovelace', import_key: 'K9' })];
+    const planned = planImport(rows, () => ['a', 'b']);
+    expect(planned[0].action).toBe('ambiguous');
+    expect(planned[0].match_id).toBeNull();
+    expect(planned[0].warnings.join(' ')).toMatch(/more than one existing lead/i);
   });
 });
