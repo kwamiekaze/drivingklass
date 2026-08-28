@@ -3,64 +3,126 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { buildRecipientList, isValidEmail, type Audience } from '@/lib/leadRecipients';
 import { LeadImportDialog } from '@/components/portal/LeadImportDialog';
 import { LeadFormDialog } from '@/components/portal/LeadFormDialog';
 import type { ImportedLeadRow } from '@/types/leads';
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, Phone, Copy, Users, ArrowUpDown,
-  FileUp, Plus, Pencil,
+  Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, Phone, Users, ArrowUpDown,
+  FileUp, Plus, Pencil, X,
 } from 'lucide-react';
 
 export type { ImportedLeadRow } from '@/types/leads';
 
-type SortKey = 'default' | 'source_index' | 'start_date' | 'student_name';
+type SortKey = 'default' | 'source_index' | 'start_date' | 'student_name' | 'source_account_created_on';
 type SourceFilter = 'all' | 'imported' | 'manual';
 
 const PAGE_SIZE = 50;
+const ANY = '__any__';
+
+/** Neutral label shown for every imported row — never the upstream source value. */
+export const IMPORTED_BADGE = 'Imported roster';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const isEmail = (v: string | null | undefined): boolean => !!v && EMAIL_RE.test(v.trim());
+
+export interface LeadFilterState {
+  search: string;
+  source: SourceFilter;
+  sort: SortKey;
+  dir: 'asc' | 'desc';
+  startFrom: string;
+  startTo: string;
+  status: string;
+  zone: string;
+}
+
+export const DEFAULT_FILTERS: LeadFilterState = {
+  search: '',
+  source: 'imported',
+  sort: 'default',
+  dir: 'desc',
+  startFrom: '',
+  startTo: '',
+  status: '',
+  zone: '',
+};
+
+/** Compact human summary of the filters currently narrowing the list. */
+export function describeFilters(f: LeadFilterState): string[] {
+  const out: string[] = [];
+  if (f.search.trim()) out.push(`Search: "${f.search.trim()}"`);
+  if (f.source === 'imported') out.push('Imported roster only');
+  if (f.source === 'manual') out.push('Manually added only');
+  if (f.startFrom && f.startTo) out.push(`Source start date ${f.startFrom} → ${f.startTo}`);
+  else if (f.startFrom) out.push(`Source start date from ${f.startFrom}`);
+  else if (f.startTo) out.push(`Source start date to ${f.startTo}`);
+  if (f.status) out.push(`Status: ${f.status}`);
+  if (f.zone) out.push(`Zone: ${f.zone}`);
+  return out;
+}
+
+export const filtersAreDefault = (f: LeadFilterState): boolean =>
+  f.search === DEFAULT_FILTERS.search &&
+  f.source === DEFAULT_FILTERS.source &&
+  f.sort === DEFAULT_FILTERS.sort &&
+  f.dir === DEFAULT_FILTERS.dir &&
+  !f.startFrom && !f.startTo && !f.status && !f.zone;
 
 export function ImportedLeadsPanel() {
   const { toast } = useToast();
   const [rows, setRows] = useState<ImportedLeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [source, setSource] = useState<SourceFilter>('imported');
-  const [sort, setSort] = useState<SortKey>('default');
-  const [dir, setDir] = useState<'asc' | 'desc'>('desc');
+  const [filters, setFilters] = useState<LeadFilterState>(DEFAULT_FILTERS);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [selected, setSelected] = useState<Record<string, ImportedLeadRow>>({});
-  const [audience, setAudience] = useState<Audience>('both');
-  const [selectingAll, setSelectingAll] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [importOpen, setImportOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ImportedLeadRow | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [zoneOptions, setZoneOptions] = useState<string[]>([]);
+
+  const patch = (p: Partial<LeadFilterState>) => { setFilters((f) => ({ ...f, ...p })); setPage(0); };
 
   useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(0); }, 350);
+    const t = setTimeout(() => { patch({ search: searchInput }); }, 350);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  const fetchPage = useCallback(async (opts?: { limit?: number; offset?: number }) => {
+  // Filter choices come from the database, never from a hardcoded list.
+  useEffect(() => {
+    supabase.rpc('admin_lead_filter_options').then(({ data, error }) => {
+      if (error || !data) return;
+      const list = data as { kind: string; value: string }[];
+      setStatusOptions(list.filter((o) => o.kind === 'status').map((o) => o.value));
+      setZoneOptions(list.filter((o) => o.kind === 'zone').map((o) => o.value));
+    });
+  }, [reloadKey]);
+
+  const fetchPage = useCallback(async () => {
     const { data, error } = await supabase.rpc('admin_search_leads', {
-      p_search: search.trim() || null,
-      p_source: source === 'all' ? null : source,
-      p_sort: sort,
-      p_dir: dir,
-      p_limit: opts?.limit ?? PAGE_SIZE,
-      p_offset: opts?.offset ?? page * PAGE_SIZE,
+      p_search: filters.search.trim() || null,
+      p_source: filters.source === 'all' ? null : filters.source,
+      p_sort: filters.sort,
+      p_dir: filters.dir,
+      p_limit: PAGE_SIZE,
+      p_offset: page * PAGE_SIZE,
+      p_start_from: filters.startFrom || null,
+      p_start_to: filters.startTo || null,
+      p_status: filters.status || null,
+      p_zone: filters.zone || null,
     });
     if (error) throw error;
     return (data || []) as unknown as ImportedLeadRow[];
-  }, [search, source, sort, dir, page]);
+  }, [filters, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,60 +142,11 @@ export function ImportedLeadsPanel() {
   }, [fetchPage, toast, reloadKey]);
 
   const reload = () => setReloadKey((k) => k + 1);
+  const resetFilters = () => { setSearchInput(''); setFilters(DEFAULT_FILTERS); setPage(0); };
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const selectedRows = useMemo(() => Object.values(selected), [selected]);
-  const recipients = useMemo(() => buildRecipientList(selectedRows, audience), [selectedRows, audience]);
-
-  const toggleRow = (row: ImportedLeadRow) => {
-    setSelected((prev) => {
-      const next = { ...prev };
-      if (next[row.id]) delete next[row.id]; else next[row.id] = row;
-      return next;
-    });
-  };
-
-  const allOnPageSelected = rows.length > 0 && rows.every((r) => selected[r.id]);
-  const togglePage = () => {
-    setSelected((prev) => {
-      const next = { ...prev };
-      if (allOnPageSelected) rows.forEach((r) => delete next[r.id]);
-      else rows.forEach((r) => { next[r.id] = r; });
-      return next;
-    });
-  };
-
-  const selectAllFiltered = async () => {
-    setSelectingAll(true);
-    try {
-      const collected: ImportedLeadRow[] = [];
-      const limit = 200;
-      for (let offset = 0; offset < total; offset += limit) {
-        const chunkRows = await fetchPage({ limit, offset });
-        collected.push(...chunkRows);
-        if (chunkRows.length < limit) break;
-      }
-      setSelected(Object.fromEntries(collected.map((r) => [r.id, r])));
-      toast({ title: `Selected ${collected.length} leads` });
-    } catch (e) {
-      toast({ title: 'Could not select all', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setSelectingAll(false);
-    }
-  };
-
-  const copyRecipients = async () => {
-    if (!recipients.eligible.length) {
-      toast({ title: 'No eligible email addresses', variant: 'destructive' });
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(recipients.eligible.join(', '));
-      toast({ title: `Copied ${recipients.eligible.length} addresses` });
-    } catch {
-      toast({ title: 'Clipboard unavailable', variant: 'destructive' });
-    }
-  };
+  const activeSummary = useMemo(() => describeFilters(filters), [filters]);
+  const isDefault = filtersAreDefault(filters);
 
   const studentName = (r: ImportedLeadRow) =>
     [r.student_first_name, r.student_last_name].filter(Boolean).join(' ') || r.full_name || 'Unnamed lead';
@@ -154,10 +167,11 @@ export function ImportedLeadsPanel() {
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              Imported Leads
+              Student Leads
             </CardTitle>
             <CardDescription>
-              Searchable, paginated view of every lead. Default order: newest start date, then newest source account date, then upload order.
+              Searchable, paginated view of every lead. Default order: newest source start date, then newest
+              source account-created date, then upload order.
             </CardDescription>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -174,71 +188,82 @@ export function ImportedLeadsPanel() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search student or guardian name, email, phone, location..."
+              placeholder="Search student or guardian name, email, phone, status, location, zone..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Select value={source} onValueChange={(v) => { setSource(v as SourceFilter); setPage(0); }}>
+            <Select value={filters.source} onValueChange={(v) => patch({ source: v as SourceFilter })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="imported">Imported leads</SelectItem>
+                <SelectItem value="imported">Imported roster leads</SelectItem>
                 <SelectItem value="manual">Manually added leads</SelectItem>
                 <SelectItem value="all">All leads</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sort} onValueChange={(v) => { setSort(v as SortKey); setPage(0); }}>
+            <Select value={filters.sort} onValueChange={(v) => patch({ sort: v as SortKey })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Sort: start date, then source date</SelectItem>
-                <SelectItem value="source_index">Sort: upload order</SelectItem>
-                <SelectItem value="start_date">Sort: start date</SelectItem>
+                <SelectItem value="default">Sort: source start date, then account-created</SelectItem>
+                <SelectItem value="start_date">Sort: source start date</SelectItem>
+                <SelectItem value="source_account_created_on">Sort: source account-created date</SelectItem>
                 <SelectItem value="student_name">Sort: student name</SelectItem>
+                <SelectItem value="source_index">Sort: upload order</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => { setDir((d) => (d === 'asc' ? 'desc' : 'asc')); setPage(0); }}>
+            <Button variant="outline" onClick={() => patch({ dir: filters.dir === 'asc' ? 'desc' : 'asc' })}>
               <ArrowUpDown className="h-4 w-4 mr-1.5" />
-              {dir === 'asc' ? 'Ascending' : 'Descending'}
+              {filters.dir === 'asc' ? 'Ascending' : 'Descending'}
             </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Source start date from</Label>
+              <Input type="date" value={filters.startFrom} onChange={(e) => patch({ startFrom: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Source start date to</Label>
+              <Input type="date" value={filters.startTo} onChange={(e) => patch({ startTo: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Source status</Label>
+              <Select
+                value={filters.status || ANY}
+                onValueChange={(v) => patch({ status: v === ANY ? '' : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Any status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY}>Any status</SelectItem>
+                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Source zone</Label>
+              <Select
+                value={filters.zone || ANY}
+                onValueChange={(v) => patch({ zone: v === ANY ? '' : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Any zone" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY}>Any zone</SelectItem>
+                  {zoneOptions.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Button size="sm" variant="outline" onClick={togglePage} disabled={!rows.length}>
-              {allOnPageSelected ? 'Clear page' : 'Select page'}
+            {activeSummary.map((s) => (
+              <Badge key={s} variant="outline" className="text-[11px] font-normal">{s}</Badge>
+            ))}
+            <Button size="sm" variant="ghost" onClick={resetFilters} disabled={isDefault}>
+              <X className="h-3.5 w-3.5 mr-1.5" /> Reset filters
             </Button>
-            <Button size="sm" variant="outline" onClick={selectAllFiltered} disabled={selectingAll || !total}>
-              {selectingAll && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-              Select all {total} filtered
-            </Button>
-            {selectedRows.length > 0 && (
-              <Button size="sm" variant="ghost" onClick={() => setSelected({})}>Clear selection ({selectedRows.length})</Button>
-            )}
           </div>
-
-          {selectedRows.length > 0 && (
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">Contacts from {selectedRows.length} selected lead{selectedRows.length === 1 ? '' : 's'}:</span>
-                <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
-                  <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="student">Students only</SelectItem>
-                    <SelectItem value="guardian">Guardians only</SelectItem>
-                    <SelectItem value="both">Students + guardians</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" variant="outline" onClick={copyRecipients}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy addresses
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">{recipients.eligible.length} addressable</Badge>
-                <Badge variant="outline">{recipients.duplicates} duplicate</Badge>
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">{recipients.invalid} invalid</Badge>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -247,7 +272,7 @@ export function ImportedLeadsPanel() {
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : rows.length === 0 ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">No leads match this search.</div>
+            <div className="text-center py-12 text-sm text-muted-foreground">No leads match these filters.</div>
           ) : (
             <div className="divide-y">
               {rows.map((r) => {
@@ -259,15 +284,14 @@ export function ImportedLeadsPanel() {
                     onOpenChange={(v) => setExpanded((p) => ({ ...p, [r.id]: v }))}
                   >
                     <div className="p-3 sm:p-4 flex items-start gap-3">
-                      <Checkbox className="mt-1" checked={!!selected[r.id]} onCheckedChange={() => toggleRow(r)} />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           {r.source_index != null && (
                             <Badge variant="outline" className="font-mono text-[10px]">#{r.source_index}</Badge>
                           )}
                           <span className="font-medium text-sm truncate">{studentName(r)}</span>
-                          {r.import_source && <Badge variant="secondary" className="text-[10px]">{r.import_source}</Badge>}
-                          {r.start_date && <span className="text-xs text-muted-foreground">Start {r.start_date}</span>}
+                          {r.import_source && <Badge variant="secondary" className="text-[10px]">{IMPORTED_BADGE}</Badge>}
+                          {r.start_date && <span className="text-xs text-muted-foreground">Source start {r.start_date}</span>}
                         </div>
                         <div className="text-xs text-muted-foreground space-y-0.5">
                           {r.email && <p className="truncate">Student: {r.email}{r.phone ? ` · ${r.phone}` : ''}</p>}
@@ -279,12 +303,12 @@ export function ImportedLeadsPanel() {
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
-                        {isValidEmail(r.email) && (
+                        {isEmail(r.email) && (
                           <Button asChild size="sm" variant="outline" className="h-8">
                             <a href={`mailto:${r.email}`} aria-label="Email student"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Student</span></a>
                           </Button>
                         )}
-                        {isValidEmail(r.guardian_email) && (
+                        {isEmail(r.guardian_email) && (
                           <Button asChild size="sm" variant="outline" className="h-8">
                             <a href={`mailto:${r.guardian_email}`} aria-label="Email guardian"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Guardian</span></a>
                           </Button>
@@ -292,6 +316,11 @@ export function ImportedLeadsPanel() {
                         {r.phone && (
                           <Button asChild size="sm" variant="ghost" className="h-8">
                             <a href={`tel:${r.phone.replace(/[^\d+]/g, '')}`} aria-label="Call student"><Phone className="h-3.5 w-3.5" /></a>
+                          </Button>
+                        )}
+                        {r.guardian_phone && (
+                          <Button asChild size="sm" variant="ghost" className="h-8">
+                            <a href={`tel:${r.guardian_phone.replace(/[^\d+]/g, '')}`} aria-label="Call guardian"><Phone className="h-3.5 w-3.5 opacity-60" /></a>
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" className="h-8" aria-label="Edit lead"
@@ -315,13 +344,12 @@ export function ImportedLeadsPanel() {
                         {detail('Guardian last', r.guardian_last_name)}
                         {detail('Guardian phone', r.guardian_phone)}
                         {detail('Guardian email', r.guardian_email)}
-                        {detail('Start date', r.start_date)}
+                        {detail('Source start date', r.start_date)}
+                        {detail('Source account-created date', r.source_account_created_on)}
                         {detail('Source status', r.source_status)}
                         {detail('Source location', r.source_location)}
                         {detail('Source zone', r.source_zone)}
-                        {detail('Account created on', r.source_account_created_on)}
-                        {detail('Import source', r.import_source)}
-                        {detail('Import key', r.import_key)}
+                        {detail('Record type', r.import_source ? IMPORTED_BADGE : 'Manually added')}
                         {detail('Source page / index', [r.source_page, r.source_index].filter((v) => v != null).join(' / '))}
                       </div>
                     </CollapsibleContent>
