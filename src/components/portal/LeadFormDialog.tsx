@@ -128,6 +128,22 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
     };
 
     try {
+      // Duplicate protection: an imported record key may only exist once per source.
+      if (payload.import_source && payload.import_key) {
+        const { data: clash, error: clashError } = await supabase
+          .from('leads')
+          .select('id')
+          .ilike('import_source', payload.import_source)
+          .ilike('import_key', payload.import_key)
+          .limit(2);
+        if (clashError) throw clashError;
+        if ((clash || []).some((c) => c.id !== lead?.id)) {
+          setErrors(['Another lead already uses this source record key. Keys must be unique.']);
+          setSaving(false);
+          return;
+        }
+      }
+
       const { error } = lead
         ? await supabase.from('leads').update(payload).eq('id', lead.id)
         : await supabase.from('leads').insert(payload);
@@ -141,6 +157,7 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
       setSaving(false);
     }
   };
+
 
   const field = (label: string, key: keyof FormState, type = 'text') => (
     <div>
