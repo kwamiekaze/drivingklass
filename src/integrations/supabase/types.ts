@@ -2802,6 +2802,14 @@ export type Database = {
           row_number: number
         }[]
       }
+      admin_lead_filter_options: {
+        Args: never
+        Returns: {
+          kind: string
+          lead_count: number
+          value: string
+        }[]
+      }
       admin_search_leads: {
         Args: {
           p_dir?: string
@@ -2810,6 +2818,10 @@ export type Database = {
           p_search?: string
           p_sort?: string
           p_source?: string
+          p_start_from?: string
+          p_start_to?: string
+          p_status?: string
+          p_zone?: string
         }
         Returns: {
           created_at: string
