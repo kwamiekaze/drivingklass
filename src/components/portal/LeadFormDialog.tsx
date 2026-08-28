@@ -85,7 +85,7 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
     if (!first && !last) problems.push('A student first or last name is required.');
 
     const start = normalizeDate(form.start_date);
-    if (!start.value || !start.valid) problems.push('A valid start date is required.');
+    if (!start.value || !start.valid) problems.push('A valid source start date is required.');
 
     const email = normalizeEmail(form.email);
     if (!email.valid) problems.push('Student email is not a valid address.');
@@ -102,6 +102,7 @@ export function LeadFormDialog({ open, onOpenChange, lead, onSaved }: Props) {
     if (problems.length) { setErrors(problems); return; }
     setErrors([]);
     setSaving(true);
+
 
     const payload = {
       student_first_name: first || null,
