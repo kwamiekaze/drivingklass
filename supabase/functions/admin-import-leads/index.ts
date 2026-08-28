@@ -3,9 +3,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 import {
   applyDiffs, countRows, planImport, normalizeRow,
-  nameKey, phoneKey,
+  emailKey, nameKey, phoneKey,
   type CanonicalLead, type ExistingLead, type MatchKey, type NormalizedRow, type PlannedRow, type RawRow,
 } from '../_shared/leadImport.ts'
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
