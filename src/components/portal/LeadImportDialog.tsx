@@ -147,9 +147,10 @@ export function LeadImportDialog({ open, onOpenChange, onImported }: Props) {
           </div>
 
           <div>
-            <Label className="text-xs">Import source label</Label>
-            <Input value={importSource} onChange={(e) => setImportSource(e.target.value)} placeholder="e.g. DriveScout" />
+            <Label className="text-xs">Batch label (internal)</Label>
+            <Input value={importSource} onChange={(e) => setImportSource(e.target.value)} placeholder="imported_student_roster" />
           </div>
+
 
           {busy === 'parse' && (
             <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Reading file…</p>
