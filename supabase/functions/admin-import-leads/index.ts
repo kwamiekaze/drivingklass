@@ -130,11 +130,14 @@ Deno.serve(async (req) => {
   }
   for (const c of candidates.values()) {
     if (c.import_key) push(`import_key:${c.import_key}`, c.id)
-    if (c.email) push(`email:${c.email.trim().toLowerCase()}`, c.id)
+    if (c.email) {
+      push(`email:${emailKey(c.email, c.student_first_name ?? '', c.student_last_name ?? '')}`, c.id)
+    }
     const n = nameKey(c.student_first_name ?? '', c.student_last_name ?? '')
     const p = phoneKey(c.phone ?? '')
     if (n && p && c.student_first_name && c.student_last_name) push(`name_phone:${n}|${p}`, c.id)
   }
+
   const lookup = (k: MatchKey): string[] => byKey.get(`${k.strategy}:${k.value}`) ?? []
 
   // 4. Plan + diff
