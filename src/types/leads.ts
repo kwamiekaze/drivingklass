@@ -33,6 +33,10 @@ export interface Lead {
   source_type: LeadSourceType | null;
   attachment_path: string | null;
   attachment_bucket: string | null;
+  // Imported roster source fields
+  start_date: string | null;
+  import_source: string | null;
+  import_key: string | null;
 }
 
 export interface LeadNote {
