@@ -67,18 +67,11 @@ export function ImportedLeadsPanel() {
   }, [reloadKey]);
 
   const fetchPage = useCallback(async () => {
-    const { data, error } = await supabase.rpc('admin_search_leads', {
-      p_search: filters.search.trim() || null,
-      p_source: filters.source === 'all' ? null : filters.source,
-      p_sort: filters.sort,
-      p_dir: filters.dir,
-      p_limit: PAGE_SIZE,
-      p_offset: page * PAGE_SIZE,
-      p_start_from: filters.startFrom || null,
-      p_start_to: filters.startTo || null,
-      p_status: filters.status || null,
-      p_zone: filters.zone || null,
-    });
+    const { data, error } = await supabase.rpc(
+      'admin_search_leads',
+      buildSearchParams(filters, page, PAGE_SIZE),
+    );
+
     if (error) throw error;
     return (data || []) as unknown as ImportedLeadRow[];
   }, [filters, page]);
