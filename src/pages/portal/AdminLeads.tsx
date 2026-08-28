@@ -49,7 +49,7 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Lead, LeadNote, LeadActivity, LeadPipelineStatus, ParsedLeadData } from '@/types/leads';
-import { effectiveAddedDate, effectiveAddedIsDateOnly, sortByEffectiveAddedDesc } from '@/lib/leadDates';
+import { compareByEffectiveAddedDesc, effectiveAddedDate, effectiveAddedIsDateOnly } from '@/lib/leadDates';
 import { parseLeadData, getMissingFields } from '@/lib/leadParser';
 import { 
   logLeadActivity, 
@@ -595,8 +595,6 @@ function AdminLeadsContent() {
 
   // Filter leads
   const filteredLeads = useMemo(() => {
-    const compareRecent = (a: Lead, b: Lead) =>
-      sortByEffectiveAddedDesc([a, b])[0] === a ? -1 : 1;
     return leads.filter(lead => {
       // Status filter
       const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
@@ -653,7 +651,7 @@ function AdminLeadsContent() {
       }
       
       return matchesStatus && matchesSearch && matchesPermitDate && matchesFollowUp && matchesMissingInfo;
-    }).sort(compareRecent);
+    }).sort(compareByEffectiveAddedDesc);
   }, [leads, statusFilter, searchQuery, permitIssueDateFrom, permitIssueDateTo, followUpFilter, missingInfoFilters]);
 
   const toggleMissingFilter = (filter: MissingInfoFilter) => {
