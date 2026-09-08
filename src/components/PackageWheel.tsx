@@ -232,8 +232,9 @@ export function PackageWheel({ onPackageSelect, splashComplete = true }: Package
   useEffect(() => {
     const updateSize = () => {
       const width = window.innerWidth;
-      if (width >= 1024) setContainerSize(600);
-      else if (width >= 768) setContainerSize(500);
+      const height = window.innerHeight;
+      if (width >= 1024) setContainerSize(Math.max(380, Math.min(600, height - 390)));
+      else if (width >= 768) setContainerSize(Math.max(380, Math.min(500, height - 390)));
       else if (width >= 640) setContainerSize(400);
       else setContainerSize(320);
     };

@@ -16,7 +16,7 @@ export function HeroSection({ splashComplete = true, onReviewsClick, onAboutClic
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-start overflow-hidden px-3 py-3 sm:py-4 md:px-4 md:py-6">
+    <section className="relative min-h-screen flex flex-col items-center justify-start overflow-hidden px-3 py-3 sm:py-4 md:h-[100svh] md:min-h-[100svh] md:px-4 md:py-3">
       {/* Row 1 — mobile compact header */}
       <div className="w-full md:hidden grid grid-cols-[auto_1fr_auto] items-center gap-2 mb-2">
         <ThemeToggle size="lg" />
@@ -29,13 +29,13 @@ export function HeroSection({ splashComplete = true, onReviewsClick, onAboutClic
       </div>
 
       {/* Desktop / tablet */}
-      <div className="hidden md:flex w-full items-center justify-between mb-6">
+      <div className="hidden md:flex w-full items-center justify-between mb-6 md:absolute md:inset-x-4 md:top-3 md:z-30 md:w-auto md:mb-0">
         <ThemeToggle />
         <PortalMenuButton />
       </div>
-      <HeaderBrand className="hidden md:block relative z-10 mb-12" />
+      <HeaderBrand className="hidden md:block relative z-10 mb-12 md:mb-1" />
 
-      <div className="w-full flex justify-center mt-2 md:mt-0">
+      <div className="w-full flex justify-center mt-2 md:mt-0 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <PackageWheel
           onPackageSelect={handlePackageSelect}
           splashComplete={splashComplete}
@@ -46,7 +46,7 @@ export function HeroSection({ splashComplete = true, onReviewsClick, onAboutClic
           Scrolls away with the hero (not fixed). */}
       {onReviewsClick && onAboutClick && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[520px] md:bottom-[7vh] bottom-[12.5vh]"
+          className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[520px] bottom-[12.5vh] md:static md:left-auto md:translate-x-0 md:max-w-none md:mt-2"
           style={{ pointerEvents: "auto" }}
         >
           <NavigationButtons
