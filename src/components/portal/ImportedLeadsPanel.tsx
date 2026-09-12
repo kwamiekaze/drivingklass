@@ -5,18 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { LeadImportDialog } from '@/components/portal/LeadImportDialog';
 import { LeadFormDialog } from '@/components/portal/LeadFormDialog';
+import { LeadDraftEmailDialog } from '@/components/portal/LeadDraftEmailDialog';
+import type { DraftRecipientSource } from '@/lib/leadDraftEmail';
 import {
   DEFAULT_FILTERS, IMPORTED_BADGE, buildSearchParams, describeFilters, filtersAreDefault,
   type LeadFilterState, type LeadSortKey, type LeadSourceFilter,
 } from '@/lib/leadFilters';
 import type { ImportedLeadRow } from '@/types/leads';
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, Phone, Users, ArrowUpDown,
+  Loader2, Search, ChevronLeft, ChevronRight, ChevronDown, Mail, MailPlus, Phone, Users, ArrowUpDown,
   FileUp, Plus, Pencil, X,
 } from 'lucide-react';
 
@@ -26,10 +30,13 @@ type SortKey = LeadSortKey;
 type SourceFilter = LeadSourceFilter;
 
 const PAGE_SIZE = 50;
+const ALL_PAGE_SIZE = 200;
+const ALL_MAX_ROWS = 10000;
 const ANY = '__any__';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const isEmail = (v: string | null | undefined): boolean => !!v && EMAIL_RE.test(v.trim());
+
 
 
 export function ImportedLeadsPanel() {
