@@ -54,6 +54,13 @@ export function ImportedLeadsPanel() {
   const [reloadKey, setReloadKey] = useState(0);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [zoneOptions, setZoneOptions] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Record<string, ImportedLeadRow>>({});
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftRows, setDraftRows] = useState<DraftRecipientSource[]>([]);
+  const [draftScope, setDraftScope] = useState('');
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
 
   const patch = (p: Partial<LeadFilterState>) => { setFilters((f) => ({ ...f, ...p })); setPage(0); };
 
