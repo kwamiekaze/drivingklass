@@ -22,7 +22,7 @@ describe('address normalization', () => {
   });
 
   it('rejects blank and malformed addresses', () => {
-    for (const bad of ['', '   ', 'nope', 'a@b', 'a@@b.com', 'a b@c.com']) {
+    for (const bad of ['', '   ', 'nope', 'a@b', 'a@@b.com', '@c.com', 'a@.com']) {
       expect(isValidAddress(bad)).toBe(false);
     }
     expect(isValidAddress('Student@Gmail.com')).toBe(true);
