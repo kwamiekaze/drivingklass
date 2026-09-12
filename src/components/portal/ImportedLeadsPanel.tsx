@@ -186,7 +186,9 @@ export function ImportedLeadsPanel() {
   );
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-4">
+
       <Card className="portal-card">
         <CardHeader className="pb-3 flex-row items-start justify-between space-y-0 gap-2">
           <div>
@@ -292,7 +294,36 @@ export function ImportedLeadsPanel() {
         </CardContent>
       </Card>
 
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-3">
+        <label className="flex items-center gap-2 text-xs cursor-pointer">
+          <Checkbox
+            checked={pageAllSelected}
+            disabled={rows.length === 0}
+            onCheckedChange={(v) => togglePage(v === true)}
+            aria-label="Select every lead on this page"
+          />
+          Select page
+        </label>
+        <Button size="sm" variant="outline" onClick={selectAllFiltered} disabled={draftLoading || total === 0}>
+          {draftLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
+          Select all {total.toLocaleString()} results
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setSelected({})} disabled={selectedList.length === 0}>
+          <X className="h-3.5 w-3.5 mr-1.5" /> Clear selection
+        </Button>
+        <Badge variant="outline" className="text-[11px] font-normal">{selectedList.length} selected</Badge>
+        <Button
+          size="sm"
+          className="ml-auto"
+          disabled={selectedList.length === 0}
+          onClick={() => openDraftFor(selectedList, `${selectedList.length} selected lead${selectedList.length === 1 ? '' : 's'}`)}
+        >
+          <MailPlus className="h-3.5 w-3.5 mr-1.5" /> Draft email
+        </Button>
+      </div>
+
       <Card className="portal-card">
+
         <CardContent className="p-0">
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -309,7 +340,14 @@ export function ImportedLeadsPanel() {
                     onOpenChange={(v) => setExpanded((p) => ({ ...p, [r.id]: v }))}
                   >
                     <div className="p-3 sm:p-4 flex items-start gap-3">
+                      <Checkbox
+                        className="mt-1"
+                        checked={!!selected[r.id]}
+                        onCheckedChange={(v) => toggleRow(r, v === true)}
+                        aria-label={`Select ${studentName(r)}`}
+                      />
                       <div className="min-w-0 flex-1 space-y-1">
+
                         <div className="flex flex-wrap items-center gap-2">
                           {r.source_index != null && (
                             <Badge variant="outline" className="font-mono text-[10px]">#{r.source_index}</Badge>
@@ -328,7 +366,21 @@ export function ImportedLeadsPanel() {
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
+                        {(isEmail(r.email) || isEmail(r.guardian_email)) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm" variant="ghost" className="h-8" aria-label="Draft email for this lead"
+                                onClick={() => openDraftFor([r], studentName(r))}
+                              >
+                                <MailPlus className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Draft email (opens a Gmail draft, never sends)</TooltipContent>
+                          </Tooltip>
+                        )}
                         {isEmail(r.email) && (
+
                           <Button asChild size="sm" variant="outline" className="h-8">
                             <a href={`mailto:${r.email}`} aria-label="Email student"><Mail className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Student</span></a>
                           </Button>
@@ -402,6 +454,16 @@ export function ImportedLeadsPanel() {
 
       <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={reload} />
       <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} lead={editing} onSaved={reload} />
+      <LeadDraftEmailDialog
+        open={draftOpen}
+        onOpenChange={setDraftOpen}
+        rows={draftRows}
+        scopeLabel={draftScope}
+        loading={false}
+        error={draftError}
+      />
     </div>
+    </TooltipProvider>
   );
 }
+
