@@ -114,10 +114,69 @@ export function ImportedLeadsPanel() {
   const activeSummary = useMemo(() => describeFilters(filters), [filters]);
   const isDefault = filtersAreDefault(filters);
 
+  // ---------------------------------------------------------------- selection
+  const selectedList = useMemo(() => Object.values(selected), [selected]);
+  const pageAllSelected = rows.length > 0 && rows.every((r) => selected[r.id]);
+
+  const toggleRow = (r: ImportedLeadRow, checked: boolean) =>
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (checked) next[r.id] = r; else delete next[r.id];
+      return next;
+    });
+
+  const togglePage = (checked: boolean) =>
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const r of rows) { if (checked) next[r.id] = r; else delete next[r.id]; }
+      return next;
+    });
+
+  /** Fetch every row matching the current filters, in bounded server-side pages. */
+  const fetchAllFiltered = useCallback(async (): Promise<ImportedLeadRow[]> => {
+    const all: ImportedLeadRow[] = [];
+    let offsetPage = 0;
+    let expected = Infinity;
+    while (all.length < expected && all.length < ALL_MAX_ROWS) {
+      const { data, error } = await supabase.rpc(
+        'admin_search_leads',
+        buildSearchParams(filters, offsetPage, ALL_PAGE_SIZE),
+      );
+      if (error) throw error;
+      const batch = (data || []) as unknown as ImportedLeadRow[];
+      if (!batch.length) break;
+      expected = Number(batch[0].total_count) || batch.length;
+      all.push(...batch);
+      offsetPage++;
+    }
+    return all;
+  }, [filters]);
+
+  const selectAllFiltered = async () => {
+    setDraftLoading(true);
+    try {
+      const all = await fetchAllFiltered();
+      setSelected(Object.fromEntries(all.map((r) => [r.id, r])));
+      toast({ title: `${all.length.toLocaleString()} leads selected` });
+    } catch (e) {
+      toast({ title: 'Could not select all results', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const openDraftFor = (source: DraftRecipientSource[], scope: string) => {
+    setDraftError(null);
+    setDraftRows(source);
+    setDraftScope(scope);
+    setDraftOpen(true);
+  };
+
   const studentName = (r: ImportedLeadRow) =>
     [r.student_first_name, r.student_last_name].filter(Boolean).join(' ') || r.full_name || 'Unnamed lead';
   const guardianName = (r: ImportedLeadRow) =>
     [r.guardian_first_name, r.guardian_last_name].filter(Boolean).join(' ') || r.guardian_name || '';
+
 
   const detail = (label: string, value: string | number | null | undefined) => (
     <div className="min-w-0">
