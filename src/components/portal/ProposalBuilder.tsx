@@ -478,11 +478,15 @@ export function ProposalBuilder({
                             <Label className="text-[10px] text-muted-foreground">Duration</Label>
                             <Select value={item.duration_minutes} onValueChange={v => updateItem(item.id, 'duration_minutes', v)}>
                               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover border z-50">
+                              <SelectContent className="bg-popover border z-50 max-h-[240px]">
                                 <SelectItem value="60">1 hour</SelectItem>
                                 <SelectItem value="90">1.5 hours</SelectItem>
                                 <SelectItem value="120">2 hours</SelectItem>
                                 <SelectItem value="180">3 hours</SelectItem>
+                                <SelectItem value="210">3.5 hours</SelectItem>
+                                <SelectItem value="240">4 hours</SelectItem>
+                                <SelectItem value="270">4.5 hours</SelectItem>
+                                <SelectItem value="300">5 hours</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
