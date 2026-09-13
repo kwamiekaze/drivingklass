@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, Check, X, Clock, Edit3, Send } from "lucide-react";
+import { Calendar, Check, X, Clock, Edit3, Send, MapPin } from "lucide-react";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
