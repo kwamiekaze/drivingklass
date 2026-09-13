@@ -15,6 +15,7 @@ import { Plus, Trash2, Send, Calendar, Info } from "lucide-react";
 import { Profile } from "@/types/portal";
 import { getDisplayName } from "@/lib/profileUtils";
 import { ProfileCombobox } from "@/components/portal/ProfileCombobox";
+import { DdsLocationPicker } from "@/components/portal/DdsLocationPicker";
 
 import { toast } from "sonner";
 import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
@@ -36,6 +37,8 @@ interface ProposalItem {
   end_time: string;
   duration_minutes: string;
   session_type: string;
+  dds_location: string;
+  pickup_time: string;
 }
 
 interface ProposalBuilderProps {
@@ -84,6 +87,7 @@ export function ProposalBuilder({
   const [noteToStudent, setNoteToStudent] = useState(existingNote || '');
   const [items, setItems] = useState<ProposalItem[]>([createEmptyItem()]);
   const [sending, setSending] = useState(false);
+  const [locationErrors, setLocationErrors] = useState<string[]>([]);
   const [studentAvailability, setStudentAvailability] = useState<{days: string[], windows: string[], notes: string | null} | null>(null);
 
   useEffect(() => {
@@ -105,6 +109,8 @@ export function ProposalBuilder({
         end_time: ei.end_time?.slice(0, 5) || '11:00',
         duration_minutes: String(ei.duration_minutes || 120),
         session_type: ei.session_type || 'driving',
+        dds_location: ei.dds_location || '',
+        pickup_time: (ei.pickup_time || '').slice(0, 5),
       })));
     }
     if (existingNote !== undefined) setNoteToStudent(existingNote || '');
@@ -141,6 +147,8 @@ export function ProposalBuilder({
       end_time: '11:00',
       duration_minutes: '120',
       session_type: 'driving',
+      dds_location: '',
+      pickup_time: '',
     };
   }
 
@@ -171,6 +179,9 @@ export function ProposalBuilder({
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
       const updated = { ...item, [field]: value };
+      if (field === 'dds_location' && value.trim()) {
+        setLocationErrors(prev => prev.filter(e => e !== id));
+      }
       if (field === 'start_time' || field === 'duration_minutes') {
         const st = field === 'start_time' ? value : item.start_time;
         const dur = field === 'duration_minutes' ? parseInt(value) : parseInt(item.duration_minutes);
@@ -184,6 +195,13 @@ export function ProposalBuilder({
     if (!studentId || !instructorId) { toast.error('Select student and instructor'); return; }
     const validItems = items.filter(i => i.date && i.start_time);
     if (validItems.length === 0) { toast.error('Add at least one date'); return; }
+    const missingLocation = validItems.filter(i => i.session_type === 'testing' && !i.dds_location.trim());
+    if (missingLocation.length > 0) {
+      setLocationErrors(missingLocation.map(i => i.id));
+      toast.error('Select a DDS testing location for each Road Test date');
+      return;
+    }
+    setLocationErrors([]);
 
     setSending(true);
     try {
@@ -204,6 +222,8 @@ export function ProposalBuilder({
           end_time: item.end_time,
           duration_minutes: parseInt(item.duration_minutes),
           session_type: item.session_type,
+          dds_location: item.session_type === 'testing' ? (item.dds_location.trim() || null) : null,
+          pickup_time: item.session_type === 'testing' && item.pickup_time ? `${item.pickup_time}:00` : null,
           pickup_address: studentProfile?.pickup_address || null,
           dropoff_address: studentProfile?.dropoff_address || null,
           item_status: 'proposed',
@@ -265,6 +285,8 @@ export function ProposalBuilder({
           end_time: item.end_time,
           duration_minutes: parseInt(item.duration_minutes),
           session_type: item.session_type,
+          dds_location: item.session_type === 'testing' ? (item.dds_location.trim() || null) : null,
+          pickup_time: item.session_type === 'testing' && item.pickup_time ? `${item.pickup_time}:00` : null,
           pickup_address: studentProfile?.pickup_address || null,
           dropoff_address: studentProfile?.dropoff_address || null,
           item_status: 'proposed',
@@ -304,6 +326,7 @@ export function ProposalBuilder({
               dateLabel: format(parseISO(it.date), 'EEE, MMM d, yyyy'),
               timeLabel: `${formatTime24to12(it.start_time)} – ${formatTime24to12(it.end_time)}`,
               sessionType: it.session_type === 'testing' ? 'testing' : 'driving',
+              locationLabel: it.session_type === 'testing' ? (it.dds_location || undefined) : undefined,
             }));
             supabase.functions.invoke('send-transactional-email', {
               body: {
@@ -501,6 +524,29 @@ export function ProposalBuilder({
                             </Select>
                           </div>
                         </div>
+                        {item.session_type === 'testing' && (
+                          <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-2">
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">DDS Testing Location</Label>
+                              <DdsLocationPicker
+                                value={item.dds_location}
+                                onChange={v => updateItem(item.id, 'dds_location', v)}
+                              />
+                              {locationErrors.includes(item.id) && (
+                                <p className="text-[11px] text-destructive mt-1">Select a DDS testing location for this road test date.</p>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Pickup Time (optional)</Label>
+                              <Input
+                                type="time"
+                                value={item.pickup_time}
+                                onChange={e => updateItem(item.id, 'pickup_time', e.target.value)}
+                                className="h-9 text-sm"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <Button
                         type="button" variant="ghost" size="icon"

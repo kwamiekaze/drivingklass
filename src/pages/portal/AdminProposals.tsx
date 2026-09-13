@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, CalendarCheck, Check, Clock, Send, Eye, CheckCircle, XCircle, Plus, Edit3, AlertTriangle, RotateCcw } from "lucide-react";
+import { Calendar, CalendarCheck, Check, Clock, Send, Eye, CheckCircle, XCircle, Plus, Edit3, AlertTriangle, RotateCcw, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { ProposalBuilder } from "@/components/portal/ProposalBuilder";
@@ -449,6 +449,12 @@ function AdminProposalsContent() {
                               <>
                                 <p className="font-medium">{format(parseISO(item.proposed_date), 'EEE, MMM d, yyyy')}</p>
                                 <p className="text-xs text-muted-foreground">{formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}</p>
+                                {item.session_type === 'testing' && (item as any).dds_location && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
+                                    <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
+                                    <span className="break-words">{(item as any).dds_location}</span>
+                                  </p>
+                                )}
                               </>
                             ) : (
                               <div className="grid grid-cols-3 gap-2">

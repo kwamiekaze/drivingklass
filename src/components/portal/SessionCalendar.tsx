@@ -528,6 +528,14 @@ export function SessionCalendar({ sessions, userRole, onSessionUpdate, defaultVi
     }
     setApproveConflictMsg(null);
     setApproveOverride(false);
+    // Road test slots trigger the existing DDS 2 GO scheduling email flow once confirmed
+    if ((selectedSession as any).session_type === 'testing' && (selectedSession as any).dds_location) {
+      supabase.functions
+        .invoke('send-road-test-scheduling-emails', { body: { sessionId: selectedSession.id } })
+        .then(({ error: e }) => {
+          if (e) toast({ title: "Road test emails failed", description: e.message, variant: "destructive" });
+        });
+    }
     toast({ title: "Pending slot approved", description: "Now scheduled." });
     setSelectedSession(null);
     onSessionUpdate?.();

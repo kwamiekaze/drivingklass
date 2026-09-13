@@ -13,14 +13,18 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get('Authorization') || ''
   const jwt = authHeader.replace('Bearer ', '')
-  const { data: userData, error: userErr } = await supabase.auth.getUser(jwt)
-  if (userErr || !userData?.user) {
-    return json({ error: 'Unauthorized' }, 401)
+  // Internal server-to-server calls (e.g. finalizing a road-test proposal) use the service role key.
+  const isInternal = jwt === serviceKey
+  if (!isInternal) {
+    const { data: userData, error: userErr } = await supabase.auth.getUser(jwt)
+    if (userErr || !userData?.user) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
+    // Require admin/staff
+    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userData.user.id)
+    const isStaff = (roles || []).some((r: any) => r.role === 'admin' || r.role === 'staff')
+    if (!isStaff) return json({ error: 'Forbidden' }, 403)
   }
-  // Require admin/staff
-  const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userData.user.id)
-  const isStaff = (roles || []).some((r: any) => r.role === 'admin' || r.role === 'staff')
-  if (!isStaff) return json({ error: 'Forbidden' }, 403)
 
   let body: any
   try { body = await req.json() } catch { return json({ error: 'Invalid JSON' }, 400) }
