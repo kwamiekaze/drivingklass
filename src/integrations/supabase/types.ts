@@ -2207,12 +2207,14 @@ export type Database = {
           conflict_reason: string | null
           created_at: string
           created_session_id: string | null
+          dds_location: string | null
           dropoff_address: string | null
           duration_minutes: number
           end_time: string
           id: string
           item_status: string
           pickup_address: string | null
+          pickup_time: string | null
           proposal_id: string
           proposed_date: string
           session_type: string
@@ -2223,12 +2225,14 @@ export type Database = {
           conflict_reason?: string | null
           created_at?: string
           created_session_id?: string | null
+          dds_location?: string | null
           dropoff_address?: string | null
           duration_minutes?: number
           end_time: string
           id?: string
           item_status?: string
           pickup_address?: string | null
+          pickup_time?: string | null
           proposal_id: string
           proposed_date: string
           session_type?: string
@@ -2239,12 +2243,14 @@ export type Database = {
           conflict_reason?: string | null
           created_at?: string
           created_session_id?: string | null
+          dds_location?: string | null
           dropoff_address?: string | null
           duration_minutes?: number
           end_time?: string
           id?: string
           item_status?: string
           pickup_address?: string | null
+          pickup_time?: string | null
           proposal_id?: string
           proposed_date?: string
           session_type?: string
