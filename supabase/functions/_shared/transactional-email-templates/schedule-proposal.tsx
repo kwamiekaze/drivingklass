@@ -8,6 +8,7 @@ interface ProposalItem {
   dateLabel: string
   timeLabel: string
   sessionType: 'driving' | 'testing'
+  locationLabel?: string
 }
 
 interface Props {
@@ -62,6 +63,7 @@ const Email = ({
                 <Text key={i} style={{ ...brand.text, margin: '0 0 4px' }}>
                   • {it.dateLabel} — {it.timeLabel}
                   {it.sessionType === 'testing' ? ' (Road Test)' : ''}
+                  {it.sessionType === 'testing' && it.locationLabel ? ` — ${it.locationLabel}` : ''}
                 </Text>
               ))}
             </Section>
