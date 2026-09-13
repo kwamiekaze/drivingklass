@@ -163,6 +163,10 @@ async function createSessionFromItem(
 
   const didOverride = conflicts.length > 0 && override;
   const durationMinutes = item.duration_minutes || 120;
+  const isRoadTest = (item.session_type || 'driving') === 'testing';
+  const pickupTimeISO = isRoadTest && item.pickup_time
+    ? toEasternISO(item.proposed_date, String(item.pickup_time).slice(0, 5))
+    : null;
 
   const { data: session, error: sErr } = await supabase
     .from('sessions')
@@ -174,6 +178,8 @@ async function createSessionFromItem(
       duration_minutes: durationMinutes,
       status: 'scheduled',
       session_type: item.session_type || 'driving',
+      dds_location: isRoadTest ? (item.dds_location || null) : null,
+      pickup_time: pickupTimeISO,
       pickup_address: item.pickup_address,
       dropoff_address: item.dropoff_address,
       created_by: createdBy,
@@ -192,6 +198,28 @@ async function createSessionFromItem(
 
   console.log(`[schedule] Created session ${session.id} for item ${item.id}: starts_at=${session.starts_at} ends_at=${session.ends_at}`);
   return { session, conflict: false };
+}
+
+/**
+ * Fires the existing road-test scheduling email flow (student DDS 2 GO walkthrough,
+ * instructor copy, and road_test_emails logging) for a newly created road-test session.
+ */
+async function fireRoadTestEmails(session: any) {
+  if (!session || session.session_type !== 'testing' || !session.dds_location) return
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-road-test-scheduling-emails`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+      body: JSON.stringify({ sessionId: session.id }),
+    })
+    if (!res.ok) {
+      console.error('[handle-proposal-action] road test emails failed:', res.status, await res.text())
+    }
+  } catch (e: any) {
+    console.error('[handle-proposal-action] road test emails error:', e?.message)
+  }
 }
 
 async function handleAccept(supabase: any, userId: string, userRole: string, proposalId: string) {
@@ -231,6 +259,7 @@ async function handleAccept(supabase: any, userId: string, userRole: string, pro
       await supabase.from('schedule_proposal_items')
         .update({ item_status: 'auto_scheduled', created_session_id: session.id })
         .eq('id', item.id)
+      await fireRoadTestEmails(session)
       results.scheduled++
     }
 
