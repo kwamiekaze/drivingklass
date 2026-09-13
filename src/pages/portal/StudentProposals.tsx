@@ -343,6 +343,12 @@ function StudentProposalsContent() {
                         <p className="text-xs text-muted-foreground">
                           {formatTime24to12(item.start_time)} – {formatTime24to12(item.end_time)}
                         </p>
+                        {item.session_type === 'testing' && (item as any).dds_location && (
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
+                            <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
+                            <span className="break-words">{(item as any).dds_location}</span>
+                          </p>
+                        )}
                       </div>
                       <SessionTypeBadge sessionType={item.session_type} />
                       {item.item_status === 'conflict' && (
