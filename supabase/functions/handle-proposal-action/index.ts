@@ -432,6 +432,7 @@ async function handleFinalize(
     await supabase.from('schedule_proposal_items')
       .update({ item_status: 'finalized', created_session_id: session.id })
       .eq('id', item.id)
+    await fireRoadTestEmails(session)
     scheduled++
     createdSessions.push({ session, item })
   }
