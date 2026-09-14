@@ -2289,6 +2289,7 @@ export type Database = {
           latest_edit_request_at: string | null
           latest_edit_request_note: string | null
           note_to_student: string | null
+          package_id: string | null
           proposal_status: string
           student_id: string
           updated_at: string
@@ -2307,6 +2308,7 @@ export type Database = {
           latest_edit_request_at?: string | null
           latest_edit_request_note?: string | null
           note_to_student?: string | null
+          package_id?: string | null
           proposal_status?: string
           student_id: string
           updated_at?: string
@@ -2325,6 +2327,7 @@ export type Database = {
           latest_edit_request_at?: string | null
           latest_edit_request_note?: string | null
           note_to_student?: string | null
+          package_id?: string | null
           proposal_status?: string
           student_id?: string
           updated_at?: string
