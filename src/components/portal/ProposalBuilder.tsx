@@ -407,6 +407,25 @@ export function ProposalBuilder({
               />
             </div>
 
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-sm">Package</Label>
+              <Select value={packageId} onValueChange={setPackageId}>
+                <SelectTrigger className="min-h-[44px]">
+                  <SelectValue placeholder="Auto (match by total hours)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="auto">Auto (match by total hours)</SelectItem>
+                  {PACKAGES.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.label.replace(/\n/g, ' ')} — {p.price}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Sets the payment link sent to the student. Auto keeps the current hour-based match.
+              </p>
+            </div>
           </div>
 
           {/* Student Availability Helper */}
