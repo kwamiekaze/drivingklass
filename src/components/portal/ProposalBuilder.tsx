@@ -109,7 +109,8 @@ export function ProposalBuilder({
     }
     if (existingNote !== undefined) setNoteToStudent(existingNote || '');
     if (existingAcceptanceMode) setAcceptanceMode(existingAcceptanceMode);
-  }, [isEditing, existingItems, existingNote, existingAcceptanceMode]);
+    if (isEditing) setPackageId(existingPackageId || 'auto');
+  }, [isEditing, existingItems, existingNote, existingAcceptanceMode, existingPackageId]);
 
   // Fetch student availability when student is selected
   useEffect(() => {
