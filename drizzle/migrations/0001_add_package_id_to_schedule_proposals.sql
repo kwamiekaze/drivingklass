@@ -1,0 +1,1 @@
+ALTER TABLE public.schedule_proposals ADD COLUMN IF NOT EXISTS package_id text;

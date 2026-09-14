@@ -18,7 +18,8 @@ import { ProfileCombobox } from "@/components/portal/ProfileCombobox";
 import { DdsLocationPicker } from "@/components/portal/DdsLocationPicker";
 
 import { toast } from "sonner";
-import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
+import { resolveProposalPackage, sumProposalHours } from "@/lib/packageSelection";
+import { PACKAGES } from "@/data/packages";
 import { format, parseISO } from "date-fns";
 
 function formatTime24to12(time: string): string {
@@ -50,6 +51,7 @@ interface ProposalBuilderProps {
   existingItems?: any[];
   existingNote?: string;
   existingAcceptanceMode?: string;
+  existingPackageId?: string | null;
   onProposalSent?: () => void;
 }
 
@@ -64,7 +66,7 @@ function computeEndTime(startTime: string, durationMinutes: number): string {
 export function ProposalBuilder({
   open, onOpenChange, preselectedStudentId, preselectedInstructorId,
   editingProposalId, existingItems, existingNote, existingAcceptanceMode,
-  onProposalSent,
+  existingPackageId, onProposalSent,
 }: ProposalBuilderProps) {
   const { role, user } = usePortalAuth();
   const isAdmin = role === 'admin' || role === 'staff';
@@ -77,6 +79,7 @@ export function ProposalBuilder({
   const [acceptanceMode, setAcceptanceMode] = useState(existingAcceptanceMode || 'pending_admin_finalize');
   const [noteToStudent, setNoteToStudent] = useState(existingNote || '');
   const [items, setItems] = useState<ProposalItem[]>([createEmptyItem()]);
+  const [packageId, setPackageId] = useState<string>(existingPackageId || 'auto');
   const [sending, setSending] = useState(false);
   const [locationErrors, setLocationErrors] = useState<string[]>([]);
   const [studentAvailability, setStudentAvailability] = useState<{days: string[], windows: string[], notes: string | null} | null>(null);
@@ -106,7 +109,8 @@ export function ProposalBuilder({
     }
     if (existingNote !== undefined) setNoteToStudent(existingNote || '');
     if (existingAcceptanceMode) setAcceptanceMode(existingAcceptanceMode);
-  }, [isEditing, existingItems, existingNote, existingAcceptanceMode]);
+    if (isEditing) setPackageId(existingPackageId || 'auto');
+  }, [isEditing, existingItems, existingNote, existingAcceptanceMode, existingPackageId]);
 
   // Fetch student availability when student is selected
   useEffect(() => {
@@ -231,6 +235,7 @@ export function ProposalBuilder({
             proposal_status: 'revised_and_resent',
             note_to_student: noteToStudent || null,
             acceptance_mode: acceptanceMode,
+            package_id: packageId === 'auto' ? null : packageId,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingProposalId!);
@@ -266,6 +271,7 @@ export function ProposalBuilder({
             proposal_status: 'sent',
             acceptance_mode: acceptanceMode,
             note_to_student: noteToStudent || null,
+            package_id: packageId === 'auto' ? null : packageId,
           })
           .select()
           .single();
@@ -290,7 +296,11 @@ export function ProposalBuilder({
 
         // Resolve package + payment link based on total hours
         const { totalHours, includesRoadTest } = sumProposalHours(validItems);
-        const pkg = resolvePackageForProposal({ totalHours, includesRoadTest });
+        const { pkg } = resolveProposalPackage({
+          packageId: packageId === 'auto' ? null : packageId,
+          totalHours,
+          includesRoadTest,
+        });
         const packageMsg = `Recommended package: ${pkg.label.replace(/\n/g, ' ')} (${pkg.price}). Complete payment to confirm your slot: ${pkg.squareUrl}`;
 
         await supabase.from('notifications').insert({
@@ -397,6 +407,25 @@ export function ProposalBuilder({
               />
             </div>
 
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-sm">Package</Label>
+              <Select value={packageId} onValueChange={setPackageId}>
+                <SelectTrigger className="min-h-[44px]">
+                  <SelectValue placeholder="Auto (match by total hours)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="auto">Auto (match by total hours)</SelectItem>
+                  {PACKAGES.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.label.replace(/\n/g, ' ')} — {p.price}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Sets the payment link sent to the student. Auto keeps the current hour-based match.
+              </p>
+            </div>
           </div>
 
           {/* Student Availability Helper */}

@@ -14,6 +14,7 @@ import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { ProposalBuilder } from "@/components/portal/ProposalBuilder";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
+import { resolveProposalPackage, sumProposalHours } from "@/lib/packageSelection";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -408,6 +409,26 @@ function AdminProposalsContent() {
                 </div>
               </div>
 
+              {items.length > 0 && (() => {
+                const { totalHours, includesRoadTest } = sumProposalHours(items as any);
+                const { pkg, isExplicit } = resolveProposalPackage({
+                  packageId: selectedProposal.package_id,
+                  totalHours,
+                  includesRoadTest,
+                });
+                return (
+                  <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+                    <p className="text-xs text-muted-foreground">Package sent to student</p>
+                    <p className="text-sm font-medium">
+                      {pkg.label.replace(/\n/g, ' ')} · {pkg.price}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {isExplicit ? 'Selected by admin' : 'Auto-matched'}
+                      </span>
+                    </p>
+                  </div>
+                );
+              })()}
+
               {selectedProposal.accepted_at && (
                 <p className="text-xs text-muted-foreground">
                   Accepted: {format(parseISO(selectedProposal.accepted_at), 'MMM d, yyyy h:mm a')}
@@ -673,6 +694,7 @@ function AdminProposalsContent() {
           existingItems={items}
           existingNote={selectedProposal.note_to_student || ''}
           existingAcceptanceMode={selectedProposal.acceptance_mode}
+          existingPackageId={selectedProposal.package_id}
           onProposalSent={() => {
             setSelectedProposal(null);
             fetchProposals();

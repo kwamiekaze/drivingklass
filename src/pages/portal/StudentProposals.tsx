@@ -14,7 +14,7 @@ import { SessionTypeBadge } from "@/components/portal/SessionTypeBadge";
 import { format, parseISO } from "date-fns";
 import { getDisplayName } from "@/lib/profileUtils";
 import { toast } from "sonner";
-import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
+import { resolveProposalPackage, sumProposalHours } from "@/lib/packageSelection";
 
 /** Convert "HH:MM" or "HH:MM:SS" (24h) to "h:MM AM/PM" display */
 function formatTime24to12(time: string): string {
@@ -278,7 +278,11 @@ function StudentProposalsContent() {
               {/* Payment CTA — show for any active/pending/finalized proposal */}
               {items.length > 0 && !['declined'].includes(selectedProposal.proposal_status) && (() => {
                 const { totalHours, includesRoadTest } = sumProposalHours(items as any);
-                const pkg = resolvePackageForProposal({ totalHours, includesRoadTest });
+                const { pkg } = resolveProposalPackage({
+                  packageId: selectedProposal.package_id,
+                  totalHours,
+                  includesRoadTest,
+                });
                 return (
                   <Card className="border-primary/40 bg-primary/5">
                     <CardContent className="p-3 space-y-2">

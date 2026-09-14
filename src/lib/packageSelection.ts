@@ -1,4 +1,24 @@
-import { PACKAGES, type Package } from "@/data/packages";
+import { PACKAGES, getPackageById, type Package } from "@/data/packages";
+
+/**
+ * Resolve the package for a proposal, honoring an explicit admin selection
+ * when present. Falls back to the existing auto-match logic otherwise.
+ */
+export function resolveProposalPackage(opts: {
+  packageId?: string | null;
+  totalHours: number;
+  includesRoadTest: boolean;
+}): { pkg: Package; isExplicit: boolean } {
+  const explicit = opts.packageId ? getPackageById(opts.packageId) : undefined;
+  if (explicit) return { pkg: explicit, isExplicit: true };
+  return {
+    pkg: resolvePackageForProposal({
+      totalHours: opts.totalHours,
+      includesRoadTest: opts.includesRoadTest,
+    }),
+    isExplicit: false,
+  };
+}
 
 /**
  * Resolve the best-fit package for a proposal based on total driving hours
