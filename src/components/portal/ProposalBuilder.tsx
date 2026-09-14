@@ -53,15 +53,6 @@ interface ProposalBuilderProps {
   onProposalSent?: () => void;
 }
 
-const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
-  const hours = Math.floor(i / 2);
-  const mins = (i % 2) * 30;
-  const val = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  const displayH = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-  const ampm = hours < 12 ? 'AM' : 'PM';
-  return { value: val, label: `${displayH}:${mins.toString().padStart(2, '0')} ${ampm}` };
-});
-
 function computeEndTime(startTime: string, durationMinutes: number): string {
   const [h, m] = startTime.split(':').map(Number);
   const totalMins = h * 60 + m + durationMinutes;
@@ -543,6 +534,7 @@ export function ProposalBuilder({
                               <Label className="text-[10px] text-muted-foreground">Pickup Time (optional)</Label>
                               <Input
                                 type="time"
+                                step={60}
                                 value={item.pickup_time}
                                 onChange={e => updateItem(item.id, 'pickup_time', e.target.value)}
                                 className="h-9 text-sm"
