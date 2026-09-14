@@ -79,6 +79,7 @@ export function ProposalBuilder({
   const [acceptanceMode, setAcceptanceMode] = useState(existingAcceptanceMode || 'pending_admin_finalize');
   const [noteToStudent, setNoteToStudent] = useState(existingNote || '');
   const [items, setItems] = useState<ProposalItem[]>([createEmptyItem()]);
+  const [packageId, setPackageId] = useState<string>(existingPackageId || 'auto');
   const [sending, setSending] = useState(false);
   const [locationErrors, setLocationErrors] = useState<string[]>([]);
   const [studentAvailability, setStudentAvailability] = useState<{days: string[], windows: string[], notes: string | null} | null>(null);
