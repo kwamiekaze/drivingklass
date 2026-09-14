@@ -488,12 +488,13 @@ export function ProposalBuilder({
                           </div>
                           <div>
                             <Label className="text-[10px] text-muted-foreground">Start Time</Label>
-                            <Select value={item.start_time} onValueChange={v => updateItem(item.id, 'start_time', v)}>
-                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover border z-50 max-h-[200px]">
-                                {TIME_SLOTS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+                            <Input
+                              type="time"
+                              step={60}
+                              value={item.start_time}
+                              onChange={e => updateItem(item.id, 'start_time', e.target.value)}
+                              className="h-9 text-sm"
+                            />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
