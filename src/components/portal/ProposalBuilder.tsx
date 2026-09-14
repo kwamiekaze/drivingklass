@@ -235,6 +235,7 @@ export function ProposalBuilder({
             proposal_status: 'revised_and_resent',
             note_to_student: noteToStudent || null,
             acceptance_mode: acceptanceMode,
+            package_id: packageId === 'auto' ? null : packageId,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingProposalId!);
@@ -270,6 +271,7 @@ export function ProposalBuilder({
             proposal_status: 'sent',
             acceptance_mode: acceptanceMode,
             note_to_student: noteToStudent || null,
+            package_id: packageId === 'auto' ? null : packageId,
           })
           .select()
           .single();
@@ -294,7 +296,11 @@ export function ProposalBuilder({
 
         // Resolve package + payment link based on total hours
         const { totalHours, includesRoadTest } = sumProposalHours(validItems);
-        const pkg = resolvePackageForProposal({ totalHours, includesRoadTest });
+        const { pkg } = resolveProposalPackage({
+          packageId: packageId === 'auto' ? null : packageId,
+          totalHours,
+          includesRoadTest,
+        });
         const packageMsg = `Recommended package: ${pkg.label.replace(/\n/g, ' ')} (${pkg.price}). Complete payment to confirm your slot: ${pkg.squareUrl}`;
 
         await supabase.from('notifications').insert({
