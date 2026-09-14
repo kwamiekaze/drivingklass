@@ -185,7 +185,9 @@ export function ProposalBuilder({
       if (field === 'start_time' || field === 'duration_minutes') {
         const st = field === 'start_time' ? value : item.start_time;
         const dur = field === 'duration_minutes' ? parseInt(value) : parseInt(item.duration_minutes);
-        updated.end_time = computeEndTime(st, dur);
+        updated.end_time = /^\d{1,2}:\d{2}$/.test(st) && Number.isFinite(dur)
+          ? computeEndTime(st, dur)
+          : '';
       }
       return updated;
     }));
