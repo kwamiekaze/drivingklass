@@ -53,15 +53,6 @@ interface ProposalBuilderProps {
   onProposalSent?: () => void;
 }
 
-const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
-  const hours = Math.floor(i / 2);
-  const mins = (i % 2) * 30;
-  const val = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  const displayH = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-  const ampm = hours < 12 ? 'AM' : 'PM';
-  return { value: val, label: `${displayH}:${mins.toString().padStart(2, '0')} ${ampm}` };
-});
-
 function computeEndTime(startTime: string, durationMinutes: number): string {
   const [h, m] = startTime.split(':').map(Number);
   const totalMins = h * 60 + m + durationMinutes;
@@ -185,7 +176,9 @@ export function ProposalBuilder({
       if (field === 'start_time' || field === 'duration_minutes') {
         const st = field === 'start_time' ? value : item.start_time;
         const dur = field === 'duration_minutes' ? parseInt(value) : parseInt(item.duration_minutes);
-        updated.end_time = computeEndTime(st, dur);
+        updated.end_time = /^\d{1,2}:\d{2}$/.test(st) && Number.isFinite(dur)
+          ? computeEndTime(st, dur)
+          : '';
       }
       return updated;
     }));
@@ -488,12 +481,13 @@ export function ProposalBuilder({
                           </div>
                           <div>
                             <Label className="text-[10px] text-muted-foreground">Start Time</Label>
-                            <Select value={item.start_time} onValueChange={v => updateItem(item.id, 'start_time', v)}>
-                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover border z-50 max-h-[200px]">
-                                {TIME_SLOTS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+                            <Input
+                              type="time"
+                              step={60}
+                              value={item.start_time}
+                              onChange={e => updateItem(item.id, 'start_time', e.target.value)}
+                              className="h-9 text-sm"
+                            />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -540,6 +534,7 @@ export function ProposalBuilder({
                               <Label className="text-[10px] text-muted-foreground">Pickup Time (optional)</Label>
                               <Input
                                 type="time"
+                                step={60}
                                 value={item.pickup_time}
                                 onChange={e => updateItem(item.id, 'pickup_time', e.target.value)}
                                 className="h-9 text-sm"
