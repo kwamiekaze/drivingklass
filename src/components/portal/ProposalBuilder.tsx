@@ -51,6 +51,7 @@ interface ProposalBuilderProps {
   existingItems?: any[];
   existingNote?: string;
   existingAcceptanceMode?: string;
+  existingPackageId?: string | null;
   onProposalSent?: () => void;
 }
 
@@ -65,7 +66,7 @@ function computeEndTime(startTime: string, durationMinutes: number): string {
 export function ProposalBuilder({
   open, onOpenChange, preselectedStudentId, preselectedInstructorId,
   editingProposalId, existingItems, existingNote, existingAcceptanceMode,
-  onProposalSent,
+  existingPackageId, onProposalSent,
 }: ProposalBuilderProps) {
   const { role, user } = usePortalAuth();
   const isAdmin = role === 'admin' || role === 'staff';
