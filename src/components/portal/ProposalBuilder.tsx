@@ -18,7 +18,8 @@ import { ProfileCombobox } from "@/components/portal/ProfileCombobox";
 import { DdsLocationPicker } from "@/components/portal/DdsLocationPicker";
 
 import { toast } from "sonner";
-import { resolvePackageForProposal, sumProposalHours } from "@/lib/packageSelection";
+import { resolveProposalPackage, sumProposalHours } from "@/lib/packageSelection";
+import { PACKAGES } from "@/data/packages";
 import { format, parseISO } from "date-fns";
 
 function formatTime24to12(time: string): string {
