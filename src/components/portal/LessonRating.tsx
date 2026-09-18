@@ -346,6 +346,46 @@ export function LessonRating({
     }
   };
 
+  const handleRemoveRating = async () => {
+    setRemoving(true);
+    try {
+      let query = supabase
+        .from("report_card_ratings" as any)
+        .delete()
+        .eq("report_card_id", reportCardId);
+
+      if (studentId) {
+        query = query.eq("student_id", studentId);
+      } else {
+        query = query.eq("is_public_view", true).is("student_id", null);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+
+      // Reset back to the pristine "no feedback yet" state
+      setExistingId(null);
+      setExistingRating(null);
+      setExistingFeedback(null);
+      setSelectedRating(0);
+      setHoveredStar(0);
+      setFeedbackText("");
+      setFeedbackSubmitted(false);
+      setSubmitted(false);
+      setEditing(false);
+      setEditRating(0);
+      setEditFeedback("");
+      setEditHover(0);
+      setConfirmRemoveOpen(false);
+      toast({ title: t('rating.removed') });
+    } catch (err) {
+      console.error("Rating removal error:", err);
+      toast({ title: t('rating.removeFailed'), variant: "destructive" });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="report-rating-panel border-border/50 bg-card/80 backdrop-blur">
