@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { Star, ExternalLink, Loader2, Send, Pencil, X } from "lucide-react";
+import { Star, ExternalLink, Loader2, Send, Pencil, X, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
