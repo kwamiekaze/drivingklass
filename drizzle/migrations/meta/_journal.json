@@ -15,6 +15,13 @@
       "when": 1789418996762,
       "tag": "0001_add_package_id_to_schedule_proposals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789696723734,
+      "tag": "0002_allow_authors_delete_own_report_card_ratings",
+      "breakpoints": true
     }
   ]
 }
