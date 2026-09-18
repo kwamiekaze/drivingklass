@@ -546,6 +546,13 @@ export function LessonRating({
                 <X className="h-4 w-4" /> {t('common.cancel')}
               </Button>
             </div>
+            {submitted && (
+              <div className="text-center">
+                <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing || submittingFeedback} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -629,9 +636,12 @@ export function LessonRating({
                 </a>
 
                 {/* Edit button for 5-star */}
-                <div className="mt-4 text-center">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
                     <Pencil className="h-3 w-3" /> {t('rating.editRating')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
                   </Button>
                 </div>
               </div>
@@ -704,15 +714,37 @@ export function LessonRating({
                 {existingFeedback && (
                   <p className={cn("mt-3 text-xs sm:text-sm italic", isDark ? "text-foreground/70" : "report-text-sweep")}>"{existingFeedback}"</p>
                 )}
-                <div className="mt-4">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
                     <Pencil className="h-3 w-3" /> {t('rating.editFeedback')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
                   </Button>
                 </div>
               </div>
             )}
           </>
         )}
+
+        <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('rating.removeConfirmTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('rating.removeConfirmBody')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={removing}>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleRemoveRating(); }}
+                disabled={removing}
+              >
+                {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {t('rating.removeConfirmAction')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
