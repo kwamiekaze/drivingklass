@@ -80,6 +80,8 @@ export function LessonRating({
   const [editHover, setEditHover] = useState(0);
   // All ratings for staff/instructor read-only view
   const [allRatings, setAllRatings] = useState<RatingEntry[]>([]);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
 
   useEffect(() => {
     const checkExisting = async () => {
