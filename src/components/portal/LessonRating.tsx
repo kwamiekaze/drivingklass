@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { Star, ExternalLink, Loader2, Send, Pencil, X } from "lucide-react";
+import { Star, ExternalLink, Loader2, Send, Pencil, X, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +80,8 @@ export function LessonRating({
   const [editHover, setEditHover] = useState(0);
   // All ratings for staff/instructor read-only view
   const [allRatings, setAllRatings] = useState<RatingEntry[]>([]);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
 
   useEffect(() => {
     const checkExisting = async () => {
@@ -336,6 +348,46 @@ export function LessonRating({
     }
   };
 
+  const handleRemoveRating = async () => {
+    setRemoving(true);
+    try {
+      let query = supabase
+        .from("report_card_ratings" as any)
+        .delete()
+        .eq("report_card_id", reportCardId);
+
+      if (studentId) {
+        query = query.eq("student_id", studentId);
+      } else {
+        query = query.eq("is_public_view", true).is("student_id", null);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+
+      // Reset back to the pristine "no feedback yet" state
+      setExistingId(null);
+      setExistingRating(null);
+      setExistingFeedback(null);
+      setSelectedRating(0);
+      setHoveredStar(0);
+      setFeedbackText("");
+      setFeedbackSubmitted(false);
+      setSubmitted(false);
+      setEditing(false);
+      setEditRating(0);
+      setEditFeedback("");
+      setEditHover(0);
+      setConfirmRemoveOpen(false);
+      toast({ title: t('rating.removed') });
+    } catch (err) {
+      console.error("Rating removal error:", err);
+      toast({ title: t('rating.removeFailed'), variant: "destructive" });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="report-rating-panel border-border/50 bg-card/80 backdrop-blur">
@@ -494,6 +546,13 @@ export function LessonRating({
                 <X className="h-4 w-4" /> {t('common.cancel')}
               </Button>
             </div>
+            {submitted && (
+              <div className="text-center">
+                <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing || submittingFeedback} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -577,9 +636,12 @@ export function LessonRating({
                 </a>
 
                 {/* Edit button for 5-star */}
-                <div className="mt-4 text-center">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
                     <Pencil className="h-3 w-3" /> {t('rating.editRating')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
                   </Button>
                 </div>
               </div>
@@ -652,15 +714,37 @@ export function LessonRating({
                 {existingFeedback && (
                   <p className={cn("mt-3 text-xs sm:text-sm italic", isDark ? "text-foreground/70" : "report-text-sweep")}>"{existingFeedback}"</p>
                 )}
-                <div className="mt-4">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
                   <Button variant="ghost" size="sm" onClick={startEditing} className="text-xs gap-1 text-muted-foreground hover:text-foreground">
                     <Pencil className="h-3 w-3" /> {t('rating.editFeedback')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveOpen(true)} disabled={removing} className="text-xs gap-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3 w-3" /> {t('rating.removeRating')}
                   </Button>
                 </div>
               </div>
             )}
           </>
         )}
+
+        <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('rating.removeConfirmTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('rating.removeConfirmBody')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={removing}>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleRemoveRating(); }}
+                disabled={removing}
+              >
+                {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {t('rating.removeConfirmAction')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
