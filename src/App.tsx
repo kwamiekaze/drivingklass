@@ -69,6 +69,7 @@ import InstructorLiveTracker from "./pages/portal/InstructorLiveTracker";
 import AdminLiveTracker from "./pages/portal/AdminLiveTracker";
 import StudentLiveTracker from "./pages/portal/StudentLiveTracker";
 import Preview from "./pages/preview/Preview";
+import KlassroomPreview from "./pages/KlassroomPreview";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -88,6 +89,7 @@ const App = () => (
             <Route path="/play" element={<RoadTestGame publicMode />} />
             <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
             <Route path="/preview" element={<Preview />} />
+            <Route path="/nuhome" element={<KlassroomPreview />} />
 
 
 
