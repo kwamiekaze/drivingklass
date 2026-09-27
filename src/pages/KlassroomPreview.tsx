@@ -1,12 +1,16 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { KLASS_VIEWS, createRigInput, type KlassViewId, type RigInput } from "@/components/klassroom/views";
+import { KLASS_VIEWS, createRigInput, wrapAngle, type KlassViewId, type RigInput } from "@/components/klassroom/views";
 import "@/components/klassroom/klassroom.css";
 
 const KlassroomCanvas = lazy(() => import("@/components/klassroom/KlassroomCanvas"));
 
 const FONT_HREF =
   "https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600;1,700&family=Poppins:wght@400;500;600;700;800&display=swap";
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
 
 function Stars() {
   return (
@@ -39,12 +43,10 @@ export default function KlassroomPreview() {
   const [ready, setReady] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [screenLive, setScreenLive] = useState(false);
   const [steered, setSteered] = useState(false);
   const input = useRef<RigInput>(createRigInput());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<number | null>(null);
-  const trail = useRef<Array<{ x: number; t: number }>>([]);
+  const pinch = useRef<{ distance: number; zoom: number } | null>(null);
   const steeredRef = useRef(false);
 
   const view = useMemo(() => KLASS_VIEWS.find((v) => v.id === activeId) ?? KLASS_VIEWS[0]!, [activeId]);
@@ -79,19 +81,6 @@ export default function KlassroomPreview() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // The live homepage on the monitor wakes shortly after the room settles on
-  // larger screens; on phones it waits until someone heads to the desk.
-  useEffect(() => {
-    if (!splashDone) return;
-    if (activeId === "screen") {
-      setScreenLive(true);
-      return;
-    }
-    if (window.innerWidth < 768) return;
-    const t = setTimeout(() => setScreenLive(true), 1500);
-    return () => clearTimeout(t);
-  }, [splashDone, activeId]);
-
   useEffect(() => {
     if (!ready) return;
     const t = setTimeout(() => setSplashDone(true), 900);
@@ -110,39 +99,20 @@ export default function KlassroomPreview() {
     return () => window.removeEventListener("keydown", onKey);
   }, [activeId]);
 
-  // Look around like IMVU with KleanupCrew's feel: one swipe turns most of the
-  // room, a flick keeps gliding, vertical drag tilts, pinch or wheel zooms.
+  // Same gestures as kleanupcrew.com: drag turns through a full 360 and stays
+  // where it is left, vertical drag tilts, pinch or wheel zooms.
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const i = input.current;
-    i.interacting = true;
-    i.flick = 0;
-    i.width = window.innerWidth;
-    trail.current = [{ x: e.clientX, t: performance.now() }];
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
-      pinch.current = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      pinch.current = { distance: Math.hypot(a!.x - b!.x, a!.y - b!.y), zoom: input.current.zoom };
     }
     e.currentTarget.setPointerCapture(e.pointerId);
   }, []);
 
   const endPointer = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const wasSingle = pointers.current.size === 1;
     pointers.current.delete(e.pointerId);
     pinch.current = null;
-    if (pointers.current.size === 0) {
-      input.current.interacting = false;
-      // Flick: average speed over the last ~90ms of the swipe keeps it turning.
-      const now = performance.now();
-      const recent = trail.current.filter((p) => now - p.t < 90);
-      if (wasSingle && recent.length >= 2) {
-        const first = recent[0]!;
-        const last = recent[recent.length - 1]!;
-        const dtMs = Math.max(16, last.t - first.t);
-        input.current.flick = ((last.x - first.x) / dtMs) * 1000;
-      }
-    }
-    trail.current = [];
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
   }, []);
 
@@ -154,36 +124,42 @@ export default function KlassroomPreview() {
     if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
       const distance = Math.hypot(a!.x - b!.x, a!.y - b!.y);
-      if (pinch.current) i.zoom *= Math.pow(pinch.current / Math.max(distance, 1), 1.6);
-      pinch.current = distance;
+      const start = pinch.current;
+      if (!start) {
+        pinch.current = { distance, zoom: i.zoom };
+        return;
+      }
+      // Measured from the start of the gesture so even a short pinch zooms clearly.
+      const scale = distance / Math.max(start.distance, 1);
+      i.zoom = clamp(start.zoom - Math.log(scale) * 2.5, -1, 1);
       return;
     }
     if (!steeredRef.current) {
       steeredRef.current = true;
       setSteered(true);
     }
-    i.dx += e.clientX - previous.x;
-    i.dy += e.clientY - previous.y;
-    const now = performance.now();
-    trail.current.push({ x: e.clientX, t: now });
-    if (trail.current.length > 12) trail.current.shift();
+    const dx = e.clientX - previous.x;
+    const dy = e.clientY - previous.y;
+    const touch = e.pointerType === "touch";
+    i.dragX = wrapAngle(i.dragX - dx * (touch ? 0.014 : 0.01));
+    i.dragY = clamp(i.dragY + dy * (touch ? 0.009 : 0.006), -1, 1);
   }, []);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     const i = input.current;
-    i.width = window.innerWidth;
-    const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
-    if (horizontal !== 0) {
-      i.dx -= horizontal * 1.4;
+    const horizontalDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
+    if (horizontalDelta !== 0) {
+      i.dragX = wrapAngle(i.dragX + horizontalDelta * 0.006);
       return;
     }
-    // Pinch on a trackpad arrives as ctrl+wheel with small deltas.
-    const scale = e.ctrlKey ? 0.012 : 0.0016;
-    i.zoom *= Math.exp(e.deltaY * scale);
+    i.zoom = clamp(i.zoom + e.deltaY / 700, -1, 1);
   }, []);
 
   const select = useCallback((id: KlassViewId) => {
     setActiveId(id);
+    input.current.dragX = 0;
+    input.current.dragY = 0;
+    input.current.zoom = 0;
     steeredRef.current = false;
     setSteered(false);
   }, []);
@@ -207,8 +183,6 @@ export default function KlassroomPreview() {
             input={input}
             reducedMotion={reducedMotion}
             started={splashDone}
-            screenLive={screenLive}
-            screenActive={activeId === "screen"}
             onReady={() => setReady(true)}
           />
         </Suspense>
@@ -229,7 +203,7 @@ export default function KlassroomPreview() {
 
       <section
         key={view.id}
-        className={`kr-card${isHero ? " kr-card--hero" : ""}${view.id === "screen" ? " kr-card--mini" : ""}${steered ? " kr-card--steered" : ""}`}
+        className={`kr-card${isHero ? " kr-card--hero" : ""}${steered ? " kr-card--steered" : ""}`}
         aria-live="polite"
       >
         <div className="kr-eyebrow">{view.eyebrow}</div>
@@ -259,7 +233,7 @@ export default function KlassroomPreview() {
         </div>
       </section>
 
-      <div className="kr-hint">Swipe to look around · pinch or scroll to zoom</div>
+      <div className="kr-hint">Drag to look around · pinch or scroll to zoom</div>
 
       <nav className="kr-dock" aria-label="Klassroom views">
         <div className="kr-dock-inner">

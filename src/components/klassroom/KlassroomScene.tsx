@@ -18,8 +18,7 @@ import {
 import { FrontWall } from "./FrontWall";
 import { FiddleLeafFig, HangingPothos, LeafyPlant, Monstera, SnakePlant, Succulents } from "./Plants";
 import { StudentDesk } from "./StudentDesk";
-import { Chair, Desk, DeskProps } from "./TeacherStation";
-import { HomepageMonitor } from "./HomepageMonitor";
+import { Chair, Desk, DeskProps, Monitor } from "./TeacherStation";
 import { Backpack, CeilingBeams, Drapes, FloorLamp, Sconce } from "./Warmth";
 import { WallCalendar, WallClock } from "./WallPieces";
 import { SunnyWindowView } from "./WindowView";
@@ -269,15 +268,7 @@ const STUDENT_DESKS: Array<[number, number]> = [
   [3.9, 2.25],
 ];
 
-export function KlassroomScene({
-  reducedMotion,
-  screenLive,
-  screenActive,
-}: {
-  reducedMotion: boolean;
-  screenLive: boolean;
-  screenActive: boolean;
-}) {
+export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <>
       <color attach="background" args={["#e9d6b6"]} />
@@ -329,7 +320,7 @@ export function KlassroomScene({
 
       {/* instructor's station */}
       <Desk />
-      <HomepageMonitor live={screenLive} active={screenActive} />
+      <Monitor />
       <DeskProps reducedMotion={reducedMotion} />
       <Chair reducedMotion={reducedMotion} />
 

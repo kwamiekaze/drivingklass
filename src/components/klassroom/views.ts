@@ -1,7 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import type { PerspectiveCamera } from "three";
-import { Vector3 } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 
 export type KlassViewId = "welcome" | "board" | "screen" | "signs" | "car" | "fame" | "window";
 
@@ -46,10 +45,9 @@ export const KLASS_VIEWS: KlassView[] = [
     eyebrow: "Live from drivingklass.com",
     title: "Pick your klass",
     body: "From a single hour to a 40 hour program, plus road test packages with a warm-up session right before your test.",
-    pos: [0.02, 1.46, -1.42],
-    target: [0, 1.37, -2.74],
+    pos: [0.05, 1.66, -1.08],
+    target: [0, 1.4, -2.75],
     sway: 0.03,
-    frame: 0.06,
   },
   {
     id: "signs",
@@ -96,91 +94,129 @@ export const KLASS_VIEWS: KlassView[] = [
 
 const UP = new Vector3(0, 1, 0);
 
-/**
- * Pointer state shared between the page (which reads touches, mouse, wheel
- * and pinch) and the camera rig (which turns them into motion). The page only
- * accumulates; the rig consumes and zeroes each frame.
+/*
+ * Camera behaviour ported from the KleanupCrew office (kleanupcrew-office-view,
+ * src/components/office/CameraRig.tsx) so both sites move identically: the same
+ * drag, pinch and wheel mapping, the same damping, the same always-on hover and
+ * sweep at every stop, and the same Welcome sequence of wide sweeps and walks.
+ * Only the tour stops are specific to the Klassroom.
  */
+
 export interface RigInput {
-  /** pixels dragged since the last frame */
-  dx: number;
-  dy: number;
-  /** multiplicative zoom since the last frame (1 = none) */
+  /** horizontal orbit angle in radians; wraps continuously through 360 degrees */
+  dragX: number;
+  /** vertical orbit adjustment, -1..1 */
+  dragY: number;
+  /** restrained dolly, -1..1 */
   zoom: number;
-  /** a finger or mouse button is down on the room */
-  interacting: boolean;
-  /** yaw velocity in px/s at release, for the flick glide */
-  flick: number;
-  /** viewport width used to scale drag sensitivity */
-  width: number;
-  /** set once the visitor has steered; stops the automatic tour */
-  touched: boolean;
 }
 
 export function createRigInput(): RigInput {
-  return { dx: 0, dy: 0, zoom: 1, interacting: false, flick: 0, width: 1280, touched: false };
+  return { dragX: 0, dragY: 0, zoom: 0 };
 }
 
-/** Welcome's automatic walk, like the KleanupCrew office, until the visitor steers. */
-const WALK: Array<{ id: KlassViewId; hold: number; travel: number }> = [
-  { id: "welcome", hold: 6, travel: 4 },
-  { id: "board", hold: 5, travel: 3.6 },
-  { id: "screen", hold: 5, travel: 3.4 },
-  { id: "window", hold: 4, travel: 3.4 },
-  { id: "car", hold: 4, travel: 3.2 },
-  { id: "signs", hold: 4, travel: 3.6 },
-  { id: "fame", hold: 4.5, travel: 4.4 },
-];
-const WALK_LENGTH = WALK.reduce((t, s) => t + s.hold + s.travel, 0);
-
-/** Interior walls, kept a little inside the real ones. */
-const BOX = { minX: -5.6, maxX: 5.6, minY: 0.42, maxY: 3.38, minZ: -4.85, maxZ: 4.95 };
-/** How far in front of the camera a stop's orbit pivot sits (IMVU-style). */
-const PIVOT_REACH = 2.1;
-/** When turning away from the opening shot, the orbit hands over to here. */
-const ROOM_CENTER = new Vector3(0, 1.6, 0.5);
-const CENTER_RADIUS = 3.4;
-
-function glide(v: number) {
-  const t = Math.min(1, Math.max(0, v));
-  return t * t * t * (t * (t * 6 - 15) + 10);
+export function wrapAngle(angle: number) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
 
-function viewById(id: KlassViewId) {
-  return KLASS_VIEWS.find((v) => v.id === id)!;
-}
+/** Per-stop automatic motion, same values as the KleanupCrew service views. */
+const AUTO_PAN: Record<
+  KlassViewId,
+  { orbit: number; mobileOrbit: number; lateral: number; mobileLateral: number; secondsPerLeg: number }
+> = {
+  welcome: { orbit: 0.3, mobileOrbit: 0.22, lateral: 0, mobileLateral: 0, secondsPerLeg: 8 },
+  board: { orbit: 0.035, mobileOrbit: 0.03, lateral: 0.36, mobileLateral: 0.18, secondsPerLeg: 6 },
+  screen: { orbit: 0.04, mobileOrbit: 0.035, lateral: 0.2, mobileLateral: 0.12, secondsPerLeg: 6 },
+  signs: { orbit: 0.035, mobileOrbit: 0.03, lateral: 0.4, mobileLateral: 0.22, secondsPerLeg: 6 },
+  car: { orbit: 0.04, mobileOrbit: 0.035, lateral: 0.28, mobileLateral: 0.18, secondsPerLeg: 6 },
+  fame: { orbit: 0.03, mobileOrbit: 0.025, lateral: 0.3, mobileLateral: 0.16, secondsPerLeg: 6 },
+  window: { orbit: 0.03, mobileOrbit: 0.025, lateral: 0.36, mobileLateral: 0.2, secondsPerLeg: 6 },
+};
 
-function angleDelta(from: number, to: number) {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
-}
-
-/** Distance from p along unit dir d until it leaves the interior box. */
-function rayToBox(p: Vector3, d: Vector3, maxZ: number) {
-  let t = Infinity;
-  const hit = (pos: number, dir: number, min: number, max: number) => {
-    if (dir > 1e-6) t = Math.min(t, (max - pos) / dir);
-    else if (dir < -1e-6) t = Math.min(t, (min - pos) / dir);
-  };
-  hit(p.x, d.x, BOX.minX, BOX.maxX);
-  hit(p.y, d.y, BOX.minY, BOX.maxY);
-  hit(p.z, d.z, BOX.minZ, maxZ);
-  return Math.max(0.3, t);
-}
-
-interface Orbit {
-  pivot: Vector3;
-  yaw: number;
-  pitch: number;
-  radius: number;
+interface TourStop {
+  pos: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+  mobilePos?: [number, number, number];
+  mobileTarget?: [number, number, number];
+  mobileFov?: number;
+  hold: number;
+  travel: number;
 }
 
 /**
- * IMVU-style look-around with KleanupCrew's damping. One swipe across the
- * screen turns you most of the way round the room and a flick keeps gliding,
- * vertical drag tilts, pinch or wheel dollies in and out. Every stop orbits a
- * point just in front of the camera, so turning always happens inside the
- * room, and the camera slides in off the walls instead of passing through.
+ * Welcome's walk: from the wide shot to the chalkboard close enough to read,
+ * wider over the instructor's desk with the window and the sun behind it,
+ * across to the gold car on its turntable with the road signs beyond, then
+ * back to the wide shot where the sweep picks up again.
  */
+const WELCOME_TOUR: TourStop[] = [
+  {
+    pos: [0, 3.3, 7.95],
+    target: [0, 1.56, -1.2],
+    fov: 42,
+    mobilePos: [0, 3.3, 8.6],
+    mobileTarget: [0, 1.2, -1.2],
+    mobileFov: 52,
+    hold: 0,
+    travel: 10.5,
+  },
+  {
+    pos: [-3.1, 1.95, -1.05],
+    target: [-3.85, 1.8, -5.1],
+    fov: 42,
+    mobilePos: [-3.3, 2.0, 0.6],
+    mobileTarget: [-3.85, 1.75, -5.1],
+    mobileFov: 50,
+    hold: 1.6,
+    travel: 8,
+  },
+  {
+    pos: [1.85, 1.66, -0.3],
+    target: [0.1, 1.3, -2.75],
+    fov: 50,
+    mobilePos: [2.4, 1.85, 1.4],
+    mobileTarget: [0.25, 1.3, -2.8],
+    mobileFov: 52,
+    hold: 1.6,
+    travel: 8.5,
+  },
+  {
+    pos: [1.6, 1.62, 0.1],
+    target: [4.4, 1.15, -3.05],
+    fov: 44,
+    mobilePos: [1.4, 1.75, 1.2],
+    mobileTarget: [4.4, 1.25, -3.05],
+    mobileFov: 50,
+    hold: 1.3,
+    travel: 8,
+  },
+];
+
+const TOUR_LENGTH = WELCOME_TOUR.reduce((total, stop) => total + stop.hold + stop.travel, 0);
+const OPENING_LEG = 8;
+const OPENING_PAN = OPENING_LEG * 2;
+const WALK_PASSES = new Set([3, 7, 10]);
+const PASS_COUNT = 10;
+const PASSES: boolean[] = Array.from({ length: PASS_COUNT }, (_, index) => WALK_PASSES.has(index + 1));
+const SEQUENCE_LENGTH = PASSES.reduce((total, walks) => total + (walks ? TOUR_LENGTH : OPENING_PAN), 0);
+
+function smootherstep(value: number) {
+  const k = Math.max(0, Math.min(1, value));
+  return k * k * k * (k * (k * 6 - 15) + 10);
+}
+
+function glide(value: number) {
+  const k = Math.max(0, Math.min(1, value));
+  return smootherstep(k) * 0.86 + k * 0.14;
+}
+
+function readStop(stop: TourStop, isMobile: boolean, position: Vector3, look: Vector3): number {
+  position.set(...(isMobile && stop.mobilePos ? stop.mobilePos : stop.pos));
+  look.set(...(isMobile && stop.mobileTarget ? stop.mobileTarget : stop.target));
+  return (isMobile && stop.mobileFov) || stop.fov;
+}
+
 export function KlassCameraRig({
   view,
   input,
@@ -193,24 +229,27 @@ export function KlassCameraRig({
   started: boolean;
 }) {
   const { camera, size } = useThree();
-  const goal = useRef<Orbit>({ pivot: new Vector3(0, 1.56, -1.2), yaw: 0, pitch: 0.2, radius: 11 });
-  const cur = useRef<Orbit>({ pivot: new Vector3(0, 2.2, -1.2), yaw: 0, pitch: 0.28, radius: 13 });
-  const welcomeYaw = useRef(0);
-  const glideVel = useRef(0);
-  const settle = useRef(0);
-  const tour = useRef(0);
-  const sway = useRef(0);
-  const tmpA = useRef(new Vector3());
-  const tmpB = useRef(new Vector3());
-  const nextA = useRef(new Vector3());
-  const nextB = useRef(new Vector3());
-  const right = useRef(new Vector3());
+  const pos = useRef(new Vector3(0, 3.6, 9.2));
+  const look = useRef(new Vector3(...view.target));
+  const desiredPos = useRef(new Vector3());
+  const desiredLook = useRef(new Vector3(...view.target));
+  const panRight = useRef(new Vector3());
+  const introStart = useRef<number | null>(null);
+  const tourStart = useRef<number | null>(null);
+  const tourHeld = useRef(0);
+  const stopPos = useRef(new Vector3());
+  const stopLook = useRef(new Vector3());
+  const nextPos = useRef(new Vector3());
+  const nextLook = useRef(new Vector3());
+  const base = useRef(new Vector3());
+  const target = useRef(new Vector3());
   const dir = useRef(new Vector3());
-  const pivotMix = useRef(new Vector3());
+  const right = useRef(new Vector3());
 
+  const isMobile = size.width < 768;
   const aspect = size.width / Math.max(1, size.height);
 
-  /** Framed camera position and look-at for a stop on this screen shape. */
+  /** A stop's camera and look-at, pulled back on tall screens and nudged clear of the info card. */
   const frameStop = (stop: KlassView, outPos: Vector3, outTarget: Vector3) => {
     const pull = aspect < 1 ? 1 + (1 - aspect) * 1.25 : aspect < 1.3 ? 1.12 : 1;
     outTarget.set(...stop.target);
@@ -230,92 +269,59 @@ export function KlassCameraRig({
     }
   };
 
-  /** Convert a camera position and look-at into an orbit about a near pivot. */
-  const toOrbit = (pos: Vector3, target: Vector3, wide: boolean, out: Orbit) => {
-    dir.current.copy(target).sub(pos);
-    const dist = dir.current.length();
-    dir.current.normalize();
-    const reach = wide ? dist : Math.min(dist, PIVOT_REACH);
-    out.pivot.copy(pos).addScaledVector(dir.current, reach);
-    out.radius = reach;
-    out.yaw = Math.atan2(-dir.current.x, -dir.current.z);
-    out.pitch = Math.asin(Math.max(-1, Math.min(1, -dir.current.y)));
-  };
-
-  const stopOrbit = (stop: KlassView, out: Orbit) => {
-    frameStop(stop, tmpA.current, tmpB.current);
-    toOrbit(tmpA.current, tmpB.current, stop.id === "welcome", out);
-  };
-
-  // Choosing a stop glides there and hands the controls back.
   useEffect(() => {
-    const target: Orbit = { pivot: new Vector3(), yaw: 0, pitch: 0, radius: 1 };
-    stopOrbit(view, target);
-    const g = goal.current;
-    g.pivot.copy(target.pivot);
-    g.radius = target.radius;
-    g.pitch = target.pitch;
-    g.yaw = cur.current.yaw + angleDelta(cur.current.yaw, target.yaw);
-    if (view.id === "welcome") welcomeYaw.current = g.yaw;
-    glideVel.current = 0;
-    settle.current = 1.8;
-    tour.current = 0;
-    sway.current = 0;
-    if (input.current) {
-      input.current.touched = false;
-      input.current.flick = 0;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view.id, aspect]);
+    if (!started) introStart.current = null;
+  }, [started]);
 
-  useFrame((_, rawDelta) => {
-    const dt = Math.min(rawDelta, 0.1);
-    const i = input.current;
-    const g = goal.current;
-    const c = cur.current;
-    const animate = started && !reducedMotion;
+  // Coming back to Welcome opens on the wide shot, not halfway through.
+  useEffect(() => {
+    tourStart.current = null;
+    introStart.current = null;
+  }, [view.id, started]);
 
-    // ---- visitor input
-    if (i) {
-      if (i.dx || i.dy) {
-        // A full-width swipe turns about 300 degrees, like IMVU on a phone.
-        const perPx = (Math.PI * 1.7) / Math.max(320, Math.min(i.width, 1100));
-        g.yaw -= i.dx * perPx;
-        g.pitch = Math.max(-0.55, Math.min(1.1, g.pitch + i.dy * perPx * 0.55));
-        i.dx = 0;
-        i.dy = 0;
-        i.touched = true;
-        settle.current = 0;
-      }
-      if (i.flick) {
-        const perPx = (Math.PI * 1.7) / Math.max(320, Math.min(i.width, 1100));
-        glideVel.current = Math.max(-7, Math.min(7, -i.flick * perPx));
-        i.flick = 0;
-      }
-      if (i.zoom !== 1) {
-        const maxR = view.id === "welcome" ? 12 : 6;
-        g.radius = Math.max(0.35, Math.min(maxR, g.radius * i.zoom));
-        i.zoom = 1;
-        i.touched = true;
-        settle.current = 0;
-      }
-    }
-    if (!i?.interacting && Math.abs(glideVel.current) > 0.002) {
-      g.yaw += glideVel.current * dt;
-      glideVel.current *= Math.exp(-2.8 * dt);
-    }
+  useFrame(({ clock }, rawDelta) => {
+    const dt = Math.min(rawDelta, 0.05);
+    const i = input.current ?? { dragX: 0, dragY: 0, zoom: 0 };
 
-    // ---- automatic motion until the visitor takes the wheel
-    let autoYaw = 0;
-    if (animate && !i?.touched) {
-      if (view.id === "welcome") {
-        tour.current += dt;
-        const t = tour.current % WALK_LENGTH;
-        let remaining = t;
+    frameStop(view, base.current, target.current);
+    let tourFov: number | null = null;
+    let tourOrbit = 0;
+    if (view.id === "welcome") {
+      let elapsed = 0;
+      if (started && !reducedMotion) {
+        tourStart.current ??= clock.elapsedTime;
+        if (i.zoom < -0.05) {
+          // Pinched in to read something: hold the walk where it stands.
+          tourStart.current = clock.elapsedTime - tourHeld.current;
+        } else {
+          tourHeld.current = clock.elapsedTime - tourStart.current;
+        }
+        elapsed = clock.elapsedTime - tourStart.current;
+      }
+
+      let cycle = elapsed % SEQUENCE_LENGTH;
+      let pass = 0;
+      for (let step = 0; step < PASS_COUNT; step += 1) {
+        pass = step;
+        const span = PASSES[step] ? TOUR_LENGTH : OPENING_PAN;
+        if (cycle < span) break;
+        cycle -= span;
+      }
+
+      const wide = WELCOME_TOUR[0]!;
+      if (!PASSES[pass]) {
+        const pan = AUTO_PAN.welcome;
+        const lead = pass % 2 === 0 ? 1 : -1;
+        tourFov = readStop(wide, isMobile, stopPos.current, stopLook.current);
+        base.current.copy(stopPos.current);
+        target.current.copy(stopLook.current);
+        tourOrbit = Math.sin((Math.PI * cycle) / OPENING_LEG) * lead * (isMobile ? pan.mobileOrbit : pan.orbit);
+      } else {
+        let remaining = cycle;
         let index = 0;
         let blend = 0;
-        for (let step = 0; step < WALK.length; step += 1) {
-          const stop = WALK[step]!;
+        for (let step = 0; step < WELCOME_TOUR.length; step += 1) {
+          const stop = WELCOME_TOUR[step]!;
           index = step;
           if (remaining < stop.hold) break;
           remaining -= stop.hold;
@@ -325,65 +331,71 @@ export function KlassCameraRig({
           }
           remaining -= stop.travel;
         }
-        const from = viewById(WALK[index]!.id);
-        const to = viewById(WALK[(index + 1) % WALK.length]!.id);
-        frameStop(from, tmpA.current, tmpB.current);
-        frameStop(to, nextA.current, nextB.current);
-        tmpA.current.lerp(nextA.current, blend);
-        tmpB.current.lerp(nextB.current, blend);
-        const wide = (from.id === "welcome" && blend < 0.5) || (to.id === "welcome" && blend > 0.5);
-        const o: Orbit = { pivot: g.pivot, yaw: 0, pitch: 0, radius: 1 };
-        toOrbit(tmpA.current, tmpB.current, wide, o);
-        g.radius = o.radius;
-        g.pitch = o.pitch;
-        g.yaw = c.yaw + angleDelta(c.yaw, o.yaw);
-        if (from.id === "welcome" && blend === 0) autoYaw = Math.sin(t * 0.4) * 0.22;
-      } else {
-        sway.current += dt;
-        autoYaw = Math.sin(sway.current * 0.35) * view.sway * 1.6;
+        const from = WELCOME_TOUR[index]!;
+        const to = WELCOME_TOUR[(index + 1) % WELCOME_TOUR.length]!;
+        const fromFov = readStop(from, isMobile, stopPos.current, stopLook.current);
+        const toFov = readStop(to, isMobile, nextPos.current, nextLook.current);
+        base.current.copy(stopPos.current).lerp(nextPos.current, blend);
+        target.current.copy(stopLook.current).lerp(nextLook.current, blend);
+        tourFov = fromFov + (toFov - fromFov) * blend;
+      }
+
+      if (started && !reducedMotion) {
+        // A held frame still breathes: two slow waves of different periods.
+        const breath = clock.elapsedTime;
+        base.current.x += Math.sin(breath * 0.35) * 0.012;
+        base.current.y += Math.sin(breath * 0.2555 + 1.4) * 0.008;
       }
     }
 
-    // ---- ease current toward goal
-    const steering = i?.interacting || Math.abs(glideVel.current) > 0.05;
-    const rate = reducedMotion ? 60 : steering ? 14 : settle.current > 0 ? 2.8 : 6;
-    settle.current = Math.max(0, settle.current - dt);
-    const k = 1 - Math.exp(-rate * dt);
-    c.pivot.lerp(g.pivot, k);
-    c.yaw += angleDelta(c.yaw, g.yaw) * k;
-    c.pitch += (g.pitch - c.pitch) * k;
-    c.radius += (g.radius - c.radius) * k;
+    const offset = dir.current.copy(base.current).sub(target.current);
+    const dist = offset.length();
+    const baseYaw = Math.atan2(offset.x, offset.z);
+    const basePitch = Math.asin(offset.y / Math.max(dist, 0.001));
+    let automaticOrbit = tourOrbit;
+    let automaticLateral = 0;
+    if (!reducedMotion && started && view.id !== "welcome") {
+      const pan = AUTO_PAN[view.id];
+      introStart.current ??= clock.elapsedTime;
+      const elapsed = clock.elapsedTime - introStart.current;
+      const panPhase = -Math.cos((elapsed * Math.PI) / pan.secondsPerLeg);
+      automaticOrbit = panPhase * (isMobile ? pan.mobileOrbit : pan.orbit);
+      automaticLateral = panPhase * (isMobile ? pan.mobileLateral : pan.lateral);
+    }
 
-    // ---- place the camera, sliding in off the walls
-    const yaw = c.yaw + autoYaw;
-    dir.current.set(Math.sin(yaw) * Math.cos(c.pitch), Math.sin(c.pitch), Math.cos(yaw) * Math.cos(c.pitch));
-    // The opening shot stands outside the open front of the room; anywhere
-    // else the camera stays inside the four walls.
-    const off = view.id === "welcome" ? Math.abs(angleDelta(welcomeYaw.current, yaw)) : Math.PI;
-    const open = 1 - Math.min(1, Math.max(0, (off - 0.18) / 0.4));
-    const maxZ = BOX.maxZ + (14 - BOX.maxZ) * open;
-    // From the wide opening shot, turning glides the orbit to the middle of
-    // the room so the whole Klassroom spins around you instead of the camera
-    // pressing into a wall.
-    let pivot = c.pivot;
-    let radius = c.radius;
-    if (view.id === "welcome") {
-      const t0 = Math.min(1, Math.max(0, (off - 0.12) / 1.0));
-      const t = t0 * t0 * (3 - 2 * t0);
-      pivotMix.current.copy(c.pivot).lerp(ROOM_CENTER, t);
-      pivot = pivotMix.current;
-      radius = c.radius + (Math.min(c.radius, CENTER_RADIUS) - c.radius) * t;
+    const yaw = baseYaw + i.dragX + automaticOrbit;
+    const pitch = Math.max(-0.35, Math.min(1.05, basePitch + i.dragY * 0.7));
+
+    // Full horizontal orbit with a safe vertical arc and restrained dolly.
+    // Wide rotations pull the Welcome camera inside the room.
+    const orbitProgress = Math.min(1, Math.abs(i.dragX) / (Math.PI / 2));
+    const safeOrbitDistance = dist > 5 ? dist + (4.35 - dist) * orbitProgress : dist;
+    const pullIn = view.id === "welcome" ? 0.8 : 0.1;
+    const zoomScale = i.zoom < 0 ? 1 + i.zoom * pullIn : 1 + i.zoom * 0.1;
+    const radius = Math.max(1.2, safeOrbitDistance * zoomScale);
+    const horizontalRadius = Math.cos(pitch) * radius;
+    desiredPos.current.set(
+      target.current.x + Math.sin(yaw) * horizontalRadius,
+      target.current.y + Math.sin(pitch) * radius,
+      target.current.z + Math.cos(yaw) * horizontalRadius,
+    );
+    desiredLook.current.copy(target.current);
+    panRight.current.set(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(automaticLateral);
+    desiredPos.current.add(panRight.current);
+    desiredLook.current.add(panRight.current);
+
+    const response = isMobile ? 8 : 5.2;
+    const k = reducedMotion ? 1 : 1 - Math.exp(-response * dt);
+    pos.current.lerp(desiredPos.current, k);
+    look.current.lerp(desiredLook.current, k);
+    camera.position.copy(pos.current);
+    if (camera instanceof PerspectiveCamera) {
+      const baseFov = tourFov ?? (isMobile ? 52 : 42);
+      const targetFov = Math.max(18, Math.min(70, baseFov + i.zoom * 28));
+      camera.fov += (targetFov - camera.fov) * k;
+      camera.updateProjectionMatrix();
     }
-    const limit = rayToBox(pivot, dir.current, maxZ) - 0.2;
-    const r = Math.min(radius, Math.max(0.3, limit));
-    camera.position.copy(pivot).addScaledVector(dir.current, r);
-    const cam = camera as PerspectiveCamera;
-    const fov = size.width < size.height ? 52 : 42;
-    if (Math.abs(cam.fov - fov) > 0.01) {
-      cam.fov = fov;
-      cam.updateProjectionMatrix();
-    }
-    camera.lookAt(pivot);
+    camera.lookAt(look.current);
   });
 
   return null;

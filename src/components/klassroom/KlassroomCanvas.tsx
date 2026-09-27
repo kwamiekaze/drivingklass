@@ -8,16 +8,12 @@ export default function KlassroomCanvas({
   input,
   reducedMotion,
   started,
-  screenLive,
-  screenActive,
   onReady,
 }: {
   view: KlassView;
   input: RefObject<RigInput>;
   reducedMotion: boolean;
   started: boolean;
-  screenLive: boolean;
-  screenActive: boolean;
   onReady?: () => void;
 }) {
   return (
@@ -31,7 +27,7 @@ export default function KlassroomCanvas({
         onReady?.();
       }}
     >
-      <KlassroomScene reducedMotion={reducedMotion} screenLive={screenLive} screenActive={screenActive} />
+      <KlassroomScene reducedMotion={reducedMotion} />
       <KlassCameraRig view={view} input={input} reducedMotion={reducedMotion} started={started} />
     </Canvas>
   );

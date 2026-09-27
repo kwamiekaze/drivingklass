@@ -8,17 +8,12 @@ import { DarkModeBackground } from "@/components/DarkModeBackground";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useTheme } from "@/components/ThemeProvider";
 
-// Rendered inside the Klassroom monitor at /nuhome: skip the intro splash.
-const isKlassroomEmbed = () =>
-  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("klassroom");
-
 const Index = () => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   
   // Check if desktop/tablet on initial render - skip splash for >= 768px
   const [showSplash, setShowSplash] = useState(() => {
-    if (isKlassroomEmbed()) return false;
     if (typeof window !== 'undefined') {
       return !window.matchMedia("(min-width: 768px)").matches;
     }
@@ -27,7 +22,6 @@ const Index = () => {
   
   // Track when splash is complete (for animation delay)
   const [splashComplete, setSplashComplete] = useState(() => {
-    if (isKlassroomEmbed()) return true;
     // If we skip splash (desktop), it's already complete
     if (typeof window !== 'undefined') {
       return window.matchMedia("(min-width: 768px)").matches;
