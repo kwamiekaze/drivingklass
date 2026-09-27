@@ -7,11 +7,17 @@ export default function KlassroomCanvas({
   view,
   input,
   reducedMotion,
+  started,
+  screenLive,
+  screenActive,
   onReady,
 }: {
   view: KlassView;
   input: RefObject<RigInput>;
   reducedMotion: boolean;
+  started: boolean;
+  screenLive: boolean;
+  screenActive: boolean;
   onReady?: () => void;
 }) {
   return (
@@ -20,10 +26,13 @@ export default function KlassroomCanvas({
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: false }}
       camera={{ position: [0, 4.5, 11.6], fov: 42, near: 0.1, far: 60 }}
-      onCreated={() => onReady?.()}
+      onCreated={({ gl }) => {
+        gl.toneMappingExposure = 1.08;
+        onReady?.();
+      }}
     >
-      <KlassroomScene reducedMotion={reducedMotion} />
-      <KlassCameraRig view={view} input={input} reducedMotion={reducedMotion} />
+      <KlassroomScene reducedMotion={reducedMotion} screenLive={screenLive} screenActive={screenActive} />
+      <KlassCameraRig view={view} input={input} reducedMotion={reducedMotion} started={started} />
     </Canvas>
   );
 }

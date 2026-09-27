@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import type { Group, Mesh, MeshStandardMaterial as MSM, PointLight, SpotLight } from "three";
 import { ExtrudeGeometry, Object3D, Shape } from "three";
+import { RealCar } from "./RealCar";
 import {
   DISPLAY,
   SERIF,
@@ -547,8 +548,15 @@ export function GoldCarPedestal({
         <cylinderGeometry args={[0.58, 0.58, 0.03, 48]} />
         <meshStandardMaterial color="#1d1a17" roughness={0.2} metalness={0.4} />
       </mesh>
-      <group ref={turntable} position={[0, 0.73, 0]} scale={0.62} rotation-y={0.6}>
-        <GoldSedan />
+      <group ref={turntable} position={[0, 0.73, 0]} rotation-y={0.6}>
+        <RealCar
+          length={1.2}
+          fallback={
+            <group scale={0.62}>
+              <GoldSedan />
+            </group>
+          }
+        />
       </group>
       {/* museum spot */}
       <primitive object={target} position={[0, 0.9, 0]} />
@@ -808,7 +816,7 @@ export function Pendant({ position, drop = 0.55 }: { position: [number, number, 
           <circleGeometry args={[0.24, 32]} />
           <meshStandardMaterial color="#fff3d6" emissive="#ffe3a8" emissiveIntensity={1.6} toneMapped={false} />
         </mesh>
-        <pointLight position={[0, -0.2, 0]} intensity={0.8} distance={4.2} color="#ffe9c0" />
+        <pointLight position={[0, -0.2, 0]} intensity={1.25} distance={4.8} color="#ffd79c" />
       </group>
     </group>
   );

@@ -15,16 +15,19 @@ import {
   TrafficLight,
   WallOfFame,
 } from "./Decor";
+import { FrontWall } from "./FrontWall";
 import { FiddleLeafFig, HangingPothos, LeafyPlant, Monstera, SnakePlant, Succulents } from "./Plants";
 import { StudentDesk } from "./StudentDesk";
-import { Chair, Desk, DeskProps, Monitor } from "./TeacherStation";
+import { Chair, Desk, DeskProps } from "./TeacherStation";
+import { HomepageMonitor } from "./HomepageMonitor";
+import { Backpack, CeilingBeams, Drapes, FloorLamp, Sconce } from "./Warmth";
 import { WallCalendar, WallClock } from "./WallPieces";
 import { SunnyWindowView } from "./WindowView";
 import { IVORY, WALL, brushedGold, goldProps } from "./shared";
 
 const CREAM = "#f3ecdc";
 const WAINSCOT = "#161311";
-const FLOOR = "#8a5c37";
+const FLOOR = "#94603a";
 
 /** Black wainscoting with a gold chair rail, run along one wall segment. */
 function Wainscot({
@@ -215,7 +218,7 @@ function StudioEnvironment() {
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = env;
     const typed = scene as typeof scene & { environmentIntensity?: number };
-    typed.environmentIntensity = 0.85;
+    typed.environmentIntensity = 0.75;
     return () => {
       scene.environment = null;
       env.dispose();
@@ -266,17 +269,26 @@ const STUDENT_DESKS: Array<[number, number]> = [
   [3.9, 2.25],
 ];
 
-export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
+export function KlassroomScene({
+  reducedMotion,
+  screenLive,
+  screenActive,
+}: {
+  reducedMotion: boolean;
+  screenLive: boolean;
+  screenActive: boolean;
+}) {
   return (
     <>
-      <color attach="background" args={["#e8e2d3"]} />
+      <color attach="background" args={["#e9d6b6"]} />
+      <fog attach="fog" args={["#e9d6b6", 16, 34]} />
       <StudioEnvironment />
-      <hemisphereLight args={["#eaf3ff", "#d8bb97", 0.8]} />
-      <ambientLight intensity={0.32} />
+      <hemisphereLight args={["#ffe7c2", "#c48d5a", 0.85]} />
+      <ambientLight intensity={0.26} color="#ffe2bd" />
       <directionalLight
         position={SUN_LIGHT_POSITION}
-        intensity={3.1}
-        color="#fff1d0"
+        intensity={3.3}
+        color="#ffd99e"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -291,10 +303,13 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
         shadow-radius={1.8}
         shadow-blurSamples={12}
       />
-      <directionalLight position={[-4.5, 4.2, 5.5]} intensity={0.5} color="#e6eeff" />
-      <pointLight position={[0, 3.2, 0]} intensity={0.45} color="#fff0d2" />
+      <directionalLight position={[-4.5, 4.2, 5.5]} intensity={0.42} color="#ffe6c4" />
+      <pointLight position={[0, 3.2, 0]} intensity={0.6} color="#ffd7a0" />
+      <pointLight position={[-5.2, 2.2, -3.4]} intensity={0.55} distance={5} color="#ffc98a" />
+      <pointLight position={[5.2, 2.2, 3.3]} intensity={0.55} distance={5} color="#ffc98a" />
 
       <Room />
+      <FrontWall />
       <ContactShadows
         position={[0, 0.02, -0.4]}
         scale={14}
@@ -314,7 +329,7 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
 
       {/* instructor's station */}
       <Desk />
-      <Monitor />
+      <HomepageMonitor live={screenLive} active={screenActive} />
       <DeskProps reducedMotion={reducedMotion} />
       <Chair reducedMotion={reducedMotion} />
 
@@ -341,9 +356,24 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
       <HangingPothos position={[5.1, 3.6, 0.2]} reducedMotion={reducedMotion} drop={0.7} />
       <HangingPothos position={[5.55, 3.6, -4.55]} reducedMotion={reducedMotion} drop={0.55} />
 
+      {/* warmth and detail */}
+      <Drapes />
+      <CeilingBeams />
+      <Sconce position={[-5.985, 2.35, -3.4]} rotationY={Math.PI / 2} />
+      <Sconce position={[-5.985, 2.35, 4.2]} rotationY={Math.PI / 2} />
+      <Sconce position={[5.985, 2.35, -4.2]} rotationY={-Math.PI / 2} />
+      <Sconce position={[5.985, 2.35, 3.3]} rotationY={-Math.PI / 2} />
+      <Sconce position={[-1.75, 2.15, 5.185]} rotationY={Math.PI} />
+      <Sconce position={[1.75, 2.15, 5.185]} rotationY={Math.PI} />
+      <FloorLamp position={[-4.55, 0, 4.45]} />
+      <Backpack position={[-3.2, 0, 0.95]} rotationY={0.4} variant={0} />
+      <Backpack position={[2.75, 0, 0.9]} rotationY={-0.5} variant={1} />
+      <Backpack position={[-1.45, 0, 2.75]} rotationY={0.9} variant={2} />
+      <Backpack position={[4.55, 0, 2.8]} rotationY={-0.3} variant={0} />
+
       {/* lighting fixtures */}
-      <Pendant position={[-3.0, 3.6, 1.35]} />
-      <Pendant position={[3.0, 3.6, 1.35]} />
+      <Pendant position={[-3.0, 3.46, 1.35]} drop={0.45} />
+      <Pendant position={[3.0, 3.46, 1.35]} drop={0.45} />
 
       <Butterflies reducedMotion={reducedMotion} />
       <SunShadowSetup />
