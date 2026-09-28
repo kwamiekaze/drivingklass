@@ -4,6 +4,7 @@ import type { Group, Mesh, MeshStandardMaterial as MSM, PointLight, SpotLight } 
 import { ExtrudeGeometry, Object3D, Shape } from "three";
 import { RealCar } from "./RealCar";
 import {
+  LOW_POWER,
   DISPLAY,
   SERIF,
   blackLacquer,
@@ -113,7 +114,18 @@ export function SloganStars({
 /* Road signs                                                          */
 /* ------------------------------------------------------------------ */
 
-type SignKind = "stop" | "yield" | "speed" | "school" | "rail";
+export type SignKind =
+  | "stop"
+  | "yield"
+  | "speed"
+  | "school"
+  | "rail"
+  | "donotenter"
+  | "oneway"
+  | "nouturn"
+  | "merge"
+  | "pedestrian"
+  | "speed55";
 
 function paintSign(kind: SignKind) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
@@ -200,6 +212,139 @@ function paintSign(kind: SignKind) {
         c.fillRect(x - 26 * s, 360 + (1 - s) * 40, 18 * s, 110 * s);
         c.fillRect(x + 8 * s, 360 + (1 - s) * 40, 18 * s, 110 * s);
       }
+    } else if (kind === "donotenter") {
+      c.beginPath();
+      c.arc(cx, cy, 246, 0, Math.PI * 2);
+      c.fillStyle = "#fbfbf6";
+      c.fill();
+      c.beginPath();
+      c.arc(cx, cy, 232, 0, Math.PI * 2);
+      c.fillStyle = "#c8102e";
+      c.fill();
+      roundedRect(c, cx - 190, cy - 34, 380, 68, 8);
+      c.fillStyle = "#fbfbf6";
+      c.fill();
+      c.font = `800 58px ${DISPLAY}`;
+      c.fillText("DO NOT", cx, cy - 104);
+      c.fillText("ENTER", cx, cy + 112);
+    } else if (kind === "oneway") {
+      roundedRect(c, 16, 150, w - 32, 212, 20);
+      c.fillStyle = "#141210";
+      c.fill();
+      c.fillStyle = "#fbfbf6";
+      c.beginPath();
+      c.moveTo(52, 214);
+      c.lineTo(330, 214);
+      c.lineTo(330, 176);
+      c.lineTo(470, 256);
+      c.lineTo(330, 336);
+      c.lineTo(330, 298);
+      c.lineTo(52, 298);
+      c.closePath();
+      c.fill();
+      c.font = `800 58px ${DISPLAY}`;
+      c.fillStyle = "#141210";
+      c.fillText("ONE WAY", 196, 258);
+    } else if (kind === "nouturn") {
+      roundedRect(c, 56, 16, w - 112, h - 32, 24);
+      c.fillStyle = "#fbfbf6";
+      c.fill();
+      c.lineWidth = 10;
+      c.strokeStyle = "#141210";
+      roundedRect(c, 72, 32, w - 144, h - 64, 16);
+      c.stroke();
+      // U-turn arrow
+      c.strokeStyle = "#141210";
+      c.lineWidth = 38;
+      c.lineCap = "butt";
+      c.beginPath();
+      c.moveTo(196, 390);
+      c.lineTo(196, 230);
+      c.arc(256, 230, 60, Math.PI, 0);
+      c.lineTo(316, 300);
+      c.stroke();
+      c.fillStyle = "#141210";
+      c.beginPath();
+      c.moveTo(262, 290);
+      c.lineTo(370, 290);
+      c.lineTo(316, 360);
+      c.closePath();
+      c.fill();
+      // prohibition ring
+      c.strokeStyle = "#c8102e";
+      c.lineWidth = 30;
+      c.beginPath();
+      c.arc(cx, cy + 20, 170, 0, Math.PI * 2);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(cx - 120, cy + 140);
+      c.lineTo(cx + 120, cy - 100);
+      c.stroke();
+    } else if (kind === "merge" || kind === "pedestrian") {
+      c.save();
+      c.translate(cx, cy);
+      c.rotate(Math.PI / 4);
+      roundedRect(c, -175, -175, 350, 350, 26);
+      c.fillStyle = "#f6c21a";
+      c.fill();
+      c.lineWidth = 12;
+      c.strokeStyle = "#141210";
+      roundedRect(c, -160, -160, 320, 320, 20);
+      c.stroke();
+      c.restore();
+      c.fillStyle = "#141210";
+      c.strokeStyle = "#141210";
+      if (kind === "merge") {
+        c.lineWidth = 30;
+        c.beginPath();
+        c.moveTo(cx, cy + 150);
+        c.lineTo(cx, cy - 90);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(cx - 100, cy + 150);
+        c.quadraticCurveTo(cx - 90, cy + 40, cx - 8, cy + 10);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(cx - 60, cy - 70);
+        c.lineTo(cx, cy - 150);
+        c.lineTo(cx + 60, cy - 70);
+        c.closePath();
+        c.fill();
+      } else {
+        // walking figure
+        c.beginPath();
+        c.arc(cx + 10, cy - 110, 30, 0, Math.PI * 2);
+        c.fill();
+        c.lineWidth = 34;
+        c.lineCap = "round";
+        c.beginPath();
+        c.moveTo(cx + 4, cy - 60);
+        c.lineTo(cx - 10, cy + 40);
+        c.moveTo(cx - 10, cy + 40);
+        c.lineTo(cx - 60, cy + 140);
+        c.moveTo(cx - 10, cy + 40);
+        c.lineTo(cx + 50, cy + 140);
+        c.moveTo(cx, cy - 40);
+        c.lineTo(cx - 60, cy + 10);
+        c.moveTo(cx, cy - 40);
+        c.lineTo(cx + 60, cy);
+        c.stroke();
+        c.lineCap = "butt";
+      }
+    } else if (kind === "speed55") {
+      roundedRect(c, 76, 20, w - 152, h - 40, 24);
+      c.fillStyle = "#fbfbf6";
+      c.fill();
+      c.lineWidth = 12;
+      c.strokeStyle = "#141210";
+      roundedRect(c, 94, 38, w - 188, h - 76, 16);
+      c.stroke();
+      c.fillStyle = "#141210";
+      c.font = `700 62px ${DISPLAY}`;
+      c.fillText("SPEED", cx, 110);
+      c.fillText("LIMIT", cx, 180);
+      c.font = `800 190px ${DISPLAY}`;
+      c.fillText("55", cx, 340);
     } else {
       c.save();
       c.translate(cx, cy);
@@ -233,7 +378,7 @@ function paintSign(kind: SignKind) {
   };
 }
 
-function RoadSign({
+export function RoadSign({
   kind,
   position,
   size = 0.62,
@@ -357,7 +502,7 @@ export function TrafficLight({
           </mesh>
         </group>
       ))}
-      <pointLight ref={glow} position={[0, 0, 0.35]} intensity={0.9} distance={1.6} decay={2} />
+      {!LOW_POWER && <pointLight ref={glow} position={[0, 0, 0.35]} intensity={0.9} distance={1.6} decay={2} />}
     </group>
   );
 }
@@ -818,6 +963,37 @@ export function Pendant({ position, drop = 0.55 }: { position: [number, number, 
         </mesh>
         <pointLight position={[0, -0.2, 0]} intensity={1.25} distance={4.8} color="#ffd79c" />
       </group>
+    </group>
+  );
+}
+
+/** A framed black display of road signs, as on the side wall, for any wall. */
+export function SignPanel({
+  kinds,
+  position,
+  rotationY = 0,
+  width = 2.2,
+}: {
+  kinds: SignKind[];
+  position: [number, number, number];
+  rotationY?: number;
+  width?: number;
+}) {
+  const gap = width / kinds.length;
+  const size = Math.min(0.66, gap * 0.9);
+  return (
+    <group position={position} rotation-y={rotationY}>
+      <mesh position={[0, 0, -0.02]} receiveShadow>
+        <boxGeometry args={[width, 1.05, 0.03]} />
+        <meshStandardMaterial {...blackLacquer} />
+      </mesh>
+      <mesh position={[0, 0, -0.04]}>
+        <boxGeometry args={[width + 0.06, 1.11, 0.02]} />
+        <meshStandardMaterial {...brushedGold} />
+      </mesh>
+      {kinds.map((kind, i) => (
+        <RoadSign key={kind} kind={kind} position={[-width / 2 + gap * (i + 0.5), 0.02, 0.02]} size={size} />
+      ))}
     </group>
   );
 }

@@ -1,5 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { MessageCircle, Phone, X } from "lucide-react";
+import { ContactForm } from "@/components/ContactForm";
 import { KLASS_VIEWS, createRigInput, wrapAngle, type KlassViewId, type RigInput } from "@/components/klassroom/views";
 import "@/components/klassroom/klassroom.css";
 
@@ -44,10 +46,15 @@ export default function KlassroomPreview() {
   const [splashDone, setSplashDone] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [steered, setSteered] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [lost, setLost] = useState(false);
+  const contactOpenRef = useRef(false);
+  contactOpenRef.current = contactOpen;
   const input = useRef<RigInput>(createRigInput());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ distance: number; zoom: number } | null>(null);
   const steeredRef = useRef(false);
+  const downAt = useRef(new Map<number, { x: number; y: number }>());
 
   const view = useMemo(() => KLASS_VIEWS.find((v) => v.id === activeId) ?? KLASS_VIEWS[0]!, [activeId]);
 
@@ -93,7 +100,13 @@ export default function KlassroomPreview() {
       const i = KLASS_VIEWS.findIndex((v) => v.id === activeId);
       if (e.key === "ArrowRight") select(KLASS_VIEWS[(i + 1) % KLASS_VIEWS.length]!.id);
       if (e.key === "ArrowLeft") select(KLASS_VIEWS[(i - 1 + KLASS_VIEWS.length) % KLASS_VIEWS.length]!.id);
-      if (e.key === "Escape") select("welcome");
+      if (e.key === "Escape") {
+        if (contactOpenRef.current) {
+          setContactOpen(false);
+          return;
+        }
+        select("welcome");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -107,11 +120,13 @@ export default function KlassroomPreview() {
       const [a, b] = [...pointers.current.values()];
       pinch.current = { distance: Math.hypot(a!.x - b!.x, a!.y - b!.y), zoom: input.current.zoom };
     }
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Capture only once this turns into a drag, so taps still reach the desk screen.
+    downAt.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
   }, []);
 
   const endPointer = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(e.pointerId);
+    downAt.current.delete(e.pointerId);
     pinch.current = null;
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
   }, []);
@@ -120,6 +135,11 @@ export default function KlassroomPreview() {
     const previous = pointers.current.get(e.pointerId);
     if (!previous) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const start = downAt.current.get(e.pointerId);
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 6) {
+      downAt.current.delete(e.pointerId);
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.setPointerCapture(e.pointerId);
+    }
     const i = input.current;
     if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
@@ -184,6 +204,7 @@ export default function KlassroomPreview() {
             reducedMotion={reducedMotion}
             started={splashDone}
             onReady={() => setReady(true)}
+            onLost={() => setLost(true)}
           />
         </Suspense>
       </div>
@@ -250,6 +271,44 @@ export default function KlassroomPreview() {
           ))}
         </div>
       </nav>
+
+      <div className="kr-fab">
+        <button type="button" className="kr-fab-btn" aria-label="Send us a message" onClick={() => setContactOpen(true)}>
+          <MessageCircle aria-hidden="true" />
+        </button>
+        <a className="kr-fab-btn" href="tel:+14044045820" aria-label="Call Driving Klass at 404-404-5820">
+          <Phone aria-hidden="true" />
+        </a>
+      </div>
+
+      {contactOpen && (
+        <div
+          className="kr-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Contact Driving Klass"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setContactOpen(false);
+          }}
+        >
+          <div className="kr-modal-panel bg-background text-foreground">
+            <button type="button" className="kr-modal-close" aria-label="Close" onClick={() => setContactOpen(false)}>
+              <X aria-hidden="true" />
+            </button>
+            <h2 className="kr-modal-title">CONTACT DRIVING KLASS</h2>
+            <ContactForm />
+          </div>
+        </div>
+      )}
+
+      {lost && (
+        <div className="kr-lost" role="alert">
+          <p>The Klassroom paused to save your battery.</p>
+          <button type="button" className="kr-btn" onClick={() => window.location.reload()}>
+            Reload the Klassroom
+          </button>
+        </div>
+      )}
 
       <div className="kr-splash" data-done={splashDone} aria-hidden={splashDone}>
         <div className="kr-splash-inner">

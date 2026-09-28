@@ -1,23 +1,22 @@
-import { DISPLAY, SERIF, goldGradient, roundedRect, setTracking, star, useCanvasTexture } from "./shared";
+import { SignPanel } from "./Decor";
+import { DISPLAY, LOW_POWER, SERIF, goldGradient, roundedRect, setTracking, star, useCanvasTexture } from "./shared";
 
 /**
  * The fourth wall, so a full 360 turn finds a finished room: lacquered double
  * doors with gold hardware, an illuminated KLASSROOM transom, the DrivingKlass
- * wordmark and two framed brand prints. Painted on one inward-facing plane, so
+ * wordmark and two framed displays of road signs. Painted on one inward-facing plane, so
  * it is invisible from the opening shot outside the room and solid from inside.
  */
 
-const TEX_W = 4096;
-const TEX_H = 1229; // 12m x 3.6m
+const TEX_W = LOW_POWER ? 2048 : 4096;
+const TEX_H = LOW_POWER ? 614 : 1229; // 12m x 3.6m
 
-function frame(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  c.fillStyle = goldGradient(c, y, y + h);
-  c.fillRect(x - 14, y - 14, w + 28, h + 28);
-  c.fillStyle = "#141210";
-  c.fillRect(x, y, w, h);
-}
-
-function paint(c: CanvasRenderingContext2D, w: number, h: number) {
+function paint(c: CanvasRenderingContext2D, realW: number, realH: number) {
+  // Laid out at 4096 wide and scaled, so the lighter phone texture matches.
+  c.save();
+  c.scale(realW / 4096, realH / 1229);
+  const w = 4096;
+  const h = 1229;
   const px = w / 12; // pixels per metre
   const yOf = (m: number) => h - m * px;
 
@@ -104,51 +103,8 @@ function paint(c: CanvasRenderingContext2D, w: number, h: number) {
     c.fill();
   }
 
-  // two framed prints either side
-  const prints: Array<{ x: number; title: string; sub: string }> = [
-    { x: w * 0.23, title: "Road Test Ready", sub: "Warm-up · Dual-pedal car · Insured" },
-    { x: w * 0.77, title: "5-Star Instructors", sub: "Calm. Patient. Certified." },
-  ];
-  for (const p of prints) {
-    const fw = 1.7 * px;
-    const fh = 1.15 * px;
-    const fx = p.x - fw / 2;
-    const fy = yOf(2.75);
-    frame(c, fx, fy, fw, fh);
-    const inner = c.createLinearGradient(fx, fy, fx, fy + fh);
-    inner.addColorStop(0, "#1c1814");
-    inner.addColorStop(1, "#2b2217");
-    c.fillStyle = inner;
-    c.fillRect(fx + 30, fy + 30, fw - 60, fh - 60);
-    // stylised road vanishing to a gold sun
-    c.fillStyle = "rgba(240,213,138,0.9)";
-    c.beginPath();
-    c.arc(p.x, fy + fh * 0.6, 62, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = "#0e0c0a";
-    c.beginPath();
-    c.moveTo(fx + 30, fy + fh - 30);
-    c.lineTo(p.x - 24, fy + fh * 0.64);
-    c.lineTo(p.x + 24, fy + fh * 0.64);
-    c.lineTo(fx + fw - 30, fy + fh - 30);
-    c.fill();
-    c.strokeStyle = "#e8c872";
-    c.lineWidth = 8;
-    c.setLineDash([36, 30]);
-    c.beginPath();
-    c.moveTo(p.x, fy + fh * 0.67);
-    c.lineTo(p.x, fy + fh - 34);
-    c.stroke();
-    c.setLineDash([]);
-    c.font = `italic 700 72px ${SERIF}`;
-    c.fillStyle = goldGradient(c, fy + 60, fy + 140);
-    c.fillText(p.title, p.x, fy + 104);
-    c.font = `600 34px ${DISPLAY}`;
-    c.fillStyle = "rgba(247,236,208,0.8)";
-    c.fillText(p.sub, p.x, fy + 170);
-  }
-
   c.textAlign = "left";
+  c.restore();
 }
 
 export function FrontWall() {
@@ -159,8 +115,21 @@ export function FrontWall() {
         <planeGeometry args={[12, 3.6]} />
         <meshStandardMaterial map={tex} roughness={0.9} />
       </mesh>
+      {/* road sign displays either side of the doors, facing into the room */}
+      <SignPanel
+        kinds={["donotenter", "oneway", "nouturn"]}
+        position={[-3.3, 2.05, 5.17]}
+        rotationY={Math.PI}
+        width={2.4}
+      />
+      <SignPanel
+        kinds={["merge", "pedestrian", "speed55"]}
+        position={[3.3, 2.05, 5.17]}
+        rotationY={Math.PI}
+        width={2.4}
+      />
       {/* light spilling from the transom */}
-      <pointLight position={[0, 2.6, 4.7]} intensity={0.6} distance={3} color="#ffe6b0" />
+      {!LOW_POWER && <pointLight position={[0, 2.6, 4.7]} intensity={0.6} distance={3} color="#ffe6b0" />}
     </group>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import type { ThreeEvent } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { getPackagesSortedByPosition } from "@/data/packages";
 import {
@@ -110,6 +111,16 @@ function paintFrame(c: CanvasRenderingContext2D, now: Date) {
   setTracking(c, "0px");
 }
 
+/** Tappable areas painted on the current screen, in canvas pixels. */
+export interface ScreenHit {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  action: { type: "package"; id: string } | { type: "slide"; index: number } | { type: "back" } | { type: "book"; url: string };
+}
+let hits: ScreenHit[] = [];
+
 function panel(c: CanvasRenderingContext2D, title: string) {
   roundedRect(c, 800, 140, 750, 640, 26);
   c.fillStyle = "rgba(255,255,255,0.045)";
@@ -122,6 +133,83 @@ function panel(c: CanvasRenderingContext2D, title: string) {
   c.fillStyle = "#e8c872";
   c.fillText(title.toUpperCase(), 840, 200);
   setTracking(c, "0px");
+  c.textAlign = "right";
+  c.font = `500 20px ${DISPLAY}`;
+  c.fillStyle = "rgba(243,236,220,0.6)";
+  c.fillText("Tap a package for details", 1515, 198);
+  c.textAlign = "left";
+}
+
+function wrapLines(c: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (c.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** One package, full description and a booking button. */
+function slideDetail(c: CanvasRenderingContext2D, id: string) {
+  const p = getPackagesSortedByPosition().find((x) => x.id === id);
+  if (!p) return;
+  roundedRect(c, 800, 140, 750, 640, 26);
+  const g = c.createLinearGradient(800, 140, 1550, 780);
+  g.addColorStop(0, "rgba(212,175,55,0.22)");
+  g.addColorStop(1, "rgba(255,255,255,0.03)");
+  c.fillStyle = g;
+  c.fill();
+  c.lineWidth = 2.5;
+  c.strokeStyle = "#e8c872";
+  c.stroke();
+  // back
+  roundedRect(c, 1330, 164, 196, 50, 25);
+  c.fillStyle = "rgba(0,0,0,0.35)";
+  c.fill();
+  c.strokeStyle = "rgba(232,200,114,0.7)";
+  c.lineWidth = 1.5;
+  c.stroke();
+  c.font = `600 20px ${DISPLAY}`;
+  c.fillStyle = "#f3ecdc";
+  c.textAlign = "center";
+  c.fillText("‹  All packages", 1428, 196);
+  c.textAlign = "left";
+  hits.push({ x: 1330, y: 164, w: 196, h: 50, action: { type: "back" } });
+  // title and price
+  c.font = `700 24px ${DISPLAY}`;
+  setTracking(c, "5px");
+  c.fillStyle = "#e8c872";
+  c.fillText("YOUR KLASS", 840, 200);
+  setTracking(c, "0px");
+  c.font = `800 76px ${DISPLAY}`;
+  c.fillStyle = "#f7ecd0";
+  c.fillText(p.label.replace(/\n/g, " "), 840, 300);
+  c.font = `800 64px ${DISPLAY}`;
+  c.fillStyle = goldGradient(c, 320, 380);
+  c.fillText(p.price, 840, 380);
+  // description
+  c.font = `400 26px ${DISPLAY}`;
+  c.fillStyle = "rgba(247,239,220,0.9)";
+  const lines = wrapLines(c, p.description, 660).slice(0, 7);
+  lines.forEach((line, i) => c.fillText(line, 840, 440 + i * 38));
+  // book button
+  roundedRect(c, 840, 700, 330, 60, 30);
+  c.fillStyle = goldGradient(c, 700, 760);
+  c.fill();
+  c.font = `800 22px ${DISPLAY}`;
+  setTracking(c, "4px");
+  c.fillStyle = "#151210";
+  c.textAlign = "center";
+  c.fillText("BOOK THIS KLASS", 1007, 738);
+  c.textAlign = "left";
+  setTracking(c, "0px");
+  hits.push({ x: 840, y: 700, w: 330, h: 60, action: { type: "book", url: p.squareUrl } });
 }
 
 function slidePackages(c: CanvasRenderingContext2D) {
@@ -132,6 +220,7 @@ function slidePackages(c: CanvasRenderingContext2D) {
     const row = Math.floor(i / 3);
     const x = 840 + col * 232;
     const y = 240 + row * 170;
+    hits.push({ x, y, w: 212, h: 148, action: { type: "package", id: p.id } });
     roundedRect(c, x, y, 212, 148, 18);
     const g = c.createLinearGradient(x, y, x, y + 148);
     g.addColorStop(0, i === 4 ? "rgba(212,175,55,0.30)" : "rgba(255,255,255,0.06)");
@@ -156,6 +245,7 @@ function slideRoadTest(c: CanvasRenderingContext2D) {
   pkgs.slice(0, 2).forEach((p, i) => {
     const x = 840 + i * 350;
     const y = 240;
+    hits.push({ x, y, w: 322, h: 200, action: { type: "package", id: p.id } });
     roundedRect(c, x, y, 322, 200, 22);
     const g = c.createLinearGradient(x, y, x + 322, y + 200);
     g.addColorStop(0, "rgba(212,175,55,0.32)");
@@ -246,25 +336,37 @@ function slideProgress(c: CanvasRenderingContext2D) {
 
 const SLIDES = [slidePackages, slideRoadTest, slideProgress];
 
-export function paintKlassScreen(c: CanvasRenderingContext2D, now: Date, slide: number) {
+export function paintKlassScreen(c: CanvasRenderingContext2D, now: Date, slide: number, selected?: string | null) {
+  hits = [];
   paintFrame(c, now);
+  if (selected) {
+    slideDetail(c, selected);
+    return hits;
+  }
   SLIDES[slide % SLIDES.length]!(c);
   // slide pips
   for (let i = 0; i < SLIDES.length; i += 1) {
+    hits.push({ x: 1150 + i * 30 - 14, y: 741, w: 28, h: 28, action: { type: "slide", index: i } });
     c.beginPath();
     c.arc(1150 + i * 30, 755, i === slide % SLIDES.length ? 8 : 5, 0, Math.PI * 2);
     c.fillStyle = i === slide % SLIDES.length ? "#e8c872" : "rgba(232,200,114,0.35)";
     c.fill();
   }
+  return hits;
 }
 
 export function KlassScreen({ width, height }: { width: number; height: number }) {
   const now = useLocalMinute();
   const [slide, setSlide] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const regions = useRef<ScreenHit[]>([]);
+
+  // Slides rotate on their own until someone opens a package.
   useEffect(() => {
+    if (selected) return;
     const id = setInterval(() => setSlide((s) => s + 1), SLIDE_SECONDS * 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [selected]);
 
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
@@ -284,15 +386,44 @@ export function KlassScreen({ width, height }: { width: number; height: number }
     const c = canvas.getContext("2d");
     if (!c) return;
     const paint = () => {
-      paintKlassScreen(c, now, slide);
+      regions.current = [...paintKlassScreen(c, now, slide, selected)];
       texture.needsUpdate = true;
     };
     paint();
     document.fonts?.ready.then(paint);
-  }, [canvas, texture, now, slide]);
+  }, [canvas, texture, now, slide, selected]);
+
+  const hitAt = (e: ThreeEvent<PointerEvent | MouseEvent>) => {
+    const uv = e.uv;
+    if (!uv) return null;
+    const x = uv.x * SCREEN_W;
+    const y = (1 - uv.y) * SCREEN_H;
+    return regions.current.find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) ?? null;
+  };
 
   return (
-    <mesh>
+    <mesh
+      onClick={(e) => {
+        // A drag to look around is not a tap.
+        if (e.delta > 10) return;
+        const hit = hitAt(e);
+        if (!hit) return;
+        e.stopPropagation();
+        const a = hit.action;
+        if (a.type === "package") setSelected(a.id);
+        else if (a.type === "back") setSelected(null);
+        else if (a.type === "slide") setSlide(a.index);
+        else if (a.type === "book") window.open(a.url, "_blank", "noopener");
+      }}
+      onPointerMove={(e) => {
+        const host = document.querySelector<HTMLElement>(".kr-canvas");
+        if (host) host.style.cursor = hitAt(e) ? "pointer" : "";
+      }}
+      onPointerOut={() => {
+        const host = document.querySelector<HTMLElement>(".kr-canvas");
+        if (host) host.style.cursor = "";
+      }}
+    >
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} toneMapped={false} />
     </mesh>

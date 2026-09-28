@@ -132,3 +132,15 @@ export function useLocalMinute() {
   }, []);
   return now;
 }
+
+/**
+ * Phones and small tablets get a lighter build of the room (smaller textures,
+ * softer shadows, fewer lights) so iOS Safari never runs out of GPU memory.
+ */
+export const LOW_POWER: boolean = (() => {
+  if (typeof window === "undefined") return false;
+  const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  const small = Math.min(window.innerWidth, window.innerHeight) < 820;
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return coarse || small || (memory !== undefined && memory <= 4);
+})();

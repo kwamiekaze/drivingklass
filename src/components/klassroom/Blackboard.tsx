@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import type { Group } from "three";
 import { CanvasTexture, SRGBColorSpace } from "three";
-import { CHALK, DISPLAY, MONTHS, SLOGAN, WEEKDAYS, blackLacquer, brushedGold, goldProps, star } from "./shared";
+import { CHALK, DISPLAY, LOW_POWER, MONTHS, SLOGAN, WEEKDAYS, blackLacquer, brushedGold, goldProps, star } from "./shared";
 
 /**
  * The Klassroom chalkboard. A live lesson is written out in chalk, stroke by
@@ -16,6 +16,8 @@ export const BOARD_W = 3.6;
 export const BOARD_H = 1.6;
 const TEX_W = 2304;
 const TEX_H = 1024;
+/** The texture actually uploaded to the GPU: smaller on phones. */
+const OUT_SCALE = LOW_POWER ? 0.62 : 1;
 
 const CHALK_WHITE = "rgba(244,242,232,0.95)";
 const CHALK_YELLOW = "rgba(250,226,140,0.95)";
@@ -487,8 +489,8 @@ export function Blackboard({
   }, []);
   const out = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = TEX_W;
-    c.height = TEX_H;
+    c.width = Math.round(TEX_W * OUT_SCALE);
+    c.height = Math.round(TEX_H * OUT_SCALE);
     return c;
   }, []);
   const texture = useMemo(() => {
@@ -543,6 +545,7 @@ export function Blackboard({
       if (now - lastPaint.current >= 1 / 30 || lastPaint.current < 0) {
         lastPaint.current = now;
         const c = out.getContext("2d")!;
+        c.setTransform(OUT_SCALE, 0, 0, OUT_SCALE, 0, 0);
         c.drawImage(slate, 0, 0);
         if (t < eraseStart) {
           for (const s of tl.strokes) {

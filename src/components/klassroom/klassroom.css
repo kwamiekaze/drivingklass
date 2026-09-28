@@ -168,3 +168,58 @@
   .kr-card--steered .kr-title { font-size: 20px; margin: 0 0 10px; }
   .kr-card--steered { padding: 12px 14px; }
 }
+
+/* Message and call buttons */
+.kr-fab {
+  position: absolute; z-index: 6; right: clamp(14px, 3vw, 32px);
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px;
+}
+.kr-fab-btn {
+  appearance: none; border: 0; cursor: pointer; display: grid; place-items: center;
+  width: 54px; height: 54px; border-radius: 999px; color: #151210;
+  background: linear-gradient(180deg, #f7e3a1, #c9a24a 60%, #b8893a);
+  box-shadow: 0 10px 30px rgba(60,36,8,0.35), inset 0 1px 0 rgba(255,255,255,0.55);
+  transition: transform .2s ease;
+}
+.kr-fab-btn:hover { transform: translateY(-2px) scale(1.04); }
+.kr-fab-btn:focus-visible { outline: 2px solid #f0d58a; outline-offset: 3px; }
+.kr-fab-btn svg { width: 24px; height: 24px; }
+@media (max-width: 640px) {
+  .kr-fab { bottom: auto; top: calc(78px + env(safe-area-inset-top)); gap: 10px; }
+  .kr-fab-btn { width: 46px; height: 46px; }
+  .kr-fab-btn svg { width: 20px; height: 20px; }
+}
+
+/* Floating contact form */
+.kr-modal {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  background: rgba(12,8,4,0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  touch-action: auto; user-select: text;
+}
+.kr-modal-panel {
+  position: relative; width: min(680px, 100%); max-height: 100%; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  border-radius: 22px; padding: 28px 22px 26px;
+  border: 1px solid rgba(232,200,114,0.6);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.45);
+}
+.kr-modal-title {
+  margin: 0 36px 18px; text-align: center; font-weight: 800; letter-spacing: 0.15em;
+  font-size: clamp(20px, 3vw, 28px);
+  text-shadow: 0 0 2px hsl(43 75% 50% / 0.8), 0 0 10px hsl(43 75% 50% / 0.4);
+}
+.kr-modal-close {
+  position: absolute; top: 12px; right: 12px; appearance: none; border: 0; cursor: pointer;
+  width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center;
+  background: rgba(201,162,74,0.18); color: inherit;
+}
+.kr-modal-close svg { width: 20px; height: 20px; }
+
+/* Shown if the phone reclaims the GPU */
+.kr-lost {
+  position: absolute; inset: 0; z-index: 15; display: grid; place-content: center; gap: 16px;
+  text-align: center; padding: 24px; background: radial-gradient(ellipse at center, #1c1814, #0a0908 70%);
+}
+.kr-lost p { margin: 0; font-size: 16px; color: #f7efdc; }

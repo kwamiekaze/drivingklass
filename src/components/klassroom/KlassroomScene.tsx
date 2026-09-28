@@ -16,13 +16,13 @@ import {
   WallOfFame,
 } from "./Decor";
 import { FrontWall } from "./FrontWall";
-import { FiddleLeafFig, HangingPothos, LeafyPlant, Monstera, SnakePlant, Succulents } from "./Plants";
+import { BirdOfParadise, FiddleLeafFig, HangingPothos, KentiaPalm, LeafyPlant, Monstera, SnakePlant, Succulents } from "./Plants";
 import { StudentDesk } from "./StudentDesk";
 import { Chair, Desk, DeskProps, Monitor } from "./TeacherStation";
 import { Backpack, CeilingBeams, Drapes, FloorLamp, Sconce } from "./Warmth";
 import { WallCalendar, WallClock } from "./WallPieces";
 import { SunnyWindowView } from "./WindowView";
-import { IVORY, WALL, brushedGold, goldProps } from "./shared";
+import { IVORY, LOW_POWER, WALL, brushedGold, goldProps } from "./shared";
 
 const CREAM = "#f3ecdc";
 const WAINSCOT = "#161311";
@@ -281,8 +281,8 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
         intensity={3.3}
         color="#ffd99e"
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={LOW_POWER ? 1024 : 2048}
+        shadow-mapSize-height={LOW_POWER ? 1024 : 2048}
         shadow-camera-left={-7}
         shadow-camera-right={7}
         shadow-camera-top={6}
@@ -296,8 +296,12 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
       />
       <directionalLight position={[-4.5, 4.2, 5.5]} intensity={0.42} color="#ffe6c4" />
       <pointLight position={[0, 3.2, 0]} intensity={0.6} color="#ffd7a0" />
-      <pointLight position={[-5.2, 2.2, -3.4]} intensity={0.55} distance={5} color="#ffc98a" />
-      <pointLight position={[5.2, 2.2, 3.3]} intensity={0.55} distance={5} color="#ffc98a" />
+      {!LOW_POWER && (
+        <>
+          <pointLight position={[-5.2, 2.2, -3.4]} intensity={0.55} distance={5} color="#ffc98a" />
+          <pointLight position={[5.2, 2.2, 3.3]} intensity={0.55} distance={5} color="#ffc98a" />
+        </>
+      )}
 
       <Room />
       <FrontWall />
@@ -307,7 +311,7 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
         opacity={0.18}
         blur={2.8}
         far={0.85}
-        resolution={512}
+        resolution={LOW_POWER ? 256 : 512}
         frames={1}
         color="#2f2217"
       />
@@ -341,7 +345,8 @@ export function KlassroomScene({ reducedMotion }: { reducedMotion: boolean }) {
       <SnakePlant position={[2.05, 0, -2.35]} scale={0.78} />
       <FiddleLeafFig position={[-5.25, 0, 3.9]} scale={1.05} />
       <Monstera position={[-1.72, 0, -4.55]} scale={0.95} />
-      <Monstera position={[5.25, 0, 3.9]} scale={1.1} />
+      <KentiaPalm position={[5.2, 0, 4.05]} scale={1.1} />
+      <BirdOfParadise position={[-5.35, 0, 0.75]} scale={1.05} />
       <Succulents position={[0, 0.9, -4.9]} />
       <HangingPothos position={[-5.1, 3.6, 3.2]} reducedMotion={reducedMotion} drop={0.8} />
       <HangingPothos position={[5.1, 3.6, 0.2]} reducedMotion={reducedMotion} drop={0.7} />

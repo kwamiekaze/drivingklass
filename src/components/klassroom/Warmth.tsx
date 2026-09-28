@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { brushedGold, goldProps } from "./shared";
+import { LOW_POWER, brushedGold, goldProps } from "./shared";
 
 /** Heavy honey-gold velvet drapes gathered either side of the window. */
 export function Drapes() {
@@ -143,7 +143,7 @@ export function FloorLamp({ position }: { position: [number, number, number] }) 
           toneMapped={false}
         />
       </mesh>
-      <pointLight position={[0, 1.55, 0]} intensity={1.1} distance={4.5} color="#ffcf8a" />
+      {!LOW_POWER && <pointLight position={[0, 1.55, 0]} intensity={1.1} distance={4.5} color="#ffcf8a" />}
     </group>
   );
 }

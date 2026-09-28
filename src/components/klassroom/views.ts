@@ -25,8 +25,8 @@ export const KLASS_VIEWS: KlassView[] = [
     eyebrow: "Carrollton, GA",
     title: "Where 5-Star Drivers Are Made",
     body: "Step inside the Klassroom. Real lessons, real instructors, and the calm confidence you take into your road test.",
-    pos: [0, 3.1, 7.6],
-    target: [0, 1.56, -1.2],
+    pos: [0, 2.95, 4.75],
+    target: [0, 1.45, -1.4],
     sway: 0.28,
   },
   {
@@ -152,12 +152,14 @@ interface TourStop {
  */
 const WELCOME_TOUR: TourStop[] = [
   {
-    pos: [0, 3.3, 7.95],
-    target: [0, 1.56, -1.2],
-    fov: 42,
-    mobilePos: [0, 3.3, 8.6],
-    mobileTarget: [0, 1.2, -1.2],
-    mobileFov: 52,
+    // The whole room from just inside the doors, so nothing outside the
+    // Klassroom is ever in frame.
+    pos: [0, 2.95, 4.75],
+    target: [0, 1.45, -1.4],
+    fov: 54,
+    mobilePos: [0, 3.0, 4.8],
+    mobileTarget: [0, 1.3, -1.6],
+    mobileFov: 66,
     hold: 0,
     travel: 10.5,
   },
@@ -192,6 +194,19 @@ const WELCOME_TOUR: TourStop[] = [
     travel: 8,
   },
 ];
+
+/**
+ * The room's inside, kept a little off the walls and furniture that sit
+ * against them. The camera is never allowed outside it, so the Klassroom is
+ * all there is: no wall backs, no beam ends, no floating fixtures.
+ */
+const ROOM_INSIDE = { minX: -5.3, maxX: 5.3, minY: 0.5, maxY: 3.3, minZ: -4.7, maxZ: 4.85 };
+
+function keepInside(v: Vector3) {
+  v.x = Math.max(ROOM_INSIDE.minX, Math.min(ROOM_INSIDE.maxX, v.x));
+  v.y = Math.max(ROOM_INSIDE.minY, Math.min(ROOM_INSIDE.maxY, v.y));
+  v.z = Math.max(ROOM_INSIDE.minZ, Math.min(ROOM_INSIDE.maxZ, v.z));
+}
 
 const TOUR_LENGTH = WELCOME_TOUR.reduce((total, stop) => total + stop.hold + stop.travel, 0);
 const OPENING_LEG = 8;
@@ -229,7 +244,7 @@ export function KlassCameraRig({
   started: boolean;
 }) {
   const { camera, size } = useThree();
-  const pos = useRef(new Vector3(0, 3.6, 9.2));
+  const pos = useRef(new Vector3(0, 3.2, 4.85));
   const look = useRef(new Vector3(...view.target));
   const desiredPos = useRef(new Vector3());
   const desiredLook = useRef(new Vector3(...view.target));
@@ -251,7 +266,7 @@ export function KlassCameraRig({
 
   /** A stop's camera and look-at, pulled back on tall screens and nudged clear of the info card. */
   const frameStop = (stop: KlassView, outPos: Vector3, outTarget: Vector3) => {
-    const pull = aspect < 1 ? 1 + (1 - aspect) * 1.25 : aspect < 1.3 ? 1.12 : 1;
+    const pull = aspect < 1 ? 1.35 : aspect < 1.3 ? 1.12 : 1;
     outTarget.set(...stop.target);
     outPos.set(...stop.pos).sub(outTarget).multiplyScalar(pull).add(outTarget);
     const frame = stop.frame ?? (stop.id === "welcome" ? 0.1 : 0.2);
@@ -383,14 +398,16 @@ export function KlassCameraRig({
     panRight.current.set(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(automaticLateral);
     desiredPos.current.add(panRight.current);
     desiredLook.current.add(panRight.current);
+    keepInside(desiredPos.current);
 
     const response = isMobile ? 8 : 5.2;
     const k = reducedMotion ? 1 : 1 - Math.exp(-response * dt);
     pos.current.lerp(desiredPos.current, k);
+    keepInside(pos.current);
     look.current.lerp(desiredLook.current, k);
     camera.position.copy(pos.current);
     if (camera instanceof PerspectiveCamera) {
-      const baseFov = tourFov ?? (isMobile ? 52 : 42);
+      const baseFov = tourFov ?? (isMobile ? 58 : 42);
       const targetFov = Math.max(18, Math.min(70, baseFov + i.zoom * 28));
       camera.fov += (targetFov - camera.fov) * k;
       camera.updateProjectionMatrix();
