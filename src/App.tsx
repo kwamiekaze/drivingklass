@@ -70,6 +70,7 @@ import AdminLiveTracker from "./pages/portal/AdminLiveTracker";
 import StudentLiveTracker from "./pages/portal/StudentLiveTracker";
 import Preview from "./pages/preview/Preview";
 import KlassroomPreview from "./pages/KlassroomPreview";
+import NuHome2 from "./pages/NuHome2";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -90,6 +91,7 @@ const App = () => (
             <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
             <Route path="/preview" element={<Preview />} />
             <Route path="/nuhome" element={<KlassroomPreview />} />
+            <Route path="/nuhome2" element={<NuHome2 />} />
 
 
 
