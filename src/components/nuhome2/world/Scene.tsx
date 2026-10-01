@@ -27,7 +27,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
     hsD: new THREE.Color('#cfe6ff'), hsN: new THREE.Color('#4a5bb0'), hgD: new THREE.Color('#d2c2a8'), hgN: new THREE.Color('#1c1a38'),
     dirD: new THREE.Color('#ffe6bf'), dirN: new THREE.Color('#9db8ff'),
   }), []);
-  useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 46, 128); }, [scene]);
+  useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 50, 150); }, [scene]);
   useFrame((_, dt) => {
     const target = night ? 1 : 0;
     mix.current += (target - mix.current) * (1 - Math.exp(-2.2 * Math.min(dt, .05)));
@@ -42,7 +42,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
   return <>
     <ambientLight ref={amb} />
     <hemisphereLight ref={hemi} />
-    <directionalLight ref={dir} position={[-9, 12, 10]} castShadow={shadow > 0} shadow-mapSize-width={shadow || 16} shadow-mapSize-height={shadow || 16} shadow-camera-left={-19} shadow-camera-right={19} shadow-camera-top={13} shadow-camera-bottom={-11} shadow-bias={-.0002} shadow-normalBias={.025} />
+    <directionalLight ref={dir} position={[-9, 12, 10]} castShadow={shadow > 0} shadow-mapSize-width={shadow || 16} shadow-mapSize-height={shadow || 16} shadow-camera-left={-34} shadow-camera-right={34} shadow-camera-top={30} shadow-camera-bottom={-30} shadow-camera-near={1} shadow-camera-far={110} shadow-bias={-.0002} shadow-normalBias={.025} />
     <directionalLight ref={fill} position={[10, 9, -8]} color="#b8c8ff" />
   </>;
 }
@@ -68,7 +68,7 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
     {!lite && <Butterflies />}
     <Doves />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
-    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={70} minPolarAngle={.25} maxPolarAngle={1.52} minAzimuthAngle={-1.5} maxAzimuthAngle={1.5} enableDamping dampingFactor={.07} target={[0, 6.6, -16]} />
+    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={90} minPolarAngle={.25} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;
 }
 

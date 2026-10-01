@@ -16,12 +16,12 @@
 .n2-gold {
   background: linear-gradient(100deg, #7a5606 0%, #b8860b 12%, #e8b93e 26%, #fff2b8 38%, #f6d067 48%, #c9971f 62%, #8b6508 76%, #d9a93a 90%, #8b6508 100%);
   background-size: 280% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: .5px rgba(96, 60, 0, .42); animation: n2-shine 7s ease-in-out infinite;
+  -webkit-text-stroke: .5px rgba(96, 60, 0, .42); animation: n2-shine 16s ease-in-out infinite;
   filter: drop-shadow(0 1px 0 rgba(60, 36, 0, .65)) drop-shadow(0 8px 20px rgba(0, 0, 0, .38));
 }
 @keyframes n2-shine { 0% { background-position: 100% 0; } 50% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
 .n2-stars { display: flex; gap: clamp(6px, 1vw, 12px); }
-.n2-stars svg { width: clamp(22px, 2.4vw, 36px); height: auto; filter: drop-shadow(0 2px 4px rgba(60, 36, 0, .5)); animation: n2-twinkle 3.2s ease-in-out infinite; transform-origin: 50% 55%; }
+.n2-stars svg { width: clamp(22px, 2.4vw, 36px); height: auto; filter: drop-shadow(0 2px 4px rgba(60, 36, 0, .5)); transform-origin: 50% 55%; }
 @keyframes n2-twinkle { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 2px 4px rgba(60, 36, 0, .5)); } 50% { transform: scale(1.12); filter: brightness(1.35) drop-shadow(0 0 10px rgba(255, 214, 120, .9)); } }
 
 /* transparent header, like thestylevan.com: the scene shows through, one hairline underneath */

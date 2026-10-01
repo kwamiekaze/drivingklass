@@ -31,6 +31,11 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     persp.fov = s.fov; persp.updateProjectionMatrix();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controls]);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('cam');
+    if (!q || !controls) return; const v = q.split(',').map(Number);
+    camera.position.set(v[0]!, v[1]!, v[2]!); controls.target.set(v[3]!, v[4]!, v[5]!); camera.lookAt(v[3]!, v[4]!, v[5]!); mode.current = 'free'; snapped.current = true;
+  }, [controls, camera]);
   useEffect(() => { if (first.current) { first.current = false; return; } mode.current = 'fly'; }, [stage, narrow]);
   useEffect(() => {
     if (!controls) return;
@@ -43,10 +48,10 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     if (!controls) return;
     const dt = Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
     const m = mode.current;
-    controls.autoRotate = m === 'free' && !reducedMotion;
+    controls.autoRotate = m === 'free' && !reducedMotion && !new URLSearchParams(window.location.search).get('cam');
     if (controls.autoRotate) {
       const a = controls.getAzimuthalAngle();
-      if (a < -.85) dir.current = -1; else if (a > .85) dir.current = 1;
+      if (Math.abs(a) < 1.5) { if (a < -.85) dir.current = -1; else if (a > .85) dir.current = 1; }
       controls.autoRotateSpeed = .42 * dir.current;
     }
     if (m === 'intro') {
@@ -67,7 +72,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       controls.target.y += Math.sin(time * .35) * .0012;
     }
     if (!done.current && mode.current !== 'intro') { done.current = true; onIntroDone(); }
-    const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -30, 30); t.z = THREE.MathUtils.clamp(t.z, -26, 24); t.y = THREE.MathUtils.clamp(t.y, .4, 14);
+    const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 30); t.y = THREE.MathUtils.clamp(t.y, .4, 16);
   });
   return null;
 }

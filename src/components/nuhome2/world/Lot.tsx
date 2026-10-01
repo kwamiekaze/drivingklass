@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { NightCtx, radialTexture, rng } from './theme';
-import { palette } from './palette';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 
 /*
@@ -31,8 +30,8 @@ function Decals({ items, color, y = PAINT_Y, emissive = 0 }: { items: Dec[]; col
 
 function paint() {
   const white: Dec[] = [], gold: Dec[] = [], cross: Dec[] = [];
-  for (let j = 0; j < 8; j++) { const x = 1.375 + 2.75 * j; [-1, 1].forEach(s => { (j === 0 ? gold : white).push({ x: s * x, z: -5.9, w: j === 0 ? .16 : .11, d: 5.2 }); }); }
-  gold.push({ x: 0, z: -3.45, w: 2.9, d: .12 });
+  for (let j = 0; j < 8; j++) { const x = 1.375 + 2.75 * j; [-1, 1].forEach(s => { (j === 0 ? gold : white).push({ x: s * x, z: -5.9, w: j === 0 ? .2 : .11, d: 5.2 }); }); }
+  gold.push({ x: 0, z: -3.45, w: 2.9, d: .16 });
   for (let k = 0; k < 9; k++) cross.push({ x: 12.1, z: -3.0 + k * .75, w: 2.6, d: .4 });
   white.push({ x: 0, z: 3.25, w: 68, d: .12 });
   return { white, gold, cross };
@@ -83,8 +82,8 @@ function Topiary({ x, z, y = .3, s = 1 }: { x: number; z: number; y?: number; s?
 
 function ReservedSign() {
   const tex = useMemo(() => makeCanvasTexture(256, 160, (g, w, h) => {
-    g.fillStyle = '#0c0c0f'; g.fillRect(0, 0, w, h); g.strokeStyle = '#f2c14e'; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
-    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#f2c14e'; g.font = `700 36px ${SIGN_FONT}`; g.fillText('RESERVED', w / 2, 58);
+    g.fillStyle = '#0c0c0f'; g.fillRect(0, 0, w, h); g.strokeStyle = '#f4efe4'; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#f4efe4'; g.font = `700 36px ${SIGN_FONT}`; g.fillText('RESERVED', w / 2, 58);
     g.fillStyle = '#fff6df'; g.font = `600 24px ${SIGN_FONT}`; g.fillText('5 STAR DRIVER', w / 2, 108);
   }, 4), []);
   return <group position={[-1.75, 0, -8.15]}>
@@ -95,21 +94,36 @@ function ReservedSign() {
 
 function Monument({ position, rotY }: { position: V3; rotY: number }) {
   const tex = useMemo(() => makeCanvasTexture(1024, 400, (g, w, h) => {
-    g.fillStyle = '#0e0e12'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9971f'; g.lineWidth = 8; g.strokeRect(14, 14, w - 28, h - 28);
-    const sh = starShape(34); for (let i = 0; i < 5; i++) { g.save(); g.translate(w / 2 + (i - 2) * 86, 84); g.scale(1, -1); g.beginPath(); sh.getPoints().forEach((p, k) => (k ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); g.fillStyle = '#f2c14e'; g.fill(); g.restore(); }
-    const gr = g.createLinearGradient(0, 150, 0, 290); gr.addColorStop(0, '#fff3c4'); gr.addColorStop(.5, '#f2c14e'); gr.addColorStop(1, '#b98714');
-    g.fillStyle = gr; g.font = `700 112px ${SIGN_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('DRIVINGKLASS', w / 2, 220);
+    g.fillStyle = '#0e0e12'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(244,239,228,.6)'; g.lineWidth = 6; g.strokeRect(14, 14, w - 28, h - 28);
+    const sh = starShape(34); for (let i = 0; i < 5; i++) { g.save(); g.translate(w / 2 + (i - 2) * 86, 84); g.scale(1, -1); g.beginPath(); sh.getPoints().forEach((p, k) => (k ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); g.fillStyle = '#f4efe4'; g.fill(); g.restore(); }
+    g.fillStyle = '#f4efe4'; g.font = `700 112px ${SIGN_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('DRIVINGKLASS', w / 2, 220);
     g.fillStyle = '#f6ede4'; g.font = `600 30px ${SIGN_FONT}`; g.fillText('WHERE 5 STAR DRIVERS ARE MADE', w / 2, 330);
   }), []);
   return <group position={position} rotation-y={rotY}>
     <Box p={[0, .35, 0]} s={[6.6, .7, 1.3]} c="#cfc2a8" r={.8} />
     <Box p={[0, 1.9, 0]} s={[6.2, 2.4, .5]} c="#0e0e12" r={.5} m={.2} />
     <mesh position={[0, 1.9, .27]}><planeGeometry args={[6.0, 2.3]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
-    <Box p={[0, 3.18, 0]} s={[6.4, .14, .6]} c={palette.goldBright} m={1} r={.25} />
+    <Box p={[0, 3.18, 0]} s={[6.4, .14, .6]} c="#cfc9bd" r={.6} />
   </group>;
 }
 
-export function Lot({ lite }: { lite: boolean }) {
+function Road({ asphalt }: { asphalt: THREE.Material }) {
+  const dashes = useMemo(() => { const out: Dec[] = []; for (let x = -196; x <= 196; x += 7) out.push({ x, z: 25.2, w: 3.4, d: .16 }); return out; }, []);
+  const edges = useMemo<Dec[]>(() => [{ x: 0, z: 19.95, w: 400, d: .14 }, { x: 0, z: 30.45, w: 400, d: .14 }], []);
+  const curb = '#cfc9bd';
+  return <group>
+    {/* near and far sidewalks and kerbs, then the road itself, running on until the fog takes it */}
+    {[-1, 1].map(s => <Box key={`n${s}`} p={[s * 102.25, .06, 17.3]} s={[195.5, .12, 3.2]} c="#d9d4c8" r={.85} cast={false} />)}
+    {[-1, 1].map(s => <Box key={`nk${s}`} p={[s * 102.25, .1, 19.1]} s={[195.5, .2, .3]} c={curb} r={.8} cast={false} />)}
+    <Box p={[0, .06, 33.3]} s={[400, .12, 3.4]} c="#d9d4c8" r={.85} cast={false} />
+    <Box p={[0, .1, 31.4]} s={[400, .2, .3]} c={curb} r={.8} cast={false} />
+    <mesh rotation-x={-Math.PI / 2} position={[0, .006, 25.25]} material={asphalt} receiveShadow><planeGeometry args={[400, 12.2]} /></mesh>
+    <mesh position={[0, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[9, .132, 5]} /></mesh>
+    <Decals items={dashes} color="#f4f1ea" y={.014} /><Decals items={edges} color="#f4f1ea" y={.014} />
+  </group>;
+}
+
+export function Lot({ lite, asphalt }: { lite: boolean; asphalt: THREE.Material }) {
   const mix = useContext(NightCtx);
   const { white, gold, cross } = useMemo(paint, []);
   const foliage = useMemo(() => { const t = foliageTexture(); t.repeat.set(2, 1); return new THREE.MeshStandardMaterial({ map: t, roughness: .95 }); }, []);
@@ -120,11 +134,12 @@ export function Lot({ lite }: { lite: boolean }) {
   const hedgeSegs: [number, number][] = [[-23, -17.2], [-16.6, -10.6], [-10, -3.7]];
   const wells: V3[] = [[-17.5, .4, 6.1], [-10, .4, 6.1], [10, .4, 6.1], [17.5, .4, 6.1]];
   return <group>
-    <Decals items={white} color="#f4f1ea" /><Decals items={gold} color="#f2c14e" emissive={.35} /><Decals items={cross} color="#f8f6ef" y={.026} />
+    <Decals items={white} color="#f4f1ea" /><Decals items={gold} color="#f4f1ea" /><Decals items={cross} color="#f8f6ef" y={.026} />
     {/* apron, kerbs, plaza edge */}
-    <Box p={[0, .08, -10.1]} s={[49.2, .16, 3.0]} c="#d9d2c4" r={.7} />
+    <Box p={[0, .08, -11.9]} s={[46, .16, 6.6]} c="#d9d2c4" r={.7} />
     <Box p={[0, .1, -8.5]} s={[49.4, .2, .3]} c="#cfc9bd" r={.7} />
-    <Box p={[0, .1, 14.35]} s={[68.6, .2, .3]} c="#cfc9bd" r={.7} />
+    {[-1, 1].map(s => <Box key={`k${s}`} p={[s * 19.45, .1, 14.35]} s={[30.3, .2, .3]} c="#cfc9bd" r={.7} />)}
+    <Road asphalt={asphalt} />
     {[-1, 1].map(s => <Box key={s} p={[s * 34.2, .1, 2.9]} s={[.3, .2, 23]} c="#cfc9bd" r={.7} />)}
     {/* islands */}
     {ISLANDS.map((i, k) => <Island key={k} {...i} mat={foliage} />)}
@@ -133,8 +148,7 @@ export function Lot({ lite }: { lite: boolean }) {
     {/* foreground planting */}
     {[-1, 1].map(s => <Hedge key={s} x={s * 21} y={.2} z={14.9} w={26} d={1.2} h={.9} mat={foliage} />)}
     {/* topiary */}
-    {[-3.7, 3.7].map(x => <Topiary key={x} x={x} z={-10.9} />)}
-    {(lite ? [-12.4, 12.4] : [-12.4, -16, -20, 12.4, 16, 20]).map(x => <Topiary key={x} x={x} z={-12.2} s={1.1} />)}
+        {(lite ? [-12.4, 12.4] : [-12.4, -16, -20, 12.4, 16, 20]).map(x => <Topiary key={x} x={x} z={-13.4} s={1.1} />)}
     {/* lamps */}
     {LAMPS.slice(0, lite ? 2 : 4).map(([x, z], i) => <Lamp key={i} x={x} z={z} />)}
     {/* ground uplights at the island trees */}

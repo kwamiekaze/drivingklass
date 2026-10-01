@@ -5,8 +5,9 @@ import { NightCtx, rng } from './theme';
 
 /** True on any concrete or stone surface, grown by `margin` so leaning blades never overhang it. */
 export function paved(x: number, z: number, margin = 0) {
-  if (Math.abs(x) < 34.6 + margin && z > -8.9 - margin && z < 14.7 + margin) return true;   // lot, islands and kerb
-  if (Math.abs(x) < 25 + margin && z < -8.3 + margin && z > -30) return true;              // apron, beds and the building
+  if (Math.abs(x) < 34.6 + margin && z > -15.4 - margin && z < 14.7 + margin) return true;   // lot, terrace, islands
+  if (Math.abs(x) < 25 + margin && z < -14 + margin && z > -30) return true;                // plinth and building
+  if (z > 14.4 - margin && z < 35.2 + margin) return true;                                  // sidewalks and road
   return false;
 }
 
