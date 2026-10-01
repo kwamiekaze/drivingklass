@@ -1,39 +1,34 @@
 import type { Key } from './cinema';
 
 export type V3 = [number, number, number];
-export type ViewId = 'welcome' | 'packages' | 'hq' | 'course' | 'pad';
+/** A camera stop: where the lens sits, what it looks at, and the lens. */
+export type Stop = { p: V3; l: V3; fov: number };
+export type Stage = { label: string; wide: Stop; narrow: Stop };
 
-/** A camera stop. `shift` slides the picture on screen (fractions of width and height) to clear the page's own UI. */
-export type Stop = { p: V3; l: V3; fov: number; shift: [number, number] };
-export type View = { id: ViewId; label: string; wide: Stop; narrow: Stop };
-
-/** World: the headquarters stands at z -15, the course at z -5 to 8, the fountain at z 24. Edit stops here to re-frame a view. */
-export const VIEWS: View[] = [
-  { id: 'welcome', label: 'Welcome',
-    wide: { p: [-9.5, 2.9, 27], l: [1, 8.4, -12], fov: 42, shift: [.22, 0] },
-    narrow: { p: [-7, 3.2, 30], l: [0, 8.6, -15], fov: 54, shift: [0, .1] } },
-  { id: 'packages', label: 'Packages',
-    wide: { p: [9.7, 2.1, 14.5], l: [3.2, 1.5, 1.2], fov: 40, shift: [-.17, 0] },
-    narrow: { p: [2.5, 2.6, 15.5], l: [0, 1.0, 1.2], fov: 56, shift: [0, -.2] } },
-  { id: 'hq', label: 'Headquarters',
-    wide: { p: [2.6, 2.5, 17.5], l: [0, 8.2, -15], fov: 46, shift: [.12, 0] },
-    narrow: { p: [2, 2.6, 21], l: [0, 9.2, -15], fov: 58, shift: [0, .1] } },
-  { id: 'course', label: 'The Course',
-    wide: { p: [-18.5, 1.45, 5.2], l: [5, 1.1, .5], fov: 40, shift: [.1, 0] },
-    narrow: { p: [-19.5, 2.3, 9], l: [2, .8, .5], fov: 58, shift: [0, -.1] } },
-  { id: 'pad', label: 'Star Pad',
-    wide: { p: [7.8, 2.7, 12.6], l: [0, 1.0, 1.2], fov: 40, shift: [.1, 0] },
-    narrow: { p: [5.2, 3.4, 13.8], l: [0, .9, 1.2], fov: 54, shift: [0, .1] } },
+/** The four stops behind NEXT VIEW. The building front is at z -12, the reserved stall at z -6. Edit here to re-frame. */
+export const STAGES: Stage[] = [
+  { label: 'THE ARRIVAL',
+    wide: { p: [-14.5, 6.6, 35], l: [-7.5, 9.2, -16], fov: 40 },
+    narrow: { p: [-3, 6.4, 40], l: [0, 11.2, -16], fov: 58 } },
+  { label: 'THE ENTRANCE',
+    wide: { p: [6, 2.9, 9.5], l: [0, 3.5, -11], fov: 40 },
+    narrow: { p: [4.5, 3.0, 8], l: [0, 3.2, -11], fov: 58 } },
+  { label: 'THE GARAGE',
+    wide: { p: [-11, 3.0, 6], l: [-16, 3.4, -13.4], fov: 40 },
+    narrow: { p: [-12, 3.2, 5], l: [-15, 3.4, -13], fov: 58 } },
+  { label: 'THE GROUNDS',
+    wide: { p: [-20, 2.6, 15], l: [8, 3.2, -3], fov: 44 },
+    narrow: { p: [-15, 3.6, 19], l: [4, 3, -4], fov: 60 } },
 ];
 
+export const INTRO_LENGTH = 9;
 export const INTRO_WIDE: Key[] = [
-  { t: 0, p: [-32, 1.6, 12], l: [-2, 5, -12], fov: 42 },
-  { t: 4.5, p: [-22, 2.0, 24], l: [0, 5.6, -12], fov: 40 },
-  { t: 9, p: [-9.5, 2.9, 27], l: [1, 8.4, -12], fov: 42 },
+  { t: 0, p: [-34, 1.8, 20], l: [-4, 5, -16], fov: 42 },
+  { t: 4.5, p: [-24, 2.6, 33], l: [-4, 6, -16], fov: 40 },
+  { t: 9, p: [-14.5, 6.6, 35], l: [-7.5, 9.2, -16], fov: 40 },
 ];
 export const INTRO_NARROW: Key[] = [
-  { t: 0, p: [-26, 2.0, 20], l: [-2, 7, -14], fov: 56 },
-  { t: 4.5, p: [-16, 2.6, 34], l: [0, 8.2, -15], fov: 54 },
-  { t: 9, p: [-7, 3.2, 30], l: [0, 8.6, -15], fov: 54 },
+  { t: 0, p: [-26, 2.4, 28], l: [-2, 7, -16], fov: 58 },
+  { t: 4.5, p: [-14, 3.6, 40], l: [0, 7.2, -16], fov: 58 },
+  { t: 9, p: [-3, 6.4, 40], l: [0, 11.2, -16], fov: 58 },
 ];
-export const INTRO_LENGTH = 9;

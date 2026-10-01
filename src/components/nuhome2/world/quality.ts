@@ -17,6 +17,8 @@ export function qualityFor(tier: Quality['tier']) { return T[tier]; }
 /** Pick a starting tier from width, cores and memory. PerformanceMonitor steps it down further if frames drop. */
 export function detectTier(): Quality['tier'] {
   if (typeof window === 'undefined') return 'mid';
+  const forced = new URLSearchParams(window.location.search).get('tier');
+  if (forced === 'high' || forced === 'mid' || forced === 'lite') return forced;
   const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
   const cores = nav.hardwareConcurrency ?? 4, mem = nav.deviceMemory ?? 4;
   const small = window.innerWidth < 900, saver = !!nav.connection?.saveData;

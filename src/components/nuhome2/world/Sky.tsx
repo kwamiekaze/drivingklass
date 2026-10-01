@@ -137,18 +137,34 @@ export function Moon({ position }: { position: [number, number, number] }) {
   </group></FadeGroup>;
 }
 
-/** A warm gold sun with a soft halo and slowly turning rays. */
+function roundedRect(w: number, h: number, r: number) {
+  const s = new THREE.Shape(); const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r * 2.2);
+  s.quadraticCurveTo(x + w, y + h, x + w - r * 2.2, y + h); s.lineTo(x + r * 2.2, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r * 2.2); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+/** The sun, wearing sunglasses. */
 export function Sun({ position }: { position: [number, number, number] }) {
-  const glow = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, 'rgba(255,244,190,.95)'], [.3, 'rgba(255,224,130,.42)'], [1, 'rgba(255,200,90,0)']])), []);
-  const disc = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, '#fffbe0'], [.7, '#ffe07a'], [1, '#ffc23a']], 512)), []);
+  const glow = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, 'rgba(255,244,190,.95)'], [.3, 'rgba(255,224,130,.4)'], [1, 'rgba(255,200,90,0)']])), []);
+  const disc = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, '#fff7c2'], [.7, '#ffd84f'], [1, '#ffb62e']], 512)), []);
+  const lens = useMemo(() => new THREE.ShapeGeometry(roundedRect(3.1, 2.1, .55)), []);
   const rays = useRef<THREE.Group>(null);
-  useFrame((_, dt) => { if (rays.current) rays.current.rotation.z += dt * .05; });
+  useFrame((_, dt) => { if (rays.current) rays.current.rotation.z += dt * .06; });
   return <FadeGroup day><group position={position}><Billboard>
-    <mesh position={[0, 0, -.3]}><planeGeometry args={[70, 70]} /><meshBasicMaterial map={glow} transparent depthWrite={false} fog={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
+    <mesh position={[0, 0, -.3]}><planeGeometry args={[62, 62]} /><meshBasicMaterial map={glow} transparent depthWrite={false} fog={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
     <group ref={rays} position={[0, 0, -.1]}>
-      {Array.from({ length: 16 }).map((_, i) => <mesh key={i} rotation={[0, 0, (i / 16) * Math.PI * 2]}><mesh position={[0, 9.4, 0]}><coneGeometry args={[.7, 3.2, 3]} /><meshBasicMaterial color="#ffd23f" transparent opacity={.85} fog={false} toneMapped={false} /></mesh></mesh>)}
+      {Array.from({ length: 16 }).map((_, i) => <mesh key={i} rotation={[0, 0, (i / 16) * Math.PI * 2]}><mesh position={[0, 9.4, 0]}><coneGeometry args={[.85, 3.4, 3]} /><meshBasicMaterial color="#ffd23f" fog={false} toneMapped={false} /></mesh></mesh>)}
     </group>
     <mesh><circleGeometry args={[6.6, 64]} /><meshBasicMaterial map={disc} fog={false} toneMapped={false} /></mesh>
+    {[-1, 1].map(s => <group key={s} position={[s * 1.95, .7, .06]}>
+      <mesh geometry={lens}><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
+      <mesh position={[-s * .55, .45, .01]} rotation={[0, 0, s * .5]}><planeGeometry args={[.9, .16]} /><meshBasicMaterial color="#8f86b8" transparent opacity={.75} fog={false} toneMapped={false} /></mesh>
+      <mesh position={[s * 1.72, .15, 0]}><planeGeometry args={[2.6, .22]} /><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
+    </group>)}
+    <mesh position={[0, .95, .06]}><planeGeometry args={[.9, .24]} /><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
+    <mesh position={[0, -.9, .05]} rotation={[0, 0, Math.PI]}><torusGeometry args={[1.85, .17, 10, 40, Math.PI * .8]} /><meshBasicMaterial color="#b5541f" fog={false} toneMapped={false} /></mesh>
+    {[-1, 1].map(s => <mesh key={s} position={[s * 3.5, -.6, .05]}><circleGeometry args={[.62, 24]} /><meshBasicMaterial color="#ff9c8a" transparent opacity={.55} fog={false} toneMapped={false} /></mesh>)}
   </Billboard></group></FadeGroup>;
 }
 

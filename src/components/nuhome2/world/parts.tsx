@@ -41,15 +41,15 @@ export function useStarGeometry(outer: number, depth: number, bevel = depth * .2
  * Canvas texture that redraws itself once the brand font arrives, so lettering is never stuck in a fallback face.
  * The draw function must fully paint the canvas every call.
  */
-export function makeCanvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D, w: number, h: number) => void, aniso = 8) {
+export const SIGN_FONT = '"Cinzel", "Cormorant Garamond", Georgia, serif';
+export function makeCanvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D, w: number, h: number) => void, aniso = 8, text = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d')!;
   draw(g, w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso;
   const redraw = () => { g.clearRect(0, 0, w, h); draw(g, w, h); t.needsUpdate = true; };
-  if (typeof document !== 'undefined' && document.fonts) {
-    document.fonts.load('800 100px Poppins').then(redraw).catch(() => {});
-    document.fonts.addEventListener?.('loadingdone', redraw);
+  if (text && typeof document !== 'undefined' && document.fonts) {
+    Promise.all([document.fonts.load('800 100px Poppins'), document.fonts.load('700 100px Cinzel')]).then(redraw).catch(() => {});
   }
   return t;
 }

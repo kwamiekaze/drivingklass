@@ -5,11 +5,8 @@ import { NightCtx, rng } from './theme';
 
 /** True on any concrete or stone surface, grown by `margin` so leaning blades never overhang it. */
 export function paved(x: number, z: number, margin = 0) {
-  if (Math.abs(x) < 17.4 + margin && z > -5.35 - margin && z < 7.75 + margin) return true;      // plaza and its border
-  if (Math.abs(x) < 2.3 + margin && z > -9.2 - margin && z < -5 + margin) return true;          // path to the mansion
-  if (Math.abs(x) < 2.3 + margin && z > 7 - margin && z < 18.6 + margin) return true;           // path to the fountain
-  if (Math.hypot(x, z - 24) < 6.6 + margin) return true;                                          // fountain court
-  if (z < -8.4 && Math.abs(x) < 23) return true;                                                  // mansion footprint and beds
+  if (Math.abs(x) < 34.6 + margin && z > -8.9 - margin && z < 14.7 + margin) return true;   // lot, islands and kerb
+  if (Math.abs(x) < 25 + margin && z < -8.3 + margin && z > -30) return true;              // apron, beds and the building
   return false;
 }
 
@@ -119,7 +116,7 @@ export function Trees({ list, clumps }: { list: TreeSpec[]; clumps: number }) {
         }
         d.position.set(t.x + px, py, t.z + pz); d.rotation.set((r() - .5) * 1.2, r() * 6.28, (r() - .5) * 1.2); d.scale.set(sz, sz, sz); d.updateMatrix(); f.setMatrixAt(n, d.matrix);
         const up = (py - th) / (4.5 * t.s);
-        if (t.kind === 'blossom') c.set(['#f4c66a', '#ffd98a', '#e9b04c', '#fff0c2', '#f2cf7a'][Math.floor(r() * 5)]).multiplyScalar(.75 + depth * .3 + up * .1);
+        if (t.kind === 'blossom') c.set(['#fff6f0', '#ffe9ef', '#ffffff', '#fbe3c8', '#fff0f4'][Math.floor(r() * 5)]).multiplyScalar(.75 + depth * .3 + up * .1);
         else c.copy(base!).offsetHSL((r() - .5) * .04, (r() - .5) * .08, (r() - .5) * .06 + depth * .1 + up * .08 - .06);
         f.setColorAt(n, c); n++;
       }
@@ -142,7 +139,7 @@ export function Blooms({ spots }: { spots: { x: number; z: number; y?: number; r
     const f = flowers.current, b = bushes.current; if (!f || !b) return; const r = rng(55), d = new THREE.Object3D(), c = new THREE.Color(); let i = 0, j = 0;
     spots.forEach(s => { for (let k = 0; k < s.n; k++) {
       const a = r() * 6.28, q = Math.sqrt(r()) * s.r, x = s.x + Math.cos(a) * q, z = s.z + Math.sin(a) * q;
-      if (s.kind === 'flower') { d.position.set(x, (s.y ?? 0) + .12 + r() * .12, z); d.rotation.set(0, 0, 0); const sc = .06 + r() * .05; d.scale.set(sc, sc, sc); d.updateMatrix(); f.setMatrixAt(i, d.matrix); c.set(['#ffd27a', '#ffffff', '#f2c14e', '#e6a93a', '#fff3c4'][Math.floor(r() * 5)]); f.setColorAt(i, c); i++; }
+      if (s.kind === 'flower') { d.position.set(x, (s.y ?? 0) + .12 + r() * .12, z); d.rotation.set(0, 0, 0); const sc = .06 + r() * .05; d.scale.set(sc, sc, sc); d.updateMatrix(); f.setMatrixAt(i, d.matrix); c.set(['#ffffff', '#fff6e4', '#ffe9a8', '#f8f4ff', '#ffffff'][Math.floor(r() * 5)]); f.setColorAt(i, c); i++; }
       else { const sc = .55 + r() * .3; for (let q = 0; q < 7; q++) { d.position.set(x + (r() - .5) * .5, .32 + r() * .35, z + (r() - .5) * .5); d.rotation.set((r() - .5) * 1.4, r() * 6.28, (r() - .5) * 1.4); d.scale.setScalar(sc * (.8 + r() * .5)); d.updateMatrix(); b.setMatrixAt(j, d.matrix); c.setHSL(.26 + r() * .03, .38, .26 + r() * .1); b.setColorAt(j, c); j++; } }
     } });
     [f, b].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });

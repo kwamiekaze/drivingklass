@@ -9,11 +9,11 @@ import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun } from './Sky';
 import { NightCtx } from './theme';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, stepDown, type Quality } from './quality';
-import { INTRO_NARROW, INTRO_WIDE, type ViewId } from './views';
+import { INTRO_NARROW, INTRO_WIDE } from './views';
 
 export type Theme = 'day' | 'night';
 export type SceneProps = {
-  view: ViewId; theme: Theme; reducedMotion: boolean; skipIntro: boolean;
+  stage: number; theme: Theme; open: boolean; reducedMotion: boolean; skipIntro: boolean;
   onReady: () => void; onIntroDone: () => void; onLost: () => void;
 };
 
@@ -25,7 +25,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
     fogD: new THREE.Color('#f3e4c6'), fogN: new THREE.Color('#0d1440'),
     ambD: new THREE.Color('#fff6ea'), ambN: new THREE.Color('#5a68b0'),
     hsD: new THREE.Color('#cfe6ff'), hsN: new THREE.Color('#4a5bb0'), hgD: new THREE.Color('#d2c2a8'), hgN: new THREE.Color('#1c1a38'),
-    dirD: new THREE.Color('#fff0d2'), dirN: new THREE.Color('#9db8ff'),
+    dirD: new THREE.Color('#ffe6bf'), dirN: new THREE.Color('#9db8ff'),
   }), []);
   useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 46, 128); }, [scene]);
   useFrame((_, dt) => {
@@ -36,7 +36,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
     const fog = scene.fog as THREE.Fog | null; if (fog) fog.color.copy(c.fogD).lerp(c.fogN, m);
     if (amb.current) { amb.current.color.copy(c.ambD).lerp(c.ambN, m); amb.current.intensity = .5 - .32 * m; }
     if (hemi.current) { hemi.current.color.copy(c.hsD).lerp(c.hsN, m); hemi.current.groundColor.copy(c.hgD).lerp(c.hgN, m); hemi.current.intensity = 1.0 - .68 * m; }
-    if (dir.current) { dir.current.color.copy(c.dirD).lerp(c.dirN, m); dir.current.intensity = 2.9 - 2.25 * m; }
+    if (dir.current) { dir.current.color.copy(c.dirD).lerp(c.dirN, m); dir.current.intensity = 2.7 - 2.1 * m; }
     if (fill.current) fill.current.intensity = .5 * m;
   });
   return <>
@@ -62,13 +62,13 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
       <Lightformer intensity={1.9} color="#fff0d0" position={[0, 4, 22]} rotation-y={Math.PI} scale={[44, 9, 1]} />
     </Environment>
     <SkyDome /><Stars count={lite ? 2600 : 6000} /><ShootingStars />
-    <Sun position={[26, 25, -70]} /><Moon position={[30, 32, -66]} />
+    <Sun position={[58, 21, -76]} /><Moon position={[30, 32, -66]} />
     <Clouds count={lite ? 12 : 22} />
-    <Suspense fallback={null}><Estate quality={quality} /></Suspense>
+    <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     {!lite && <Butterflies />}
     <Doves />
-    <Rig viewId={p.view} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
-    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={3} maxDistance={64} minPolarAngle={.2} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 6, -12]} />
+    <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
+    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={70} minPolarAngle={.25} maxPolarAngle={1.52} minAzimuthAngle={-1.5} maxAzimuthAngle={1.5} enableDamping dampingFactor={.07} target={[0, 6.6, -16]} />
   </NightCtx.Provider>;
 }
 
@@ -92,7 +92,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
     shadows={fixed.shadow > 0}
     dpr={quality.dpr}
     gl={{ antialias: tier !== 'lite', alpha: false, powerPreference: 'high-performance' }}
-    camera={{ position: k0.p, fov: k0.fov, near: 1, far: 170 }}
+    camera={{ position: k0.p, fov: k0.fov, near: 1, far: 190 }}
     onCreated={({ gl }) => {
       gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .9;
       gl.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost.current(); }, { once: true });

@@ -1,238 +1,275 @@
 import { useContext, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { NightCtx, rng } from './theme';
+import { NightCtx, radialTexture, rng } from './theme';
 import { palette } from './palette';
-import { Box, Cyl, FONT, V3, drawSpaced, goldGradient, makeCanvasTexture, starShape, useStarGeometry } from './parts';
+import { Box, SIGN_FONT, V3, makeCanvasTexture, useStarGeometry } from './parts';
 
 /*
- * DrivingKlass Headquarters. Meters, local space: x across, y up, z toward the viewer. World origin is at z -15.
- * Main block  x ±9, z ±4, walls to y 8.6, glass curtain wall on the front (z 4), sign band above it.
- * Wings       x ±(9..20), front face at z 2.2, walls to y 5.2. Left: The Garage. Right: The Klassroom.
- * Tower       3.4 m square shaft behind the front, lantern at y 15.2 to 17.2, spire and star finial above.
+ * DrivingKlass Headquarters. Local meters: x across, y up, z toward the viewer; world origin of the building is z -16.
+ * Centre block  x ±9.6, z ±4, top 10.9. Limestone piers, a 14.8 x 7.2 m glass atrium, a cedar sign band with five stars.
+ * Lantern       glass cupola on the roof with a dark hip roof and an antenna.
+ * Wings         x ±(9.6..22.6), front face z 2.6, 6.9 m tall. Left: garage bays with white cars. Right: the lounge.
  */
-const MAIN = { w: 18, d: 4, h: 8.6 };
-const WING = { w: 11, h: 5.2, front: 2.2, back: -3.8 };
+const CB = { hw: 9.6, hd: 4, top: 10.9 };
+const GL = { hw: 7.4, y0: .3, h: 7.2 };
+const WING = { x0: 9.6, w: 13, h: 6.9, front: 2.6, back: -3.6 };
 
-const dark = '#1d1d24';
-const B = (props: Parameters<typeof Box>[0]) => <Box cast={false} {...props} />;
+const rr = (g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
 
-function glassTextures() {
-  const W = 2048, H = 760, panes = 8, pw = W / panes, mid = H / 2;
-  const base = makeCanvasTexture(W, H, (g) => {
-    const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#3f5b78'); sky.addColorStop(.55, '#1c2838'); sky.addColorStop(1, '#10151e');
-    g.fillStyle = sky; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(255,255,255,.055)';
-    for (let i = 0; i < 9; i++) { g.save(); g.translate(i * 250 - 120, 0); g.transform(1, 0, -.45, 1, 0, 0); g.fillRect(0, 0, 70 + (i % 3) * 26, H); g.restore(); }
-    g.fillStyle = '#c9971f';
-    for (let i = 0; i <= panes; i++) g.fillRect(i * pw - 7, 0, 14, H);
-    g.fillStyle = '#e3b647'; g.fillRect(0, mid - 9, W, 18); g.fillRect(0, 0, W, 12); g.fillRect(0, H - 14, W, 14);
-    g.fillStyle = '#f2c14e'; g.fillRect(W / 2 - 4, mid + 6, 8, H / 2 - 20);          // entrance seam
-  }, W > 1024 ? 8 : 4);
-  const glow = makeCanvasTexture(W, H, (g) => {
-    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-    const r = rng(11);
-    for (let p = 0; p < panes; p++) for (let f = 0; f < 2; f++) {
-      const lobby = f === 1 && (p === 3 || p === 4);
-      if (!lobby && r() < .18) continue;
-      const x0 = p * pw + 14, y0 = f === 0 ? 20 : mid + 16, w = pw - 28, h = mid - 34;
-      const gr = g.createLinearGradient(0, y0, 0, y0 + h);
-      gr.addColorStop(0, lobby ? '#fff0c8' : '#ffd38a'); gr.addColorStop(1, lobby ? '#ffc070' : '#c98a3c');
-      g.fillStyle = gr; g.globalAlpha = lobby ? 1 : .55 + r() * .4; g.fillRect(x0, y0, w, h);
-    }
-    g.globalAlpha = 1;
-  });
-  return { base, glow };
+function ficus(g: CanvasRenderingContext2D, r: () => number, x: number, base: number, hgt: number, rad: number) {
+  g.fillStyle = '#3a2412'; g.fillRect(x - hgt * .018, base - hgt * .6, hgt * .036, hgt * .6);
+  for (let i = 0; i < 26; i++) {
+    const a = r() * Math.PI * 2, d = r() * rad * .8;
+    g.fillStyle = ['#27491f', '#33642b', '#427a35', '#58963f'][Math.floor(r() * 4)]!;
+    g.beginPath(); g.arc(x + Math.cos(a) * d, base - hgt * .75 + Math.sin(a) * d * .8, rad * (.28 + r() * .22), 0, 7); g.fill();
+  }
 }
 
-function signTextures() {
-  const W = 2048, H = 185;
-  const draw = (emissive: boolean) => (g: CanvasRenderingContext2D, w: number, h: number) => {
-    g.fillStyle = emissive ? '#000' : '#0e0e12'; g.fillRect(0, 0, w, h);
-    if (!emissive) { g.strokeStyle = '#c9971f'; g.lineWidth = 5; g.strokeRect(14, 14, w - 28, h - 28); g.strokeStyle = 'rgba(242,193,78,.5)'; g.lineWidth = 2; g.strokeRect(26, 26, w - 52, h - 52); }
-    g.font = `800 118px ${FONT}`;
-    g.fillStyle = emissive ? '#ffd98a' : goldGradient(g, 36, 150);
-    drawSpaced(g, 'DRIVINGKLASS', w / 2, h / 2 + 4, 26);
-    const star = starShape(28); g.save();
-    [80, w - 80].forEach(cx => { g.save(); g.translate(cx, h / 2); g.scale(1, -1); g.beginPath(); star.getPoints().forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); g.fillStyle = emissive ? '#ffd98a' : '#f2c14e'; g.fill(); g.restore(); });
-    g.restore();
-  };
-  return { base: makeCanvasTexture(W, H, draw(false)), glow: makeCanvasTexture(W, H, draw(true), 2) };
+function pendant(g: CanvasRenderingContext2D, x: number, y0: number, y1: number) {
+  g.strokeStyle = 'rgba(40,24,10,.8)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke();
+  const gr = g.createRadialGradient(x, y1, 2, x, y1, 34); gr.addColorStop(0, 'rgba(255,248,220,1)'); gr.addColorStop(.35, 'rgba(255,226,160,.85)'); gr.addColorStop(1, 'rgba(255,200,120,0)');
+  g.fillStyle = gr; g.fillRect(x - 36, y1 - 36, 72, 72);
 }
 
-function wingTextures(kind: 'garage' | 'class') {
-  const PX = 128, W = WING.w * PX, H = WING.h * PX;
-  const base = makeCanvasTexture(W, H, (g) => {
-    g.fillStyle = '#22222a'; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(255,255,255,.035)'; for (let y = 40; y < H; y += 64) g.fillRect(0, y, W, 2);
-    g.fillStyle = '#0e0e12'; g.fillRect(0, H - 4 * PX + 0, W, 0);
-    if (kind === 'garage') {
-      [-3.5, 0, 3.5].forEach((bx, i) => {
-        const x0 = (WING.w / 2 + bx - 1.45) * PX, w = 2.9 * PX, top = H - 3.7 * PX;
-        const inner = g.createLinearGradient(0, top, 0, H); inner.addColorStop(0, '#2a2a30'); inner.addColorStop(.4, '#f7e2b0'); inner.addColorStop(1, '#d9a64e');
-        g.fillStyle = inner; g.fillRect(x0, top, w, 3.7 * PX);
-        for (let s = 0; s < 6; s++) { g.fillStyle = s % 2 ? '#2d2d36' : '#383842'; g.fillRect(x0, top + s * 0.26 * PX, w, 0.24 * PX); }
-        g.fillStyle = '#c9971f'; g.fillRect(x0, top + 6 * 0.26 * PX - 2, w, 8);
-        g.strokeStyle = '#e3b647'; g.lineWidth = 9; g.strokeRect(x0 - 5, top - 5, w + 10, 3.7 * PX + 5);
-        g.fillStyle = goldGradient(g, top - 70, top - 10); g.font = `800 46px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i + 1), x0 + w / 2, top - 38);
-      });
-    } else {
-      [-3.9, -1.3, 1.3, 3.9].forEach(bx => {
-        const x0 = (WING.w / 2 + bx - 1.0) * PX, w = 2.0 * PX, top = H - 3.9 * PX, h = 3.2 * PX;
-        const gl = g.createLinearGradient(0, top, 0, top + h); gl.addColorStop(0, '#3f5b78'); gl.addColorStop(1, '#151b26');
-        g.fillStyle = gl; g.fillRect(x0, top, w, h);
-        g.strokeStyle = '#c9971f'; g.lineWidth = 8; g.strokeRect(x0, top, w, h); g.fillStyle = '#c9971f'; g.fillRect(x0 + w / 2 - 3, top, 6, h); g.fillRect(x0, top + h * .42, w, 6);
-      });
+function tableSet(g: CanvasRenderingContext2D, x: number, base: number, s: number) {
+  g.fillStyle = '#3d2614'; g.fillRect(x - s * .5, base - s * .62, s, s * .07);           // top
+  g.fillRect(x - s * .03, base - s * .55, s * .06, s * .55);                                // stem
+  g.fillStyle = 'rgba(255,214,150,.55)'; g.fillRect(x - s * .5, base - s * .62, s, s * .012);
+  [-1, 1].forEach(d => { g.fillStyle = '#4a2f1a'; rr(g, x + d * s * .74 - s * .13, base - s * .5, s * .26, s * .06, 4); g.fill(); g.fillRect(x + d * s * .74 - s * .12, base - s * .5, s * .03, s * .5); g.fillRect(x + d * s * .74 + s * .09, base - s * .5, s * .03, s * .5); g.fillRect(x + d * s * .74 - s * .13, base - s * .86, s * .26, s * .05); });
+}
+
+function whiteCar(g: CanvasRenderingContext2D, cx: number, by: number, w: number) {
+  const h = w * .46;
+  g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(cx, by, w * .56, w * .05, 0, 0, 7); g.fill();
+  g.fillStyle = '#1b1b1f'; g.fillRect(cx - w * .46, by - h * .16, w * .13, h * .16); g.fillRect(cx + w * .33, by - h * .16, w * .13, h * .16);   // tyres
+  g.fillStyle = '#f2f2ef'; rr(g, cx - w * .5, by - h * .62, w, h * .48, w * .07); g.fill();                                                          // body
+  g.beginPath(); g.moveTo(cx - w * .37, by - h * .6); g.lineTo(cx - w * .27, by - h); g.lineTo(cx + w * .27, by - h); g.lineTo(cx + w * .37, by - h * .6); g.closePath(); g.fill();
+  g.fillStyle = '#2a3340'; g.beginPath(); g.moveTo(cx - w * .31, by - h * .62); g.lineTo(cx - w * .24, by - h * .94); g.lineTo(cx + w * .24, by - h * .94); g.lineTo(cx + w * .31, by - h * .62); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(cx - w * .2, by - h * .9, w * .14, h * .04);
+  g.fillStyle = '#fff7dc'; rr(g, cx - w * .44, by - h * .5, w * .2, h * .1, 5); g.fill(); rr(g, cx + w * .24, by - h * .5, w * .2, h * .1, 5); g.fill();   // headlights
+  g.fillStyle = '#26262b'; rr(g, cx - w * .2, by - h * .47, w * .4, h * .13, 4); g.fill();                                                             // grille
+  g.fillStyle = '#d9d9d6'; g.fillRect(cx - w * .13, by - h * .24, w * .26, h * .07);
+}
+
+function atriumTexture() {
+  const W = 2048, H = 996;
+  return makeCanvasTexture(W, H, (g) => {
+    const r = rng(21);
+    const wall = g.createLinearGradient(0, 0, 0, H);
+    wall.addColorStop(0, '#5a3d22'); wall.addColorStop(.16, '#e3b06a'); wall.addColorStop(.5, '#ffd9a0'); wall.addColorStop(.82, '#f0bd78'); wall.addColorStop(1, '#8a5a30');
+    g.fillStyle = wall; g.fillRect(0, 0, W, H);
+    const glow = g.createRadialGradient(W / 2, H * .3, 10, W / 2, H * .3, W * .42); glow.addColorStop(0, 'rgba(255,244,210,.8)'); glow.addColorStop(1, 'rgba(255,244,210,0)'); g.fillStyle = glow; g.fillRect(0, 0, W, H);
+    // upper level back wall: warm panels
+    for (let i = 0; i < 16; i++) { g.fillStyle = `rgba(120,78,40,${.10 + r() * .06})`; g.fillRect(i * 128 + 6, 70, 116, 290); }
+    // mezzanine slab and rail
+    g.fillStyle = '#3a2516'; g.fillRect(0, 392, W, 34); g.fillStyle = 'rgba(255,214,150,.6)'; g.fillRect(0, 426, W, 4);
+    g.fillStyle = 'rgba(70,44,22,.55)'; for (let x = 0; x < W; x += 52) g.fillRect(x, 356, 3, 36);
+    g.fillRect(0, 354, W, 4);
+    // downlights
+    for (let x = 64; x < W; x += 128) { const gr = g.createRadialGradient(x, 52, 1, x, 52, 26); gr.addColorStop(0, 'rgba(255,250,230,1)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = gr; g.fillRect(x - 26, 26, 52, 52); }
+    // chandelier
+    g.strokeStyle = 'rgba(60,36,14,.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, 170); g.stroke();
+    for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2, len = 70 + (i % 3) * 38; const x = W / 2 + Math.cos(a) * len * 1.3, y = 200 + Math.sin(a) * len * .8; g.strokeStyle = 'rgba(255,236,180,.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(W / 2, 200); g.lineTo(x, y); g.stroke(); const gr = g.createRadialGradient(x, y, 1, x, y, 14); gr.addColorStop(0, 'rgba(255,252,235,1)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = gr; g.fillRect(x - 14, y - 14, 28, 28); }
+    // plants and furniture
+    ficus(g, r, 250, 820, 560, 170); ficus(g, r, 1800, 820, 600, 180); ficus(g, r, 600, 820, 330, 110); ficus(g, r, 1450, 820, 330, 110);
+    ficus(g, r, 120, 392, 230, 90); ficus(g, r, 1930, 392, 230, 90);
+    [330, 560, 820, 1230, 1490, 1730].forEach((x, i) => tableSet(g, x, 820 + (i % 2) * 10, 120));
+    g.fillStyle = '#3d2614'; g.fillRect(860, 680, 330, 130); g.fillStyle = 'rgba(255,214,150,.6)'; g.fillRect(860, 680, 330, 6);   // reception
+    // floor
+    const fl = g.createLinearGradient(0, H * .84, 0, H); fl.addColorStop(0, 'rgba(120,76,36,0)'); fl.addColorStop(1, 'rgba(98,62,30,.9)'); g.fillStyle = fl; g.fillRect(0, H * .84, W, H * .16);
+    // mullions and transoms
+    g.fillStyle = '#14110e';
+    for (let k = 0; k <= 8; k++) g.fillRect(k * 256 - 6, 0, 12, H);
+    g.fillRect(0, 392, W, 10); g.fillRect(0, H - 470, W, 12); g.fillRect(0, H - 14, W, 14); g.fillRect(0, 0, W, 10);
+    // doors
+    g.strokeStyle = '#14110e'; g.lineWidth = 12; g.strokeRect(859, H - 464, 330, 464);
+    g.fillStyle = '#e8c372'; g.fillRect(1004, H - 250, 6, 90); g.fillRect(1038, H - 250, 6, 90);
+    // reflections of the sky
+    const sk = g.createLinearGradient(0, 0, 0, H * .55); sk.addColorStop(0, 'rgba(150,190,240,.26)'); sk.addColorStop(1, 'rgba(150,190,240,0)'); g.fillStyle = sk; g.fillRect(0, 0, W, H * .55);
+    g.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 6; i++) { g.save(); g.translate(i * 380 - 100, 0); g.transform(1, 0, -.5, 1, 0, 0); g.fillRect(0, 0, 90 + (i % 3) * 30, H); g.restore(); }
+  }, 8, false);
+}
+
+function wingTexture(kind: 'garage' | 'lounge') {
+  const W = 1560, H = 830;
+  return makeCanvasTexture(W, H, (g) => {
+    const r = rng(kind === 'garage' ? 31 : 41);
+    g.fillStyle = '#26262b'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.03)'; for (let y = 250; y < H; y += 60) g.fillRect(0, y, W, 2);
+    // cedar fascia
+    for (let y = 0; y < 200; y += 20) { g.fillStyle = `hsl(${27 + r() * 4},${48 + r() * 8}%,${36 + r() * 9}%)`; g.fillRect(0, y, W, 20); g.fillStyle = 'rgba(30,14,4,.5)'; g.fillRect(0, y, W, 2); }
+    g.fillStyle = '#1b1918'; g.fillRect(0, 200, W, 34); g.fillStyle = '#ffcf8a'; g.fillRect(0, 234, W, 4);
+    const bays: [number, number, number, number][] = kind === 'garage' ? [[70, 300, 650, 512], [830, 300, 650, 512]] : [0, 1, 2, 3].map(k => [60 + k * 385, 320, 330, 470] as [number, number, number, number]);
+    bays.forEach(([x, y, w, h], bi) => {
+      g.fillStyle = '#121114'; g.fillRect(x - 12, y - 12, w + 24, h + 12);
+      const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#d7a45f'); gr.addColorStop(.35, '#ffe2ae'); gr.addColorStop(1, '#f0c688'); g.fillStyle = gr; g.fillRect(x, y, w, h);
+      const cg = g.createRadialGradient(x + w / 2, y + 40, 4, x + w / 2, y + 40, w * .7); cg.addColorStop(0, 'rgba(255,250,230,.7)'); cg.addColorStop(1, 'rgba(255,250,230,0)'); g.fillStyle = cg; g.fillRect(x, y, w, h);
+      const n = kind === 'garage' ? 6 : 3;
+      for (let i = 0; i < n; i++) { const lx = x + (i + .5) * (w / n); const lg = g.createRadialGradient(lx, y + 24, 1, lx, y + 24, 22); lg.addColorStop(0, 'rgba(255,252,238,1)'); lg.addColorStop(1, 'rgba(255,224,160,0)'); g.fillStyle = lg; g.fillRect(lx - 22, y + 2, 44, 44); }
+      if (kind === 'garage') {
+        g.fillStyle = 'rgba(150,110,60,.35)'; g.fillRect(x, y + h - 90, w, 90);
+        whiteCar(g, x + w * .27, y + h - 34, 250); whiteCar(g, x + w * .73, y + h - 34, 250);
+        g.fillStyle = '#3d2a18'; g.fillRect(x + w / 2 - 6, y + 80, 12, h - 170);
+      } else {
+        pendant(g, x + w * .3, y, y + 120); pendant(g, x + w * .7, y, y + 100);
+        ficus(g, r, x + w * .12, y + h - 10, 210, 60);
+        tableSet(g, x + w * .42, y + h - 12, 100); if (bi % 2 === 0) tableSet(g, x + w * .8, y + h - 10, 88);
+      }
+      g.fillStyle = '#121114';
+      const cols = kind === 'garage' ? 5 : 2, rows = kind === 'garage' ? 3 : 2;
+      for (let c = 1; c < cols; c++) g.fillRect(x + (w / cols) * c - 4, y, 8, h);
+      for (let rw = 1; rw < rows; rw++) g.fillRect(x, y + (h / rows) * rw - 4, w, 8);
+    });
+    [30, 1530].forEach(x => { const gr = g.createRadialGradient(x, 470, 2, x, 470, 70); gr.addColorStop(0, 'rgba(255,214,140,.95)'); gr.addColorStop(1, 'rgba(255,190,100,0)'); g.fillStyle = gr; g.fillRect(x - 70, 400, 140, 140); g.fillStyle = '#ffe2ae'; g.fillRect(x - 8, 440, 16, 60); });
+  }, 8, false);
+}
+
+function woodTexture() {
+  const t = makeCanvasTexture(512, 512, (g, w, h) => {
+    const r = rng(7), n = 16, sw = w / n;
+    for (let i = 0; i < n; i++) {
+      g.fillStyle = `hsl(${26 + r() * 4},${46 + r() * 10}%,${36 + r() * 10}%)`; g.fillRect(i * sw, 0, sw, h);
+      for (let k = 0; k < 46; k++) { g.fillStyle = `rgba(60,30,10,${.05 + r() * .09})`; g.fillRect(i * sw + r() * sw, r() * h, 1 + r() * 1.5, 20 + r() * 140); }
+      g.fillStyle = 'rgba(28,12,4,.6)'; g.fillRect(i * sw, 0, 3, h); g.fillStyle = 'rgba(255,218,168,.12)'; g.fillRect(i * sw + 3, 0, 2, h);
     }
-    g.font = `800 64px ${FONT}`; g.fillStyle = goldGradient(g, 50, 120);
-    drawSpaced(g, kind === 'garage' ? 'THE GARAGE' : 'THE KLASSROOM', W / 2, 88, 18);
-    g.fillStyle = '#c9971f'; g.fillRect(W / 2 - 360, 144, 720, 4);
+  }, 8, false);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+
+function stoneTexture() {
+  const t = makeCanvasTexture(256, 512, (g, w, h) => {
+    const r = rng(3); g.fillStyle = '#cfc2a8'; g.fillRect(0, 0, w, h);
+    const rows = 10, rh = h / rows;
+    for (let y = 0; y < rows; y++) { const off = (y % 2) * w / 4; for (let x = -1; x < 3; x++) { g.fillStyle = `hsl(${38 + r() * 6},${20 + r() * 10}%,${74 + r() * 9}%)`; g.fillRect(x * (w / 2) + off + 2, y * rh + 2, w / 2 - 4, rh - 4); } }
+    for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(120,100,70,${.05 + r() * .08})`; g.fillRect(r() * w, r() * h, 2, 2); }
+  }, 8, false);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+
+function lettersTexture() {
+  const W = 2048, H = 256;
+  return makeCanvasTexture(W, H, (g) => {
+    g.clearRect(0, 0, W, H);
+    g.font = `700 150px ${SIGN_FONT}`; g.textBaseline = 'middle'; g.textAlign = 'left';
+    const text = 'DRIVINGKLASS', sp = 34, ws = [...text].map(c => g.measureText(c).width), total = ws.reduce((a, b) => a + b, 0) + sp * (text.length - 1);
+    let x = (W - total) / 2;
+    const gr = g.createLinearGradient(0, 40, 0, 216); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(.55, '#fff0cc'); gr.addColorStop(1, '#ffd98a');
+    [...text].forEach((c, i) => {
+      g.shadowColor = 'rgba(255,200,110,.95)'; g.shadowBlur = 26; g.fillStyle = gr; g.fillText(c, x, H / 2 + 6);
+      g.shadowColor = 'rgba(40,20,4,.65)'; g.shadowBlur = 6; g.shadowOffsetY = 4; g.fillText(c, x, H / 2 + 6); g.shadowOffsetY = 0;
+      x += ws[i]! + sp;
+    });
   }, 8);
-  const glow = makeCanvasTexture(W, H, (g) => {
-    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-    if (kind === 'garage') {
-      [-3.5, 0, 3.5].forEach(bx => {
-        const x0 = (WING.w / 2 + bx - 1.45) * PX, w = 2.9 * PX, top = H - 3.7 * PX + 6 * 0.26 * PX;
-        const inner = g.createLinearGradient(0, top, 0, H); inner.addColorStop(0, '#ffe6b0'); inner.addColorStop(1, '#ffb45a');
-        g.fillStyle = inner; g.fillRect(x0, top, w, H - top);
-      });
-    } else {
-      [-3.9, -1.3, 1.3, 3.9].forEach((bx, i) => {
-        const x0 = (WING.w / 2 + bx - 1.0) * PX + 10, w = 2.0 * PX - 20, top = H - 3.9 * PX + 10, h = 3.2 * PX - 20;
-        const gl = g.createLinearGradient(0, top, 0, top + h); gl.addColorStop(0, '#ffe2a8'); gl.addColorStop(1, '#ffb45a');
-        g.globalAlpha = i === 2 ? .7 : 1; g.fillStyle = gl; g.fillRect(x0, top, w, h);
-      });
-      g.globalAlpha = 1;
-    }
-    g.font = `800 64px ${FONT}`; g.fillStyle = '#ffd98a'; drawSpaced(g, kind === 'garage' ? 'THE GARAGE' : 'THE KLASSROOM', W / 2, 88, 18);
-  }, 2);
-  return { base, glow };
 }
 
-function checkerTexture() {
-  const t = makeCanvasTexture(128, 32, (g) => { for (let y = 0; y < 2; y++) for (let x = 0; x < 8; x++) { g.fillStyle = (x + y) % 2 ? '#f6f3ec' : '#15151a'; g.fillRect(x * 16, y * 16, 16, 16); } }, 4);
-  t.wrapS = THREE.RepeatWrapping; t.repeat.set(9, 1); t.magFilter = THREE.NearestFilter; return t;
+function doorSignTexture(open: boolean) {
+  return makeCanvasTexture(512, 256, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = '#0b0b0d'; rr(g, 8, 8, w - 16, h - 16, 30); g.fill();
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 4; rr(g, 8, 8, w - 16, h - 16, 30); g.stroke();
+    const c = open ? '#45ff95' : '#ff5252';
+    g.strokeStyle = c; g.lineWidth = 6; g.shadowColor = c; g.shadowBlur = 20; rr(g, 30, 30, w - 60, h - 60, 20); g.stroke();
+    const word = open ? 'OPEN' : 'CLOSED'; let size = 130; g.font = `700 ${size}px ${SIGN_FONT}`;
+    while (g.measureText(word).width > w - 120 && size > 40) { size -= 4; g.font = `700 ${size}px ${SIGN_FONT}`; }
+    g.fillStyle = c; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(word, w / 2, h / 2 - 12);
+    g.shadowBlur = 0; g.fillStyle = '#f2c14e'; g.font = `600 30px ${SIGN_FONT}`; g.fillText('9AM – 6PM', w / 2, h - 52);
+  }, 8);
 }
 
-/** A flag that ripples: ripples grow toward the free edge. */
-function Flag({ position, dir, tex }: { position: V3; dir: 1 | -1; tex: THREE.Texture }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const geo = useMemo(() => new THREE.PlaneGeometry(2.1, 1.3, 16, 8), []);
-  const base = useMemo(() => Float32Array.from(geo.attributes.position.array as Float32Array), [geo]);
-  useFrame(({ clock }) => {
-    const pos = geo.attributes.position as THREE.BufferAttribute, t = clock.elapsedTime;
-    for (let i = 0; i < pos.count; i++) {
-      const x = base[i * 3]!, y = base[i * 3 + 1]!, k = (x + 1.05) / 2.1;
-      pos.setZ(i, Math.sin(x * 2.6 - t * 3.2 + y * .8) * .16 * k + Math.sin(x * 1.3 - t * 2.1) * .05 * k);
-    }
-    pos.needsUpdate = true; geo.computeVertexNormals();
-  });
-  return <mesh ref={ref} geometry={geo} position={[position[0] + dir * 1.05, position[1], position[2]]} scale={[dir, 1, 1]}>
-    <meshStandardMaterial map={tex} side={THREE.DoubleSide} roughness={.85} />
-  </mesh>;
-}
-
-function flagTextures() {
-  const star = makeCanvasTexture(512, 320, (g, w, h) => {
-    g.fillStyle = '#0f0f13'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9971f'; g.lineWidth = 10; g.strokeRect(12, 12, w - 24, h - 24);
-    const s = starShape(96); g.save(); g.translate(w / 2, h / 2 + 6); g.scale(1, -1); g.beginPath(); s.getPoints().forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); g.fillStyle = goldGradient(g, -96, 96); g.fill(); g.restore();
-  }, 4);
-  const check = makeCanvasTexture(512, 320, (g, w, h) => { const c = 64; for (let y = 0; y < h / c; y++) for (let x = 0; x < w / c; x++) { g.fillStyle = (x + y) % 2 ? '#f6f3ec' : '#15151a'; g.fillRect(x * c, y * c, c, c); } }, 4);
-  return { star, check };
-}
-
-export function HQ({ position, lite }: { position: V3; lite: boolean }) {
+export function HQ({ position, lite, open }: { position: V3; lite: boolean; open: boolean }) {
   const mix = useContext(NightCtx);
-  const glass = useMemo(glassTextures, []);
-  const sign = useMemo(signTextures, []);
-  const garage = useMemo(() => wingTextures('garage'), []);
-  const klass = useMemo(() => wingTextures('class'), []);
-  const checker = useMemo(checkerTexture, []);
-  const flags = useMemo(flagTextures, []);
-  const starGeo = useStarGeometry(.78, .2);
-  const finialGeo = useStarGeometry(.6, .16);
-
-  const mats = useMemo(() => ({
-    glass: new THREE.MeshPhysicalMaterial({ map: glass.base, emissiveMap: glass.glow, emissive: '#ffffff', emissiveIntensity: .1, roughness: .1, metalness: .5, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.25 }),
-    sign: new THREE.MeshStandardMaterial({ map: sign.base, emissiveMap: sign.glow, emissive: '#ffffff', emissiveIntensity: .25, roughness: .4, metalness: .35 }),
-    garage: new THREE.MeshStandardMaterial({ map: garage.base, emissiveMap: garage.glow, emissive: '#ffffff', emissiveIntensity: .3, roughness: .5, metalness: .2 }),
-    klass: new THREE.MeshStandardMaterial({ map: klass.base, emissiveMap: klass.glow, emissive: '#ffffff', emissiveIntensity: .3, roughness: .35, metalness: .3 }),
-    gold: new THREE.MeshStandardMaterial({ color: palette.goldBright, metalness: .92, roughness: .28, emissive: '#d9a030', emissiveIntensity: .2, envMapIntensity: 1.5 }),
-    lantern: new THREE.MeshPhysicalMaterial({ color: '#a9c9e8', roughness: .05, metalness: 0, transparent: true, opacity: .32, emissive: '#ffcf80', emissiveIntensity: .1, side: THREE.DoubleSide, depthWrite: false }),
-    lamp: [0, 1, 2].map(i => new THREE.MeshStandardMaterial({ color: ['#ff4b3e', '#ffc93a', '#37d36b'][i], emissive: ['#ff2a1a', '#ffb000', '#14c050'][i], emissiveIntensity: .1, roughness: .35 })),
-    under: new THREE.MeshStandardMaterial({ color: '#fff2d2', emissive: '#ffc77a', emissiveIntensity: 1.4 }),
-    checker: new THREE.MeshStandardMaterial({ map: checker, roughness: .5 }),
-  }), [glass, sign, garage, klass, checker]);
-
-  const finial = useRef<THREE.Mesh>(null), beacon = useRef<THREE.Mesh>(null);
-  const beaconLight = useRef<THREE.PointLight>(null), doorLight = useRef<THREE.PointLight>(null);
-  useFrame(({ clock }, dt) => {
+  const tex = useMemo(() => ({
+    atrium: atriumTexture(), garage: wingTexture('garage'), lounge: wingTexture('lounge'), wood: woodTexture(), stone: stoneTexture(),
+    letters: lettersTexture(), openT: doorSignTexture(true), closedT: doorSignTexture(false),
+    halo: new THREE.CanvasTexture(radialTexture([[0, 'rgba(255,236,180,1)'], [.4, 'rgba(255,200,110,.45)'], [1, 'rgba(255,190,90,0)']])),
+  }), []);
+  tex.wood.repeat.set(9.4, 1.3);
+  const m = useMemo(() => {
+    const lit = (map: THREE.Texture, rough: number, metal: number) => new THREE.MeshStandardMaterial({ map, emissiveMap: map, emissive: '#ffffff', emissiveIntensity: .3, roughness: rough, metalness: metal, envMapIntensity: 1.25 });
+    return {
+      atrium: new THREE.MeshPhysicalMaterial({ map: tex.atrium, emissiveMap: tex.atrium, emissive: '#ffffff', emissiveIntensity: .3, roughness: .1, metalness: .25, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.3 }),
+      garage: lit(tex.garage, .3, .2), lounge: lit(tex.lounge, .3, .2),
+      wood: new THREE.MeshStandardMaterial({ map: tex.wood, emissiveMap: tex.wood, emissive: '#ff9b4a', emissiveIntensity: 0, roughness: .62, metalness: .02 }),
+      stone: new THREE.MeshStandardMaterial({ map: tex.stone, roughness: .85 }),
+      dark: new THREE.MeshStandardMaterial({ color: '#1c1a19', roughness: .42, metalness: .5 }),
+      roof: new THREE.MeshStandardMaterial({ color: '#3a3f48', roughness: .36, metalness: .7 }),
+      gold: new THREE.MeshStandardMaterial({ color: palette.goldBright, metalness: .9, roughness: .26, emissive: '#e0a83a', emissiveIntensity: .35, envMapIntensity: 1.5 }),
+      warm: new THREE.MeshStandardMaterial({ color: '#fff2d2', emissive: '#ffc77a', emissiveIntensity: 1.4 }),
+      pane: new THREE.MeshPhysicalMaterial({ color: '#b9d3ea', roughness: .05, metalness: 0, transparent: true, opacity: .22, clearcoat: 1, envMapIntensity: 1.4, depthWrite: false }),
+      inner: new THREE.MeshStandardMaterial({ color: '#ffd9a6', emissive: '#ffbd6e', emissiveIntensity: .9, side: THREE.BackSide }),
+      plant: new THREE.MeshStandardMaterial({ color: '#2f6a30', roughness: .8 }),
+      letters: new THREE.MeshBasicMaterial({ map: tex.letters, transparent: true, toneMapped: false, depthWrite: false }),
+      halo: new THREE.SpriteMaterial({ map: tex.halo, transparent: true, opacity: .25, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }),
+      beacon: new THREE.MeshStandardMaterial({ color: '#ff3b30', emissive: '#ff2a1a', emissiveIntensity: 1 }),
+    };
+  }, [tex]);
+  const star = useStarGeometry(.46, .16);
+  const beaconLight = useRef<THREE.PointLight>(null), doorLight = useRef<THREE.PointLight>(null), signHalo = useRef<THREE.Sprite>(null);
+  const rings = useRef<THREE.Group>(null);
+  const hueOpen = useMemo(() => new THREE.Color('#45ff95'), []), hueClosed = useMemo(() => new THREE.Color('#ff5252'), []);
+  useFrame(({ clock }) => {
     const n = mix.current, t = clock.elapsedTime;
-    mats.glass.emissiveIntensity = .1 + 1.5 * n; mats.sign.emissiveIntensity = .22 + 1.6 * n;
-    mats.garage.emissiveIntensity = .3 + 1.25 * n; mats.klass.emissiveIntensity = .3 + 1.3 * n;
-    mats.gold.emissiveIntensity = .2 + .5 * n; mats.lantern.emissiveIntensity = .12 + .9 * n; mats.under.emissiveIntensity = 1.2 + 2.2 * n;
-    // traffic signal on the tower: green 6 s, yellow 1.6 s, red 5 s
-    const c = t % 12.6, on = c < 6 ? 2 : c < 7.6 ? 1 : 0;
-    mats.lamp.forEach((m, i) => { m.emissiveIntensity = i === on ? 3.4 : .07; });
-    if (finial.current) finial.current.rotation.y += dt * .9;
-    if (beacon.current) beacon.current.rotation.y -= dt * 1.4;
-    if (beaconLight.current) beaconLight.current.intensity = .5 + 9 * n + Math.sin(t * 2.2) * .4 * n;
-    if (doorLight.current) doorLight.current.intensity = .7 + 4.4 * n;
+    m.atrium.emissiveIntensity = .3 + .62 * n; m.garage.emissiveIntensity = .32 + .6 * n; m.lounge.emissiveIntensity = .32 + .6 * n;
+    m.wood.emissiveIntensity = .03 + .34 * n; m.gold.emissiveIntensity = .3 + .55 * n; m.warm.emissiveIntensity = 1.2 + 2.3 * n; m.inner.emissiveIntensity = .7 + .55 * n;
+    m.halo.opacity = .22 + .5 * n; m.beacon.emissiveIntensity = Math.sin(t * 2.4) > 0 ? 2.2 : .2;
+    if (rings.current) rings.current.rotation.y = t * .1;
+    if (beaconLight.current) beaconLight.current.intensity = .5 + 8 * n;
+    if (doorLight.current) doorLight.current.intensity = .8 + 4.2 * n;
+    if (signHalo.current) { const sm = signHalo.current.material as THREE.SpriteMaterial; sm.color.copy(open ? hueOpen : hueClosed); sm.opacity = (.32 + .4 * n) * (.85 + .15 * Math.sin(t * 3)); }
   });
-
-  const cap = MAIN.h, towerY0 = cap, towerH = 6.6;
+  const signY = 9.0;
   return <group position={position}>
-    {/* plinth and checkered band */}
-    <B p={[0, .175, 0]} s={[MAIN.w + .5, .35, MAIN.d * 2 + .5]} c="#14141a" r={.5} />
-    <B p={[0, .5, 4.08]} s={[MAIN.w, .3, .04]} c="#ffffff" mat={mats.checker} />
-    {/* main block */}
-    <B p={[0, MAIN.h / 2, 0]} s={[MAIN.w, MAIN.h, MAIN.d * 2]} c={dark} r={.55} />
-    <mesh position={[0, .35 + 3.125, MAIN.d + .03]} material={mats.glass}><planeGeometry args={[16.8, 6.25]} /></mesh>
-    <B p={[0, 7.52, MAIN.d + .14]} s={[17.2, 1.74, .22]} c="#0e0e12" r={.5} m={.2} />
-    <mesh position={[0, 7.52, MAIN.d + .26]} material={mats.sign}><planeGeometry args={[16.6, 1.5]} /></mesh>
-    <mesh position={[0, cap - .2, 0]} castShadow={false} material={mats.gold}><boxGeometry args={[MAIN.w + .7, .42, MAIN.d * 2 + .7]} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[s * (MAIN.w / 2 + .1), 4.3, MAIN.d + .02]} material={mats.gold}><boxGeometry args={[.36, 8.2, .34]} /></mesh>)}
-    {/* five stars on the roofline */}
-    {[-3.6, -1.8, 0, 1.8, 3.6].map((x, i) => <mesh key={i} position={[x, cap + .62, MAIN.d - .5]} geometry={starGeo} material={mats.gold} castShadow={false} />)}
-    {/* entrance canopy, doors and runner */}
-    <B p={[0, 3.78, MAIN.d + 1.75]} s={[6.4, .22, 3.5]} c="#15151a" r={.4} m={.4} />
-    <mesh position={[0, 3.92, MAIN.d + 1.75]} material={mats.gold}><boxGeometry args={[6.6, .1, 3.7]} /></mesh>
-    <mesh position={[0, 3.66, MAIN.d + 1.75]} material={mats.under}><boxGeometry args={[5.9, .04, 3]} /></mesh>
-    {[-2.8, 2.8].map(x => <mesh key={x} position={[x, 1.9, MAIN.d + 3.3]} material={mats.gold}><cylinderGeometry args={[.1, .1, 3.7, 16]} /></mesh>)}
-    <B p={[0, .03, MAIN.d + 1.9]} s={[2.5, .02, 3.4]} c="#16161c" r={.6} receive={false} />
-    {[-1.3, 1.3].map(x => <B key={x} p={[x, .035, MAIN.d + 1.9]} s={[.06, .02, 3.4]} c={palette.goldBright} m={1} r={.3} receive={false} />)}
+    {/* plinth and body */}
+    <Box p={[0, .15, 0]} s={[46, .3, 9.4]} c="#1b1918" r={.6} />
+    <Box p={[0, CB.top / 2, 0]} s={[CB.hw * 2, CB.top, CB.hd * 2]} c="#2a2622" r={.7} />
+    {/* limestone piers */}
+    {[-1, 1].map(s => <mesh key={s} position={[s * (GL.hw + (CB.hw - GL.hw) / 2), CB.top / 2, CB.hd + .14]} material={m.stone} castShadow receiveShadow><boxGeometry args={[CB.hw - GL.hw, CB.top, .56]} /></mesh>)}
+    {/* glass atrium */}
+    <mesh position={[0, GL.y0 + GL.h / 2, CB.hd + .05]} material={m.atrium}><planeGeometry args={[GL.hw * 2, GL.h]} /></mesh>
+    <Box p={[0, GL.y0 + GL.h + .32, CB.hd + .2]} s={[GL.hw * 2 + .2, .64, .4]} c="#15130f" r={.4} m={.5} cast={false} />
+    {/* cedar sign band, letters and stars */}
+    <mesh position={[0, 8.1 + 1.25 + .32, CB.hd + .06]} material={m.wood}><planeGeometry args={[GL.hw * 2, 2.5]} /></mesh>
+    <mesh position={[0, signY, CB.hd + .1]} material={m.letters}><planeGeometry args={[11.2, 1.4]} /></mesh>
+    <sprite position={[0, signY, CB.hd + .3]} scale={[13, 3.4, 1]} material={m.halo} />
+    {[-2.4, -1.2, 0, 1.2, 2.4].map(x => <mesh key={x} position={[x, 10.05, CB.hd + .14]} geometry={star} material={m.gold} />)}
+    <Box p={[0, CB.top - .12, 0]} s={[CB.hw * 2 + .8, .3, CB.hd * 2 + .8]} c="#15130f" r={.4} m={.5} cast={false} />
+    {/* entrance canopy, light strip, sconces */}
+    <Box p={[0, 3.62, CB.hd + 1.0]} s={[8.2, .22, 2.0]} c="#15130f" r={.35} m={.5} />
+    <mesh position={[0, 3.49, CB.hd + 1.0]} material={m.warm}><boxGeometry args={[7.6, .04, 1.5]} /></mesh>
+    {[-1, 1].map(s => <group key={s}>
+      <mesh position={[s * 8.5, 3.6, CB.hd + .5]} material={m.warm}><boxGeometry args={[.16, .7, .1]} /></mesh>
+      <sprite position={[s * 8.5, 3.6, CB.hd + .75]} scale={[2.4, 2.4, 1]} material={m.halo} />
+    </group>)}
+    {/* the door sign: open 9am to 6pm Georgia time, closed otherwise */}
+    <mesh position={[0, 2.55, CB.hd + .12]}><planeGeometry args={[1.9, .95]} /><meshBasicMaterial map={open ? tex.openT : tex.closedT} transparent toneMapped={false} /></mesh>
+    <sprite ref={signHalo} position={[0, 2.55, CB.hd + .2]} scale={[3.6, 2.2, 1]} material={new THREE.SpriteMaterial({ map: tex.halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false })} />
     {/* wings */}
     {[-1, 1].map(s => {
-      const cz = (WING.front + WING.back) / 2, d = WING.front - WING.back;
+      const cx = s * (WING.x0 + WING.w / 2), cz = (WING.front + WING.back) / 2, d = WING.front - WING.back;
       return <group key={s}>
-        <B p={[s * 14.5, WING.h / 2, cz]} s={[WING.w, WING.h, d]} c={dark} r={.55} />
-        <mesh position={[s * 14.5, WING.h / 2, WING.front + .03]} material={s < 0 ? mats.garage : mats.klass}><planeGeometry args={[WING.w, WING.h]} /></mesh>
-        <mesh position={[s * 14.5, WING.h + .14, cz]} material={mats.gold}><boxGeometry args={[WING.w + .5, .3, d + .5]} /></mesh>
-        <B p={[s * 14.5, .175, cz]} s={[WING.w + .4, .35, d + .4]} c="#14141a" r={.5} />
-        <B p={[s * 14.5, WING.h + .5, cz + .3]} s={[5, .06, 1.4]} c="#fff" e="#ffd08a" ei={1.4} r={.3} cast={false} />
+        <Box p={[cx, WING.h / 2, cz]} s={[WING.w, WING.h, d]} c="#26262b" r={.6} />
+        <mesh position={[cx, WING.h / 2, WING.front + .03]} material={s < 0 ? m.garage : m.lounge}><planeGeometry args={[WING.w, WING.h]} /></mesh>
+        <Box p={[cx, WING.h + .14, cz + .2]} s={[WING.w + .5, .32, d + .8]} c="#15130f" r={.4} m={.5} cast={false} />
+        <mesh position={[cx, 4.0, WING.front + .75]} material={m.dark}><boxGeometry args={[WING.w - .4, .16, 1.5]} /></mesh>
       </group>;
     })}
-    {/* control tower: shaft, bands, traffic signal, lantern, spire */}
-    <B p={[0, towerY0 + towerH / 2, -.5]} s={[3.4, towerH, 3.4]} c="#1a1a21" r={.45} m={.25} />
-    {[.6, 3.1, 5.6].map(y => <mesh key={y} position={[0, towerY0 + y, -.5]} material={mats.gold}><boxGeometry args={[3.56, .16, 3.56]} /></mesh>)}
-    <B p={[0, towerY0 + 2.6, 1.42]} s={[1.0, 2.8, .36]} c="#0b0b0e" r={.4} />
-    {[0, 1, 2].map(i => <mesh key={i} position={[0, towerY0 + 3.45 - i * .85, 1.62]} material={mats.lamp[i]}><circleGeometry args={[.3, 28]} /></mesh>)}
-    <mesh position={[0, towerY0 + towerH + 1.0, -.5]} material={mats.lantern}><boxGeometry args={[3.7, 2.0, 3.7]} /></mesh>
-    {[-1, 1].flatMap(sx => [-1, 1].map(sz => <mesh key={`${sx}${sz}`} position={[sx * 1.85, towerY0 + towerH + 1.0, -.5 + sz * 1.85]} material={mats.gold}><boxGeometry args={[.16, 2.1, .16]} /></mesh>))}
-    <mesh position={[0, towerY0 + towerH + .05, -.5]} material={mats.gold}><boxGeometry args={[3.9, .14, 3.9]} /></mesh>
-    <mesh position={[0, towerY0 + towerH + 2.05, -.5]} material={mats.gold}><boxGeometry args={[3.9, .14, 3.9]} /></mesh>
-    <mesh ref={beacon} position={[0, towerY0 + towerH + 1.0, -.5]} geometry={finialGeo} material={mats.gold} scale={1.1} />
-    <mesh position={[0, towerY0 + towerH + 2.75, -.5]} rotation-y={Math.PI / 4} material={mats.gold}><coneGeometry args={[2.7, 1.5, 4]} /></mesh>
-    <mesh position={[0, towerY0 + towerH + 4.4, -.5]} material={mats.gold}><cylinderGeometry args={[.04, .07, 2.3, 10]} /></mesh>
-    <mesh ref={finial} position={[0, towerY0 + towerH + 5.75, -.5]} geometry={finialGeo} material={mats.gold} />
-    {/* flags */}
-    {[-1, 1].map(s => <group key={s}>
-      <Cyl p={[s * 7.4, 3.8, MAIN.d + 2.6]} r={.05} rb={.07} h={7.6} c={palette.goldBright} m={1} rough={.25} cast={false} />
-      <mesh position={[s * 7.4, 7.65, MAIN.d + 2.6]} material={mats.gold}><sphereGeometry args={[.11, 12, 10]} /></mesh>
-      <Flag position={[s * 7.4, 6.85, MAIN.d + 2.6]} dir={s as 1 | -1} tex={s < 0 ? flags.star : flags.check} />
-    </group>)}
-    <pointLight ref={beaconLight} position={[0, towerY0 + towerH + 1, 1.2]} color="#ffd27a" distance={30} decay={1.6} intensity={.5} />
-    {!lite && <pointLight ref={doorLight} position={[0, 3.2, MAIN.d + 2.6]} color="#ffc98f" distance={14} decay={1.7} intensity={.7} />}
+    {/* lantern tower */}
+    <mesh position={[0, CB.top + .55, -.8]} material={m.wood} castShadow><boxGeometry args={[8.2, 1.0, 6.4]} /></mesh>
+    <mesh position={[0, CB.top + 1.05 + 1.85, -.8]} material={m.inner}><boxGeometry args={[7.4, 3.7, 5.6]} /></mesh>
+    <group ref={rings} position={[0, CB.top + 2.9, -.8]}>
+      {[-.6, 1.0].map(y => <mesh key={y} position={[0, y, 0]} rotation-x={Math.PI / 2} material={m.warm}><torusGeometry args={[2.0, .035, 8, 48]} /></mesh>)}
+      {[[-2.6, -1.4], [2.6, -1.2], [-2.4, 1.4], [2.5, 1.5]].map(([x, z], i) => <mesh key={i} position={[x, -1.1, z]} material={m.plant}><sphereGeometry args={[.55, 10, 8]} /></mesh>)}
+    </group>
+    <mesh position={[0, CB.top + 2.9, -.8]} material={m.pane}><boxGeometry args={[7.6, 3.7, 5.8]} /></mesh>
+    {[-1, 1].flatMap(sx => [-1, 1].map(sz => <mesh key={`${sx}${sz}`} position={[sx * 3.8, CB.top + 2.9, -.8 + sz * 2.9]} material={m.dark}><boxGeometry args={[.14, 3.8, .14]} /></mesh>))}
+    {[-1.9, 1.9].map(x => <mesh key={x} position={[x, CB.top + 2.9, -.8 + 2.9]} material={m.dark}><boxGeometry args={[.08, 3.7, .1]} /></mesh>)}
+    <mesh position={[0, CB.top + 4.78, -.8]} material={m.dark}><boxGeometry args={[7.8, .18, 6.0]} /></mesh>
+    <mesh position={[0, CB.top + 4.87 + 1.0, -.8]} rotation-y={Math.PI / 4} scale={[9.4 / 1.4142, 2.0, 7.6 / 1.4142]} material={m.roof} castShadow><coneGeometry args={[1, 1, 4]} /></mesh>
+    <mesh position={[0, CB.top + 7.9, -.8]} material={m.dark}><cylinderGeometry args={[.03, .06, 2.6, 8]} /></mesh>
+    <mesh position={[0, CB.top + 9.25, -.8]} material={m.beacon}><sphereGeometry args={[.11, 10, 8]} /></mesh>
+    <sprite position={[0, CB.top + 3.0, -.8 + 3.2]} scale={[11, 6, 1]} material={m.halo} />
+    <pointLight ref={beaconLight} position={[0, CB.top + 3, 1.6]} color="#ffd9a0" distance={34} decay={1.6} intensity={.5} />
+    {!lite && <pointLight ref={doorLight} position={[0, 3.0, CB.hd + 3]} color="#ffc98f" distance={16} decay={1.7} intensity={.8} />}
   </group>;
 }

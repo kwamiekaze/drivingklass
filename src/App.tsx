@@ -91,7 +91,6 @@ const App = () => (
             <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
             <Route path="/preview" element={<Preview />} />
             <Route path="/nuhome" element={<KlassroomPreview />} />
-            <Route path="/nuhome2" element={<NuHome2 />} />
 
 
 
@@ -103,6 +102,7 @@ const App = () => (
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/" element={<Index />} />
+                      <Route path="/nuhome2" element={<NuHome2 />} />
                       <Route path="/auth" element={<Auth />} />
                       
                       {/* Portal Auth Routes */}
