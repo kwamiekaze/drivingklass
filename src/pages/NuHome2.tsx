@@ -1,14 +1,15 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDown, ChevronDown, ChevronUp, Moon, Sun, X } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronUp, Moon, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
+import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
+import { Journey } from "@/components/nuhome2/journey/Journey";
 import { NavigationButtons } from "@/components/NavigationButtons";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
 import { ContactSection } from "@/components/ContactSection";
 import { useTheme } from "@/components/ThemeProvider";
-import { getPackagesSortedByPosition, type Package } from "@/data/packages";
-import { formatChipPrice } from "@/lib/priceFormatters";
+import { getPackagesSortedByPosition } from "@/data/packages";
 import { BRAND } from "@/components/nuhome2/content";
 import { STAGES } from "@/components/nuhome2/world/views";
 import "@/components/nuhome2/nuhome2.css";
@@ -57,11 +58,6 @@ class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode 
 
 function hasWebGL() {
   try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; }
-}
-
-function openBooking(pkg: Package) {
-  const w = window.open(pkg.squareUrl, "_blank", "noopener,noreferrer");
-  if (!w || w.closed || typeof w.closed === "undefined") window.location.href = pkg.squareUrl;
 }
 
 /**
@@ -139,7 +135,7 @@ export default function NuHome2() {
 
   return (
     <div className="n2-page" data-theme={night ? "night" : "day"}>
-      <main className="n2-experience">
+      <main className="n2-experience" data-pop={sheet ? "true" : "false"}>
         <div className="n2-poster" aria-hidden="true" />
         {gl && !lost && (
           <div className="n2-scene" aria-hidden="true" onPointerDown={() => setTouched(true)}>
@@ -168,7 +164,7 @@ export default function NuHome2() {
               {night ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
             </button>
             <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
-            <PortalMenuButton />
+            <PortalMenuButton variant="hamburger" triggerClassName="n2-theme n2-burger" />
           </div>
         </header>
 
@@ -198,25 +194,7 @@ export default function NuHome2() {
         </div>
         <div className="n2-drag" data-show={splashDone && !touched}>DRAG TO ORBIT · SCROLL TO ZOOM</div>
 
-        {sheet && (
-          <section className="n2-sheet" aria-label="Packages">
-            <div className="n2-sheet-head"><span>Choose a package</span>
-              <button type="button" className="n2-x" aria-label="Close packages" onClick={() => setSheet(false)}><X size={18} aria-hidden="true" /></button>
-            </div>
-            <ul className="n2-list">
-              {packages.map((p) => (
-                <li key={p.id}>
-                  <button type="button" className="n2-pkg" onClick={() => openBooking(p)} aria-label={`Book ${p.label.replace("\n", " ")} for ${formatChipPrice(p.price)}`}>
-                    <span className="n2-pkg-name">{p.label.replace("\n", " ")}</span>
-                    <span className="n2-pkg-price">{formatChipPrice(p.price)}</span>
-                    <span className="n2-pkg-go">Book</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <a className="n2-call" href="tel:+14044045820">Questions? Call {BRAND.phone}</a>
-          </section>
-        )}
+        {sheet && <PackagesPopup packages={packages} onClose={() => setSheet(false)} />}
 
         {lost && gl && (
           <div className="n2-lost" role="alert"><p>The 3D world paused to save your battery.</p>
@@ -229,6 +207,8 @@ export default function NuHome2() {
           </div>
         </div>
       </main>
+
+      <Journey theme={night ? "night" : "day"} onBook={() => setSheet(true)} onTheme={() => setTheme(night ? "light" : "dark")} />
 
       <section className="n2-below bg-background text-foreground">
         <ContactSection />

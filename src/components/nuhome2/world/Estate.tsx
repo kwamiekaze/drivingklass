@@ -5,6 +5,7 @@ import { NightCtx, rng } from './theme';
 import { HQ } from './HQ';
 import { CAR_POS, ISLANDS, Lot } from './Lot';
 import { Blooms, Grass, Trees, lawnTexture } from './Grounds';
+import { StarCanopy } from './StarCanopy';
 import type { Quality } from './quality';
 
 function windowsTexture() {
@@ -93,6 +94,7 @@ export function Estate({ quality, open, children }: { quality: Quality; open: bo
     {skyline.map((t, i) => <mesh key={i} position={t.p} rotation-y={t.rot} scale={t.s} material={towerMat}><boxGeometry args={[1, 1, 1]} /></mesh>)}
     <HQ position={[0, 0, HQ_Z]} lite={lite} open={open} />
     <Lot lite={lite} asphalt={asphalt} />
+    <StarCanopy lite={lite} />
     <group position={CAR_POS}>{children}</group>
     <Grass count={quality.grass} />
     <Trees list={ring} clumps={quality.clumps} />

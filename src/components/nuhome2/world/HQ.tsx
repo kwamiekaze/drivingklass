@@ -2,7 +2,7 @@ import { useContext, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, rng } from './theme';
-import { SIGN_FONT, makeCanvasTexture } from './parts';
+import { SIGN_FONT, goldGradient, makeCanvasTexture, starShape } from './parts';
 
 /*
  * Every dimension below is meters in mansion space: x across, y up, z toward the viewer.
@@ -152,19 +152,26 @@ function Urn({ x, z, gold, stone }: { x: number; z: number; gold: Mat; stone: Ma
 function signTexture() {
   const W = 2048, H = 368;
   return makeCanvasTexture(W, H, (g) => {
-    g.fillStyle = '#242831'; g.fillRect(0, 0, W, H);
-    g.strokeStyle = 'rgba(244,239,228,.55)'; g.lineWidth = 5; g.strokeRect(22, 22, W - 44, H - 44);
-    g.fillStyle = '#f4efe4';
-    for (let i = 0; i < 5; i++) {
-      const cx = W / 2 + (i - 2) * 150, cy = 100, R = 52, r = R * .42; g.beginPath();
+    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1b1c22'); bg.addColorStop(.5, '#0c0d11'); bg.addColorStop(1, '#16171c');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#d9a93a'; g.lineWidth = 7; g.strokeRect(20, 20, W - 40, H - 40);
+    g.strokeStyle = 'rgba(242,193,78,.55)'; g.lineWidth = 2.5; g.strokeRect(38, 38, W - 76, H - 76);
+    for (let i = 0; i < 5; i++) {                                              // five gold stars
+      const cx = W / 2 + (i - 2) * 150, cy = 100, R = 56, r = R * .42; g.beginPath();
       for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rad = k % 2 ? r : R; g[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); }
-      g.closePath(); g.fill();
+      g.closePath(); g.fillStyle = goldGradient(g, cy - R, cy + R); g.fill();
     }
     g.font = `700 150px ${SIGN_FONT}`; g.textBaseline = 'middle'; g.textAlign = 'left';
     const text = 'DRIVINGKLASS', sp = 30, ws = [...text].map(c => g.measureText(c).width), total = ws.reduce((a, b) => a + b, 0) + sp * (text.length - 1);
-    let x = (W - total) / 2; g.fillStyle = '#f4efe4';
+    let x = (W - total) / 2; g.fillStyle = goldGradient(g, 175, 330); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 8; g.shadowOffsetY = 3;
     [...text].forEach((c, i) => { g.fillText(c, x, 252); x += ws[i]! + sp; });
   }, 8);
+}
+
+/** A thick, bevelled five point star: solid from every angle, satin gold, so it never glints or thins out edge on. */
+function CrownStar({ x, y, z, r, mat }: { x: number; y: number; z: number; r: number; mat: THREE.Material }) {
+  const geo = useMemo(() => { const g = new THREE.ExtrudeGeometry(starShape(r, r * .46), { depth: r * .34, bevelEnabled: true, bevelThickness: r * .12, bevelSize: r * .06, bevelSegments: 2 }); g.translate(0, 0, -r * .17); g.computeVertexNormals(); return g; }, [r]);
+  return <mesh geometry={geo} material={mat} position={[x, y, z]} castShadow />;
 }
 
 function doorSignTexture(open: boolean) {
@@ -191,7 +198,9 @@ export function HQ({ position, lite, open }: { position: [number, number, number
   const door = useMemo(() => new THREE.MeshStandardMaterial({ color: '#3d2a2c', roughness: .4, metalness: .1 }), []);
   const goldM = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cfc7b8', roughness: .5, metalness: .35 }), []);
   const lamp = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fff0d0', emissive: '#ffbf70', emissiveIntensity: 1 }), []);
-  useFrame(() => { const m = mix.current; glass.emissiveIntensity = .12 + .8 * m; lamp.emissiveIntensity = .9 + 1.1 * m; board.emissiveIntensity = .12 + .55 * m; });
+  const crown = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e0a21a', emissive: '#ff9d00', emissiveIntensity: .3, roughness: .45, metalness: .25 }), []);
+  const bezel = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c9971f', roughness: .5, metalness: .3 }), []);
+  useFrame(() => { const m = mix.current; glass.emissiveIntensity = .12 + .8 * m; lamp.emissiveIntensity = .9 + 1.1 * m; board.emissiveIntensity = .14 + .85 * m; crown.emissiveIntensity = .3 + 1.5 * m; });
 
   const mainRoof = useMemo(() => hipRoof(17.4, 4.4, 2.5), []);
   const wingRoof = useMemo(() => hipRoof(9.4, 3.2, 1.7), []);
@@ -267,6 +276,11 @@ export function HQ({ position, lite, open }: { position: [number, number, number
     {/* DRIVINGKLASS and five stars, standing on the main cornice */}
     <mesh position={[0, mainTop + 1.4, 2.8]} material={board} castShadow><boxGeometry args={[15.6, 2.8, .4]} /></mesh>
     <mesh position={[0, mainTop + 1.4, 3.005]} material={board}><planeGeometry args={[15.2, 2.72]} /></mesh>
+    {/* gold bezel: four bars proud of the board face, then five gold stars standing on the sign */}
+    <mesh position={[0, mainTop + 2.86, 3.02]} material={bezel}><boxGeometry args={[15.9, .22, .3]} /></mesh>
+    <mesh position={[0, mainTop - .06, 3.02]} material={bezel}><boxGeometry args={[15.9, .22, .3]} /></mesh>
+    {[-7.9, 7.9].map(x => <mesh key={x} position={[x, mainTop + 1.4, 3.02]} material={bezel}><boxGeometry args={[.22, 3.0, .3]} /></mesh>)}
+    {[[-6.2, .5], [-3.1, .72], [0, 1.15], [3.1, .72], [6.2, .5]].map(([x, r]) => <CrownStar key={x} x={x!} y={mainTop + 2.97 + r! * .95} z={2.95} r={r!} mat={crown} />)}
     {/* OPEN 9am to 6pm Georgia time, otherwise CLOSED. Matte, steady, never tied to the day/night toggle. */}
     <mesh position={[0, 3.05, MAIN.d / 2 + .2]}><planeGeometry args={[1.5, .75]} /><meshBasicMaterial map={open ? doorSigns.open : doorSigns.closed} transparent /></mesh>
   </group>;

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download } from "lucide-react";
+import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download, Menu, X } from "lucide-react";
 import portalCarIcon from "@/assets/portal-car-icon.png";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { InstallAppModal } from "./InstallAppModal";
 
-export function PortalMenuButton({ size = "md" }: { size?: "md" | "lg" } = {}) {
+export function PortalMenuButton({ size = "md", variant = "car", triggerClassName }: { size?: "md" | "lg"; variant?: "car" | "hamburger"; triggerClassName?: string } = {}) {
   const [open, setOpen] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -51,20 +51,32 @@ export function PortalMenuButton({ size = "md" }: { size?: "md" | "lg" } = {}) {
 
   return (
     <div ref={wrapRef} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`${isLg ? "p-2.5" : "p-1.5"} rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group shadow-[0_0_18px_rgba(0,0,0,0.35)]`}
-        title="Menu"
-        aria-label="Open menu"
-        aria-expanded={open}
-      >
-        <img
-          src={portalCarIcon}
-          alt="Menu"
-          className={`${isLg ? "w-11 h-11" : "w-8 h-8"} object-contain group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(212,175,55,0.5)]`}
-        />
-      </button>
-
+      {variant === "hamburger" ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={triggerClassName}
+          title="Menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+        >
+          {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={`${isLg ? "p-2.5" : "p-1.5"} rounded-full bg-card/40 border border-gold/30 hover:border-gold/60 hover:bg-gold/10 transition-all duration-300 backdrop-blur-sm group shadow-[0_0_18px_rgba(0,0,0,0.35)]`}
+          title="Menu"
+          aria-label="Open menu"
+          aria-expanded={open}
+        >
+          <img
+            src={portalCarIcon}
+            alt="Menu"
+            className={`${isLg ? "w-11 h-11" : "w-8 h-8"} object-contain group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(212,175,55,0.5)]`}
+          />
+        </button>
+      )}
 
       {open && (
         <div

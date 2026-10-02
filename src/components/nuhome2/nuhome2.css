@@ -39,6 +39,7 @@
 
 /* hero copy */
 .n2-hero { position: absolute; z-index: 3; top: clamp(124px, 18vh, 176px); left: 5.2%; width: min(50vw, 760px); pointer-events: none; text-shadow: 0 2px 28px var(--n2-shade); animation: n2-rise .9s cubic-bezier(.2, .8, .2, 1) both .2s; }
+.n2-hero::before { content: ""; position: absolute; z-index: -1; inset: -40px -70px -30px -60px; background: radial-gradient(closest-side, rgba(6, 8, 18, .46), rgba(6, 8, 18, .2) 62%, transparent 100%); pointer-events: none; }
 .n2-hero > .n2-actions { pointer-events: auto; }
 .n2-hero { transition: opacity .6s ease, transform .6s ease; }
 .n2-hero[data-hidden="true"] { opacity: 0; transform: translateY(-14px); visibility: hidden; transition: opacity .6s ease, transform .6s ease, visibility 0s .6s; }
@@ -76,20 +77,8 @@
 .n2-drag { position: absolute; z-index: 3; right: 5.2%; bottom: 100px; font: 700 9px/1 "Poppins", sans-serif; letter-spacing: .22em; opacity: 0; transition: opacity .8s ease; pointer-events: none; text-shadow: 0 1px 10px rgba(0, 0, 0, .6); }
 .n2-drag[data-show="true"] { opacity: .85; }
 
-/* packages */
-.n2-sheet { position: absolute; z-index: 25; right: 5.2%; top: 118px; bottom: 112px; width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column; overflow: hidden; color: #1b1b22; background: rgba(255, 250, 240, .86); border: 1px solid rgba(139, 101, 8, .35); border-radius: 22px; box-shadow: 0 18px 50px rgba(0, 0, 0, .35); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); animation: n2-rise .45s cubic-bezier(.2, .8, .2, 1) both; font-family: "Poppins", sans-serif; }
-.n2-page[data-theme="night"] .n2-sheet { color: #f6ede4; background: rgba(14, 14, 18, .84); border-color: rgba(242, 193, 78, .35); }
-.n2-sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 12px 22px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: 13px; border-bottom: 1px solid rgba(139, 101, 8, .3); }
+/* packages: a transparent glass popup so the 3D world stays visible behind it */
 .n2-x { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: none; border: 0; cursor: pointer; color: inherit; }
-.n2-list { list-style: none; margin: 0; padding: 10px 12px; overflow-y: auto; flex: 1; touch-action: pan-y; overscroll-behavior: contain; }
-.n2-list li + li { margin-top: 8px; }
-.n2-pkg { width: 100%; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 14px; padding: 13px 14px 13px 18px; border-radius: 16px; border: 1px solid rgba(139, 101, 8, .3); background: rgba(255, 255, 255, .1); cursor: pointer; text-align: left; color: inherit; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
-.n2-pkg:hover { border-color: #c9971f; background: rgba(242, 193, 78, .16); transform: translateY(-1px); }
-.n2-pkg-name { font-weight: 700; letter-spacing: .05em; font-size: 15px; }
-.n2-pkg-price { font-weight: 800; font-size: 17px; color: #b8860b; }
-.n2-page[data-theme="night"] .n2-pkg-price { color: #f2c14e; }
-.n2-pkg-go { padding: 6px 14px; border-radius: 999px; background: linear-gradient(180deg, #ffe08a, #f2c14e 50%, #c9971f); color: #1a1408; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.n2-call { display: flex; justify-content: center; padding: 14px; font-size: 13px; font-weight: 600; text-decoration: none; color: inherit; border-top: 1px solid rgba(139, 101, 8, .3); }
 
 .n2-lost { position: absolute; z-index: 50; left: 50%; top: 116px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 20px; border-radius: 999px; background: rgba(14, 14, 18, .8); border: 1px solid rgba(242, 193, 78, .35); font: 500 13px "Poppins", sans-serif; backdrop-filter: blur(12px); }
 .n2-lost p { margin: 0; }
@@ -126,8 +115,35 @@
   .n2-rail { height: 74px; padding: 0 5%; gap: 18px; }
   .n2-rail-caption { font-size: 8px; }
   .n2-next { font-size: 8px; letter-spacing: .14em; }
-  .n2-sheet { left: 10px; right: 10px; width: auto; top: auto; bottom: 84px; height: min(46dvh, 430px); }
 }
 @media (max-width: 390px) { .n2-brand-tag { display: none; } .n2-wordmark { font-size: 34px; } }
 @media (max-height: 560px) and (orientation: landscape) { .n2-desc, .n2-stars { display: none; } .n2-hero { top: 90px; } .n2-wordmark { font-size: clamp(30px, 6vw, 60px); } }
-@media (prefers-reduced-motion: reduce) { .n2-gold, .n2-stars svg, .n2-hero, .n2-sheet, .n2-bar i { animation: none !important; } .n2-gold { background-position: 40% 0; } }
+@media (prefers-reduced-motion: reduce) { .n2-gold, .n2-stars svg, .n2-hero, .n2-bar i { animation: none !important; } .n2-gold { background-position: 40% 0; } }
+
+.n2-pop-layer { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: clamp(10px, 3vw, 32px); background: radial-gradient(ellipse at center, rgba(0, 0, 0, .08), rgba(0, 0, 0, .34)); animation: n2-fade .25s ease both; }
+.n2-pop { width: min(1080px, 100%); max-height: min(86svh, 900px); display: flex; flex-direction: column; overflow: hidden; border-radius: 28px; color: #fffaf0; background: rgba(14, 10, 3, .4); border: 1px solid rgba(242, 193, 78, .55); box-shadow: 0 30px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 244, 200, .35); backdrop-filter: blur(9px) saturate(1.35); -webkit-backdrop-filter: blur(9px) saturate(1.35); animation: n2-pop-in .38s cubic-bezier(.2, .9, .25, 1) both; }
+.n2-page[data-theme="day"] .n2-pop { background: rgba(20, 14, 4, .42); }
+.n2-pop-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 12px 26px; border-bottom: 1px solid rgba(242, 193, 78, .35); }
+.n2-pop-eyebrow { display: block; font: 700 10px/1 "Poppins", sans-serif; letter-spacing: .5em; color: #f2c14e; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); }
+.n2-pop-title { margin: 8px 0 0; font-family: "Cinzel", "Cormorant Garamond", serif; font-size: clamp(22px, 3vw, 32px); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ffeeb8; text-shadow: 0 2px 16px rgba(0, 0, 0, .65); }
+.n2-x { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .12); cursor: pointer; color: #fff6e2; flex: none; transition: background .2s ease, transform .2s ease; }
+.n2-x:hover { background: rgba(255, 255, 255, .26); transform: rotate(90deg); }
+.n2-pop-grid { list-style: none; margin: 0; padding: 16px 18px 6px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.n2-pop-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 16px 14px; border-radius: 18px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(242, 193, 78, .32); transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+.n2-pop-card:hover { border-color: rgba(242, 193, 78, .85); background: rgba(255, 255, 255, .15); transform: translateY(-2px); }
+.n2-pop-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.n2-pop-name { margin: 0; font: 800 17px/1.1 "Poppins", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #ffe08a; text-shadow: 0 1px 10px rgba(0, 0, 0, .65); }
+.n2-pop-price { font: 800 20px/1 "Poppins", sans-serif; color: #fff6d8; text-shadow: 0 1px 10px rgba(0, 0, 0, .65); white-space: nowrap; }
+.n2-pop-desc { margin: 0; flex: 1; font-size: 15.5px; line-height: 1.4; font-weight: 600; color: #fff3dc; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); }
+.n2-pop-book { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 999px; border: 1px solid rgba(255, 236, 170, .7); cursor: pointer; background: linear-gradient(180deg, #ffe08a, #f2c14e 48%, #c9971f); color: #1a1408; font: 800 11px/1 "Poppins", sans-serif; letter-spacing: .14em; text-transform: uppercase; box-shadow: 0 6px 18px rgba(201, 151, 31, .35); transition: filter .2s ease, transform .15s ease; }
+.n2-pop-book:hover { filter: brightness(1.08); } .n2-pop-book:active { transform: scale(.97); }
+.n2-pop-call { display: flex; justify-content: center; padding: 14px; font: 600 13px/1 "Poppins", sans-serif; color: #fff3dc; text-decoration: none; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); border-top: 1px solid rgba(242, 193, 78, .3); }
+@keyframes n2-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes n2-pop-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.n2-burger { padding: 0; }
+@media (max-width: 900px) { .n2-pop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .n2-pop { border-radius: 22px; max-height: 88svh; } .n2-pop-grid { grid-template-columns: minmax(0, 1fr); padding: 12px 12px 4px; } .n2-pop-head { padding: 16px 14px 10px 18px; } }
+@media (prefers-reduced-motion: reduce) { .n2-pop, .n2-pop-layer { animation: none !important; } }
+
+/* while the packages popup is open, the page copy behind it steps aside so only the 3D world shows through the glass */
+.n2-experience[data-pop="true"] :is(.n2-hero, .n2-navbtns, .n2-rail, .n2-drag, .n2-header) { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s ease, visibility 0s .25s; }
