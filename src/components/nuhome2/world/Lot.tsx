@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 import { CAR_SPECS, Car } from './Cars';
+import { Plant } from './Plants';
 
 /*
  * The lot, laid out like a real one. World meters. Building front wall z -14.5, terrace z -15.2 to -8.6.
@@ -51,8 +52,6 @@ function markings() {
   for (let j = 0; j <= 10; j++) { const x = 1.375 + 2.75 * j; [-1, 1].forEach(s => white.push({ x: s * x, z: -6, w: j === 0 ? .16 : .1, d: 5 })); }
   for (let k = 0; k <= 9; k++) { const x = 4.125 + 2.75 * k; [-1, 1].forEach(s => white.push({ x: s * x, z: 5.5, w: .1, d: 5 })); }
   white.push({ x: -31.7, z: 13.3, w: 5, d: .45 }, { x: -2.05, z: 13.3, w: 4, d: .45 });
-  [-1, 1].forEach(s => yellow.push({ x: s * .09, z: 5.65, w: .1, d: 17.3 }));
-  [-1, 1].forEach(s => yellowHi.push({ x: s * .09, z: 16.7, w: .1, d: 5 }));
   [-1, 1].forEach(sx => [-1, 1].forEach(sz => streetW.push({ x: sx * 132.3, z: 25.25 + sz * .09, w: 255.4, d: .1 })));
   [19.95, 30.55].forEach(z => [-1, 1].forEach(sx => streetW.push({ x: sx * 132.3, z, w: 255.4, d: .14 })));
   [-1, 1].forEach(s => { yellow.push({ x: s * .09, z: 135.75, w: .1, d: 208.5 }); avenueW.push({ x: s * 3.85, z: 135.75, w: .14, d: 208.5 }); });
@@ -124,7 +123,7 @@ const topiaryGeo = (() => { const g = new THREE.IcosahedronGeometry(1, 3), p = g
 function Topiary({ x, z, y = .3, s = 1 }: { x: number; z: number; y?: number; s?: number }) {
   return <group position={[x, y, z]} scale={s}>
     <mesh position={[0, .34, 0]} castShadow><cylinderGeometry args={[.46, .36, .68, 18]} /><meshStandardMaterial color="#3b3a3f" roughness={.55} metalness={.15} /></mesh>
-    <mesh position={[0, 1.42, 0]} scale={[.64, .74, .64]} geometry={topiaryGeo} castShadow><meshStandardMaterial color="#2a5a30" roughness={.92} /></mesh>
+    <Plant kind="ball" y={.62} seed={5} scale={.75} />
   </group>;
 }
 
@@ -172,7 +171,7 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
       <Box p={[s * 132.1, .06, 33.3]} s={[255.8, .12, 3.4]} c={walk} r={.85} cast={false} /><Box p={[s * 132.1, .1, 31.4]} s={[255.8, .2, .3]} c={kerb} r={.8} cast={false} />
     </group>)}
     {[0, -31.7, 31.7].map((x, i) => <mesh key={i} position={[x, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[i ? 5.2 : 8.2, .132, 5.1]} /></mesh>)}
-    <Decals items={mk.streetW} color="#e8e6df" /><Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" /><Decals items={mk.yellowHi} color="#d9a621" y={HI_Y} />
+    <Decals items={mk.streetW} color="#e8e6df" /><Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
   </group>;
 }
 

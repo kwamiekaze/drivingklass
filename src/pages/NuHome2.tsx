@@ -1,10 +1,9 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { ArrowDown, ChevronDown, ChevronUp, Moon, Sun } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronUp, Info, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { Journey } from "@/components/nuhome2/journey/Journey";
-import { NavigationButtons } from "@/components/NavigationButtons";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { ReviewsModal } from "@/components/ReviewsModal";
 import { AboutModal } from "@/components/AboutModal";
 import { ContactSection } from "@/components/ContactSection";
@@ -66,6 +65,7 @@ function hasWebGL() {
  */
 export default function NuHome2() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { trackClick } = useAnalytics();
   const night = resolvedTheme === "dark";
   const q = useMemo(() => (typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search)), []);
   const [stage, setStage] = useState(() => Math.max(0, Math.min(STAGES.length - 1, Number(q.get("stage")) || 0)));
@@ -156,7 +156,6 @@ export default function NuHome2() {
           </button>
           <nav className="n2-nav" aria-label="Main navigation">
             <button type="button" onClick={() => setSheet(true)}>Packages</button>
-            <Link to="/play">Play</Link>
             <button type="button" onClick={toContact}>Contact</button>
           </nav>
           <div className="n2-header-actions">
@@ -174,23 +173,16 @@ export default function NuHome2() {
           <p className="n2-script n2-gold">{BRAND.slogan}</p>
           <Stars />
           <p className="n2-desc">{BRAND.description}</p>
-          <div className="n2-actions">
-            <button type="button" className="n2-btn n2-btn--gold" onClick={() => setSheet(true)}>Book a Klass</button>
-            <Link to="/play" className="n2-btn n2-btn--ghost">Play<span className="n2-btn-long">&nbsp;the Road Test Challenge</span></Link>
-          </div>
         </div>
 
-        {/* phones: Book and Play sit low, above Reviews / About Us / Call, so the middle of the screen stays the scene */}
-        <div className="n2-cta" data-hidden={stage !== 0}>
-          <button type="button" className="n2-btn n2-btn--gold" onClick={() => setSheet(true)}>Book a Klass</button>
-          <Link to="/play" className="n2-btn n2-btn--ghost">Play</Link>
+        <div className="n2-navbtns" role="group" aria-label="Reviews, About Us and Call">
+          <button type="button" className="n2-nbtn" onClick={() => setReviewsOpen(true)}><Star size={15} aria-hidden="true" /><span>Reviews</span></button>
+          <button type="button" className="n2-nbtn" onClick={() => setAboutOpen(true)}><Info size={15} aria-hidden="true" /><span>About Us</span></button>
+          <button type="button" className="n2-nbtn" aria-label="Call Driving Klass" onClick={() => { trackClick("call_click"); window.location.href = "tel:+14044045820"; }}><Phone size={15} aria-hidden="true" /><span>Call</span></button>
         </div>
-
-        <div className="n2-navbtns"><NavigationButtons overlay onReviewsClick={() => setReviewsOpen(true)} onAboutClick={() => setAboutOpen(true)} /></div>
 
         <div className="n2-rail">
-          <span className="n2-rail-index">0{stage + 1} <span>/</span> 0{STAGES.length}</span>
-          <div className="n2-rail-caption"><span className="n2-rail-dash" /> {STAGES[stage]!.label}</div>
+          <button type="button" className="n2-btn n2-btn--gold n2-rail-book" onClick={() => setSheet(true)}>Book a Klass</button>
           <button type="button" className="n2-next" onClick={next}>NEXT VIEW <ArrowDown size={15} aria-hidden="true" /></button>
           <div className="n2-swipe" role="button" tabIndex={0} aria-label="Scroll down to send us a message" onClick={scrollDown}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollDown(); }}>

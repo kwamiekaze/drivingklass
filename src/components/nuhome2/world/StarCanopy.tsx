@@ -73,8 +73,8 @@ export function StarCanopy({ lite }: { lite: boolean }) {
 
   useFrame(({ clock }) => {
     const n = mix.current, t = clock.elapsedTime;
-    mat.emissiveIntensity = (.42 + 1.7 * n) * (1 + .05 * Math.sin(t * .8));         // slow shimmer, never a flash
-    haloMat.opacity = .08 + .5 * n;
+    mat.emissiveIntensity = (.42 + 2.6 * n) * (1 + .04 * Math.sin(t * .8));         // slow shimmer, never a flash
+    haloMat.opacity = .08 + .72 * n;
     if (halo.current) halo.current.visible = n > .02 || true;
   });
 

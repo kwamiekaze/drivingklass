@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef, type ReactNode } from 'react';
+import { useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Billboard } from '@react-three/drei';
 import * as THREE from 'three';
@@ -73,7 +73,7 @@ export function Stars({ count = 7000 }: { count?: number }) {
     const m = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
       uniforms: { uTime: { value: 0 }, uMix: { value: 0 }, uPx: { value: 1 } },
-      vertexShader: 'attribute float aSize; attribute float aPhase; attribute vec3 aColor; uniform float uTime,uMix,uPx; varying vec3 vC; varying float vA; void main(){ vC = aColor; float tw = .6 + .4 * sin(uTime * (.5 + aPhase * 1.8) + aPhase * 60.0); vA = tw * uMix; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_PointSize = aSize * uPx; }',
+      vertexShader: 'attribute float aSize; attribute float aPhase; attribute vec3 aColor; uniform float uTime,uMix,uPx; varying vec3 vC; varying float vA; void main(){ vC = aColor; float tw = .6 + .4 * sin(uTime * (.5 + aPhase * 1.8) + aPhase * 60.0); vA = tw * uMix; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_PointSize = aSize * uPx;  gl_Position.z = gl_Position.w * .99999; }',
       fragmentShader: 'varying vec3 vC; varying float vA; void main(){ float d = length(gl_PointCoord - .5); float a = pow(smoothstep(.5,0.,d),1.7); gl_FragColor = vec4(vC, a * vA); }',
     });
     return { geo: g, mat: m };
@@ -126,15 +126,27 @@ function moonTexture() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+/** Sun and moon live at infinity: their depth is pinned to the far plane, so a tower or a roof can never fall behind them. */
+function pinFar(mat: THREE.Material) {
+  mat.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n gl_Position.z = gl_Position.w * 0.99999;'); };
+  mat.customProgramCacheKey = () => 'pinfar';
+  mat.needsUpdate = true;
+}
+function FarDepth({ children }: { children: ReactNode }) {
+  const g = useRef<THREE.Group>(null);
+  useLayoutEffect(() => { g.current?.traverse(o => { const m = (o as THREE.Mesh).material; (Array.isArray(m) ? m : m ? [m] : []).forEach(pinFar); }); });
+  return <group ref={g}>{children}</group>;
+}
+
 export function Moon({ position }: { position: [number, number, number] }) {
   const map = useMemo(moonTexture, []);
   const halo = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, 'rgba(205,222,255,.85)'], [.25, 'rgba(170,195,255,.35)'], [1, 'rgba(120,150,255,0)']])), []);
   const spin = useRef<THREE.Mesh>(null);
   useFrame((_, dt) => { if (spin.current) spin.current.rotation.y += dt * .01; });
-  return <FadeGroup day={false}><group position={position}>
+  return <FadeGroup day={false}><FarDepth><group position={position}>
     <Billboard><mesh position={[0, 0, -1]}><planeGeometry args={[46, 46]} /><meshBasicMaterial map={halo} transparent depthWrite={false} fog={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh></Billboard>
     <mesh ref={spin} rotation={[.2, 2.4, 0]}><sphereGeometry args={[6, 48, 32]} /><meshBasicMaterial map={map} fog={false} toneMapped={false} /></mesh>
-  </group></FadeGroup>;
+  </group></FarDepth></FadeGroup>;
 }
 
 function roundedRect(w: number, h: number, r: number) {
@@ -151,7 +163,7 @@ export function Sun({ position }: { position: [number, number, number] }) {
   const lens = useMemo(() => new THREE.ShapeGeometry(roundedRect(3.1, 2.1, .55)), []);
   const rays = useRef<THREE.Group>(null);
   useFrame((_, dt) => { if (rays.current) rays.current.rotation.z += dt * .06; });
-  return <FadeGroup day><group position={position}><Billboard>
+  return <FadeGroup day><FarDepth><group position={position}><Billboard>
     <mesh position={[0, 0, -.3]}><planeGeometry args={[62, 62]} /><meshBasicMaterial map={glow} transparent depthWrite={false} fog={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
     <group ref={rays} position={[0, 0, -.1]}>
       {Array.from({ length: 16 }).map((_, i) => <mesh key={i} rotation={[0, 0, (i / 16) * Math.PI * 2]}><mesh position={[0, 9.4, 0]}><coneGeometry args={[.85, 3.4, 3]} /><meshBasicMaterial color="#ffd23f" fog={false} toneMapped={false} /></mesh></mesh>)}
@@ -165,7 +177,7 @@ export function Sun({ position }: { position: [number, number, number] }) {
     <mesh position={[0, .95, .06]}><planeGeometry args={[.9, .24]} /><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
     <mesh position={[0, -.9, .05]} rotation={[0, 0, Math.PI]}><torusGeometry args={[1.85, .17, 10, 40, Math.PI * .8]} /><meshBasicMaterial color="#b5541f" fog={false} toneMapped={false} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[s * 3.5, -.6, .05]}><circleGeometry args={[.62, 24]} /><meshBasicMaterial color="#ff9c8a" transparent opacity={.55} fog={false} toneMapped={false} /></mesh>)}
-  </Billboard></group></FadeGroup>;
+  </Billboard></group></FarDepth></FadeGroup>;
 }
 
 /** Soft cloud puffs drifting slowly around the whole scene. */

@@ -21,17 +21,26 @@ export const STAGES: Stage[] = [
     narrow: { p: [-30, 14, 34], l: [2, 5, -14], fov: 58 } },
 ];
 
-export const INTRO_LENGTH = 12;
-/** The intro starts far down the avenue and drives straight at the building, then settles into the first stop. */
-export const INTRO_WIDE: Key[] = [
-  { t: 0, p: [1.6, 2.2, 168], l: [0, 6.5, -17.5], fov: 38 },
-  { t: 6.5, p: [1.2, 2.4, 70], l: [0, 6, -17.5], fov: 38 },
-  { t: 9.5, p: [-3, 3.6, 46], l: [-2, 6.2, -17.5], fov: 39 },
-  { t: 12, p: [-12, 5.5, 34], l: [-8, 9.0, -17.5], fov: 40 },
-];
-export const INTRO_NARROW: Key[] = [
-  { t: 0, p: [1.6, 2.2, 168], l: [0, 6.5, -17.5], fov: 56 },
-  { t: 6.5, p: [1.2, 2.6, 78], l: [0, 6.5, -17.5], fov: 56 },
-  { t: 9.5, p: [0, 5, 58], l: [0, 7.5, -17.5], fov: 57 },
-  { t: 12, p: [-1.5, 6.5, 40], l: [0, 10.6, -17.5], fov: 58 },
-];
+/**
+ * The opening shot and the idle shot, both one unbroken camera move (centripetal Catmull-Rom through the keys, so there is
+ * never a corner or a jump). Position and look target share one parameter, and the parameter eases in and out, so the
+ * camera starts and stops at rest.
+ *
+ * INTRO: starts far down the avenue and drives straight at the building, then bends right and arrives at the PAN start.
+ * PAN:   from the far right the building sign stays framed while the lens sinks past the monument sign, then climbs
+ *        while sliding left. It runs there and back forever (zero speed at each end) until the visitor touches the scene.
+ */
+export const INTRO = {
+  len: 17,
+  p: [[1.6, 2.4, 170], [1.4, 2.6, 98], [3, 3.2, 64], [17, 5.0, 46], [34, 7.5, 33]] as V3[],
+  l: [[0, 6.5, -17.5], [0, 6.5, -17.5], [0, 7.2, -16], [-1, 7.9, -15], [-2, 8.2, -15]] as V3[],
+};
+export const PAN = {
+  period: 56,
+  p: [[34, 7.5, 33], [21, 3.8, 30.5], [10.5, 2.0, 27.5], [-3, 3.0, 30], [-18, 5.6, 31.5], [-33, 9.0, 31]] as V3[],
+  l: [[-2, 8.2, -15], [3, 6.4, -12], [6, 5.2, -8], [-1, 6.6, -13], [-3, 8.0, -14.5], [-2, 8.6, -15]] as V3[],
+};
+export const FOV = { wide: 40, narrow: 58 };
+/** First lens position, read by the canvas before the rig takes over. */
+export const INTRO_WIDE: Key[] = [{ t: 0, p: INTRO.p[0]!, l: INTRO.l[0]!, fov: FOV.wide }];
+export const INTRO_NARROW: Key[] = [{ t: 0, p: INTRO.p[0]!, l: INTRO.l[0]!, fov: FOV.narrow }];

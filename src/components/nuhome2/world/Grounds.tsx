@@ -144,6 +144,7 @@ export function Blooms({ spots }: { spots: { x: number; z: number; y?: number; r
       if (s.kind === 'flower') { d.position.set(x, (s.y ?? 0) + .12 + r() * .12, z); d.rotation.set(0, 0, 0); const sc = .06 + r() * .05; d.scale.set(sc, sc, sc); d.updateMatrix(); f.setMatrixAt(i, d.matrix); c.set(['#ffffff', '#fff6e4', '#ffe9a8', '#f8f4ff', '#ffffff'][Math.floor(r() * 5)]); f.setColorAt(i, c); i++; }
       else { const sc = .55 + r() * .3; for (let q = 0; q < 7; q++) { d.position.set(x + (r() - .5) * .5, .32 + r() * .35, z + (r() - .5) * .5); d.rotation.set((r() - .5) * 1.4, r() * 6.28, (r() - .5) * 1.4); d.scale.setScalar(sc * (.8 + r() * .5)); d.updateMatrix(); b.setMatrixAt(j, d.matrix); c.setHSL(.26 + r() * .03, .38, .26 + r() * .1); b.setColorAt(j, c); j++; } }
     } });
+    f.count = i; b.count = j;   // draw only what was placed: an unused instance sits at the world origin, in the middle of the avenue
     [f, b].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
   }, [spots]);
   return <group>

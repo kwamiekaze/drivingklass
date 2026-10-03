@@ -2,6 +2,7 @@ import { useContext, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, rng } from './theme';
+import { Plant } from './Plants';
 import { SIGN_FONT, goldGradient, makeCanvasTexture, starShape } from './parts';
 
 /*
@@ -226,10 +227,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
     const ph = kind === 'small' ? .5 : .95, pw = kind === 'small' ? .9 : 1.5;
     return <group position={[x, 0, z]}>
       <mesh position={[0, ph / 2 + .16, 0]} material={M.trim} castShadow><boxGeometry args={[pw, ph, pw]} /></mesh>
-      {kind === 'cone' && <mesh position={[0, ph + .16 + 1.35, 0]} material={M.leaf} castShadow><coneGeometry args={[.95, 2.7, 9]} /></mesh>}
-      {kind === 'small' && <mesh position={[0, ph + .16 + .6, 0]} material={M.leaf} castShadow><coneGeometry args={[.5, 1.2, 8]} /></mesh>}
-      {kind === 'ball' && <mesh position={[0, ph + .16 + .75, 0]} material={M.leaf2} castShadow><icosahedronGeometry args={[.8, 1]} /></mesh>}
-      {kind === 'tree' && <><mesh position={[0, ph + .16 + .8, 0]} material={M.bark}><cylinderGeometry args={[.1, .13, 1.6, 8]} /></mesh><mesh position={[0, ph + .16 + 2.1, 0]} material={M.leaf2} castShadow><icosahedronGeometry args={[1.05, 1]} /></mesh></>}
+      <Plant kind={kind} y={ph + .16} seed={Math.round(Math.abs(x) * 10 + z * 3)} detail={lite ? 0 : 1} />
       <mesh position={[pw / 2 - .05, ph + .2, pw / 2 - .05]} material={M.lamp}><boxGeometry args={[.14, .08, .14]} /></mesh>
     </group>;
   };

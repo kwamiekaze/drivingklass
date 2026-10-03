@@ -69,13 +69,13 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
       <Lightformer intensity={1.9} color="#fff0d0" position={[0, 4, 22]} rotation-y={Math.PI} scale={[44, 9, 1]} />
     </Environment>
     <SkyFollow><SkyDome /><Stars count={lite ? 2600 : 6000} /><ShootingStars />
-    <Sun position={[58, 21, -76]} /><Moon position={[30, 32, -66]} />
+    <Sun position={[40, 36, -74]} /><Moon position={[30, 32, -66]} />
     <Clouds count={lite ? 12 : 22} /></SkyFollow>
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     <Butterflies count={lite ? 5 : 9} />
     <Doves />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
-    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={120} minPolarAngle={.25} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
+    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={120} minPolarAngle={.25} maxPolarAngle={1.9} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;
 }
 
