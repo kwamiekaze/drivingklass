@@ -32,10 +32,12 @@ function asphaltTexture() {
 }
 /** The lot, baked once: grain, sealed seams, patched repairs, hairline cracks, oil stains by the stalls and tire wear down the aisles. */
 function lotTexture(lite: boolean) {
-  const W = lite ? 1024 : 2048, H = lite ? 512 : 1024, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d')!; const r = rng(31);
+  const W = lite ? 1024 : 2048, H = lite ? 512 : 1024, c = document.createElement('canvas'); c.width = W; c.height = H; let g = c.getContext('2d')!; const r = rng(31);
   const X = (x: number) => ((x + 34.6) / 69.2) * W, Z = (z: number) => ((z + 14.7) / 29) * H, sx = W / 69.2, sz = H / 29;
   g.fillStyle = '#7b7b83'; g.fillRect(0, 0, W, H);
   for (let i = 0; i < (lite ? 20000 : 70000); i++) { const v = 94 + r() * 74; g.fillStyle = `rgba(${v},${v},${v + 6},.5)`; g.fillRect(r() * W, r() * H, 1 + r() * 1.6, 1 + r() * 1.6); }
+  // everything dark (seams, patches, tire tracks, oil, cracks) goes on its own layer, so a clean zone can be cut around the fountain
+  const ground = g, layer = document.createElement('canvas'); layer.width = W; layer.height = H; g = layer.getContext('2d')!;
   // sealed seams every ~11 m
   g.fillStyle = 'rgba(40,40,46,.35)'; for (let x = -33; x < 34; x += 11) g.fillRect(X(x), 0, 2, H); for (const z of [-9, 0, 9]) g.fillRect(0, Z(z), W, 2);
   // repaired patches
@@ -51,12 +53,18 @@ function lotTexture(lite: boolean) {
   // hairline cracks
   g.strokeStyle = 'rgba(24,24,28,.5)'; g.lineWidth = 1;
   for (let i = 0; i < 26; i++) { let x = r() * W, z = r() * H; g.beginPath(); g.moveTo(x, z); for (let k = 0; k < 9; k++) { x += (r() - .5) * 60; z += (r() - .5) * 40; g.lineTo(x, z); } g.stroke(); }
+  // keep the paving round the fountain spotless: fully clean out to 11 m, fading back to the worn lot by 16 m
+  g.save(); g.globalCompositeOperation = 'destination-out'; g.translate(X(FOUNTAIN_AT.x), Z(FOUNTAIN_AT.z)); g.scale(1, sz / sx);
+  const hole = g.createRadialGradient(0, 0, sx * 11, 0, 0, sx * 16); hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = hole; g.fillRect(-sx * 17, -sx * 17, sx * 34, sx * 34); g.restore();
+  ground.drawImage(layer, 0, 0);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 
 /** The lot ends at z 14.3; the road beyond it runs along x until the fog takes it. */
 const PLAZA = { x: 69.2, z: 29, cz: -.2 };
 const FOUNTAIN = { x: 0, z: 6.6 };
+const FOUNTAIN_AT = FOUNTAIN;
 export const FLOOR_Y = .002;
 export const HQ_Z = -17.5;
 export { CAR_POS };

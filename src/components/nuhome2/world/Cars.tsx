@@ -26,16 +26,26 @@ type Pt = [number, number];
 function loft(rings: THREE.Vector3[][]) {
   const m = rings[0]!.length, pos: number[] = [], idx: number[] = [];
   rings.forEach(r => r.forEach(p => pos.push(p.x, p.y, p.z)));
-  for (let i = 0; i < rings.length - 1; i++) for (let k = 0; k < m; k++) {
-    const a = i * m + k, b = i * m + (k + 1) % m, c = (i + 1) * m + k, d = (i + 1) * m + (k + 1) % m;
-    idx.push(a, c, b, b, c, d);
-  }
-  const cap = (ri: number, flip: boolean) => {
-    const c = new THREE.Vector3(); rings[ri]!.forEach(p => c.add(p)); c.multiplyScalar(1 / m);
-    const ci = pos.length / 3; pos.push(c.x, c.y, c.z);
-    for (let k = 0; k < m; k++) { const a = ri * m + k, b = ri * m + (k + 1) % m; idx.push(...(flip ? [ci, b, a] : [ci, a, b])); }
+  const P = (i: number) => new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+  const center = (ri: number) => { const c = new THREE.Vector3(); rings[ri]!.forEach(p => c.add(p)); return c.multiplyScalar(1 / m); };
+  /** Push one triangle facing `out`. Every triangle is tested on its own, so no cap or panel can ever face inward and show the inside of the car. */
+  const tri = (a: number, b: number, c: number, out: THREE.Vector3) => {
+    const pa = P(a), n = P(b).sub(pa).cross(P(c).sub(pa));
+    if (n.dot(out) < 0) idx.push(a, c, b); else idx.push(a, b, c);
   };
-  cap(0, true); cap(rings.length - 1, false);
+  for (let i = 0; i < rings.length - 1; i++) {
+    const mid = center(i).add(center(i + 1)).multiplyScalar(.5);
+    for (let k = 0; k < m; k++) {
+      const a = i * m + k, b = i * m + (k + 1) % m, c = (i + 1) * m + k, d = (i + 1) * m + (k + 1) % m;
+      tri(a, c, b, P(a).add(P(c)).add(P(b)).multiplyScalar(1 / 3).sub(mid));
+      tri(b, c, d, P(b).add(P(c)).add(P(d)).multiplyScalar(1 / 3).sub(mid));
+    }
+  }
+  const cap = (ri: number, nb: number) => {
+    const c = center(ri), ci = pos.length / 3, out = c.clone().sub(center(nb)); pos.push(c.x, c.y, c.z);
+    for (let k = 0; k < m; k++) tri(ci, ri * m + k, ri * m + (k + 1) % m, out);
+  };
+  cap(0, 1); cap(rings.length - 1, rings.length - 2);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
@@ -143,7 +153,7 @@ function getShared() {
     tire: new THREE.MeshStandardMaterial({ color: '#0f1012', roughness: .94, side: THREE.DoubleSide }),
     rim: new THREE.MeshStandardMaterial({ map: rimTexture(), metalness: .8, roughness: .28 }),
     arch: new THREE.MeshBasicMaterial({ color: '#040405', polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
-    glass: new THREE.MeshPhysicalMaterial({ color: '#0b1218', roughness: .04, metalness: .6, clearcoat: 1, envMapIntensity: 2 }),
+    glass: new THREE.MeshPhysicalMaterial({ color: '#0b1218', roughness: .04, metalness: .6, clearcoat: 1, envMapIntensity: 2, side: THREE.DoubleSide }),
     dark: new THREE.MeshStandardMaterial({ color: '#0b0b0d', roughness: .5, metalness: .2 }),
     chrome: new THREE.MeshStandardMaterial({ color: '#d4d8de', roughness: .18, metalness: 1 }),
     head: new THREE.MeshStandardMaterial({ color: '#dfe7f2', emissive: '#cfe0f6', emissiveIntensity: .1, roughness: .1, metalness: .4 }),
@@ -166,7 +176,7 @@ const discGeo = new THREE.CylinderGeometry(1, 1, 1, 24);
 export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position: [number, number, number]; rotationY?: number }) {
   const geos = useMemo(() => buildGeos(spec), [spec]);
   const m = getShared();
-  const paint = useMemo(() => new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: .5, roughness: .26, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5 }), [spec.color]);
+  const paint = useMemo(() => new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: .5, roughness: .26, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5, side: THREE.DoubleSide }), [spec.color]);
   const roofMat = useMemo(() => { const r = paint.clone(); r.side = THREE.DoubleSide; return r; }, [paint]);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(`DK${spec.year % 100}${spec.id.slice(0, 2).toUpperCase()}`), roughness: .45 }), [spec]);
   const { L, W, H, WB, fo, tire } = spec, hw = W / 2, fz = hw * BODY_W + .002, ax = L / 2 - fo, rx = ax - WB, belt = .69 * H;
@@ -177,6 +187,8 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
   return <group position={position} rotation-y={rotationY}>
     <mesh position={[0, .06, 0]} rotation-x={-Math.PI / 2} material={m.shadow} scale={[L * 1.28, W * 1.5, 1]} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
     <mesh geometry={geos.body} material={paint} castShadow receiveShadow />
+    {/* a solid core inside the shell: even if a panel were ever missing you would see paint, never the far wheel */}
+    <mesh position={[0, H * .42, 0]} material={paint}><boxGeometry args={[L * .94, H * .5, W * .86]} /></mesh>
     <mesh geometry={geos.cabin} material={m.glass} castShadow />
     <mesh geometry={geos.roof} material={roofMat} />
     {/* wheels: wheel well, tire with rounded shoulders, barrel, rim, brake disc and caliper. Centre height = tire radius, so every tire touches the ground. */}
@@ -221,8 +233,8 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
     <mesh position={[L / 2 - .028, H * .36, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[.84, .15]} /></mesh>
     <mesh position={[L / 2 - .05, H * .22, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[1.1, .1]} /></mesh>
     <mesh position={[L / 2 - .015, H * .27, 0]} rotation-y={Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
-    <mesh position={[-L / 2 + .012, H * .38, 0]} rotation-y={-Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
-    <mesh position={[-L / 2 + .014, H * .56, 0]} material={m.chrome}><boxGeometry args={[.012, .035, .18]} /></mesh>
+    <mesh position={[-L / 2 - .008, H * .36, 0]} rotation-y={-Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
+    <mesh position={[-L / 2 - .004, H * .5, 0]} material={m.chrome}><boxGeometry args={[.012, .035, .18]} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[-L / 2 + .02, H * .16, s * hw * .5]} rotation-z={Math.PI / 2} material={m.chrome}><cylinderGeometry args={[.035, .035, .08, 12]} /></mesh>)}
     <mesh position={[-L / 2 + .13, H * (.7 * (spec.trunk ?? 1)) + .005, 0]} material={paint}><boxGeometry args={[.1, .018, W * .6]} /></mesh>
     <mesh position={[(.34 - .5) * L, H + .02, 0]} material={m.dark}><boxGeometry args={[.13, .04, .035]} /></mesh>
