@@ -165,6 +165,27 @@ function RoofTrim({ w, d, h, y, x = 0, z = 0, cap, fascia }: { w: number; d: num
 type Opening = { cx: number; w: number; y0: number; y1: number };
 
 
+/** A sidewalk A-frame: two white plastic panels hinged at the top, the same HOURS board printed on both faces. */
+function AFrame({ position, rotY = 0, map }: { position: [number, number, number]; rotY?: number; map: THREE.Texture }) {
+  const white = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f1f1ee', roughness: .42 }), []);
+  const board = useMemo(() => new THREE.MeshBasicMaterial({ map, toneMapped: false }), [map]);
+  const H = .98, W = .64, tilt = .21;
+  const panel = <group position={[0, H, 0]} rotation-x={-tilt}>
+    <mesh position={[0, -.03, 0]} material={white} castShadow><boxGeometry args={[W, .06, .035]} /></mesh>
+    <mesh position={[0, -H + .03, 0]} material={white} castShadow><boxGeometry args={[W, .06, .035]} /></mesh>
+    {[-1, 1].map(s => <mesh key={s} position={[s * (W / 2 - .0225), -H / 2, 0]} material={white} castShadow><boxGeometry args={[.045, H, .035]} /></mesh>)}
+    <mesh position={[0, -H / 2, .019]} material={board}><planeGeometry args={[W - .09, H - .12]} /></mesh>
+    <mesh position={[0, -H / 2, -.019]} rotation-y={Math.PI} material={white}><planeGeometry args={[W - .09, H - .12]} /></mesh>
+    {[-1, 1].map(s => <mesh key={`f${s}`} position={[s * (W / 2 - .06), -H + .02, .03]} material={white}><boxGeometry args={[.1, .04, .08]} /></mesh>)}
+  </group>;
+  return <group position={position} rotation-y={rotY}>
+    <group>{panel}</group>
+    <group rotation-y={Math.PI}>{panel}</group>
+    <mesh position={[0, H + .015, 0]} material={white}><boxGeometry args={[W * .9, .05, .1]} /></mesh>
+    <mesh position={[0, H + .06, 0]} material={white}><boxGeometry args={[.17, .045, .04]} /></mesh>
+  </group>;
+}
+
 export function Building({ position, lite, open }: { position: [number, number, number]; lite: boolean; open: boolean }) {
   const mix = useContext(NightCtx);
   const base = useMemo(limestone, []);
@@ -297,7 +318,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
     {[-1.9, -.95, 0, .95, 1.9].map(x => <mesh key={x} position={[x, 2.85, FRONT - .12]} material={M.black}><boxGeometry args={[x === 0 ? .1 : .1, 3.7, .2]} /></mesh>)}
     {[-.14, .14].map(x => <mesh key={x} position={[x * 1.4, 2.3, FRONT - .04]} material={M.gold}><boxGeometry args={[.07, .8, .09]} /></mesh>)}
     <mesh position={[1.45, 2.7, FRONT + .1]} material={undefined}><planeGeometry args={[.95, .48]} /><meshBasicMaterial map={lampOn ? tex.door.open : tex.door.closed} transparent toneMapped={false} /></mesh>
-    <mesh position={[-1.45, 2.78, FRONT + .1]}><planeGeometry args={[.98, 1.47]} /><meshBasicMaterial map={tex.hours} transparent toneMapped={false} /></mesh>
+    <AFrame position={[2.7, .16, 8.1]} rotY={-.12} map={tex.hours} />
     {[-1, 1].map(s => <group key={s}>
       <mesh position={[s * 3.75, 3.1, FRONT + .35]} material={stone(.8, 4.3)} castShadow><boxGeometry args={[.8, 4.3, .7]} /></mesh>
       <mesh position={[s * 2.7, 3.9, FRONT + .25]} material={M.black}><boxGeometry args={[.16, .5, .16]} /></mesh>

@@ -135,8 +135,9 @@ function ReservedSign() {
     g.fillStyle = '#d9a621'; g.font = `600 24px ${SIGN_FONT}`; g.fillText('5 STAR DRIVER', w / 2, 108);
   }, 4), []);
   return <group position={[-1.75, 0, -8.15]}>
-    <Cyl p={[0, .8, 0]} r={.035} h={1.6} c="#1a1a1e" m={.6} rough={.4} seg={8} />
-    <mesh position={[0, 1.55, .02]}><planeGeometry args={[.82, .52]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
+    <Cyl p={[0, .845, -.05]} r={.035} h={1.69} c="#1a1a1e" m={.6} rough={.4} seg={8} />
+    <mesh position={[0, 1.44, -.012]}><boxGeometry args={[.84, .54, .02]} /><meshStandardMaterial color="#1a1a1e" metalness={.5} roughness={.5} /></mesh>
+    <mesh position={[0, 1.44, .0]}><planeGeometry args={[.82, .52]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
   </group>;
 }
 

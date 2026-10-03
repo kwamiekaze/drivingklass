@@ -23,6 +23,7 @@ export const CAR_SPECS: Record<string, CarSpec> = {
 };
 
 /* ---- the body: a smooth sedan, lofted from spline profiles, not a box ---- */
+Object.values(CAR_SPECS).forEach(s => { s.H *= .975; });   // a touch lower and sleeker
 const BODY_W = .965;     // the flank sits just inside the widest line, so the wheels read as fully round and fully outside
 
 /** Smooth 1D curve through (t, value) points: Catmull-Rom, clamped at the ends. */
@@ -41,8 +42,8 @@ const TOP = curve([[0, .5], [.015, .55], [.05, .6], [.1, .625], [.17, .635], [.2
 const BOT = curve([[0, .2], [.03, .15], [.1, .125], [.2, .115], [.5, .11], [.8, .115], [.92, .125], [.975, .16], [1, .19]]);
 const WID = curve([[0, .78], [.012, .85], [.05, .93], [.12, .98], [.2, 1], [.8, 1], [.9, .98], [.96, .94], [1, .84]]);
 const SHO = curve([[0, .25], [.2, .17], [.5, .12], [.75, .17], [1, .25]]);          // shoulder radius in metres
-const ROOF = curve([[.17, .64], [.2, .69], [.25, .8], [.31, .91], [.37, .98], [.43, 1], [.5, .995], [.55, .955], [.6, .86], [.65, .74], [.675, .655]]);
-const CAB0 = .17, CAB1 = .675;
+const ROOF = curve([[.14, .64], [.18, .7], [.25, .8], [.31, .91], [.37, .98], [.43, 1], [.5, .995], [.55, .955], [.6, .86], [.65, .74], [.675, .655]]);
+const CAB0 = .14, CAB1 = .675;
 
 /** Every triangle is tested on its own so it always faces outward and the inside of the car can never show. */
 function loft(rings: THREE.Vector3[][]) {
@@ -198,7 +199,7 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
   const geos = useMemo(() => buildGeos(spec), [spec]);
   const m = getShared();
   const paint = useMemo(() => new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: .5, roughness: .26, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5, side: THREE.DoubleSide }), [spec.color]);
-  const roofMat = useMemo(() => { const r = paint.clone(); r.side = THREE.DoubleSide; return r; }, [paint]);
+  const roofMat = useMemo(() => new THREE.MeshPhysicalMaterial({ color: '#0b0c0f', metalness: .55, roughness: .18, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.6, side: THREE.DoubleSide }), []);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(`DK${spec.year % 100}${spec.id.slice(0, 2).toUpperCase()}`), roughness: .45 }), [spec]);
   const { L, W, H, WB, fo, tire } = spec, hw = W / 2, fz = hw * BODY_W + .002, ax = L / 2 - fo, rx = ax - WB, belt = .69 * H;
   const wheelZ = hw - .105, archRel = (hw * BODY_W * 1.016 + .004) - wheelZ;
@@ -219,7 +220,7 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
       <mesh rotation-x={Math.PI / 2} scale={[tire * .68, .19, tire * .68]} material={m.dark}><cylinderGeometry args={[1, 1, 1, 24]} /></mesh>
       <mesh position={[0, 0, s * .06]} rotation-x={Math.PI / 2} geometry={discGeo} scale={[tire * .6, .02, tire * .6]} material={m.disc} />
       <mesh position={[tire * .24, tire * .3, s * .075]} material={m.caliper}><boxGeometry args={[.12, .1, .04]} /></mesh>
-      <mesh position={[0, 0, s * .1035]} rotation-y={s > 0 ? 0 : Math.PI} geometry={rimGeo} scale={tire * .74} material={m.rim} />
+      <mesh position={[0, 0, s * .1035]} rotation-y={s > 0 ? 0 : Math.PI} geometry={rimGeo} scale={tire * .85} material={m.rim} />
     </group>)}
     {[-1, 1].map(s => <group key={s}>
       {/* lamps: swept ellipsoids sunk into the corners, so they read as moulded lenses, with a thin daytime strip and a red lens at the tail */}
@@ -255,7 +256,10 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
     {[-1, 1].map(s => <mesh key={s} position={[-L / 2 + .02, H * .16, s * hw * .5]} rotation-z={Math.PI / 2} material={m.chrome}><cylinderGeometry args={[.035, .035, .08, 12]} /></mesh>)}
     <mesh position={[-L / 2 + .13, H * (.7 * (spec.trunk ?? 1)) + .005, 0]} material={paint}><boxGeometry args={[.1, .018, W * .6]} /></mesh>
     <mesh position={[(.34 - .5) * L, H + .02, 0]} material={m.dark}><boxGeometry args={[.13, .04, .035]} /></mesh>
-    <Topper position={[(.44 - .5) * L, H + .004, 0]} />
+    {/* one continuous LED light bar across the tail, as on the 2026 sedans */}
+    <mesh position={[-L / 2 + .012, H * .5, 0]}><boxGeometry args={[.03, .03, W * .8]} /><meshStandardMaterial color="#c4121c" emissive="#ff2a1a" emissiveIntensity={.9} /></mesh>
+    <mesh position={[-L / 2 + .012, H * .5 + .024, 0]} material={m.chrome}><boxGeometry args={[.03, .008, W * .8]} /></mesh>
+    <Topper position={[(.44 - .5) * L, ROOF(.44) * H - .004, 0]} />
   </group>;
 }
 
@@ -301,10 +305,10 @@ function getTopper() {
   return topper;
 }
 function Topper({ position }: { position: [number, number, number] }) {
-  const t = getTopper(), lift = .055, fx = TH.d / 2 + .012 + .0015;
+  const t = getTopper(), lift = .032, fx = TH.d / 2 + .012 + .0015;
   return <group position={position}>
     {[[-.045, -.33], [.045, -.33], [-.045, .33], [.045, .33]].map(([x, z], i) => <group key={i} position={[x!, 0, z!]}>
-      <mesh position={[0, .012, 0]} material={t.cup}><cylinderGeometry args={[.07, .078, .024, 20]} /></mesh>
+      <mesh position={[0, .012, 0]} material={t.cup}><cylinderGeometry args={[.085, .095, .03, 20]} /></mesh>
       <mesh position={[0, .034, 0]} material={t.cupTop}><cylinderGeometry args={[.045, .06, .02, 20]} /></mesh>
       <mesh position={[0, .048, 0]} material={t.cup}><cylinderGeometry args={[.02, .02, .03, 10]} /></mesh>
     </group>)}

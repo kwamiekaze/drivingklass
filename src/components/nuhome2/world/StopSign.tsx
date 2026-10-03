@@ -8,7 +8,7 @@ import { SIGN_FONT, makeCanvasTexture } from './parts';
  * The face is a CircleGeometry with 8 segments turned half a step, so its corners sit at 22.5 degrees + k x 45
  * and the canvas octagon below is drawn on exactly the same corners.
  */
-const R = .43, POLE_H = 2.45;
+const R = .43, POLE_H = 2.45, CY = POLE_H - R * Math.cos(Math.PI / 8);   // centre height: the octagon's flat top sits exactly at the top of the pole
 
 function faceTexture() {
   return makeCanvasTexture(512, 512, (g, w) => {
@@ -26,10 +26,9 @@ export function StopSign({ position }: { position: [number, number, number] }) {
   const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: '#8d9198', roughness: .45, metalness: .75 }), []);
   const geo = useMemo(() => new THREE.CircleGeometry(R, 8, Math.PI / 8), []);
   return <group position={position}>
-    <mesh position={[0, POLE_H / 2, 0]} material={metal} castShadow><cylinderGeometry args={[.036, .04, POLE_H, 12]} /></mesh>
-    <mesh position={[0, POLE_H + .01, 0]} material={metal}><sphereGeometry args={[.045, 12, 8]} /></mesh>
-    <mesh position={[0, POLE_H - .5, -.045]} rotation-z={0} geometry={geo} material={metal} scale={1.02}><meshStandardMaterial color="#8d9198" roughness={.5} metalness={.7} side={THREE.BackSide} /></mesh>
-    <mesh position={[0, POLE_H - .5, .0]} geometry={geo} material={face} castShadow />
-    {[.22, -.22].map(y => <mesh key={y} position={[0, POLE_H - .5 + y, -.05]} material={metal}><boxGeometry args={[.07, .06, .03]} /></mesh>)}
+    <mesh position={[0, (POLE_H - .01) / 2, -.07]} material={metal} castShadow><cylinderGeometry args={[.036, .04, POLE_H - .01, 12]} /></mesh>
+    <mesh position={[0, CY, -.03]} rotation-z={0} geometry={geo} material={metal} scale={1.02}><meshStandardMaterial color="#8d9198" roughness={.5} metalness={.7} side={THREE.BackSide} /></mesh>
+    <mesh position={[0, CY, .0]} geometry={geo} material={face} castShadow />
+    {[.22, -.22].map(y => <mesh key={y} position={[0, CY + y, -.05]} material={metal}><boxGeometry args={[.07, .06, .03]} /></mesh>)}
   </group>;
 }
