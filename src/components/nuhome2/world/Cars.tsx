@@ -22,13 +22,34 @@ export const CAR_SPECS: Record<string, CarSpec> = {
   sentra: { id: 'sentra', year: 2023, make: 'Nissan', model: 'Sentra S', color: '#f1efe9', L: 4.64, W: 1.82, H: 1.45, WB: 2.71, fo: .95, hood: .98, tire: .315 },
 };
 
-type Pt = [number, number];
+/* ---- the body: a smooth sedan, lofted from spline profiles, not a box ---- */
+const BODY_W = .965;     // the flank sits just inside the widest line, so the wheels read as fully round and fully outside
+
+/** Smooth 1D curve through (t, value) points: Catmull-Rom, clamped at the ends. */
+function curve(pts: [number, number][]) {
+  return (t: number) => {
+    const n = pts.length; if (t <= pts[0]![0]) return pts[0]![1]; if (t >= pts[n - 1]![0]) return pts[n - 1]![1];
+    let i = 0; while (i < n - 2 && t > pts[i + 1]![0]) i++;
+    const p0 = pts[Math.max(0, i - 1)]!, p1 = pts[i]!, p2 = pts[i + 1]!, p3 = pts[Math.min(n - 1, i + 2)]!;
+    const u = (t - p1[0]) / (p2[0] - p1[0]), u2 = u * u, u3 = u2 * u;
+    const m1 = (p2[1] - p0[1]) / (p2[0] - p0[0]) * (p2[0] - p1[0]), m2 = (p3[1] - p1[1]) / (p3[0] - p1[0]) * (p2[0] - p1[0]);
+    return (2 * u3 - 3 * u2 + 1) * p1[1] + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * p2[1] + (u3 - u2) * m2;
+  };
+}
+// t runs from the tail (0) to the nose (1). Heights are fractions of H, widths fractions of half the car width.
+const TOP = curve([[0, .5], [.015, .55], [.05, .6], [.1, .625], [.17, .635], [.26, .645], [.36, .655], [.5, .66], [.6, .65], [.66, .64], [.72, .625], [.82, .6], [.91, .57], [.965, .53], [1, .48]]);
+const BOT = curve([[0, .2], [.03, .15], [.1, .125], [.2, .115], [.5, .11], [.8, .115], [.92, .125], [.975, .16], [1, .19]]);
+const WID = curve([[0, .78], [.012, .85], [.05, .93], [.12, .98], [.2, 1], [.8, 1], [.9, .98], [.96, .94], [1, .84]]);
+const SHO = curve([[0, .25], [.2, .17], [.5, .12], [.75, .17], [1, .25]]);          // shoulder radius in metres
+const ROOF = curve([[.17, .64], [.2, .69], [.25, .8], [.31, .91], [.37, .98], [.43, 1], [.5, .995], [.55, .955], [.6, .86], [.65, .74], [.675, .655]]);
+const CAB0 = .17, CAB1 = .675;
+
+/** Every triangle is tested on its own so it always faces outward and the inside of the car can never show. */
 function loft(rings: THREE.Vector3[][]) {
   const m = rings[0]!.length, pos: number[] = [], idx: number[] = [];
   rings.forEach(r => r.forEach(p => pos.push(p.x, p.y, p.z)));
   const P = (i: number) => new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
   const center = (ri: number) => { const c = new THREE.Vector3(); rings[ri]!.forEach(p => c.add(p)); return c.multiplyScalar(1 / m); };
-  /** Push one triangle facing `out`. Every triangle is tested on its own, so no cap or panel can ever face inward and show the inside of the car. */
   const tri = (a: number, b: number, c: number, out: THREE.Vector3) => {
     const pa = P(a), n = P(b).sub(pa).cross(P(c).sub(pa));
     if (n.dot(out) < 0) idx.push(a, c, b); else idx.push(a, b, c);
@@ -50,53 +71,53 @@ function loft(rings: THREE.Vector3[][]) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
 
-const BODY_ST: [number, number, number, number][] = [   // t from the tail, top (x H), half width (x W/2), bottom (x H)
-  [0, .50, .70, .17], [.012, .60, .86, .15], [.05, .66, .95, .13], [.12, .692, .985, .115], [.20, .70, 1, .11], [.35, .70, 1, .105], [.55, .70, 1, .105], [.64, .685, 1, .11],
-  [.72, .63, 1, .115], [.82, .59, .985, .12], [.91, .55, .955, .13], [.965, .50, .90, .145], [.99, .43, .80, .16], [1, .34, .66, .18],
-];
-const CABIN_ST: [number, number][] = [   // t, roof height (x H)
-  [.215, .69], [.235, .78], [.28, .905], [.34, .975], [.40, 1], [.48, 1], [.53, .975], [.575, .85], [.61, .73], [.625, .69],
-];
-const BODY_W = .965;     // the flank sits just inside the widest line, so the wheels read as fully round and fully outside
-
-/** Make every triangle face outward: a closed surface has a positive signed volume. */
-function orient(g: THREE.BufferGeometry) {
-  const p = g.attributes.position as THREE.BufferAttribute, ix = g.index!, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
-  let vol = 0;
-  for (let i = 0; i < ix.count; i += 3) { a.fromBufferAttribute(p, ix.getX(i)); b.fromBufferAttribute(p, ix.getX(i + 1)); c.fromBufferAttribute(p, ix.getX(i + 2)); vol += a.dot(b.clone().cross(c)); }
-  if (vol < 0) for (let i = 0; i < ix.count; i += 3) { const t = ix.getX(i + 1); ix.setX(i + 1, ix.getX(i + 2)); ix.setX(i + 2, t); }
-  g.computeVertexNormals(); return g;
-}
+/** Where the flat flank sits at t: the details (door lines, handles) are placed on this. */
+export const flankAt = (s: CarSpec, t: number) => (s.W / 2) * BODY_W * WID(t);
+/** The top of the flat flank at t: above it the surface rolls over the shoulder. */
+export const flankTop = (s: CarSpec, t: number) => s.H * TOP(t) * (s.trunk && t < .3 ? s.trunk : 1) - .05 - SHO(t);
 
 function buildGeos(s: CarSpec) {
   const { L, W, H } = s, hw = W / 2, tr = s.trunk ?? 1, hd = s.hood ?? 1, rb = s.roofBack ?? 1;
-  const tF = .5 + (L / 2 - s.fo) / L, tR = .5 + (L / 2 - s.fo - s.WB) / L;
-  const flare = (t: number) => 1 + .016 * (Math.exp(-Math.pow((t - tF) / .06, 2)) + Math.exp(-Math.pow((t - tR) / .06, 2)));
-  // flat flanks, rounded shoulder, flat sill
-  const HALF: [number, number][] = [[.78, 0], [.95, .07], [1, .2], [1, .6], [.985, .8], [.9, .95], [.6, 1]];
-  const bodyRings = BODY_ST.map(([t, top, w, bot]) => {
-    const x = (t - .5) * L, tp = (t < .3 ? top * tr : t > .7 ? top * hd : top) * H, bt = bot * H, ww = w * hw * BODY_W * flare(t), pts: THREE.Vector3[] = [];
-    HALF.forEach(([wf, yf]) => pts.push(new THREE.Vector3(x, bt + (tp - bt) * yf, wf * ww)));
-    pts.push(new THREE.Vector3(x, tp + .004, 0));
-    for (let i = HALF.length - 1; i >= 0; i--) { const [wf, yf] = HALF[i]!; pts.push(new THREE.Vector3(x, bt + (tp - bt) * yf, -wf * ww)); }
-    pts.push(new THREE.Vector3(x, bt, 0));
-    return pts;
-  });
-  const belt = .69 * H;
-  const cabinRings = CABIN_ST.map(([t, roof], i) => {
-    const x = (t - .5) * L, yt = roof * H + (t < .4 ? (rb - 1) * .02 * H : 0), yb = belt - .002, hb = .82 * hw, ht = (roof > .95 ? .7 : .7 + (1 - roof) * .3) * hw;
-    void i;
-    const P: Pt[] = [[-hb, yb], [-(hb + ht) / 2 - .012, (yb + yt) / 2], [-ht, yt - .06], [-ht * .88, yt - .014], [-ht * .55, yt], [0, yt + .012], [ht * .55, yt], [ht * .88, yt - .014], [ht, yt - .06], [(hb + ht) / 2 + .012, (yb + yt) / 2], [hb, yb]];
-    const ring = P.map(([z, y]) => new THREE.Vector3(x, y, z)); ring.push(new THREE.Vector3(x, yb, 0)); return ring;
-  });
-  const roofSt = CABIN_ST.slice(2, 7);
-  const roof = (() => {
-    const cols = 9, pos: number[] = [], idx: number[] = [];
-    roofSt.forEach(([t, r]) => { const x = (t - .5) * L, yt = r * H, w = .7 * hw * .9; for (let c = 0; c < cols; c++) { const u = c / (cols - 1) * 2 - 1; pos.push(x, yt + .008 + .014 * (1 - u * u), u * w); } });
-    for (let i = 0; i < roofSt.length - 1; i++) for (let c = 0; c < cols - 1; c++) { const a = i * cols + c; idx.push(a, a + cols, a + 1, a + 1, a + cols, a + cols + 1); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
-  })();
-  return { body: orient(loft(bodyRings)), cabin: orient(loft(cabinRings)), roof };
+  const N = 72, R1 = .07, CROWN = .05;
+  const T = (i: number) => .5 - .5 * Math.cos((Math.PI * i) / (N - 1));         // stations cluster at the nose and tail, where the shape turns
+  const bodyRings: THREE.Vector3[][] = [];
+  for (let i = 0; i < N; i++) {
+    const t = T(i), x = (t - .5) * L;
+    const bot = BOT(t) * H, top = TOP(t) * (t < .3 ? tr : t > .7 ? hd : 1) * H, w = hw * BODY_W * WID(t), rs = SHO(t);
+    const half: [number, number][] = [[0, bot], [w * .82, bot]];
+    for (const a of [-60, -30]) { const r = a * Math.PI / 180; half.push([w - R1 + R1 * Math.cos(r), bot + R1 + R1 * Math.sin(r)]); }
+    const ys = top - CROWN - rs;
+    half.push([w, bot + R1], [w, bot + R1 + (ys - bot - R1) * .5], [w, ys]);
+    for (const a of [22.5, 45, 67.5, 90]) { const r = a * Math.PI / 180; half.push([w - rs + rs * Math.cos(r), ys + rs * Math.sin(r)]); }
+    const zt = w - rs;
+    for (let k = 1; k <= 4; k++) { const z = zt * (1 - k / 4); half.push([z, top - CROWN * (z / zt) * (z / zt)]); }
+    const ring: THREE.Vector3[] = half.map(([z, y]) => new THREE.Vector3(x, y, z));
+    for (let k = half.length - 2; k >= 1; k--) ring.push(new THREE.Vector3(x, half[k]![1], -half[k]![0]));
+    bodyRings.push(ring);
+  }
+  // greenhouse: dark glass dome with a little tumblehome, standing on the belt line
+  const belt = TOP(.5) * H, J = 14, CN = 40;
+  const cabinRings: THREE.Vector3[][] = [], arcs: { x: number; pts: THREE.Vector3[] }[] = [];
+  for (let i = 0; i < CN; i++) {
+    const t = CAB0 + (CAB1 - CAB0) * (.5 - .5 * Math.cos((Math.PI * i) / (CN - 1))), x = (t - .5) * L;
+    const yt = Math.max(belt + .004, ROOF(t) * H + (t < .4 ? (rb - 1) * .02 * H : 0)), hb = Math.min(hw * .78, hw * BODY_W * WID(t) - SHO(t) - .02), d = .07 * H;
+    const arc: THREE.Vector3[] = [];
+    for (let j = 0; j <= J; j++) {
+      const ph = (j / J) * (Math.PI / 2), sn = Math.sin(ph), cs = Math.cos(ph);
+      arc.push(new THREE.Vector3(x, belt + (yt - belt) * Math.pow(sn, .8), -hb * Math.pow(cs, .85) * (1 - .24 * sn)));
+    }
+    const ring = [new THREE.Vector3(x, belt - d, -hb), ...arc];
+    for (let j = J - 1; j >= 0; j--) ring.push(new THREE.Vector3(x, arc[j]!.y, -arc[j]!.z));
+    ring.push(new THREE.Vector3(x, belt - d, hb));
+    cabinRings.push(ring); arcs.push({ x, pts: arc });
+  }
+  // the painted roof panel: the top of the greenhouse between the headers, lifted 4 mm
+  const roofSt = arcs.filter((_, i) => { const t = CAB0 + (CAB1 - CAB0) * (.5 - .5 * Math.cos((Math.PI * i) / (CN - 1))); return t > .345 && t < .565; });
+  const jr0 = Math.round(J * .55), roofPos: number[] = [], roofIdx: number[] = [], cols = (J - jr0) * 2 + 1;
+  roofSt.forEach(({ x, pts }) => { for (let j = jr0; j <= J; j++) roofPos.push(x, pts[j]!.y + .004, pts[j]!.z); for (let j = J - 1; j >= jr0; j--) roofPos.push(x, pts[j]!.y + .004, -pts[j]!.z); });
+  for (let i = 0; i < roofSt.length - 1; i++) for (let c = 0; c < cols - 1; c++) { const a = i * cols + c; roofIdx.push(a, a + cols, a + 1, a + 1, a + cols, a + cols + 1); }
+  const roof = new THREE.BufferGeometry(); roof.setAttribute('position', new THREE.Float32BufferAttribute(roofPos, 3)); roof.setIndex(roofIdx); roof.computeVertexNormals();
+  return { body: loft(bodyRings), cabin: loft(cabinRings), roof };
 }
 
 function rimTexture() {
@@ -153,7 +174,7 @@ function getShared() {
     tire: new THREE.MeshStandardMaterial({ color: '#0f1012', roughness: .94, side: THREE.DoubleSide }),
     rim: new THREE.MeshStandardMaterial({ map: rimTexture(), metalness: .8, roughness: .28 }),
     arch: new THREE.MeshBasicMaterial({ color: '#040405', polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
-    glass: new THREE.MeshPhysicalMaterial({ color: '#0b1218', roughness: .04, metalness: .6, clearcoat: 1, envMapIntensity: 2, side: THREE.DoubleSide }),
+    glass: new THREE.MeshPhysicalMaterial({ color: '#1d2a38', roughness: .05, metalness: .45, clearcoat: 1, envMapIntensity: 2.6, side: THREE.DoubleSide }),
     dark: new THREE.MeshStandardMaterial({ color: '#0b0b0d', roughness: .5, metalness: .2 }),
     chrome: new THREE.MeshStandardMaterial({ color: '#d4d8de', roughness: .18, metalness: 1 }),
     head: new THREE.MeshStandardMaterial({ color: '#dfe7f2', emissive: '#cfe0f6', emissiveIntensity: .1, roughness: .1, metalness: .4 }),
@@ -181,9 +202,9 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(`DK${spec.year % 100}${spec.id.slice(0, 2).toUpperCase()}`), roughness: .45 }), [spec]);
   const { L, W, H, WB, fo, tire } = spec, hw = W / 2, fz = hw * BODY_W + .002, ax = L / 2 - fo, rx = ax - WB, belt = .69 * H;
   const wheelZ = hw - .105, archRel = (hw * BODY_W * 1.016 + .004) - wheelZ;
-  const arch = useMemo(() => { const rw = tire * 1.22, a0 = Math.asin(Math.max(-1, Math.min(1, (.11 * H - tire) / rw))), sh = new THREE.Shape(); sh.absarc(0, 0, rw, a0, Math.PI - a0, false); sh.closePath(); return new THREE.ShapeGeometry(sh, 28); }, [tire, H]);
+  const arch = useMemo(() => { const rw = tire * 1.22, a0 = Math.asin(Math.max(-1, Math.min(1, (.175 * H - tire) / rw))), sh = new THREE.Shape(); sh.absarc(0, 0, rw, a0, Math.PI - a0, false); sh.closePath(); return new THREE.ShapeGeometry(sh, 28); }, [tire, H]);
   const wheels = [[ax, 1], [ax, -1], [rx, 1], [rx, -1]] as const;
-  const doorLo = .25 * H, doorH = belt - doorLo;
+  const doorLo = .25 * H, doorH = flankTop(spec, .45) - doorLo - .01;
   return <group position={position} rotation-y={rotationY}>
     <mesh position={[0, .06, 0]} rotation-x={-Math.PI / 2} material={m.shadow} scale={[L * 1.28, W * 1.5, 1]} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
     <mesh geometry={geos.body} material={paint} castShadow receiveShadow />
@@ -201,15 +222,11 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
       <mesh position={[0, 0, s * .1035]} rotation-y={s > 0 ? 0 : Math.PI} geometry={rimGeo} scale={tire * .74} material={m.rim} />
     </group>)}
     {[-1, 1].map(s => <group key={s}>
-      {/* lamps */}
-      <mesh position={[L / 2 - .1, H * .45, s * hw * .62]} rotation-y={-s * .38} material={m.head}><boxGeometry args={[.12, .085, .4]} /></mesh>
-      <mesh position={[L / 2 - .045, H * .452, s * hw * .6]} rotation-x={Math.PI / 2} rotation-z={Math.PI / 2} material={m.dark}><cylinderGeometry args={[.028, .028, .04, 14]} /></mesh>
-      <mesh position={[L / 2 - .095, H * .485, s * hw * .62]} rotation-y={-s * .38} material={m.drl}><boxGeometry args={[.125, .014, .38]} /></mesh>
-      <mesh position={[-L / 2 + .03, H * .56, s * hw * .5]} rotation-y={s * .12} material={m.tail}><boxGeometry args={[.07, .09, .4]} /></mesh>
-      <mesh position={[-L / 2 + .068, H * .56, s * hw * .5]} material={m.chrome}><boxGeometry args={[.012, .016, .3]} /></mesh>
-      <mesh position={[-L / 2 + .02, H * .24, s * hw * .62]} material={m.tail}><boxGeometry args={[.02, .04, .1]} /></mesh>
-      <mesh position={[L / 2 - .09, H * .21, s * hw * .72]} material={m.drl}><boxGeometry args={[.04, .045, .12]} /></mesh>
-      <mesh position={[(.93 - .5) * L, H * .4, s * (fz + .004)]} material={m.tail}><boxGeometry args={[.07, .022, .012]} /></mesh>
+      {/* lamps: swept ellipsoids sunk into the corners, so they read as moulded lenses, with a thin daytime strip and a red lens at the tail */}
+      <mesh position={[L / 2 - .15, H * .44, s * hw * .6]} rotation-y={-s * .42} scale={[.15, .034, .12]} material={m.head}><sphereGeometry args={[1, 20, 12]} /></mesh>
+      <mesh position={[L / 2 - .1, H * .475, s * hw * .62]} rotation-y={-s * .42} scale={[.13, .009, .12]} material={m.drl}><sphereGeometry args={[1, 16, 8]} /></mesh>
+      <mesh position={[-L / 2 + .06, H * .5, s * hw * .62]} rotation-y={s * .22} scale={[.07, .05, .24]} material={m.tail}><sphereGeometry args={[1, 18, 10]} /></mesh>
+      <mesh position={[L / 2 - .05, H * .21, s * hw * .7]} scale={[.05, .04, .12]} material={m.drl}><sphereGeometry args={[1, 12, 8]} /></mesh>
       {/* mirrors */}
       <mesh position={[(.585 - .5) * L + .06, H * .69, s * (fz + .02)]} material={m.dark}><boxGeometry args={[.05, .03, .06]} /></mesh>
       <mesh position={[(.585 - .5) * L + .1, H * .71, s * (fz + .08)]} material={paint} castShadow><boxGeometry args={[.13, .09, .16]} /></mesh>
@@ -217,10 +234,10 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
       {[.585, .455, .30].map(t => <mesh key={t} position={[(t - .5) * L, doorLo + doorH / 2, s * (fz + .001)]} material={m.dark}><boxGeometry args={[.007, doorH, .004]} /></mesh>)}
       <mesh position={[(.4425 - .5) * L, doorLo, s * (fz + .001)]} material={m.dark}><boxGeometry args={[.285 * L, .006, .004]} /></mesh>
       {[.52, .39].map(t => <group key={t}>
-        <mesh position={[(t - .5) * L, H * .6, s * (fz + .004)]} material={m.dark}><boxGeometry args={[.17, .045, .008]} /></mesh>
-        <mesh position={[(t - .5) * L, H * .6, s * (fz + .011)]} material={m.chrome}><boxGeometry args={[.13, .022, .02]} /></mesh>
+        <mesh position={[(t - .5) * L, H * .56, s * (fz + .004)]} material={m.dark}><boxGeometry args={[.17, .045, .008]} /></mesh>
+        <mesh position={[(t - .5) * L, H * .56, s * (fz + .011)]} material={m.chrome}><boxGeometry args={[.13, .022, .02]} /></mesh>
       </group>)}
-      <mesh position={[(.42 - .5) * L, belt + .006, s * (.82 * hw + .004)]} material={m.chrome}><boxGeometry args={[L * .4, .018, .014]} /></mesh>
+      <mesh position={[(.42 - .5) * L, belt + .006, s * (.8 * hw + .012)]} material={m.chrome}><boxGeometry args={[L * .42, .016, .012]} /></mesh>
       <mesh position={[(.455 - .5) * L, belt + (H - belt) * .5, s * (.77 * hw)]} material={m.dark}><boxGeometry args={[.07, (H - belt) * .86, .02]} /></mesh>
       <mesh position={[0, H * .17, s * (fz + .003)]} material={m.dark}><boxGeometry args={[L * .5, .05, .014]} /></mesh>
     </group>)}
@@ -230,9 +247,9 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
     {/* wipers and cowl */}
     {[-1, 1].map(s => <mesh key={s} position={[(.6 - .5) * L, belt + .012, s * .34]} rotation-y={s * .12} material={m.dark}><boxGeometry args={[.05, .012, .5]} /></mesh>)}
     {/* grille, intake, plates, exhaust, badge, spoiler lip, shark fin */}
-    <mesh position={[L / 2 - .028, H * .36, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[.84, .15]} /></mesh>
-    <mesh position={[L / 2 - .05, H * .22, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[1.1, .1]} /></mesh>
-    <mesh position={[L / 2 - .015, H * .27, 0]} rotation-y={Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
+    <mesh position={[L / 2 + .003, H * .37, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[.78, .13]} /></mesh>
+    <mesh position={[L / 2 + .002, H * .245, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[1.02, .075]} /></mesh>
+    <mesh position={[L / 2 + .005, H * .3, 0]} rotation-y={Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
     <mesh position={[-L / 2 - .008, H * .36, 0]} rotation-y={-Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
     <mesh position={[-L / 2 - .004, H * .5, 0]} material={m.chrome}><boxGeometry args={[.012, .035, .18]} /></mesh>
     {[-1, 1].map(s => <mesh key={s} position={[-L / 2 + .02, H * .16, s * hw * .5]} rotation-z={Math.PI / 2} material={m.chrome}><cylinderGeometry args={[.035, .035, .08, 12]} /></mesh>)}

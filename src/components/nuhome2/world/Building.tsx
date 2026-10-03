@@ -89,6 +89,24 @@ function doorSignTexture(open: boolean) {
   }, 8);
 }
 
+/** Opening hours, Sunday first. Shown on the door beside the OPEN sign. */
+const HOURS: [string, string][] = [['Sunday', '10 AM\u20136 PM'], ['Monday', '9 AM\u20136 PM'], ['Tuesday', '9 AM\u20136 PM'], ['Wednesday', '9 AM\u20136 PM'], ['Thursday', '9 AM\u20136 PM'], ['Friday', '9 AM\u20136 PM'], ['Saturday', '9 AM\u20136 PM']];
+function hoursSignTexture() {
+  return makeCanvasTexture(512, 768, (g, w, h) => {
+    const rr = (x: number, y: number, ww: number, hh: number, r: number) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + ww, y, x + ww, y + hh, r); g.arcTo(x + ww, y + hh, x, y + hh, r); g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + ww, y, r); g.closePath(); };
+    g.clearRect(0, 0, w, h); g.fillStyle = '#16181d'; rr(8, 8, w - 16, h - 16, 40); g.fill();
+    g.strokeStyle = 'rgba(244,239,228,.6)'; g.lineWidth = 5; rr(8, 8, w - 16, h - 16, 40); g.stroke();
+    g.fillStyle = '#e0b030'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 74px ${SIGN_FONT}`; g.fillText('HOURS', w / 2, 82);
+    g.strokeStyle = 'rgba(224,176,48,.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(60, 136); g.lineTo(w - 60, 136); g.stroke();
+    g.fillStyle = '#f4efe4'; g.font = `600 37px ${SIGN_FONT}`;
+    HOURS.forEach(([day, time], i) => {
+      const y = 196 + i * 78;
+      g.textAlign = 'left'; g.fillText(day, 40, y); g.textAlign = 'right'; g.fillText(time, w - 40, y);
+    });
+    void h;
+  }, 8);
+}
+
 function hipRoof(w: number, d: number, h: number) {
   const hw = w / 2, hd = d / 2, rr = (w - d) / 2;
   const A = [-hw, 0, -hd], B = [hw, 0, -hd], C = [hw, 0, hd], D = [-hw, 0, hd], E = [-rr, h, 0], F = [rr, h, 0];
@@ -171,7 +189,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
   const tex = useMemo(() => ({
     tv: interiorTexture('tv', 256, 480), meeting: interiorTexture('meeting', 256, 480), office: interiorTexture('office', 256, 480),
     hall: interiorTexture('hall', 256, 768), lobby: interiorTexture('lobby', 512, 512),
-    face: lettersTexture('face'), side: lettersTexture('side'), door: { open: doorSignTexture(true), closed: doorSignTexture(false) },
+    face: lettersTexture('face'), side: lettersTexture('side'), door: { open: doorSignTexture(true), closed: doorSignTexture(false) }, hours: hoursSignTexture(),
   }), []);
   const glass = useMemo(() => {
     const mk = (t: THREE.Texture) => new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
@@ -279,6 +297,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
     {[-1.9, -.95, 0, .95, 1.9].map(x => <mesh key={x} position={[x, 2.85, FRONT - .12]} material={M.black}><boxGeometry args={[x === 0 ? .1 : .1, 3.7, .2]} /></mesh>)}
     {[-.14, .14].map(x => <mesh key={x} position={[x * 1.4, 2.3, FRONT - .04]} material={M.gold}><boxGeometry args={[.07, .8, .09]} /></mesh>)}
     <mesh position={[1.45, 2.7, FRONT + .1]} material={undefined}><planeGeometry args={[.95, .48]} /><meshBasicMaterial map={lampOn ? tex.door.open : tex.door.closed} transparent toneMapped={false} /></mesh>
+    <mesh position={[-1.45, 2.78, FRONT + .1]}><planeGeometry args={[.98, 1.47]} /><meshBasicMaterial map={tex.hours} transparent toneMapped={false} /></mesh>
     {[-1, 1].map(s => <group key={s}>
       <mesh position={[s * 3.75, 3.1, FRONT + .35]} material={stone(.8, 4.3)} castShadow><boxGeometry args={[.8, 4.3, .7]} /></mesh>
       <mesh position={[s * 2.7, 3.9, FRONT + .25]} material={M.black}><boxGeometry args={[.16, .5, .16]} /></mesh>

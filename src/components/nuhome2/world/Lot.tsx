@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 import { CAR_SPECS, Car } from './Cars';
+import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 
 /*
@@ -216,6 +217,8 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {wells.map((p, i) => <mesh key={i} position={p} material={wellMat}><cylinderGeometry args={[.14, .14, .08, 10]} /></mesh>)}
     <ReservedSign />
     <Monument position={[10.4, 0, 14.9]} />
+    {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
+    <StopSign position={[5.3, 0, 37.6]} />
     {cars.map(c => <Car key={c.id} spec={CAR_SPECS[c.id]!} position={[c.x, .002, c.z]} rotationY={c.r} />)}
   </group>;
 }
