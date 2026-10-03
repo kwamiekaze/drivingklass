@@ -3,7 +3,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
-import { CAR_SPECS, Car } from './Cars';
+import { CAR_SPECS } from './Cars';
+import { FLEET_COLORS, FleetCar } from './Fleet';
+const FLEET_ORDER = [FLEET_COLORS.white, FLEET_COLORS.red, FLEET_COLORS.green, FLEET_COLORS.yellow, FLEET_COLORS.black];
 import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 
@@ -220,6 +222,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     <Monument position={[10.4, 0, 14.9]} />
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
-    {cars.map(c => <Car key={c.id} spec={CAR_SPECS[c.id]!} position={[c.x, .002, c.z]} rotationY={c.r} />)}
+    {/* the fleet in the Guyana flag colours: white, red, green, yellow, black */}
+    {cars.map((c, i) => <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={`DK2${4 + i}CO`} position={[c.x, .002, c.z]} rotationY={c.r} model={tier !== 'lite'} />)}
   </group>;
 }

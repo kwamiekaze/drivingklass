@@ -150,7 +150,7 @@ function magnetTexture(top: boolean) {
   if (top) { t.center.set(.5, .5); t.rotation = Math.PI / 2; }
   return t;
 }
-function plateTexture(text: string) {
+export function plateTexture(text: string) {
   return makeCanvasTexture(256, 128, (g, w, h) => {
     g.fillStyle = '#f4f4f0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1b2b5a'; g.lineWidth = 5; g.strokeRect(4, 4, w - 8, h - 8);
     g.fillStyle = '#1b2b5a'; g.font = '700 22px Poppins, Arial, sans-serif'; g.textAlign = 'center'; g.fillText('GEORGIA', w / 2, 28);
@@ -304,7 +304,7 @@ function getTopper() {
   };
   return topper;
 }
-function Topper({ position }: { position: [number, number, number] }) {
+export function Topper({ position }: { position: [number, number, number] }) {
   const t = getTopper(), lift = .032, fx = TH.d / 2 + .012 + .0015;
   return <group position={position}>
     {[[-.045, -.33], [.045, -.33], [-.045, .33], [.045, .33]].map(([x, z], i) => <group key={i} position={[x!, 0, z!]}>
