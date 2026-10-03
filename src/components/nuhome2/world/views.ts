@@ -21,14 +21,17 @@ export const STAGES: Stage[] = [
     narrow: { p: [-30, 14, 34], l: [2, 5, -14], fov: 58 } },
 ];
 
-export const INTRO_LENGTH = 9;
+export const INTRO_LENGTH = 12;
+/** The intro starts far down the avenue and drives straight at the building, then settles into the first stop. */
 export const INTRO_WIDE: Key[] = [
-  { t: 0, p: [-40, 2.2, 22], l: [-4, 5, -17.5], fov: 42 },
-  { t: 4.5, p: [-26, 3.6, 34], l: [-5, 6, -17.5], fov: 40 },
-  { t: 9, p: [-12, 5.5, 34], l: [-8, 9.0, -17.5], fov: 40 },
+  { t: 0, p: [1.6, 2.2, 168], l: [0, 6.5, -17.5], fov: 38 },
+  { t: 6.5, p: [1.2, 2.4, 70], l: [0, 6, -17.5], fov: 38 },
+  { t: 9.5, p: [-3, 3.6, 46], l: [-2, 6.2, -17.5], fov: 39 },
+  { t: 12, p: [-12, 5.5, 34], l: [-8, 9.0, -17.5], fov: 40 },
 ];
 export const INTRO_NARROW: Key[] = [
-  { t: 0, p: [-30, 3, 30], l: [-2, 7, -17.5], fov: 58 },
-  { t: 4.5, p: [-16, 5, 44], l: [0, 8, -17.5], fov: 58 },
-  { t: 9, p: [-1.5, 6.5, 40], l: [0, 10.6, -17.5], fov: 58 },
+  { t: 0, p: [1.6, 2.2, 168], l: [0, 6.5, -17.5], fov: 56 },
+  { t: 6.5, p: [1.2, 2.6, 78], l: [0, 6.5, -17.5], fov: 56 },
+  { t: 9.5, p: [0, 5, 58], l: [0, 7.5, -17.5], fov: 57 },
+  { t: 12, p: [-1.5, 6.5, 40], l: [0, 10.6, -17.5], fov: 58 },
 ];

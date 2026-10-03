@@ -27,7 +27,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
     hsD: new THREE.Color('#cfe6ff'), hsN: new THREE.Color('#4a5bb0'), hgD: new THREE.Color('#d2c2a8'), hgN: new THREE.Color('#1c1a38'),
     dirD: new THREE.Color('#ffe6bf'), dirN: new THREE.Color('#9db8ff'),
   }), []);
-  useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 50, 150); }, [scene]);
+  useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 70, 235); }, [scene]);
   useFrame((_, dt) => {
     const target = night ? 1 : 0;
     mix.current += (target - mix.current) * (1 - Math.exp(-2.2 * Math.min(dt, .05)));
@@ -47,6 +47,13 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
   </>;
 }
 
+/** The sky travels with the camera, so it holds from the far end of the avenue to the back lawn. */
+function SkyFollow({ children }: { children: React.ReactNode }) {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => { if (g.current) g.current.position.set(camera.position.x, 0, camera.position.z); });
+  return <group ref={g}>{children}</group>;
+}
+
 function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'> & { quality: Quality; shadow: number; onTier: () => void }) {
   const { onTier, theme } = p as typeof p & { onTier: () => void };
   const night = theme === 'night';
@@ -61,14 +68,14 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
       <Lightformer intensity={1.3} color="#ffe2a0" position={[12, 3, 8]} scale={[16, 6, 1]} />
       <Lightformer intensity={1.9} color="#fff0d0" position={[0, 4, 22]} rotation-y={Math.PI} scale={[44, 9, 1]} />
     </Environment>
-    <SkyDome /><Stars count={lite ? 2600 : 6000} /><ShootingStars />
+    <SkyFollow><SkyDome /><Stars count={lite ? 2600 : 6000} /><ShootingStars />
     <Sun position={[58, 21, -76]} /><Moon position={[30, 32, -66]} />
-    <Clouds count={lite ? 12 : 22} />
+    <Clouds count={lite ? 12 : 22} /></SkyFollow>
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     <Butterflies count={lite ? 5 : 9} />
     <Doves />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
-    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={90} minPolarAngle={.25} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
+    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={120} minPolarAngle={.25} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;
 }
 
@@ -95,7 +102,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
     shadows={fixed.shadow > 0}
     dpr={dprOverride() ?? quality.dpr}
     gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-    camera={{ position: k0.p, fov: k0.fov, near: 2, far: 175 }}
+    camera={{ position: k0.p, fov: k0.fov, near: 2, far: 320 }}
     onCreated={({ gl }) => {
       gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .9;
       gl.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost.current(); }, { once: true });

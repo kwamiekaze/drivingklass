@@ -88,17 +88,63 @@ function doorSignTexture(open: boolean) {
   }, 8);
 }
 
-/** Hip roof over a w by d rectangle: four planes and a ridge. */
 function hipRoof(w: number, d: number, h: number) {
-  const hw = w / 2, hd = d / 2, rr = Math.max(0, (w - d) / 2);
+  const hw = w / 2, hd = d / 2, rr = (w - d) / 2;
   const A = [-hw, 0, -hd], B = [hw, 0, -hd], C = [hw, 0, hd], D = [-hw, 0, hd], E = [-rr, h, 0], F = [rr, h, 0];
-  const tris = rr > 0 ? [D, C, F, D, F, E, B, A, E, B, E, F, A, D, E, C, B, F] : [D, C, E, C, B, E, B, A, E, A, D, E];
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(), 3)); g.computeVertexNormals();
+  const tris = [D, C, F, D, F, E, B, A, E, B, E, F, A, D, E, C, B, F];
+  const g = new THREE.BufferGeometry(), uv: number[] = [];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(), 3));
+  // slate courses run along each slope: project every face onto its own plane
+  for (let i = 0; i < tris.length; i += 3) {
+    const p0 = new THREE.Vector3(...(tris[i] as [number, number, number])), p1 = new THREE.Vector3(...(tris[i + 1] as [number, number, number])), p2 = new THREE.Vector3(...(tris[i + 2] as [number, number, number]));
+    const n = new THREE.Vector3().subVectors(p1, p0).cross(new THREE.Vector3().subVectors(p2, p0)).normalize();
+    const e1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(), e2 = new THREE.Vector3().crossVectors(n, e1).normalize();
+    [p0, p1, p2].forEach(p => uv.push(p.dot(e1) / 2.2, p.dot(e2) / 2.2));
+  }
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
   return g;
 }
 
+function slateTexture() {
+  const W = 512, H = 512, rows = 10, tw = 64;
+  return makeCanvasTexture(W, H, (g) => {
+    const r = rng(17); g.fillStyle = '#2a2d35'; g.fillRect(0, 0, W, H);
+    for (let y = 0; y < rows; y++) { const off = (y % 2) * tw / 2, rh = H / rows;
+      for (let x = -1; x < W / tw + 1; x++) {
+        const v = (r() - .5) * 20, tone = 62 + v; g.fillStyle = `rgb(${tone},${tone + 3},${tone + 12})`;
+        g.fillRect(x * tw + off + 1.5, y * rh + 1, tw - 3, rh - 1);
+        g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(x * tw + off + 1.5, y * rh + 1, tw - 3, 2);
+        const sh = g.createLinearGradient(0, y * rh + rh * .55, 0, y * rh + rh); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.4)'); g.fillStyle = sh; g.fillRect(x * tw + off + 1.5, y * rh + rh * .55, tw - 3, rh * .45);
+        if (r() > .86) { g.fillStyle = 'rgba(120,130,110,.14)'; g.fillRect(x * tw + off + 4, y * rh + 6, tw * .5, rh * .3); }
+      } }
+  }, 8, false);
+}
+
+function Bar({ a, b, r = .09, m }: { a: [number, number, number]; b: [number, number, number]; r?: number; m: THREE.Material }) {
+  const { pos, q, len } = useMemo(() => {
+    const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b), dir = new THREE.Vector3().subVectors(vb, va), len = dir.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return { pos: va.clone().add(vb).multiplyScalar(.5), q, len };
+  }, [a, b]);
+  return <mesh position={pos} quaternion={q} material={m} castShadow><cylinderGeometry args={[r, r, len, 8]} /></mesh>;
+}
+
+/** Ridge and hip caps, a fascia rim and chimney pots: the details that make a hip roof read as a real roof. */
+function RoofTrim({ w, d, h, y, x = 0, z = 0, cap, fascia }: { w: number; d: number; h: number; y: number; x?: number; z?: number; cap: THREE.Material; fascia: THREE.Material }) {
+  const hw = w / 2, hd = d / 2, rr = (w - d) / 2, P = (px: number, py: number, pz: number): [number, number, number] => [x + px, y + py, z + pz];
+  return <group>
+    <Bar a={P(-rr - .1, h, 0)} b={P(rr + .1, h, 0)} r={.13} m={cap} />
+    <Bar a={P(-hw, 0, -hd)} b={P(-rr, h, 0)} m={cap} /><Bar a={P(-hw, 0, hd)} b={P(-rr, h, 0)} m={cap} />
+    <Bar a={P(hw, 0, -hd)} b={P(rr, h, 0)} m={cap} /><Bar a={P(hw, 0, hd)} b={P(rr, h, 0)} m={cap} />
+    {[-1, 1].map(s => <mesh key={`f${s}`} position={P(0, .07, s * hd)} material={fascia}><boxGeometry args={[w + .1, .16, .1]} /></mesh>)}
+    {[-1, 1].map(s => <mesh key={`g${s}`} position={P(s * hw, .07, 0)} material={fascia}><boxGeometry args={[.1, .16, d + .1]} /></mesh>)}
+  </group>;
+}
+
+
 type Opening = { cx: number; w: number; y0: number; y1: number };
+
 
 export function Building({ position, lite, open }: { position: [number, number, number]; lite: boolean; open: boolean }) {
   const mix = useContext(NightCtx);
@@ -111,7 +157,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
   };
   const M = useMemo(() => ({
     trim: new THREE.MeshStandardMaterial({ color: '#f5ecdc', roughness: .6 }),
-    roof: new THREE.MeshStandardMaterial({ color: '#101218', roughness: .62, metalness: 0, side: THREE.DoubleSide, flatShading: true }),
+    roof: (() => { const t = slateTexture(); t.wrapS = t.wrapT = THREE.RepeatWrapping; return new THREE.MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 1.5, color: '#ffffff', roughness: .5, metalness: .12, side: THREE.DoubleSide }); })(),
     black: new THREE.MeshStandardMaterial({ color: '#15161a', roughness: .45, metalness: .3 }),
     led: new THREE.MeshStandardMaterial({ color: '#fff4cf', emissive: '#ffd070', emissiveIntensity: .8, roughness: .5 }),
     lamp: new THREE.MeshStandardMaterial({ color: '#fff0d0', emissive: '#ffbf70', emissiveIntensity: 1 }),
@@ -148,6 +194,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
     const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.computeVertexNormals(); return g;
   }, []);
   const archLed = useMemo(() => { const R = 5.55, cy = .55 + 2.3 - R, pts: THREE.Vector3[] = []; for (let i = 0; i <= 48; i++) { const x = -4.1 + (8.2 * i) / 48; pts.push(new THREE.Vector3(x, cy + Math.sqrt(R * R - x * x) - .3, 0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, .08, 6, false); }, []);
+  const capM = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e6dfd0', roughness: .55 }), []), fasM = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2b2d34', roughness: .5, metalness: .3 }), []);
   const roofs = useMemo(() => ({ main: hipRoof(45, 6.6, 1.9), center: hipRoof(14, 6.4, 4.1), pav: hipRoof(6.4, 5.6, 2.0) }), []);
   const crownGeo = useMemo(() => { const g = new THREE.ExtrudeGeometry(starShape(1, .46), { depth: .34, bevelEnabled: true, bevelThickness: .12, bevelSize: .06, bevelSegments: 2 }); g.translate(0, 0, -.17); g.computeVertexNormals(); return g; }, []);
 
@@ -204,6 +251,8 @@ export function Building({ position, lite, open }: { position: [number, number, 
     <mesh position={[0, WALL_H - .08, FRONT + .55]} material={M.led}><boxGeometry args={[HALF * 2 + .2, .12, .12]} /></mesh>
     <mesh geometry={roofs.main} material={M.roof} position={[0, WALL_H + .5, 0]} castShadow />
     <mesh geometry={roofs.center} material={M.roof} position={[0, WALL_H + .5, -.2]} castShadow />
+    <RoofTrim w={45} d={6.6} h={1.9} y={WALL_H + .5} cap={capM} fascia={fasM} />
+    <RoofTrim w={14} d={6.4} h={4.1} y={WALL_H + .5} z={-.2} cap={capM} fascia={fasM} />
 
     {/* pavilions: taller, proud of the wall, each with a tall lit window and its own pyramid roof */}
     {[-1, 1].map(s => <group key={s}>
@@ -211,6 +260,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
       <mesh position={[s * 10.4, PAV_H + .3, -.3]} material={M.trim} castShadow><boxGeometry args={[6.1, .6, 7.2]} /></mesh>
       <mesh position={[s * 10.4, PAV_H - .08, FRONT + 1.2]} material={M.led}><boxGeometry args={[5.9, .12, .12]} /></mesh>
       <mesh geometry={roofs.pav} material={M.roof} position={[s * 10.4, PAV_H + .6, -.1]} castShadow />
+      <RoofTrim w={6.4} d={5.6} h={2} y={PAV_H + .6} x={s * 10.4} z={-.1} cap={capM} fascia={fasM} />
       <mesh position={[s * 10.4, (WALL_H + PAV_H) / 2, -.6]} material={stone(5.4, 1.6)}><boxGeometry args={[5.4, PAV_H - WALL_H, 4.2]} /></mesh>
       <Bay cx={s * 10.5} w={2.0} y0={1.0} y1={6.0} z={FRONT + .6} kind="hall" rows={3} />
       <Bay cx={s * 6.55} w={2.1} y0={1.0} y1={4.9} z={FRONT} kind={s < 0 ? 'tv' : 'meeting'} />

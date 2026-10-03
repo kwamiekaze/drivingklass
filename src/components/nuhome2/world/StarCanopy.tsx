@@ -17,7 +17,7 @@ import { starShape } from './parts';
 const POLE_H = 6.6;
 /** Pole positions (x, z), left rear corner round the front to the right rear corner. All on free pavement. */
 export const POLES: [number, number][] = [
-  [-26, -12.4], [-33, -8], [-34.5, -.5], [-32, 6.5], [-27, 11.8], [-18, 11.8], [18, 11.8], [27, 11.8], [32, 6.5], [34.5, -.5], [33, -8], [26, -12.4],
+  [-26, -12.4], [-35, -8], [-35, -.5], [-35, 6.5], [-27, 11.8], [-18, 11.8], [18, 11.8], [27, 11.8], [35, 6.5], [35, -.5], [35, -8], [26, -12.4],
 ];
 /** The gap over the entrance is one long, deep swag (a smile of stars); the other spans sag gently. */
 const sagFor = (len: number) => Math.min(3.4, Math.max(.9, len * .1));
