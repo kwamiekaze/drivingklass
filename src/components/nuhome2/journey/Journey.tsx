@@ -54,7 +54,7 @@ function CarSprite({ carRef, near }: { carRef: React.RefObject<SVGGElement | nul
       {/* the roof magnet: a black box across the roof with five gold stars on its top */}
       <g className="n2j-magnet" transform="translate(-6 0)">
         <rect x="-10" y="-24" width="20" height="48" rx="5" fill="#0c0c10" stroke="#f2c14e" strokeWidth="1.5" />
-        {[-18, -9, 0, 9, 18].map((y, i) => <path key={i} className="n2j-mstar" transform={`translate(0 ${y})`} d={starPath(4.2, 1.8)} fill="#ffd86a" style={{ animationDelay: `${i * .18}s` }} />)}
+        {[-18, -9, 0, 9, 18].map((y, i) => <g key={i} transform={`translate(0 ${y})`}><path className="n2j-mstar" d={starPath(4.2, 1.8)} fill="#ffd86a" style={{ animationDelay: `${i * .18}s` }} /></g>)}
       </g>
       {[-1, 1].map(s => <g key={s}><rect x="22" y={s > 0 ? 25 : -31} width="9" height="6" rx="3" fill="#d8a52c" /><circle cx="60" cy={s * 17} r="3.8" fill="#fff6d6" /><circle className="lamp" cx="60" cy={s * 17} r="8" fill="#fff6d6" opacity=".4" /><rect x="-66" y={s > 0 ? 13 : -21} width="4" height="8" rx="1.5" fill="#e0243a" /></g>)}
     </g>

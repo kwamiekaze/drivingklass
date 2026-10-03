@@ -65,7 +65,7 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
     <Sun position={[58, 21, -76]} /><Moon position={[30, 32, -66]} />
     <Clouds count={lite ? 12 : 22} />
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
-    {!lite && <Butterflies />}
+    <Butterflies count={lite ? 5 : 9} />
     <Doves />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
     <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={90} minPolarAngle={.25} maxPolarAngle={1.52} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
@@ -77,6 +77,9 @@ function Ready({ onReady }: { onReady: () => void }) {
   useFrame(() => { if (n.current < 4 && ++n.current === 4) onReady(); });
   return null;
 }
+
+/** ?dpr=1 pins the pixel ratio, for screenshots on machines without a GPU. Visitors never see it. */
+function dprOverride(): number | null { if (typeof window === 'undefined') return null; const v = Number(new URLSearchParams(window.location.search).get('dpr')); return v >= .5 && v <= 3 ? v : null; }
 
 export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   const [tier, setTier] = useState(detectTier);
@@ -90,9 +93,9 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   return <Canvas
     className="n2-canvas"
     shadows={fixed.shadow > 0}
-    dpr={quality.dpr}
-    gl={{ antialias: tier !== 'lite', alpha: false, powerPreference: 'high-performance' }}
-    camera={{ position: k0.p, fov: k0.fov, near: 1, far: 190 }}
+    dpr={dprOverride() ?? quality.dpr}
+    gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+    camera={{ position: k0.p, fov: k0.fov, near: 2, far: 175 }}
     onCreated={({ gl }) => {
       gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .9;
       gl.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost.current(); }, { once: true });

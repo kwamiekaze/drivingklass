@@ -11,7 +11,7 @@ import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
  * CAR_POS is the centre of the reserved stall directly in front of the entrance.
  */
 export const CAR_POS: V3 = [0, 0, -6.1];
-const PAINT_Y = .014;
+const PAINT_Y = .04;
 export const ISLANDS = [{ x: -13, z: 6.6, w: 16, d: 4 }, { x: 13, z: 6.6, w: 16, d: 4 }];
 export const LAMPS: [number, number][] = [[-13.7, 6.6], [13.7, 6.6], [-24.4, -8.2], [24.4, -8.2]];
 
@@ -119,7 +119,7 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
     <Box p={[0, .1, 31.4]} s={[400, .2, .3]} c={curb} r={.8} cast={false} />
     <mesh rotation-x={-Math.PI / 2} position={[0, .006, 25.25]} material={asphalt} receiveShadow><planeGeometry args={[400, 12.2]} /></mesh>
     <mesh position={[0, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[9, .132, 5]} /></mesh>
-    <Decals items={dashes} color="#f4f1ea" y={.014} /><Decals items={edges} color="#f4f1ea" y={.014} />
+    <Decals items={dashes} color="#f4f1ea" y={.04} /><Decals items={edges} color="#f4f1ea" y={.04} />
   </group>;
 }
 
@@ -134,7 +134,7 @@ export function Lot({ lite, asphalt }: { lite: boolean; asphalt: THREE.Material 
   const hedgeSegs: [number, number][] = [[-23, -17.2], [-16.6, -10.6], [-10, -3.7]];
   const wells: V3[] = [[-17.5, .4, 6.1], [-10, .4, 6.1], [10, .4, 6.1], [17.5, .4, 6.1]];
   return <group>
-    <Decals items={white} color="#f4f1ea" /><Decals items={gold} color="#f4f1ea" /><Decals items={cross} color="#f8f6ef" y={.026} />
+    <Decals items={white} color="#f4f1ea" /><Decals items={gold} color="#f4f1ea" /><Decals items={cross} color="#f8f6ef" y={.05} />
     {/* apron, kerbs, plaza edge */}
     <Box p={[0, .08, -11.9]} s={[46, .16, 6.6]} c="#d9d2c4" r={.7} />
     <Box p={[0, .1, -8.5]} s={[49.4, .2, .3]} c="#cfc9bd" r={.7} />
@@ -147,8 +147,6 @@ export function Lot({ lite, asphalt }: { lite: boolean; asphalt: THREE.Material 
     {[-1, 1].flatMap(s => hedgeSegs.map(([a, b]) => { const x0 = s < 0 ? a : -b, x1 = s < 0 ? b : -a; return <Hedge key={`${s}${a}`} x={(x0 + x1) / 2} z={-9.25} w={Math.abs(x1 - x0)} d={1} mat={foliage} />; }))}
     {/* foreground planting */}
     {[-1, 1].map(s => <Hedge key={s} x={s * 21} y={.2} z={14.9} w={26} d={1.2} h={.9} mat={foliage} />)}
-    {/* topiary */}
-        {(lite ? [-12.4, 12.4] : [-12.4, -16, -20, 12.4, 16, 20]).map(x => <Topiary key={x} x={x} z={-13.4} s={1.1} />)}
     {/* lamps */}
     {LAMPS.slice(0, lite ? 2 : 4).map(([x, z], i) => <Lamp key={i} x={x} z={z} />)}
     {/* ground uplights at the island trees */}

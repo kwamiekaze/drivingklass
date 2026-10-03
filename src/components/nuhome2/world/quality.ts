@@ -7,9 +7,9 @@ export type Quality = {
 };
 
 const T: Record<Quality['tier'], Quality> = {
-  high: { tier: 'high', reflective: true, lite: false, grass: 18000, trees: 34, clumps: 38, shadow: 2048, dpr: [1, 1.6] },
-  mid: { tier: 'mid', reflective: false, lite: false, grass: 6500, trees: 22, clumps: 24, shadow: 1024, dpr: [1, 1.4] },
-  lite: { tier: 'lite', reflective: false, lite: true, grass: 2600, trees: 14, clumps: 16, shadow: 0, dpr: [1, 1] },
+  high: { tier: 'high', reflective: true, lite: false, grass: 18000, trees: 34, clumps: 38, shadow: 2048, dpr: [1.5, 2] },
+  mid: { tier: 'mid', reflective: false, lite: false, grass: 6500, trees: 22, clumps: 24, shadow: 1024, dpr: [1.5, 2] },
+  lite: { tier: 'lite', reflective: false, lite: true, grass: 2600, trees: 14, clumps: 16, shadow: 0, dpr: [1.25, 1.5] },
 };
 
 export function qualityFor(tier: Quality['tier']) { return T[tier]; }

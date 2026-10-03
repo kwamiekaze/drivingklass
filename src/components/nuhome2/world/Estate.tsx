@@ -2,7 +2,8 @@ import { useContext, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, rng } from './theme';
-import { HQ } from './HQ';
+import { Building } from './Building';
+import { Fountain } from './Fountain';
 import { CAR_POS, ISLANDS, Lot } from './Lot';
 import { Blooms, Grass, Trees, lawnTexture } from './Grounds';
 import { StarCanopy } from './StarCanopy';
@@ -33,6 +34,7 @@ function asphaltTexture() {
 const PLAZA = { x: 68, z: 29, cz: -.2 };
 export const FLOOR_Y = .002;
 export const HQ_Z = -17.5;
+const FOUNTAIN = { x: 0, z: 6.6 };
 export { CAR_POS };
 
 type TreeSpec = { x: number; z: number; s: number; kind: 'oak' | 'cypress' | 'blossom' };
@@ -89,12 +91,20 @@ export function Estate({ quality, open, children }: { quality: Quality; open: bo
   }, [lite]);
 
   return <group>
-    <mesh geometry={lawnGeo} rotation-x={-Math.PI / 2} position={[0, -.02, 0]} receiveShadow><meshStandardMaterial map={lawnTex} roughness={.95} /></mesh>
-    <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, PLAZA.cz]} material={lotMat} receiveShadow><planeGeometry args={[PLAZA.x, PLAZA.z]} /></mesh>
+    {/* a dark ground underlay: if two ground pieces ever leave a hairline gap, this shows instead of the sky */}
+    <mesh rotation-x={-Math.PI / 2} position={[0, -.16, 0]}><planeGeometry args={[700, 700]} /><meshStandardMaterial color="#2b3d26" roughness={1} /></mesh>
+    <mesh geometry={lawnGeo} rotation-x={-Math.PI / 2} position={[0, -.07, 0]} receiveShadow><meshStandardMaterial map={lawnTex} roughness={.95} /></mesh>
+    <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, PLAZA.cz]} material={lotMat} receiveShadow><planeGeometry args={[PLAZA.x + 1.2, PLAZA.z + 1.2]} /></mesh>
     {skyline.map((t, i) => <mesh key={i} position={t.p} rotation-y={t.rot} scale={t.s} material={towerMat}><boxGeometry args={[1, 1, 1]} /></mesh>)}
-    <HQ position={[0, 0, HQ_Z]} lite={lite} open={open} />
+    <Building position={[0, 0, HQ_Z]} lite={lite} open={open} />
     <Lot lite={lite} asphalt={asphalt} />
     <StarCanopy lite={lite} />
+    {/* the fountain: a round court in the entry aisle, between the two flower islands, gold ring and flowers around it */}
+    <group position={[FOUNTAIN.x, 0, FOUNTAIN.z]}>
+      <mesh position={[0, .05, 0]} receiveShadow><cylinderGeometry args={[4.5, 4.5, .1, 64]} /><meshStandardMaterial color="#c9971f" roughness={.45} metalness={.35} /></mesh>
+      <mesh position={[0, .1, 0]} receiveShadow><cylinderGeometry args={[4.2, 4.2, .2, 64]} /><meshStandardMaterial color="#e8dcc8" roughness={.7} /></mesh>
+      <Fountain position={[0, .2, 0]} mobile={lite} scale={.8} />
+    </group>
     <group position={CAR_POS}>{children}</group>
     <Grass count={quality.grass} />
     <Trees list={ring} clumps={quality.clumps} />

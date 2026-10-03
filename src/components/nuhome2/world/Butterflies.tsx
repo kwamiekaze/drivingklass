@@ -3,7 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx } from './theme';
 
-const COLORS: [string, string][] = [['#f2c14e', '#fff3c4'], ['#ffd27a', '#c9971f'], ['#ffffff', '#f2c14e'], ['#e9a93a', '#fff0c2'], ['#fff3c4', '#d9a441']];
+/*
+ * A small flock that is always in the air, circling the fountain and the front flower beds where the camera looks.
+ * The Style Van sends a few across the whole estate now and then; here they are larger and always present, because
+ * a butterfly crossing 90 m of scene every ten seconds is too small to ever notice. Each one follows its own looping path.
+ */
+const COLORS: [string, string][] = [['#f2c14e', '#fff3c4'], ['#ffd27a', '#c9971f'], ['#ffffff', '#f2c14e'], ['#e9a93a', '#fff0c2'], ['#fff3c4', '#d9a441'], ['#ffb43a', '#ffe9a8']];
 
 function wing(upper: boolean, side: 1 | -1) {
   const s = new THREE.Shape();
@@ -14,56 +19,41 @@ function wing(upper: boolean, side: 1 | -1) {
   return g;
 }
 
-type Fly = { active: boolean; t: number; dur: number; a: THREE.Vector3; b: THREE.Vector3; y: number; ph: number; wob: number; speed: number };
+type Path = { cx: number; cz: number; rx: number; rz: number; y: number; sp: number; ph: number; bob: number };
 
-function Butterfly({ index, api }: { index: number; api: React.MutableRefObject<Fly[]> }) {
+/** Orbit centres: the fountain, the two flower islands and the lawn beside the building. */
+const CENTERS: [number, number, number, number][] = [[0, 6.6, 6, 5], [-13, 6.6, 9, 4], [13, 6.6, 9, 4], [-24, 0, 7, 8], [24, 0, 7, 8], [0, -2, 16, 4]];
+
+function Butterfly({ index }: { index: number }) {
   const root = useRef<THREE.Group>(null), l = useRef<THREE.Group>(null), r = useRef<THREE.Group>(null);
   const mix = useContext(NightCtx);
-  const [c1, c2] = COLORS[index % COLORS.length];
+  const [c1, c2] = COLORS[index % COLORS.length]!;
   const geo = useMemo(() => ({ ul: wing(true, 1), ll: wing(false, 1), ur: wing(true, -1), lr: wing(false, -1) }), []);
   const m1 = useMemo(() => new THREE.MeshBasicMaterial({ color: c1, side: THREE.DoubleSide, toneMapped: false, fog: false }), [c1]);
   const m2 = useMemo(() => new THREE.MeshBasicMaterial({ color: c2, side: THREE.DoubleSide, toneMapped: false, fog: false }), [c2]);
-  const prev = useRef(new THREE.Vector3());
-  useFrame((_, dt) => {
-    const f = api.current[index], g = root.current; if (!g) return;
-    if (!f.active) { g.visible = false; return; }
-    g.visible = true; f.t += dt;
-    const u = f.t / f.dur;
-    if (u >= 1) { f.active = false; return; }
-    const p = new THREE.Vector3().lerpVectors(f.a, f.b, u);
-    p.y = f.y + Math.sin(f.t * 1.3 + f.ph) * 1.1 + Math.sin(f.t * 3.1) * .18;
-    p.z += Math.sin(f.t * .8 + f.ph) * f.wob;
-    const d = p.clone().sub(prev.current);
-    if (d.lengthSq() > 1e-6) g.rotation.y = Math.atan2(-d.z, d.x);
-    prev.current.copy(p); g.position.copy(p);
-    const flap = Math.sin(f.t * 17 + f.ph * 5) * .95 + .35;
+  const path = useMemo<Path>(() => {
+    const [cx, cz, rx, rz] = CENTERS[index % CENTERS.length]!;
+    return { cx, cz, rx: rx * (.7 + (index % 3) * .18), rz: rz * (.7 + (index % 2) * .25), y: 1.6 + (index % 4) * .7, sp: .16 + (index % 5) * .035, ph: index * 1.7, bob: .5 + (index % 3) * .25 };
+  }, [index]);
+  const prev = useRef(new THREE.Vector3()), tmp = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ clock }) => {
+    const g = root.current; if (!g) return;
+    const t = clock.elapsedTime, a = t * path.sp + path.ph;
+    tmp.set(path.cx + Math.cos(a) * path.rx + Math.sin(a * 2.3) * .8, path.y + Math.sin(t * 1.3 + path.ph) * path.bob + Math.sin(t * 3.1) * .12, path.cz + Math.sin(a * 1.0) * path.rz);
+    const dx = tmp.x - prev.current.x, dz = tmp.z - prev.current.z;
+    if (dx * dx + dz * dz > 1e-8) g.rotation.y = Math.atan2(-dz, dx);
+    prev.current.copy(tmp); g.position.copy(tmp);
+    const flap = Math.sin(t * 15 + path.ph * 5) * .95 + .35;
     if (l.current) l.current.rotation.x = -flap; if (r.current) r.current.rotation.x = flap;
-    const k = 1 - mix.current * .28; m1.color.set(c1).multiplyScalar(k); m2.color.set(c2).multiplyScalar(k);
+    const k = 1 - mix.current * .2; m1.color.set(c1).multiplyScalar(k); m2.color.set(c2).multiplyScalar(k);
   });
-  return <group ref={root} visible={false} scale={.75}>
+  return <group ref={root} scale={2.5}>
     <mesh rotation-z={Math.PI / 2}><capsuleGeometry args={[.03, .28, 4, 8]} /><meshBasicMaterial color="#3a2a10" toneMapped={false} fog={false} /></mesh>
     <group ref={l}><mesh geometry={geo.ul} material={m1} /><mesh geometry={geo.ll} material={m2} /></group>
     <group ref={r}><mesh geometry={geo.ur} material={m1} /><mesh geometry={geo.lr} material={m2} /></group>
   </group>;
 }
 
-/** Butterflies cross the whole scene every so often. */
-export function Butterflies() {
-  const api = useRef<Fly[]>(Array.from({ length: 8 }).map(() => ({ active: false, t: 0, dur: 20, a: new THREE.Vector3(), b: new THREE.Vector3(), y: 3, ph: 0, wob: 2, speed: 3 })));
-  const timer = useRef(2);
-  useFrame((_, dt) => {
-    timer.current -= dt;
-    if (timer.current > 0) return;
-    timer.current = 7 + Math.random() * 10;
-    const n = 1 + Math.floor(Math.random() * 3);
-    const left = Math.random() > .5, z0 = -10 + Math.random() * 26;
-    for (let i = 0; i < n; i++) {
-      const f = api.current.find(x => !x.active); if (!f) break;
-      const ex = 46;
-      f.active = true; f.t = -i * .9; f.dur = 20 + Math.random() * 8;
-      f.a.set(left ? -ex : ex, 0, z0 + i * 1.6); f.b.set(left ? ex : -ex, 0, z0 + (Math.random() - .5) * 14);
-      f.y = 2.2 + Math.random() * 5; f.ph = Math.random() * 6; f.wob = 1.5 + Math.random() * 3;
-    }
-  });
-  return <group>{api.current.map((_, i) => <Butterfly key={i} index={i} api={api} />)}</group>;
+export function Butterflies({ count = 9 }: { count?: number }) {
+  return <group>{Array.from({ length: count }).map((_, i) => <Butterfly key={i} index={i} />)}</group>;
 }

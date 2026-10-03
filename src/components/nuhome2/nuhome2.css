@@ -147,3 +147,26 @@
 
 /* while the packages popup is open, the page copy behind it steps aside so only the 3D world shows through the glass */
 .n2-experience[data-pop="true"] :is(.n2-hero, .n2-navbtns, .n2-rail, .n2-drag, .n2-header) { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s ease, visibility 0s .25s; }
+
+/* ---- hero copy stays in the sky: smaller on desktop, and on phones only the slogan and stars remain up top ---- */
+.n2-cta { display: none; }
+@media (min-width: 821px) and (min-aspect-ratio: 4/5) {
+  .n2-hero { top: clamp(112px, 15vh, 150px); width: min(42vw, 620px); }
+  .n2-wordmark { font-size: clamp(38px, 4.6vw, 80px); margin-top: 14px; }
+  .n2-script { margin-top: 18px; font-size: clamp(30px, 3.2vw, 56px); }
+  .n2-desc { max-width: 32ch; font-size: clamp(15px, 1.15vw, 19px); }
+  .n2-actions { margin-top: 16px; }
+}
+@media (max-width: 820px), (max-aspect-ratio: 4/5) {
+  .n2-eyebrow, .n2-wordmark, .n2-desc { display: none; }
+  .n2-hero { top: 92px; }
+  .n2-script { margin: 0 0 8px 2%; }
+  .n2-hero .n2-actions { display: none; }
+  .n2-hero::before { inset: -20px -40px -10px -40px; }
+  .n2-cta { display: flex; position: absolute; z-index: 6; left: 0; right: 0; bottom: 146px; justify-content: center; gap: 10px; transition: opacity .6s ease, visibility 0s; }
+  .n2-cta[data-hidden="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .6s ease, visibility 0s .6s; }
+  .n2-experience[data-pop="true"] .n2-cta { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+
+/* the long Play label only appears on very wide screens, so the button never reaches over the building */
+@media (min-width: 821px) and (max-width: 1699px) { .n2-btn-long { display: none; } }

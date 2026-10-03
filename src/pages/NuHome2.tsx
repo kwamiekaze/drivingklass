@@ -180,6 +180,12 @@ export default function NuHome2() {
           </div>
         </div>
 
+        {/* phones: Book and Play sit low, above Reviews / About Us / Call, so the middle of the screen stays the scene */}
+        <div className="n2-cta" data-hidden={stage !== 0}>
+          <button type="button" className="n2-btn n2-btn--gold" onClick={() => setSheet(true)}>Book a Klass</button>
+          <Link to="/play" className="n2-btn n2-btn--ghost">Play</Link>
+        </div>
+
         <div className="n2-navbtns"><NavigationButtons overlay onReviewsClick={() => setReviewsOpen(true)} onAboutClick={() => setAboutOpen(true)} /></div>
 
         <div className="n2-rail">
