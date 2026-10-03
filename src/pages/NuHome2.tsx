@@ -24,6 +24,11 @@ export function georgiaOpen(now: Date = new Date()) {
   const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
   return h >= 9 && h < 18;
 }
+/** The default theme: day from 7am to 7pm Georgia time, night otherwise. A visitor's own choice, once made, wins. */
+function georgiaDay(now: Date = new Date()) {
+  const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
+  return h >= 7 && h < 19;
+}
 function openOverride(): boolean | null {
   if (typeof window === "undefined") return null;
   const q = new URLSearchParams(window.location.search).get("open");
@@ -64,9 +69,11 @@ function hasWebGL() {
  * buttons over the line, and the same message form as the homepage underneath. Unlisted and noindex until it replaces the homepage.
  */
 export default function NuHome2() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme: pref, resolvedTheme, setTheme } = useTheme();
+  const [clockDay, setClockDay] = useState(() => georgiaDay());
   const { trackClick } = useAnalytics();
-  const night = resolvedTheme === "dark";
+  const auto = pref === "time-based" || pref === "system";
+  const night = auto ? !clockDay : resolvedTheme === "dark";
   const q = useMemo(() => (typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search)), []);
   const [stage, setStage] = useState(() => Math.max(0, Math.min(STAGES.length - 1, Number(q.get("stage")) || 0)));
   const [ready, setReady] = useState(false);
@@ -94,6 +101,13 @@ export default function NuHome2() {
     let link = document.querySelector<HTMLLinkElement>("link[data-nuhome2-fonts]");
     if (!link) { link = document.createElement("link"); link.rel = "stylesheet"; link.href = FONT_HREF; link.dataset.nuhome2Fonts = "true"; document.head.appendChild(link); }
     return () => { document.title = prevTitle; robots.remove(); };
+  }, []);
+
+  useEffect(() => {
+    try { const saved = localStorage.getItem("theme"); if (!saved || saved === "system") setTheme("time-based"); } catch { /* private mode */ }
+    const id = window.setInterval(() => setClockDay(georgiaDay()), 30000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

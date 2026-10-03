@@ -41,19 +41,31 @@ function loft(rings: THREE.Vector3[][]) {
 }
 
 const BODY_ST: [number, number, number, number][] = [   // t from the tail, top (x H), half width (x W/2), bottom (x H)
-  [0, .50, .72, .27], [.015, .60, .88, .22], [.06, .67, .96, .17], [.18, .695, 1, .15], [.30, .70, 1, .14], [.50, .70, 1, .14], [.64, .685, 1, .14],
-  [.72, .63, 1, .15], [.84, .585, .97, .17], [.94, .54, .93, .20], [.985, .46, .84, .24], [1, .36, .70, .27],
+  [0, .50, .70, .17], [.012, .60, .86, .15], [.05, .66, .95, .13], [.12, .692, .985, .115], [.20, .70, 1, .11], [.35, .70, 1, .105], [.55, .70, 1, .105], [.64, .685, 1, .11],
+  [.72, .63, 1, .115], [.82, .59, .985, .12], [.91, .55, .955, .13], [.965, .50, .90, .145], [.99, .43, .80, .16], [1, .34, .66, .18],
 ];
 const CABIN_ST: [number, number][] = [   // t, roof height (x H)
   [.215, .69], [.235, .78], [.28, .905], [.34, .975], [.40, 1], [.48, 1], [.53, .975], [.575, .85], [.61, .73], [.625, .69],
 ];
+const BODY_W = .965;     // the flank sits just inside the widest line, so the wheels read as fully round and fully outside
+
+/** Make every triangle face outward: a closed surface has a positive signed volume. */
+function orient(g: THREE.BufferGeometry) {
+  const p = g.attributes.position as THREE.BufferAttribute, ix = g.index!, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  let vol = 0;
+  for (let i = 0; i < ix.count; i += 3) { a.fromBufferAttribute(p, ix.getX(i)); b.fromBufferAttribute(p, ix.getX(i + 1)); c.fromBufferAttribute(p, ix.getX(i + 2)); vol += a.dot(b.clone().cross(c)); }
+  if (vol < 0) for (let i = 0; i < ix.count; i += 3) { const t = ix.getX(i + 1); ix.setX(i + 1, ix.getX(i + 2)); ix.setX(i + 2, t); }
+  g.computeVertexNormals(); return g;
+}
 
 function buildGeos(s: CarSpec) {
   const { L, W, H } = s, hw = W / 2, tr = s.trunk ?? 1, hd = s.hood ?? 1, rb = s.roofBack ?? 1;
-  // flat flanks, rounded shoulder, flat sill: wheels sit inside the body line like a real sedan
+  const tF = .5 + (L / 2 - s.fo) / L, tR = .5 + (L / 2 - s.fo - s.WB) / L;
+  const flare = (t: number) => 1 + .016 * (Math.exp(-Math.pow((t - tF) / .06, 2)) + Math.exp(-Math.pow((t - tR) / .06, 2)));
+  // flat flanks, rounded shoulder, flat sill
   const HALF: [number, number][] = [[.78, 0], [.95, .07], [1, .2], [1, .6], [.985, .8], [.9, .95], [.6, 1]];
   const bodyRings = BODY_ST.map(([t, top, w, bot]) => {
-    const x = (t - .5) * L, tp = (t < .3 ? top * tr : t > .7 ? top * hd : top) * H, bt = bot * H, ww = w * hw, pts: THREE.Vector3[] = [];
+    const x = (t - .5) * L, tp = (t < .3 ? top * tr : t > .7 ? top * hd : top) * H, bt = bot * H, ww = w * hw * BODY_W * flare(t), pts: THREE.Vector3[] = [];
     HALF.forEach(([wf, yf]) => pts.push(new THREE.Vector3(x, bt + (tp - bt) * yf, wf * ww)));
     pts.push(new THREE.Vector3(x, tp + .004, 0));
     for (let i = HALF.length - 1; i >= 0; i--) { const [wf, yf] = HALF[i]!; pts.push(new THREE.Vector3(x, bt + (tp - bt) * yf, -wf * ww)); }
@@ -62,8 +74,8 @@ function buildGeos(s: CarSpec) {
   });
   const belt = .69 * H;
   const cabinRings = CABIN_ST.map(([t, roof], i) => {
-    const x = (t - .5) * L, yt = roof * H * (t < .4 ? (i < 3 ? 1 : 1) : 1) * (t < .4 ? rb + (1 - rb) * 0 : 1) + (t < .4 ? (rb - 1) * .02 * H : 0), yb = belt - .002;
-    const hb = .82 * hw, ht = (roof > .95 ? .7 : .7 + (1 - roof) * .3) * hw;
+    const x = (t - .5) * L, yt = roof * H + (t < .4 ? (rb - 1) * .02 * H : 0), yb = belt - .002, hb = .82 * hw, ht = (roof > .95 ? .7 : .7 + (1 - roof) * .3) * hw;
+    void i;
     const P: Pt[] = [[-hb, yb], [-(hb + ht) / 2 - .012, (yb + yt) / 2], [-ht, yt - .06], [-ht * .88, yt - .014], [-ht * .55, yt], [0, yt + .012], [ht * .55, yt], [ht * .88, yt - .014], [ht, yt - .06], [(hb + ht) / 2 + .012, (yb + yt) / 2], [hb, yb]];
     const ring = P.map(([z, y]) => new THREE.Vector3(x, y, z)); ring.push(new THREE.Vector3(x, yb, 0)); return ring;
   });
@@ -74,9 +86,8 @@ function buildGeos(s: CarSpec) {
     for (let i = 0; i < roofSt.length - 1; i++) for (let c = 0; c < cols - 1; c++) { const a = i * cols + c; idx.push(a, a + cols, a + 1, a + 1, a + cols, a + cols + 1); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
   })();
-  return { body: loft(bodyRings), cabin: loft(cabinRings), roof };
+  return { body: orient(loft(bodyRings)), cabin: orient(loft(cabinRings)), roof };
 }
-
 
 function rimTexture() {
   return makeCanvasTexture(256, 256, (g, w, h) => {
@@ -129,9 +140,9 @@ function getShared() {
   const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.62)'); gr.addColorStop(.6, 'rgba(0,0,0,.3)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   const face = (map: THREE.Texture) => new THREE.MeshStandardMaterial({ map, roughness: .42, metalness: .25 });
   shared = {
-    tire: new THREE.MeshStandardMaterial({ color: '#0f1012', roughness: .94 }),
+    tire: new THREE.MeshStandardMaterial({ color: '#0f1012', roughness: .94, side: THREE.DoubleSide }),
     rim: new THREE.MeshStandardMaterial({ map: rimTexture(), metalness: .8, roughness: .28 }),
-    arch: new THREE.MeshBasicMaterial({ color: '#040405' }),
+    arch: new THREE.MeshBasicMaterial({ color: '#040405', polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     glass: new THREE.MeshPhysicalMaterial({ color: '#0b1218', roughness: .04, metalness: .6, clearcoat: 1, envMapIntensity: 2 }),
     dark: new THREE.MeshStandardMaterial({ color: '#0b0b0d', roughness: .5, metalness: .2 }),
     chrome: new THREE.MeshStandardMaterial({ color: '#d4d8de', roughness: .18, metalness: 1 }),
@@ -148,9 +159,8 @@ function getShared() {
   return shared;
 }
 
-const tireGeo = new THREE.CylinderGeometry(1, 1, 1, 32);
+const tireGeo = new THREE.LatheGeometry([[.66, -.5], [.8, -.5], [.93, -.47], [1, -.38], [1, .38], [.93, .47], [.8, .5], [.66, .5], [.66, -.5]].map(([r, y]) => new THREE.Vector2(r, y)), 40);
 const rimGeo = new THREE.CircleGeometry(1, 32);
-const archGeo = new THREE.RingGeometry(.76, 1, 32);
 const discGeo = new THREE.CylinderGeometry(1, 1, 1, 24);
 
 export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position: [number, number, number]; rotationY?: number }) {
@@ -159,51 +169,120 @@ export function Car({ spec, position, rotationY = 0 }: { spec: CarSpec; position
   const paint = useMemo(() => new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: .5, roughness: .26, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5 }), [spec.color]);
   const roofMat = useMemo(() => { const r = paint.clone(); r.side = THREE.DoubleSide; return r; }, [paint]);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(`DK${spec.year % 100}${spec.id.slice(0, 2).toUpperCase()}`), roughness: .45 }), [spec]);
-  const { L, W, H, WB, fo, tire } = spec, hw = W / 2, ax = L / 2 - fo, rx = ax - WB, archZ = hw * .975 + .003, belt = .69 * H;
+  const { L, W, H, WB, fo, tire } = spec, hw = W / 2, fz = hw * BODY_W + .002, ax = L / 2 - fo, rx = ax - WB, belt = .69 * H;
+  const wheelZ = hw - .105, archRel = (hw * BODY_W * 1.016 + .004) - wheelZ;
+  const arch = useMemo(() => { const rw = tire * 1.22, a0 = Math.asin(Math.max(-1, Math.min(1, (.11 * H - tire) / rw))), sh = new THREE.Shape(); sh.absarc(0, 0, rw, a0, Math.PI - a0, false); sh.closePath(); return new THREE.ShapeGeometry(sh, 28); }, [tire, H]);
   const wheels = [[ax, 1], [ax, -1], [rx, 1], [rx, -1]] as const;
-  const seams = [.585, .455, .30];
+  const doorLo = .25 * H, doorH = belt - doorLo;
   return <group position={position} rotation-y={rotationY}>
     <mesh position={[0, .06, 0]} rotation-x={-Math.PI / 2} material={m.shadow} scale={[L * 1.28, W * 1.5, 1]} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
-    <mesh position={[0, .13, 0]} material={m.dark}><boxGeometry args={[L * .86, .02, W * .8]} /></mesh>
     <mesh geometry={geos.body} material={paint} castShadow receiveShadow />
     <mesh geometry={geos.cabin} material={m.glass} castShadow />
     <mesh geometry={geos.roof} material={roofMat} />
-    {/* wheels, discs, calipers, wells */}
-    {wheels.map(([x, s], i) => <group key={i} position={[x, tire, s * (hw - .115)]}>
+    {/* wheels: wheel well, tire with rounded shoulders, barrel, rim, brake disc and caliper. Centre height = tire radius, so every tire touches the ground. */}
+    {wheels.map(([x, s], i) => <group key={i} position={[x, tire, s * wheelZ]}>
+      <mesh position={[0, 0, s * archRel]} rotation-y={s > 0 ? 0 : Math.PI} geometry={arch} material={m.arch} />
       <mesh rotation-x={Math.PI / 2} geometry={tireGeo} scale={[tire, .205, tire]} material={m.tire} />
+      <mesh rotation-x={Math.PI / 2} scale={[tire * .68, .19, tire * .68]} material={m.dark}><cylinderGeometry args={[1, 1, 1, 24]} /></mesh>
       <mesh position={[0, 0, s * .06]} rotation-x={Math.PI / 2} geometry={discGeo} scale={[tire * .6, .02, tire * .6]} material={m.disc} />
       <mesh position={[tire * .24, tire * .3, s * .075]} material={m.caliper}><boxGeometry args={[.12, .1, .04]} /></mesh>
       <mesh position={[0, 0, s * .1035]} rotation-y={s > 0 ? 0 : Math.PI} geometry={rimGeo} scale={tire * .74} material={m.rim} />
-      <mesh position={[0, 0, s * (archZ - (hw - .115))]} rotation-y={s > 0 ? 0 : Math.PI} scale={tire * 1.3} geometry={archGeo} material={m.arch} />
     </group>)}
     {[-1, 1].map(s => <group key={s}>
-      {/* lamps: housing, projector, daytime strip; wraparound tail lamp with a chrome bar */}
+      {/* lamps */}
       <mesh position={[L / 2 - .1, H * .45, s * hw * .62]} rotation-y={-s * .38} material={m.head}><boxGeometry args={[.12, .085, .4]} /></mesh>
       <mesh position={[L / 2 - .045, H * .452, s * hw * .6]} rotation-x={Math.PI / 2} rotation-z={Math.PI / 2} material={m.dark}><cylinderGeometry args={[.028, .028, .04, 14]} /></mesh>
       <mesh position={[L / 2 - .095, H * .485, s * hw * .62]} rotation-y={-s * .38} material={m.drl}><boxGeometry args={[.125, .014, .38]} /></mesh>
-      <mesh position={[-L / 2 + .07, H * .56, s * hw * .68]} rotation-y={s * .3} material={m.tail}><boxGeometry args={[.08, .09, .42]} /></mesh>
-      <mesh position={[-L / 2 + .105, H * .56, s * hw * .52]} material={m.chrome}><boxGeometry args={[.012, .016, .3]} /></mesh>
+      <mesh position={[-L / 2 + .03, H * .56, s * hw * .5]} rotation-y={s * .12} material={m.tail}><boxGeometry args={[.07, .09, .4]} /></mesh>
+      <mesh position={[-L / 2 + .068, H * .56, s * hw * .5]} material={m.chrome}><boxGeometry args={[.012, .016, .3]} /></mesh>
+      <mesh position={[-L / 2 + .02, H * .24, s * hw * .62]} material={m.tail}><boxGeometry args={[.02, .04, .1]} /></mesh>
       <mesh position={[L / 2 - .09, H * .21, s * hw * .72]} material={m.drl}><boxGeometry args={[.04, .045, .12]} /></mesh>
-      {/* mirrors: stalk and housing */}
-      <mesh position={[(.585 - .5) * L + .06, H * .69, s * (hw + .02)]} material={m.dark}><boxGeometry args={[.05, .03, .06]} /></mesh>
-      <mesh position={[(.585 - .5) * L + .1, H * .71, s * (hw + .08)]} material={paint} castShadow><boxGeometry args={[.13, .09, .16]} /></mesh>
-      {/* door seams, handles, window chrome, B pillar, side skirt */}
-      {seams.map(t => <mesh key={t} position={[(t - .5) * L, H * .42, s * (hw + .001)]} material={m.dark}><boxGeometry args={[.007, H * .5, .004]} /></mesh>)}
-      {[.52, .39].map(t => <mesh key={t} position={[(t - .5) * L, H * .6, s * (hw + .008)]} material={m.chrome}><boxGeometry args={[.13, .022, .02]} /></mesh>)}
+      <mesh position={[(.93 - .5) * L, H * .4, s * (fz + .004)]} material={m.tail}><boxGeometry args={[.07, .022, .012]} /></mesh>
+      {/* mirrors */}
+      <mesh position={[(.585 - .5) * L + .06, H * .69, s * (fz + .02)]} material={m.dark}><boxGeometry args={[.05, .03, .06]} /></mesh>
+      <mesh position={[(.585 - .5) * L + .1, H * .71, s * (fz + .08)]} material={paint} castShadow><boxGeometry args={[.13, .09, .16]} /></mesh>
+      {/* doors: shut lines all round, handle pockets and handles, B pillar, window chrome, sill trim */}
+      {[.585, .455, .30].map(t => <mesh key={t} position={[(t - .5) * L, doorLo + doorH / 2, s * (fz + .001)]} material={m.dark}><boxGeometry args={[.007, doorH, .004]} /></mesh>)}
+      <mesh position={[(.4425 - .5) * L, doorLo, s * (fz + .001)]} material={m.dark}><boxGeometry args={[.285 * L, .006, .004]} /></mesh>
+      {[.52, .39].map(t => <group key={t}>
+        <mesh position={[(t - .5) * L, H * .6, s * (fz + .004)]} material={m.dark}><boxGeometry args={[.17, .045, .008]} /></mesh>
+        <mesh position={[(t - .5) * L, H * .6, s * (fz + .011)]} material={m.chrome}><boxGeometry args={[.13, .022, .02]} /></mesh>
+      </group>)}
       <mesh position={[(.42 - .5) * L, belt + .006, s * (.82 * hw + .004)]} material={m.chrome}><boxGeometry args={[L * .4, .018, .014]} /></mesh>
       <mesh position={[(.455 - .5) * L, belt + (H - belt) * .5, s * (.77 * hw)]} material={m.dark}><boxGeometry args={[.07, (H - belt) * .86, .02]} /></mesh>
-      <mesh position={[0, H * .18, s * (hw - .012)]} material={m.dark}><boxGeometry args={[L * .56, .06, .02]} /></mesh>
+      <mesh position={[0, H * .17, s * (fz + .003)]} material={m.dark}><boxGeometry args={[L * .5, .05, .014]} /></mesh>
     </group>)}
-    {/* grille, intake, plates, exhaust, spoiler lip, shark fin */}
+    <mesh position={[(.215 - .5) * L, H * .7 * (spec.trunk ?? 1) + .005, 0]} material={m.dark}><boxGeometry args={[.006, .004, W * .72]} /></mesh>
+    {/* fuel flap */}
+    <mesh position={[(.21 - .5) * L, H * .56, fz + .002]} material={m.dark}><boxGeometry args={[.17, .17, .004]} /></mesh>
+    {/* wipers and cowl */}
+    {[-1, 1].map(s => <mesh key={s} position={[(.6 - .5) * L, belt + .012, s * .34]} rotation-y={s * .12} material={m.dark}><boxGeometry args={[.05, .012, .5]} /></mesh>)}
+    {/* grille, intake, plates, exhaust, badge, spoiler lip, shark fin */}
     <mesh position={[L / 2 - .028, H * .36, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[.84, .15]} /></mesh>
     <mesh position={[L / 2 - .05, H * .22, 0]} rotation-y={Math.PI / 2} material={m.grille}><planeGeometry args={[1.1, .1]} /></mesh>
     <mesh position={[L / 2 - .015, H * .27, 0]} rotation-y={Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
     <mesh position={[-L / 2 + .012, H * .38, 0]} rotation-y={-Math.PI / 2} material={plate}><planeGeometry args={[.3, .15]} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[-L / 2 + .02, H * .2, s * hw * .5]} rotation-z={Math.PI / 2} material={m.chrome}><cylinderGeometry args={[.035, .035, .08, 12]} /></mesh>)}
-    <mesh position={[-L / 2 + .13, H * (.7 * (spec.trunk ?? 1)) + .005, 0]} material={paint}><boxGeometry args={[.1, .018, W * .62]} /></mesh>
+    <mesh position={[-L / 2 + .014, H * .56, 0]} material={m.chrome}><boxGeometry args={[.012, .035, .18]} /></mesh>
+    {[-1, 1].map(s => <mesh key={s} position={[-L / 2 + .02, H * .16, s * hw * .5]} rotation-z={Math.PI / 2} material={m.chrome}><cylinderGeometry args={[.035, .035, .08, 12]} /></mesh>)}
+    <mesh position={[-L / 2 + .13, H * (.7 * (spec.trunk ?? 1)) + .005, 0]} material={paint}><boxGeometry args={[.1, .018, W * .6]} /></mesh>
     <mesh position={[(.34 - .5) * L, H + .02, 0]} material={m.dark}><boxGeometry args={[.13, .04, .035]} /></mesh>
-    {/* the DrivingKlass roof magnet: long side across the roof, gold border, five gold stars */}
-    <mesh position={[(.44 - .5) * L, H + .018, 0]} material={m.gold}><boxGeometry args={[.4, .012, 1.1]} /></mesh>
-    <mesh position={[(.44 - .5) * L, H + .06, 0]} material={m.mag}><boxGeometry args={[.36, .075, 1.05]} /></mesh>
+    <Topper position={[(.44 - .5) * L, H + .004, 0]} />
+  </group>;
+}
+
+/* ---- the roof topper: white shell, yellow face, five glossy gold stars on both sides, black magnet cups ---- */
+function drawFacetStar(g: CanvasRenderingContext2D, cx: number, cy: number, R: number) {
+  const r = R * .46, v: [number, number][] = Array.from({ length: 10 }, (_, k) => { const a = -Math.PI / 2 + (k * Math.PI) / 5, rad = k % 2 ? r : R; return [cx + Math.cos(a) * rad, cy + Math.sin(a) * rad]; });
+  const mix = (t: number) => { const a = [255, 243, 150], b = [226, 134, 0]; return `rgb(${a.map((x, i) => Math.round(x + (b[i]! - x) * t)).join(',')})`; };
+  v.forEach((p, k) => { const q = v[(k + 1) % 10]!, am = -Math.PI / 2 + ((k + .5) * Math.PI) / 5, light = Math.cos(am + Math.PI * .75); g.beginPath(); g.moveTo(cx, cy); g.lineTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.closePath(); g.fillStyle = mix(.5 - .5 * light); g.fill(); });
+  g.beginPath(); v.forEach((p, k) => (k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); g.lineJoin = 'round'; g.lineWidth = R * .075; g.strokeStyle = '#8a2a06'; g.stroke();
+  g.beginPath(); g.moveTo(cx - R * .08, cy - R * .12); g.lineTo(cx - R * .5, cy - R * .08); g.lineTo(cx - R * .2, cy - R * .5); g.closePath(); g.fillStyle = 'rgba(255,255,255,.4)'; g.fill();
+}
+function topperTexture() {
+  const W = 1400, H = 400;
+  return makeCanvasTexture(W, H, (g) => {
+    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fff400'); bg.addColorStop(.55, '#f6e600'); bg.addColorStop(1, '#e8d000'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    const sh = g.createLinearGradient(0, 0, W * .8, H); sh.addColorStop(0, 'rgba(255,255,255,.4)'); sh.addColorStop(.45, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(0, 0, W, H);
+    [[.135, .92], [.315, .96], [.5, 1.1], [.685, .96], [.865, .92]].forEach(([fx, sc]) => drawFacetStar(g, W * fx!, H * .5, 125 * sc!));
+  }, 8, false);
+}
+const TH = { hl: .475, h: .27, d: .15 };
+function topperShape(inset: number) {
+  const hl = TH.hl - inset, h = TH.h - inset * 1.4, b = inset * .7, s = new THREE.Shape();
+  s.moveTo(-hl + .05, b); s.lineTo(hl - .05, b); s.quadraticCurveTo(hl, b, hl, b + .06); s.lineTo(hl, h - .09); s.quadraticCurveTo(hl, h, hl - .11, h + .012);
+  s.quadraticCurveTo(0, h + .05, -hl + .11, h + .012); s.quadraticCurveTo(-hl, h, -hl, h - .09); s.lineTo(-hl, b + .06); s.quadraticCurveTo(-hl, b, -hl + .05, b);
+  return s;
+}
+let topper: { shell: THREE.BufferGeometry; face: THREE.BufferGeometry; shellMat: THREE.Material; faceMat: THREE.Material; cup: THREE.Material; cupTop: THREE.Material } | null = null;
+function getTopper() {
+  if (topper) return topper;
+  const shell = new THREE.ExtrudeGeometry(topperShape(0), { depth: TH.d, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 3, curveSegments: 18 });
+  shell.translate(0, 0, -TH.d / 2); shell.rotateY(-Math.PI / 2); shell.computeVertexNormals();
+  const face = new THREE.ShapeGeometry(topperShape(.03), 18), pos = face.attributes.position as THREE.BufferAttribute, uv: number[] = [];
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i = 0; i < pos.count; i++) { x0 = Math.min(x0, pos.getX(i)); x1 = Math.max(x1, pos.getX(i)); y0 = Math.min(y0, pos.getY(i)); y1 = Math.max(y1, pos.getY(i)); }
+  for (let i = 0; i < pos.count; i++) uv.push((pos.getX(i) - x0) / (x1 - x0), (pos.getY(i) - y0) / (y1 - y0));
+  face.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  topper = {
+    shell, face,
+    shellMat: new THREE.MeshPhysicalMaterial({ color: '#f8f6ef', roughness: .22, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.2 }),
+    faceMat: new THREE.MeshPhysicalMaterial({ map: topperTexture(), roughness: .3, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1 }),
+    cup: new THREE.MeshStandardMaterial({ color: '#101012', roughness: .55, metalness: .2 }),
+    cupTop: new THREE.MeshStandardMaterial({ color: '#2b2c30', roughness: .5, metalness: .3 }),
+  };
+  return topper;
+}
+function Topper({ position }: { position: [number, number, number] }) {
+  const t = getTopper(), lift = .055, fx = TH.d / 2 + .012 + .0015;
+  return <group position={position}>
+    {[[-.045, -.33], [.045, -.33], [-.045, .33], [.045, .33]].map(([x, z], i) => <group key={i} position={[x!, 0, z!]}>
+      <mesh position={[0, .012, 0]} material={t.cup}><cylinderGeometry args={[.07, .078, .024, 20]} /></mesh>
+      <mesh position={[0, .034, 0]} material={t.cupTop}><cylinderGeometry args={[.045, .06, .02, 20]} /></mesh>
+      <mesh position={[0, .048, 0]} material={t.cup}><cylinderGeometry args={[.02, .02, .03, 10]} /></mesh>
+    </group>)}
+    <group position={[0, lift, 0]}>
+      <mesh geometry={t.shell} material={t.shellMat} castShadow />
+      <mesh geometry={t.face} material={t.faceMat} position={[fx, 0, 0]} rotation-y={Math.PI / 2} />
+      <mesh geometry={t.face} material={t.faceMat} position={[-fx, 0, 0]} rotation-y={-Math.PI / 2} />
+    </group>
   </group>;
 }

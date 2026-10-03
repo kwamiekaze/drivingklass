@@ -127,14 +127,25 @@ function moonTexture() {
 }
 
 /** Sun and moon live at infinity: their depth is pinned to the far plane, so a tower or a roof can never fall behind them. */
+/** The sky group follows the camera. The rig moves it after the camera has settled for the frame, so the sun never lags or jitters. */
+export const skyAnchor: { current: THREE.Group | null } = { current: null };
+
 function pinFar(mat: THREE.Material) {
   mat.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n gl_Position.z = gl_Position.w * 0.99999;'); };
   mat.customProgramCacheKey = () => 'pinfar';
   mat.needsUpdate = true;
 }
-function FarDepth({ children }: { children: ReactNode }) {
+/** Every part sits at the same far depth, so none may depth-test against another: they paint in JSX order instead (glow, rays, disc, lenses, smile), which is what keeps the sunglasses solid. */
+function FarDepth({ children, order = -6 }: { children: ReactNode; order?: number }) {
   const g = useRef<THREE.Group>(null);
-  useLayoutEffect(() => { g.current?.traverse(o => { const m = (o as THREE.Mesh).material; (Array.isArray(m) ? m : m ? [m] : []).forEach(pinFar); }); });
+  useLayoutEffect(() => {
+    let n = 0;
+    g.current?.traverse(o => {
+      const mesh = o as THREE.Mesh; if (!mesh.isMesh) return;
+      mesh.renderOrder = order + (n++) * .01;
+      (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach(m => { pinFar(m); m.transparent = true; m.depthWrite = false; });
+    });
+  }, [order]);
   return <group ref={g}>{children}</group>;
 }
 
@@ -156,27 +167,32 @@ function roundedRect(w: number, h: number, r: number) {
   return s;
 }
 
+/** The Style Van sun, drawn once to a single plate: gradient disc, sixteen rays, sunglasses, smile, blush. Nothing in it moves or layers in 3D, so nothing in it can flicker. */
+function sunArt() {
+  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d')!;
+  g.translate(S / 2, S / 2); g.scale(S / 24, -S / 24);
+  g.fillStyle = '#ffd23f';
+  for (let i = 0; i < 16; i++) { g.save(); g.rotate((i / 16) * Math.PI * 2); g.beginPath(); g.moveTo(-.74, 7.7); g.lineTo(.74, 7.7); g.lineTo(0, 11.1); g.closePath(); g.fill(); g.restore(); }
+  const d = g.createRadialGradient(0, 0, 0, 0, 0, 6.6); d.addColorStop(0, '#fff7c2'); d.addColorStop(.7, '#ffd84f'); d.addColorStop(1, '#ffb62e');
+  g.fillStyle = d; g.beginPath(); g.arc(0, 0, 6.6, 0, Math.PI * 2); g.fill();
+  const lens = (sx: number) => { const w = 3.1, h = 2.1, r = .55, x = sx * 1.95 - w / 2, y = .7 - h / 2; g.beginPath(); g.moveTo(x + r, y); g.lineTo(x + w - r * 2.2, y); g.quadraticCurveTo(x + w, y, x + w, y + r); g.lineTo(x + w, y + h - r * 2.2); g.quadraticCurveTo(x + w, y + h, x + w - r * 2.2, y + h); g.lineTo(x + r * 2.2, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r * 2.2); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath(); g.fill(); };
+  g.fillStyle = '#14101c';
+  [-1, 1].forEach(sx => { lens(sx); g.fillRect(sx * 3.67 - 1.3, .74, 2.6, .22); });
+  g.fillRect(-.45, .83, .9, .24);
+  [-1, 1].forEach(sx => { g.save(); g.translate(sx * 1.95 - sx * .55, 1.15); g.rotate(sx * .5); g.fillStyle = 'rgba(143,134,184,.75)'; g.fillRect(-.45, -.08, .9, .16); g.restore(); });
+  g.strokeStyle = '#b5541f'; g.lineWidth = .34; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+  for (let k = 0; k <= 24; k++) { const a = Math.PI + (k / 24) * Math.PI * .8, x = 1.85 * Math.cos(a), y = -.9 + 1.85 * Math.sin(a); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+  g.fillStyle = 'rgba(255,156,138,.55)'; [-1, 1].forEach(sx => { g.beginPath(); g.arc(sx * 3.5, -.6, .62, 0, Math.PI * 2); g.fill(); });
+  return c;
+}
+
 /** The sun, wearing sunglasses. */
 export function Sun({ position }: { position: [number, number, number] }) {
   const glow = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, 'rgba(255,244,190,.95)'], [.3, 'rgba(255,224,130,.4)'], [1, 'rgba(255,200,90,0)']])), []);
-  const disc = useMemo(() => new THREE.CanvasTexture(radialTexture([[0, '#fff7c2'], [.7, '#ffd84f'], [1, '#ffb62e']], 512)), []);
-  const lens = useMemo(() => new THREE.ShapeGeometry(roundedRect(3.1, 2.1, .55)), []);
-  const rays = useRef<THREE.Group>(null);
-  useFrame((_, dt) => { if (rays.current) rays.current.rotation.z += dt * .06; });
+  const art = useMemo(() => { const t = new THREE.CanvasTexture(sunArt()); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }, []);
   return <FadeGroup day><FarDepth><group position={position}><Billboard>
     <mesh position={[0, 0, -.3]}><planeGeometry args={[62, 62]} /><meshBasicMaterial map={glow} transparent depthWrite={false} fog={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
-    <group ref={rays} position={[0, 0, -.1]}>
-      {Array.from({ length: 16 }).map((_, i) => <mesh key={i} rotation={[0, 0, (i / 16) * Math.PI * 2]}><mesh position={[0, 9.4, 0]}><coneGeometry args={[.85, 3.4, 3]} /><meshBasicMaterial color="#ffd23f" fog={false} toneMapped={false} /></mesh></mesh>)}
-    </group>
-    <mesh><circleGeometry args={[6.6, 64]} /><meshBasicMaterial map={disc} fog={false} toneMapped={false} /></mesh>
-    {[-1, 1].map(s => <group key={s} position={[s * 1.95, .7, .06]}>
-      <mesh geometry={lens}><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
-      <mesh position={[-s * .55, .45, .01]} rotation={[0, 0, s * .5]}><planeGeometry args={[.9, .16]} /><meshBasicMaterial color="#8f86b8" transparent opacity={.75} fog={false} toneMapped={false} /></mesh>
-      <mesh position={[s * 1.72, .15, 0]}><planeGeometry args={[2.6, .22]} /><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
-    </group>)}
-    <mesh position={[0, .95, .06]}><planeGeometry args={[.9, .24]} /><meshBasicMaterial color="#14101c" fog={false} toneMapped={false} /></mesh>
-    <mesh position={[0, -.9, .05]} rotation={[0, 0, Math.PI]}><torusGeometry args={[1.85, .17, 10, 40, Math.PI * .8]} /><meshBasicMaterial color="#b5541f" fog={false} toneMapped={false} /></mesh>
-    {[-1, 1].map(s => <mesh key={s} position={[s * 3.5, -.6, .05]}><circleGeometry args={[.62, 24]} /><meshBasicMaterial color="#ff9c8a" transparent opacity={.55} fog={false} toneMapped={false} /></mesh>)}
+    <mesh><planeGeometry args={[24, 24]} /><meshBasicMaterial map={art} transparent depthWrite={false} fog={false} toneMapped={false} /></mesh>
   </Billboard></group></FarDepth></FadeGroup>;
 }
 

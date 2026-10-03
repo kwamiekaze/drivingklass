@@ -109,3 +109,9 @@
   .n2j-btn { min-height: 48px; padding: 0 20px; font-size: 11px; } .n2j-steps ol { grid-template-columns: 1fr; } .n2j-chapters { display: none; } .n2j-dock { left: 10px; bottom: 12px; gap: 8px; } .n2j-dock button { width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .n2j *, .n2j *::before, .n2j *::after { animation: none !important; transition-duration: .01ms !important; } }
+
+/* the page-bottom sun is the Style Van sun: no disc or shadow of its own, the SVG carries the glow */
+.n2j-sun { background: none !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible; }
+.n2j-sun-rays { transform-origin: 0 0; animation: n2j-rays 105s linear infinite; }
+@keyframes n2j-rays { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .n2j-sun-rays { animation: none; } }

@@ -197,3 +197,11 @@
   .n2-nbtn { height: 40px; padding: 0 12px; font-size: 10.5px; letter-spacing: .1em; gap: 0; }
   .n2-nbtn svg { display: none; }
 }
+
+/* the menu is glass: the 3D world stays visible behind it */
+.n2-header [role="menu"] { background: linear-gradient(180deg, rgba(24, 19, 10, .4), rgba(10, 8, 5, .34)) !important; backdrop-filter: blur(5px) saturate(1.15); -webkit-backdrop-filter: blur(5px) saturate(1.15); border-color: rgba(242, 193, 78, .55); }
+.n2-header [role="menuitem"] { text-shadow: 0 1px 10px rgba(0, 0, 0, .85) !important; }
+.n2-header [role="menuitem"]:hover, .n2-header [role="menuitem"]:focus-visible { background: rgba(242, 193, 78, .2) !important; }
+/* nothing over the canvas animates every frame, so the compositor never has a reason to flicker the sky */
+.n2-gold { animation: none !important; background-position: 40% 0; }
+.n2-scene { transform: translate3d(0, 0, 0); }

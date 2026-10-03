@@ -4,8 +4,7 @@ import { Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@re
 import * as THREE from 'three';
 import { Estate } from './Estate';
 import { Butterflies } from './Butterflies';
-import { Doves } from './Doves';
-import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun } from './Sky';
+import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun, skyAnchor } from './Sky';
 import { NightCtx } from './theme';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, stepDown, type Quality } from './quality';
@@ -49,9 +48,7 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
 
 /** The sky travels with the camera, so it holds from the far end of the avenue to the back lawn. */
 function SkyFollow({ children }: { children: React.ReactNode }) {
-  const g = useRef<THREE.Group>(null);
-  useFrame(({ camera }) => { if (g.current) g.current.position.set(camera.position.x, 0, camera.position.z); });
-  return <group ref={g}>{children}</group>;
+  return <group ref={n => { skyAnchor.current = n; }}>{children}</group>;
 }
 
 function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'> & { quality: Quality; shadow: number; onTier: () => void }) {
@@ -73,7 +70,6 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
     <Clouds count={lite ? 12 : 22} /></SkyFollow>
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     <Butterflies count={lite ? 5 : 9} />
-    <Doves />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
     <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={120} minPolarAngle={.25} maxPolarAngle={1.9} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FOV, INTRO, PAN, STAGES, type Stop, type V3 } from './views';
+import { skyAnchor } from './Sky';
 
 type Controls = {
   target: THREE.Vector3; enabled: boolean; autoRotate: boolean; autoRotateSpeed: number; getAzimuthalAngle: () => number;
@@ -83,6 +84,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       if (camera.position.y < .8) camera.position.y = .8;
     }
     if (!done.current && m !== 'intro') { done.current = true; onIntroDone(); }
+    if (skyAnchor.current) skyAnchor.current.position.set(camera.position.x, 0, camera.position.z);
     const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 30); t.y = THREE.MathUtils.clamp(t.y, .4, 16);
   });
   return null;

@@ -50,8 +50,8 @@ function Arrows({ items }: { items: { x: number; z: number; yaw: number }[] }) {
 function markings() {
   const white: Dec[] = [], yellow: Dec[] = [], yellowHi: Dec[] = [], streetW: Dec[] = [], avenueW: Dec[] = [], cross: Dec[] = [];
   for (let j = 0; j <= 10; j++) { const x = 1.375 + 2.75 * j; [-1, 1].forEach(s => white.push({ x: s * x, z: -6, w: j === 0 ? .16 : .1, d: 5 })); }
-  for (let k = 0; k <= 9; k++) { const x = 4.125 + 2.75 * k; [-1, 1].forEach(s => white.push({ x: s * x, z: 5.5, w: .1, d: 5 })); }
-  white.push({ x: -31.7, z: 13.3, w: 5, d: .45 }, { x: -2.05, z: 13.3, w: 4, d: .45 });
+  for (let k = 1; k <= 9; k++) { const x = 4.125 + 2.75 * k; [-1, 1].forEach(s => white.push({ x: s * x, z: 5.5, w: .1, d: 5 })); }
+  white.push({ x: -31.7, z: 13.3, w: 5, d: .45 });
   [-1, 1].forEach(sx => [-1, 1].forEach(sz => streetW.push({ x: sx * 132.3, z: 25.25 + sz * .09, w: 255.4, d: .1 })));
   [19.95, 30.55].forEach(z => [-1, 1].forEach(sx => streetW.push({ x: sx * 132.3, z, w: 255.4, d: .14 })));
   [-1, 1].forEach(s => { yellow.push({ x: s * .09, z: 135.75, w: .1, d: 208.5 }); avenueW.push({ x: s * 3.85, z: 135.75, w: .14, d: 208.5 }); });
@@ -178,7 +178,7 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
 export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mid' | 'lite'; asphalt: THREE.Material }) {
   const mix = useContext(NightCtx);
   const mk = useMemo(markings, []);
-  const arrows = useMemo(() => [{ x: 31.7, z: 6, yaw: 0 }, { x: 31.7, z: -.2, yaw: 0 }, { x: -31.7, z: 6, yaw: Math.PI }, { x: -31.7, z: -.2, yaw: Math.PI }, { x: 2.05, z: 10.6, yaw: 0 }, { x: -2.05, z: 10.6, yaw: Math.PI }], []);
+  const arrows = useMemo(() => [{ x: 31.7, z: 6, yaw: 0 }, { x: 31.7, z: -.2, yaw: 0 }, { x: -31.7, z: 6, yaw: Math.PI }, { x: -31.7, z: -.2, yaw: Math.PI }], []);
   const pl = useMemo<Plant>(() => ({
     core: (() => { const t = foliageTexture(); t.repeat.set(2, 1); return new THREE.MeshStandardMaterial({ map: t, roughness: .95, color: '#5f7a5a' }); })(),
     blob: new THREE.IcosahedronGeometry(.17, tier === 'high' ? 1 : 0),
