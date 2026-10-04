@@ -222,7 +222,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     <Monument position={[10.4, 0, 14.9]} />
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
-    {/* the fleet in the Guyana flag colours: white, red, green, yellow, black */}
+    {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}
     {cars.map((c, i) => <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={`DK2${4 + i}CO`} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
   </group>;
 }

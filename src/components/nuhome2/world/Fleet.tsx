@@ -24,6 +24,19 @@ export const useTexturedFleet = () => typeof window === 'undefined' || new URLSe
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
+type ImportedFleetAsset = { full: string; lite: string };
+const asset = (name: string): ImportedFleetAsset => ({
+  full: `${import.meta.env.BASE_URL}models/${name}.glb`,
+  lite: `${import.meta.env.BASE_URL}models/${name}-lite.glb`,
+});
+
+/** The three Meshy cars selected for the new homepage. Their baked paint and surface detail are preserved. */
+const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>> = {
+  corolla: asset('dk-meshy-future-ev'),
+  civic: asset('dk-meshy-sleek-sport'),
+  elantra: asset('dk-meshy-red-sport'),
+};
+
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
 
 /** Bake the model into car space: length along x, up y, wheels on y = 0, centred. Then find wheels, nose, roof and plate spots. */
@@ -218,18 +231,55 @@ function LoadedTex({ color, plate, position, rotationY, lite }: { color: string;
   </group>;
 }
 
+/** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
+function LoadedImported({ files, position, rotationY, lite }: { files: ImportedFleetAsset; position: [number, number, number]; rotationY: number; lite: boolean }) {
+  const url = lite ? files.lite : files.full;
+  const { scene } = useGLTF(url);
+  const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
+  const root = useMemo(() => {
+    const r = scene.clone(true);
+    const polish = (source: THREE.Material) => {
+      const material = source.clone();
+      if (material instanceof THREE.MeshStandardMaterial) {
+        material.envMapIntensity = lite ? .75 : 1.05;
+        material.needsUpdate = true;
+      }
+      return material;
+    };
+    r.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.material = Array.isArray(m.material) ? m.material.map(polish) : polish(m.material);
+      m.castShadow = !lite;
+      m.receiveShadow = !lite;
+    });
+    return r;
+  }, [scene, lite]);
+  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p, q, sc }; }, [P]);
+  const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
+  return <group position={position} rotation-y={rotationY}>
+    <group rotation-y={P.nose > 0 ? 0 : Math.PI}>
+      <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * 1.22, P.W * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
+      <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
+      <Topper position={[P.roof.x, P.roof.y - .012, 0]} />
+    </group>
+  </group>;
+}
+
 class Fallback extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 
-/** One fleet car: the generated sedan on every device. The procedural car only appears if the model file cannot load. */
+/** One fleet car: three selected Meshy cars plus two house sedans, all with automatic mobile variants and fallbacks. */
 export function FleetCar({ color, plate, specId, position, rotationY = 0, lite = false }: { color: string; plate: string; specId: keyof typeof CAR_SPECS; position: [number, number, number]; rotationY?: number; lite?: boolean }) {
   const spec = useMemo(() => ({ ...CAR_SPECS[specId]!, color }), [specId, color]);
   const fallback = <Car spec={spec} position={position} rotationY={rotationY} />;
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
   const standard = <Fallback fallback={fallback}><Suspense fallback={null}><Loaded color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback>;
   // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
-  return useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
+  const house = useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
+  const imported = IMPORTED_FLEET[specId];
+  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : house;
 }
