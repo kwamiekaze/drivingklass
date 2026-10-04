@@ -38,7 +38,7 @@ const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
   civic: asset('dk-meshy-matra-laser', { length: 4.4 }),
   camry: asset('dk-meshy-orange-sport', { length: 4.5 }),
-  sentra: asset('dk-meshy-black-car', { length: 4.5 }),
+  sentra: asset('dk-meshy-lamborghini', { length: 4.5 }),
 };
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };

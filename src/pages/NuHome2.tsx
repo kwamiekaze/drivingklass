@@ -1,6 +1,8 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ChevronDown, ChevronUp, Info, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
+import { ThemeMenu } from "@/components/nuhome2/ThemeMenu";
+import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
@@ -74,7 +76,7 @@ export default function NuHome2() {
   const { theme: pref, resolvedTheme, setTheme } = useTheme();
   const [clockDay, setClockDay] = useState(() => georgiaDay());
   const { trackClick } = useAnalytics();
-  const auto = pref === "time-based" || pref === "system";
+  const auto = pref === "time-based";   // "system" follows the device, exactly as on the homepage
   const night = auto ? !clockDay : resolvedTheme === "dark";
   const q = useMemo(() => (typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search)), []);
   const [stage, setStage] = useState(() => Math.max(0, Math.min(STAGES.length - 1, Number(q.get("stage")) || 0)));
@@ -195,9 +197,7 @@ export default function NuHome2() {
               <button type="button" onClick={toContact}>Contact</button>
             </nav>
             <div className="n2-header-actions">
-              <button type="button" className="n2-hdr-btn" onClick={() => setTheme(night ? "light" : "dark")} aria-label={night ? "Switch to day" : "Switch to night"}>
-                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
-              </button>
+              <ThemeMenu night={night} />
               <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
               <PortalMenuButton variant="hamburger" triggerClassName="n2-hdr-btn" />
             </div>
@@ -252,7 +252,8 @@ export default function NuHome2() {
 
       <Journey theme={night ? "night" : "day"} onBook={() => setSheet(true)} onTheme={() => setTheme(night ? "light" : "dark")} />
 
-      <section className="n2-below bg-background text-foreground">
+      <section className="n2-below text-foreground">
+        <ContactBackdrop night={night} />
         <ContactSection />
         <footer className="n2-foot"><span className="n2-gold">{BRAND.wordmark}</span><em>{BRAND.slogan}</em></footer>
       </section>

@@ -198,3 +198,56 @@
 /* nothing over the canvas animates every frame, so the compositor never has a reason to flicker the sky */
 .n2-gold { animation: none !important; background-position: 40% 0; }
 .n2-scene { transform: translate3d(0, 0, 0); }
+
+/* ---- the theme menu: same four options as the homepage, dressed like the hamburger menu ---- */
+.n2-theme-menu { min-width: 12rem; border-radius: 18px !important; border: 1px solid rgba(242, 193, 78, .5) !important; background: linear-gradient(180deg, rgba(24, 19, 10, .5), rgba(10, 8, 5, .44)) !important; backdrop-filter: blur(6px) saturate(1.15); -webkit-backdrop-filter: blur(6px) saturate(1.15); color: #fff6e2 !important; padding: 6px !important; z-index: 70 !important; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
+.n2-theme-menu [role="menuitem"] { color: #fff6e2 !important; border-radius: 12px; padding: 11px 12px !important; font: 600 15px/1 "Cormorant Garamond", Georgia, serif; letter-spacing: .05em; text-shadow: 0 1px 8px rgba(0, 0, 0, .8); }
+.n2-theme-menu [role="menuitem"] svg { color: #f2c14e; }
+.n2-theme-menu [role="menuitem"]:focus, .n2-theme-menu [role="menuitem"]:hover { background: rgba(242, 193, 78, .2) !important; }
+
+/* ---- the contact backdrop: a quiet road, a little interactive, never in the way of the form ---- */
+.n2-below { background: transparent !important; overflow: hidden; isolation: isolate; }
+.n2-below > #contact, .n2-below > footer { position: relative; z-index: 2; }
+.n2-cbd { --px: 0; --py: 0; --fill: 0; position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; --cbd-road-far: #7f7c86; --cbd-road-near: #4d4b55; }
+.n2-cbd[data-theme="night"] { --cbd-road-far: #2a2b45; --cbd-road-near: #0f1022; }
+.n2-cbd-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #8fc3ee 0%, #cfe4f4 34%, #fde9c9 66%, #ffd9a2 100%); transition: opacity .6s ease; }
+.n2-cbd[data-theme="night"] .n2-cbd-sky { background: linear-gradient(180deg, #03071a 0%, #0b1240 44%, #231f5e 78%, #4a2f6a 100%); }
+.n2-cbd-glow { position: absolute; left: 50%; bottom: 8%; width: min(900px, 130vw); height: 46%; transform: translate(calc(-50% + var(--px) * -10px), calc(var(--py) * 8px)); background: radial-gradient(ellipse at 50% 100%, rgba(255, 214, 140, .8), rgba(255, 214, 140, 0) 66%); }
+.n2-cbd[data-theme="night"] .n2-cbd-glow { background: radial-gradient(ellipse at 50% 100%, rgba(255, 190, 110, .32), rgba(255, 190, 110, 0) 66%); }
+.n2-cbd-stars, .n2-cbd-orb { opacity: 0; transition: opacity .6s ease; }
+.n2-cbd[data-theme="night"] .n2-cbd-stars, .n2-cbd[data-theme="night"] .n2-cbd-orb { opacity: 1; }
+.n2-cbd-stars { position: absolute; inset: 0; transform: translate3d(calc(var(--px) * -8px), calc(var(--py) * -10px), 0); }
+.n2-cbd-stars span { position: absolute; border-radius: 50%; background: #fff7dc; box-shadow: 0 0 6px rgba(255, 240, 190, .8); animation: n2-cbd-tw 5.5s ease-in-out infinite; }
+@keyframes n2-cbd-tw { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+.n2-cbd-orb { position: absolute; right: 9%; top: 5%; width: clamp(54px, 7vw, 92px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 36% 34%, #fffdf0, #efe7c8 62%, #d8cfa8); box-shadow: 0 0 60px 14px rgba(240, 232, 190, .28); transform: translate3d(calc(var(--px) * -14px), calc(var(--py) * -12px), 0); }
+.n2-cbd-clouds { position: absolute; inset: 0; transition: opacity .6s ease; }
+.n2-cbd[data-theme="night"] .n2-cbd-clouds { opacity: .12; }
+.n2-cbd-clouds span { position: absolute; left: -22%; width: 280px; height: 70px; border-radius: 80px; background: radial-gradient(ellipse at 30% 60%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 70%), radial-gradient(ellipse at 66% 40%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 66%); filter: blur(2px); opacity: .85; animation: n2-cbd-drift linear infinite; }
+@keyframes n2-cbd-drift { from { margin-left: 0; } to { margin-left: 150vw; } }
+.n2-cbd-land { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: min(560px, 62vw); min-height: 300px; transform: translate3d(calc(var(--px) * 6px), 0, 0); }
+.n2-cbd-hill-far { fill: #9db7c6; } .n2-cbd-hill-near { fill: #7da07a; }
+.n2-cbd[data-theme="night"] .n2-cbd-hill-far { fill: #1c2150; } .n2-cbd[data-theme="night"] .n2-cbd-hill-near { fill: #0e1230; }
+.n2-cbd-city rect { fill: #8aa3b8; opacity: .8; } .n2-cbd[data-theme="night"] .n2-cbd-city rect { fill: #151a46; opacity: 1; }
+.n2-cbd-edge { stroke: #f2c14e; stroke-width: 3; fill: none; opacity: .9; }
+.n2-cbd-dash { stroke: #fff6dc; stroke-width: 5; fill: none; stroke-dasharray: 26 34; animation: n2-cbd-road 2.6s linear infinite; }
+@keyframes n2-cbd-road { to { stroke-dashoffset: -60; } }
+.n2-cbd-car { transform-origin: 800px 318px; transform: translateY(calc(var(--fill) * -190px)) scale(calc(1 - var(--fill) * .66)); transition: transform 1.2s cubic-bezier(.3, .7, .2, 1); transform-box: view-box; }
+.n2-cbd-body { fill: #f4f4f1; } .n2-cbd-cabin { fill: #1a1d26; }
+.n2-cbd[data-theme="night"] .n2-cbd-body { fill: #cfd2dc; }
+.n2-cbd-tail { fill: #d41a22; }
+.n2-cbd[data-theme="night"] .n2-cbd-tail { filter: drop-shadow(0 0 6px rgba(255, 60, 40, .9)); }
+.n2-cbd-five { position: absolute; left: 50%; bottom: clamp(190px, 25vw, 330px); transform: translateX(-50%) translate3d(calc(var(--px) * -6px), 0, 0); display: flex; gap: clamp(8px, 1.6vw, 18px); }
+.n2-cbd-s { width: clamp(16px, 2.4vw, 28px); height: auto; fill: rgba(255, 255, 255, .22); stroke: rgba(242, 193, 78, .5); stroke-width: .6; transition: fill .6s ease, filter .6s ease, transform .6s ease; }
+.n2-cbd[data-theme="night"] .n2-cbd-s { fill: rgba(255, 255, 255, .12); }
+.n2-cbd[data-stars="1"] .n2-cbd-s[data-i="0"], .n2-cbd[data-stars="2"] .n2-cbd-s:nth-child(-n+2), .n2-cbd[data-stars="3"] .n2-cbd-s:nth-child(-n+3), .n2-cbd[data-stars="4"] .n2-cbd-s:nth-child(-n+4), .n2-cbd[data-stars="5"] .n2-cbd-s { fill: #f2c14e; stroke: #b98714; filter: drop-shadow(0 0 8px rgba(255, 210, 90, .8)); transform: scale(1.12); }
+/* behind the form itself the picture is veiled, so every label and field stays easy to read */
+.n2-cbd-veil { position: absolute; inset: 0; background: radial-gradient(ellipse 62% 70% at 50% 38%, rgba(255, 252, 244, .72), rgba(255, 252, 244, .38) 58%, rgba(255, 252, 244, 0) 100%); }
+.n2-cbd[data-theme="night"] .n2-cbd-veil { background: radial-gradient(ellipse 62% 70% at 50% 38%, rgba(6, 8, 26, .66), rgba(6, 8, 26, .34) 58%, rgba(6, 8, 26, 0) 100%); }
+@media (prefers-reduced-motion: reduce) { .n2-cbd-stars span, .n2-cbd-clouds span, .n2-cbd-dash { animation: none !important; } .n2-cbd-car { transition: none; } }
+/* the footer is a navy and gold band like the header, so the road scene ends cleanly above it and the words never sit on the picture */
+.n2-cbd { bottom: 118px; }
+.n2-foot { min-height: 118px; justify-content: center; padding: 14px 20px !important; background: linear-gradient(180deg, #0b3475 0%, #082a63 55%, #061b48 100%); border-top: 2px solid #e5b84a; position: relative; z-index: 2; }
+.n2-foot span { background: linear-gradient(180deg, #fff1b8, #ffd86a 40%, #e5b84a 75%, #b98720); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.n2-foot em { color: #ffe39a !important; }
+.n2-below > footer { position: relative; z-index: 3; }
+.n2-below #contact { padding-bottom: clamp(200px, 36vw, 400px) !important; }
