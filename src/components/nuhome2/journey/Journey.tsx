@@ -112,10 +112,13 @@ export function Journey({ theme, onBook, onTheme }: { theme: Theme; onBook: () =
       const now = performance.now(), dt = Math.min(.25, (now - (st.current.t || now)) / 1000); st.current.t = now;
       st.current.s += (target - st.current.s) * (reduce ? 1 : 1 - Math.exp(-dt * 7));
       const s = st.current.s, sc = L.scale;
-      const [x, y] = at(s), [ax, ay] = at(s - 9), [bx, by] = at(s + 9), ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+      const [rx, ry] = at(s), [ax, ay] = at(s - 9), [bx, by] = at(s + 9), ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+      // drive in the right hand lane: a quarter of the road width to the driver's right of the centre line
+      const hl = Math.hypot(bx - ax, by - ay) || 1, off = L.roadW * .25, ox = (-(by - ay) / hl) * off, oy = ((bx - ax) / hl) * off;
+      const x = rx + ox, y = ry + oy;
       carRef.current?.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(${sc})`);
       if (glow.current) glow.current.style.strokeDashoffset = String(S.len - s);
-      if (!reduce && Math.abs(s - st.current.lastTrail) > 24) { st.current.lastTrail = s; const p = at(Math.max(0, s - 74 * sc)); trail[ti = (ti + 1) % trail.length] = { x: p[0], y: p[1], t: performance.now() }; }
+      if (!reduce && Math.abs(s - st.current.lastTrail) > 24) { st.current.lastTrail = s; const p = at(Math.max(0, s - 74 * sc)); trail[ti = (ti + 1) % trail.length] = { x: p[0] + ox, y: p[1] + oy, t: performance.now() }; }
       if (trailRef.current) Array.from(trailRef.current.children).forEach((c, i) => { const p = trail[i]!, age = (performance.now() - p.t) / 1600, o = Math.max(0, .95 - age); c.setAttribute('transform', `translate(${p.x.toFixed(1)} ${(p.y - age * 20).toFixed(1)}) rotate(${(age * 160).toFixed(0)}) scale(${(Math.max(.01, (1.05 - age * .5)) * sc * 1.3).toFixed(2)})`); c.setAttribute('opacity', String(o)); });
       let a = -1; L.ys.forEach((yy, i) => { if (Math.abs(y - yy) < (L.mobile ? 210 : 190)) a = i; }); if (s > S.len - 6) a = N;
       if (a !== st.current.active) { st.current.active = a; setActive(a); if (a >= 0) setBurst({ k: performance.now(), x, y }); }

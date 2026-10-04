@@ -1,9 +1,11 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ChevronDown, ChevronUp, Info, Moon, Phone, Star, Sun } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, MessageSquare, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
-import { ThemeMenu } from "@/components/nuhome2/ThemeMenu";
 import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
+import { MessagePopup } from "@/components/nuhome2/MessagePopup";
+import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
+import { Sparkles } from "@/components/nuhome2/Sparkles";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -86,6 +88,7 @@ export default function NuHome2() {
   const [sheet, setSheet] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [open, setOpen] = useState(() => openOverride() ?? georgiaOpen());
   const [touched, setTouched] = useState(false);
@@ -135,7 +138,6 @@ export default function NuHome2() {
   }, [ready, gl]);
   useEffect(() => { const t = setTimeout(() => setSplashDone(true), 9000); return () => clearTimeout(t); }, []);
 
-  const next = useCallback(() => { setStage((s) => (s + 1) % STAGES.length); setTouched(true); }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSheet(false);
@@ -147,13 +149,14 @@ export default function NuHome2() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const goHome = useCallback(() => { setStage(0); setTouched(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, []);
   const onIntroDone = useCallback(() => { try { sessionStorage.setItem("n2-intro", "1"); } catch { /* private mode */ } }, []);
   const scrollDown = useCallback(() => window.scrollTo({ top: window.innerHeight * 0.92, behavior: "smooth" }), []);
   const toContact = useCallback(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), []);
 
   return (
     <div className="n2-page" data-theme={night ? "night" : "day"}>
-      <main className="n2-experience" data-pop={sheet ? "true" : "false"}>
+      <main className="n2-experience" data-pop={sheet || msgOpen ? "true" : "false"}>
         <div className="n2-poster" aria-hidden="true" />
         {gl && !lost && (
           <div className="n2-scene" aria-hidden="true" onPointerDown={() => setTouched(true)}>
@@ -169,26 +172,11 @@ export default function NuHome2() {
 
         <header className="n2-header n2-hdr">
           {/* the panel: two curved end caps and a stretched middle, all CSS/SVG so the gold edge stays razor sharp at any width */}
-          <div className="n2-hdr-bg" aria-hidden="true">
-            <svg className="n2-hdr-cap n2-hdr-cap--l" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
-              <defs>
-                <linearGradient id="n2h-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0b3475" /><stop offset=".5" stopColor="#082a63" /><stop offset="1" stopColor="#061b48" /></linearGradient>
-                <linearGradient id="n2h-gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#956716" /><stop offset=".45" stopColor="#e5b84a" /><stop offset="1" stopColor="#e5b84a" /></linearGradient>
-              </defs>
-              <path d="M0 0 H100 V100 C58 100 42 80 0 80 Z" fill="url(#n2h-fill)" />
-              <path d="M0 80 C42 80 58 100 100 100" fill="none" stroke="url(#n2h-gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <div className="n2-hdr-mid" />
-            <svg className="n2-hdr-cap n2-hdr-cap--r" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
-              <path d="M0 0 H100 V100 C58 100 42 80 0 80 Z" fill="url(#n2h-fill)" />
-              <path d="M0 80 C42 80 58 100 100 100" fill="none" stroke="url(#n2h-gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <span className="n2-hdr-spark" />
-          </div>
+          <HeaderPanel />
 
           <div className="n2-hdr-row">
-            <button type="button" className="n2-brand" onClick={() => setStage(0)} aria-label="DrivingKlass home">
-              <img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" />
+            <button type="button" className="n2-brand" onClick={goHome} aria-label="DrivingKlass home">
+              <span className="n2-hdr-wheelwrap" style={{ "--wheel": `url(${wheelUrl})` } as React.CSSProperties}><img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" /></span>
               <span className="n2-hdr-sep" aria-hidden="true" />
               <span className="n2-hdr-word">DrivingKlass</span>
             </button>
@@ -197,7 +185,9 @@ export default function NuHome2() {
               <button type="button" onClick={toContact}>Contact</button>
             </nav>
             <div className="n2-header-actions">
-              <ThemeMenu night={night} />
+              <button type="button" className="n2-hdr-btn" onClick={() => setTheme(night ? "light" : "dark")} aria-label={night ? "Switch to day" : "Switch to night"}>
+                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
+              </button>
               <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
               <PortalMenuButton variant="hamburger" triggerClassName="n2-hdr-btn" />
             </div>
@@ -227,7 +217,7 @@ export default function NuHome2() {
 
         <div className="n2-rail">
           <button type="button" className="n2-btn n2-btn--gold n2-rail-book" onClick={() => setSheet(true)}>Book a Klass</button>
-          <button type="button" className="n2-next" onClick={next}>NEXT VIEW <ArrowDown size={15} aria-hidden="true" /></button>
+          <button type="button" className="n2-next n2-msg-btn" onClick={() => setMsgOpen(true)} aria-label="Send us a message"><MessageSquare size={15} aria-hidden="true" /> MESSAGE</button>
           <div className="n2-swipe" role="button" tabIndex={0} aria-label="Scroll down to send us a message" onClick={scrollDown}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollDown(); }}>
             <span className="n2-lbl-touch">SWIPE</span><span className="n2-lbl-mouse">SCROLL</span>
@@ -237,6 +227,8 @@ export default function NuHome2() {
         <div className="n2-drag" data-show={splashDone && !touched}>DRAG TO ORBIT · SCROLL TO ZOOM</div>
 
         {sheet && <PackagesPopup packages={packages} onClose={() => setSheet(false)} />}
+        {msgOpen && <MessagePopup onClose={() => setMsgOpen(false)} />}
+        <Sparkles />
 
         {lost && gl && (
           <div className="n2-lost" role="alert"><p>The 3D world paused to save your battery.</p>

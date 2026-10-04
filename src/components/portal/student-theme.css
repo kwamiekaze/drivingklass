@@ -1,0 +1,63 @@
+/*
+ * The student portal wears the home page's look: deep navy glass, gold edges, cream type, a gold serif for headings.
+ * Everything keys off the `dk-portal` class on <body>, which only the student layout sets, so instructor and admin
+ * pages are untouched. Most of it is just the colour tokens the pages already use.
+ */
+body.dk-portal {
+  --bg: 221 72% 8%; --bg2: 220 66% 12%; --text: 43 68% 94%; --text-muted: 43 30% 76%;
+  --background: 221 72% 8%; --foreground: 43 68% 94%;
+  --card: 219 70% 15%; --card-foreground: 43 68% 94%;
+  --popover: 220 68% 12%; --popover-foreground: 43 68% 94%;
+  --muted: 219 56% 21%; --muted-foreground: 43 30% 76%;
+  --secondary: 219 60% 19%; --secondary-foreground: 43 68% 92%;
+  --border: 43 55% 42%; --input: 219 62% 19%; --ring: 43 88% 62%;
+  --primary: 43 82% 56%; --primary-foreground: 221 72% 9%; --accent: 43 82% 56%; --accent-foreground: 221 72% 9%;
+  --gold: 43 82% 56%; --gold-light: 45 86% 70%; --gold-dark: 38 76% 40%; --gold-shimmer: 48 92% 78%;
+  background: #061b48; color: #fff4d6;
+}
+/* panels: navy glass with a thin gold edge */
+body.dk-portal [class*="bg-card"] {
+  background: linear-gradient(180deg, rgba(14, 54, 122, .6), rgba(7, 29, 74, .7)) !important;
+  border-color: rgba(229, 184, 74, .5) !important;
+  box-shadow: 0 14px 36px rgba(0, 8, 32, .4), inset 0 1px 0 rgba(255, 236, 170, .2) !important;
+  backdrop-filter: blur(12px) saturate(1.25); -webkit-backdrop-filter: blur(12px) saturate(1.25);
+}
+body.dk-portal main h1 { font-family: "Cinzel", "Cormorant Garamond", Georgia, serif; font-weight: 700; letter-spacing: .04em; color: #ffe9a6; text-shadow: 0 2px 14px rgba(0, 8, 32, .6); }
+body.dk-portal [class*="bg-card"] h2, body.dk-portal [class*="bg-card"] h3 { font-family: "Cinzel", "Cormorant Garamond", Georgia, serif; letter-spacing: .03em; }
+body.dk-portal button[class*="bg-primary"], body.dk-portal a[class*="bg-primary"] { background: linear-gradient(180deg, #ffe08a, #f2c14e 48%, #c9971f) !important; color: #1a1408 !important; border: 1px solid rgba(255, 236, 170, .7); box-shadow: 0 6px 18px rgba(201, 151, 31, .32); }
+body.dk-portal [role="tablist"] { background: rgba(7, 29, 74, .62) !important; border: 1px solid rgba(229, 184, 74, .35); }
+body.dk-portal [role="tab"][data-state="active"] { background: linear-gradient(180deg, #ffe08a, #f2c14e 52%, #c9971f) !important; color: #1a1408 !important; }
+body.dk-portal input, body.dk-portal textarea, body.dk-portal select { border-color: rgba(229, 184, 74, .4); }
+body.dk-portal .text-muted-foreground { color: hsl(43 30% 78%); }
+
+/* the sky behind every student page */
+.dk-sky { position: fixed; inset: 0; z-index: -5; overflow: hidden; pointer-events: none; }
+.dk-sky > * { position: absolute; }
+.dk-sky-base { inset: 0; background: linear-gradient(180deg, #3f78c4 0%, #7fb0e6 42%, #e7d6b0 82%, #f1cf92 100%); transition: opacity .6s; }
+.dk-sky[data-theme="night"] .dk-sky-base { background: linear-gradient(180deg, #04060f 0%, #0c1238 58%, #1c1731 100%); }
+.dk-sky-stars { inset: 0 0 35% 0; opacity: 0; transition: opacity .8s; }
+.dk-sky[data-theme="night"] .dk-sky-stars { opacity: 1; }
+.dk-sky-stars span { position: absolute; border-radius: 50%; background: #fff3c4; animation: dk-tw 5s ease-in-out infinite; }
+@keyframes dk-tw { 0%, 100% { opacity: .2; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.25); } }
+.dk-sky-orb { top: 7svh; right: 8vw; width: clamp(80px, 12vw, 150px); aspect-ratio: 1; }
+.dk-sun, .dk-moon { position: absolute; inset: 0; border-radius: 50%; }
+.dk-sun { background: radial-gradient(circle at 38% 36%, #fff6b0, #ffd23f 55%, #f6a31c); box-shadow: 0 0 60px 20px rgba(255, 205, 80, .5); }
+.dk-moon { display: none; background: radial-gradient(circle at 38% 36%, #fffbe8, #efe4bf 60%, #cfc29a); box-shadow: 0 0 50px 14px rgba(255, 244, 214, .38); }
+.dk-sky[data-theme="night"] .dk-sun { display: none; } .dk-sky[data-theme="night"] .dk-moon { display: block; }
+.dk-sky-city { left: 0; width: 100%; height: 34%; fill: rgba(255, 255, 255, .5); } .dk-sky-far { bottom: 16%; } .dk-sky-near { bottom: 6%; height: 28%; fill: rgba(176, 150, 96, .55); }
+.dk-sky[data-theme="night"] .dk-sky-far { fill: rgba(60, 52, 90, .85); } .dk-sky[data-theme="night"] .dk-sky-near { fill: rgba(18, 16, 30, .97); }
+.dk-sky-city rect { fill: #ffe9a8; opacity: 0; } .dk-sky[data-theme="night"] .dk-sky-city rect { opacity: .8; }
+.dk-sky-floaters { inset: 0; } .dk-sky-floaters > span { position: absolute; bottom: -8svh; opacity: 0; animation: dk-rise linear infinite; }
+.dk-sky-floaters svg { display: block; fill: #f2c14e; filter: drop-shadow(0 0 6px rgba(242, 193, 78, .6)); }
+@keyframes dk-rise { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 0; } 12% { opacity: .75; } 100% { transform: translate3d(24px, -118svh, 0) rotate(160deg); opacity: 0; } }
+.dk-sky-veil { inset: 0; background: linear-gradient(180deg, rgba(6, 27, 72, .35), rgba(6, 27, 72, .1) 40%, rgba(6, 27, 72, .45)); }
+@media (prefers-reduced-motion: reduce) { .dk-sky-stars span, .dk-sky-floaters > span { animation: none; } .dk-sky-floaters { display: none; } }
+
+body.dk-portal main h1, body.dk-portal main h1 * { color: #ffe9a6 !important; -webkit-text-fill-color: #ffe9a6 !important; background: none !important; }
+
+body.dk-portal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), body.dk-portal textarea, body.dk-portal select, body.dk-portal [role="combobox"] {
+  background: rgba(6, 22, 56, .72) !important; color: #fff4d6 !important; border: 1px solid rgba(229, 184, 74, .45) !important;
+}
+body.dk-portal input::placeholder, body.dk-portal textarea::placeholder { color: rgba(255, 238, 200, .5) !important; }
+body.dk-portal input:disabled { opacity: .7; }
+body.dk-portal button[class*="outline"], body.dk-portal button[class*="bg-background"] { background: rgba(6, 22, 56, .7) !important; border-color: rgba(229, 184, 74, .45) !important; color: #fff4d6 !important; }

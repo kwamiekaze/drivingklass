@@ -58,7 +58,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             style={{ color: 'hsl(42 25% 75%)' }}
           >
             <p>
-              DrivingKlass.com is a platform dedicated to providing safe, lawful driving supervision—not driving instruction. We are not a certified Driver Training School, we do not offer instruction for hire, and we are not affiliated with or certified by the Georgia Department of Driver Services (DDS).
+              DrivingKlass.com is a platform dedicated to providing safe, lawful driving supervision, not driving instruction. We are not a certified Driver Training School, we do not offer instruction for hire, and we are not affiliated with or certified by the Georgia Department of Driver Services (DDS).
             </p>
             
             <p>

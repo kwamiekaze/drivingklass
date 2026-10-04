@@ -13,10 +13,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower, HeartPulse } from "lucide-react";
+import { Moon, Sun, Bell, User, LogOut, Calendar, FileText, Users, Settings, Home, CheckCircle, Menu, X, UserPlus, FileUser, Shield, Headset, Gamepad2, Map as MapIcon, Send, Star, BookOpen, Mail, RadioTower, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GlobalSearch } from "@/components/portal/GlobalSearch";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { StudentThemeContext } from "@/lib/studentTheme";
+import { StudentSky } from "@/components/portal/StudentSky";
+import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
+import { useTheme } from "@/components/ThemeProvider";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import wheelUrl from "@/assets/dk-steering-wheel.webp";
+import "@/components/nuhome2/header.css";
+import "@/components/portal/student-theme.css";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -56,17 +64,41 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   };
 
   const navItems = getNavItems(role, t);
+  const isStudent = role === "student";
+  const { resolvedTheme, setTheme } = useTheme();
+  const { trackClick } = useAnalytics();
+  const night = resolvedTheme === "dark";
+  // the navy and gold student look is switched on for the whole page, popups included, by one class on <body>
+  useEffect(() => {
+    if (!isStudent) return;
+    document.body.classList.add("dk-portal");
+    return () => document.body.classList.remove("dk-portal");
+  }, [isStudent]);
+  const hdrBtn = isStudent ? "n2-hdr-btn" : "";
 
   return (
+    <StudentThemeContext.Provider value={isStudent}>
     <div className="min-h-screen">
+      {isStudent && <StudentSky />}
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40">
-        <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">
+      <header className={cn(isStudent ? "n2-header n2-hdr n2-hdr--bar" : "sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40")}>
+        {isStudent && <HeaderPanel />}
+        <div className={cn("flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto", isStudent && "n2-hdr-row")}>
           {/* Logo/Brand */}
-          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <span className="text-lg sm:text-xl font-bold text-gold-shimmer">DrivingKlass</span>
-            <Badge variant="secondary" className="text-[10px] sm:text-xs hidden xs:inline-flex">Portal</Badge>
-          </Link>
+          {isStudent ? (
+            <Link to="/nuhome2" className="n2-brand" aria-label="DrivingKlass home">
+              <span className="n2-hdr-wheelwrap" style={{ "--wheel": `url(${wheelUrl})` } as React.CSSProperties}>
+                <img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" />
+              </span>
+              <span className="n2-hdr-sep" aria-hidden="true" />
+              <span className="n2-hdr-word">DrivingKlass</span>
+            </Link>
+          ) : (
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <span className="text-lg sm:text-xl font-bold text-gold-shimmer">DrivingKlass</span>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs hidden xs:inline-flex">Portal</Badge>
+            </Link>
+          )}
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
@@ -93,12 +125,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
               </div>
             )}
             
-            <ThemeToggle />
+            {isStudent ? (
+              <button type="button" className="n2-hdr-btn" aria-label={night ? "Switch to day" : "Switch to night"}
+                onClick={() => { trackClick("theme_toggle", { theme: night ? "light" : "dark" }); setTheme(night ? "light" : "dark"); }}>
+                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
+              </button>
+            ) : <ThemeToggle />}
             
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10">
+                <Button variant="ghost" size="icon" className={cn("relative h-9 w-9 sm:h-10 sm:w-10", hdrBtn)}>
                   <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                   {unreadCount > 0 && (
                     <Badge 
@@ -187,7 +224,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0">
+                <Button variant="ghost" size="icon" className={cn("h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0", hdrBtn)}>
                   <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                     <AvatarImage src={(profile as any)?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
                     <AvatarFallback className="text-xs sm:text-sm bg-primary/10 text-primary">
@@ -208,7 +245,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   <User className="mr-2 h-4 w-4" />
                   {t('common.profile')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate(isStudent ? '/nuhome2' : '/')} className="cursor-pointer">
                   <Home className="mr-2 h-4 w-4" />
                   {t('common.mainSite')}
                 </DropdownMenuItem>
@@ -225,7 +262,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden h-9 w-9 sm:h-10 sm:w-10"
+              className={cn("lg:hidden h-9 w-9 sm:h-10 sm:w-10", hdrBtn)}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -262,6 +299,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
         {children}
       </main>
     </div>
+    </StudentThemeContext.Provider>
   );
 }
 

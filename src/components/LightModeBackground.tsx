@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useStudentTheme } from "@/lib/studentTheme";
 
 const VIDEO_SRC = "/videos/light-road-loop.mp4";
 const VIDEO_POSTER = "/videos/light-road-loop-poster.jpg";
 
-export function LightModeBackground() {
+function LightModeBackgroundVideo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -117,4 +118,10 @@ export function LightModeBackground() {
       />
     </div>
   );
+}
+
+/** Student pages draw their own sky, so the road video is not even loaded there. */
+export function LightModeBackground() {
+  const student = useStudentTheme();
+  return student ? null : <LightModeBackgroundVideo />;
 }

@@ -162,6 +162,9 @@ export function ThemeProvider({
   );
 }
 
+/** Exported so a glass popup can render a form in its dark look whatever the page theme is. */
+export const ThemeProviderContext_ = ThemeProviderContext;
+
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
   if (!context)

@@ -62,3 +62,34 @@
 
 /* the navy panel lets the 3D scene show through; the logo, words and buttons are not part of it, so they stay solid */
 .n2-hdr-bg { opacity: .72; }
+
+
+/* the wheel emblem glows and a light sweeps across it now and then, like polished gold */
+.n2-hdr-wheelwrap { position: relative; display: inline-block; flex: none; line-height: 0; border-radius: 50%; filter: drop-shadow(0 0 7px rgba(255, 208, 90, .55)); animation: n2-wheel-glow 3.8s ease-in-out infinite; }
+.n2-hdr-wheelwrap .n2-hdr-wheel { display: block; filter: none; }
+.n2-hdr-wheelwrap::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 36%, rgba(255, 246, 205, 0) 40%, rgba(255, 246, 205, .9) 50%, rgba(255, 246, 205, 0) 60%, transparent 64%); background-size: 260% 100%; background-position: 130% 0; -webkit-mask: var(--wheel) center / contain no-repeat; mask: var(--wheel) center / contain no-repeat; animation: n2-wheel-sweep 4.6s ease-in-out infinite; }
+@keyframes n2-wheel-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 208, 90, .4)); } 50% { filter: drop-shadow(0 0 13px rgba(255, 214, 110, .85)); } }
+@keyframes n2-wheel-sweep { 0%, 55% { background-position: 130% 0; } 85%, 100% { background-position: -30% 0; } }
+@media (prefers-reduced-motion: reduce) { .n2-hdr-wheelwrap, .n2-hdr-wheelwrap::after { animation: none; } }
+
+
+/* the same header as a slim bar for the student portal: sticky, one row, no tagline */
+.n2-hdr.n2-hdr--bar { position: sticky; top: 0; left: auto; right: auto; inset: auto; z-index: 50; padding: max(env(safe-area-inset-top, 0px), 6px) 0 16px; }
+.n2-hdr--bar .n2-hdr-row { gap: 8px; }
+.n2-hdr--bar .n2-hdr-wheel { width: clamp(46px, 12.5vw, 62px); }
+.n2-hdr--bar .n2-hdr-sep { height: clamp(30px, 8vw, 42px); }
+.n2-hdr--bar .n2-hdr-word { font-size: clamp(19px, 5.4vw, 30px); }
+.n2-hdr--bar .n2-hdr-btn { width: 42px !important; height: 42px !important; padding: 0 !important; flex: none; }
+.n2-hdr--bar .n2-hdr-btn:hover { background: radial-gradient(circle at 32% 22%, rgba(23, 86, 166, .95), rgba(8, 42, 99, .96) 62%, rgba(6, 27, 72, .98)) !important; }
+.n2-hdr--bar .n2-hdr-btn span[class*="avatar"], .n2-hdr--bar .n2-hdr-btn [class*="rounded-full"] { box-shadow: none; }
+.n2-hdr--bar .n2-hdr-btn svg { width: 20px; height: 20px; }
+
+@media (max-width: 520px) {
+  .n2-hdr--bar .n2-hdr-row { gap: 6px; padding: 0 10px; }
+  .n2-hdr--bar .n2-brand { gap: 7px; min-width: 0; flex: 1 1 auto; }
+  .n2-hdr--bar .n2-hdr-sep { display: none; }
+  .n2-hdr--bar .n2-hdr-wheel { width: 42px; }
+  .n2-hdr--bar .n2-hdr-word { font-size: clamp(14px, 4.4vw, 19px); letter-spacing: 0; }
+  .n2-hdr--bar .n2-hdr-btn { width: 38px !important; height: 38px !important; }
+  .n2-hdr--bar .n2-hdr-row > div:last-child { gap: 5px !important; }
+}

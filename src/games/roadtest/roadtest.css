@@ -17,7 +17,7 @@
   --gold: #f2c14e;
   --gold-deep: #c9971f;
   --black: #101014;
-  --ink: #1b1b22;
+  --ink: #0b2358;
   --road: #2e2e33;
   --road-light: #4a4a50;
   --white: #ffffff;
@@ -30,13 +30,12 @@
   font-family: var(--body);
   color: var(--white);
   background:
-    radial-gradient(1200px 500px at 50% -10%, #26262c 0%, transparent 60%),
-    repeating-linear-gradient(
-      0deg,
-      var(--road) 0 46px,
-      #33333a 46px 48px
-    );
-  background-color: var(--road);
+    radial-gradient(900px 420px at 86% 3%, rgba(255, 214, 120, .38), transparent 62%),
+    radial-gradient(1.4px 1.4px at 12% 14%, #ffe9a6 99%, transparent), radial-gradient(1.6px 1.6px at 31% 8%, #fff3c4 99%, transparent),
+    radial-gradient(1.2px 1.2px at 54% 18%, #ffe9a6 99%, transparent), radial-gradient(1.6px 1.6px at 72% 10%, #fff3c4 99%, transparent),
+    radial-gradient(1.2px 1.2px at 88% 24%, #ffe9a6 99%, transparent), radial-gradient(1.4px 1.4px at 22% 30%, #fff3c4 99%, transparent),
+    linear-gradient(180deg, #061b48 0%, #0b3475 55%, #0a2656 100%);
+  background-color: #061b48;
   -webkit-font-smoothing: antialiased;
   /* Block iOS text selection, callout, and double-tap zoom during play. */
   user-select: none;
@@ -1401,3 +1400,12 @@
 @keyframes dk-track-toast-out {
   to { transform: translateY(6px); opacity: 0; }
 }
+
+/* the menu panels wear the home page's navy glass and gold edge */
+.rank-bar, .daily-challenge-card, .missions-panel, .hero-card, .brand-header {
+  background: linear-gradient(180deg, rgba(14, 54, 122, .62), rgba(7, 29, 74, .74)) !important;
+  border: 1px solid rgba(229, 184, 74, .5) !important;
+  box-shadow: 0 12px 30px rgba(0, 8, 32, .4), inset 0 1px 0 rgba(255, 236, 170, .18) !important;
+  backdrop-filter: blur(10px);
+}
+.brand-header { background: transparent !important; box-shadow: none !important; border: 0 !important; backdrop-filter: none; }
