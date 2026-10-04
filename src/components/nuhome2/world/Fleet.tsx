@@ -16,9 +16,10 @@ import { NightCtx } from './theme';
 export const FLEET_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan.glb`;
 /** The same car with 30% of the triangles, 33 KB, for slower phones. Both files are meshopt compressed. */
 export const FLEET_LITE_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-lite.glb`;
-/** Optional upgrade: the same sedan generated WITH surface detail. Preview it with ?fleet=textured once public/models/dk-fleet-sedan-textured.glb is in the build. */
+/** The same sedan generated WITH surface detail (lamps, grille, panel lines, wheels). Used automatically once public/models/dk-fleet-sedan-textured.glb is in the build. */
 export const FLEET_TEX_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-textured.glb`;
-export const useTexturedFleet = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fleet') === 'textured';
+/** The textured sedan is used whenever its file is in the build; ?fleet=painted forces the painted one for comparison. */
+export const useTexturedFleet = () => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('fleet') !== 'painted';
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
@@ -162,8 +163,8 @@ function LoadedTex({ color, plate, position, rotationY }: { color: string; plate
   const { scene } = useGLTF(FLEET_TEX_URL);
   const P = useMemo(() => { let p = prepared.get(FLEET_TEX_URL); if (!p) { p = prepare(scene.clone(true)); prepared.set(FLEET_TEX_URL, p); } return p; }, [scene]);
   const root = useMemo(() => {
-    const r = scene.clone(true), tint = new THREE.Color(color);
-    r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals(); const src = m.material as THREE.MeshStandardMaterial; const c = new THREE.MeshPhysicalMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: .3, metalness: .3, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: .8 }); c.color.copy(tint); m.material = c; m.castShadow = true; m.receiveShadow = true; });
+    const r = scene.clone(true), tint = new THREE.Color(color); if (tint.r + tint.g + tint.b > .9) tint.multiplyScalar(1.28);   // lift the baked paint so white reads as clean pearl, not grey
+    r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals(); const src = m.material as THREE.MeshStandardMaterial; const c = new THREE.MeshPhysicalMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: .26, metalness: .22, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1 }); c.color.copy(tint); m.material = c; m.castShadow = true; m.receiveShadow = true; });
     return r;
   }, [scene, color]);
   const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p, q, sc }; }, [P]);
@@ -192,6 +193,6 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   const fallback = <Car spec={spec} position={position} rotationY={rotationY} />;
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
   const standard = <Fallback fallback={fallback}><Suspense fallback={null}><Loaded color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback>;
-  // ?fleet=textured previews the textured model; if its file is not there the painted sedan stays
+  // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
   return useTexturedFleet() && !lite ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} /></Suspense></Fallback> : standard;
 }
