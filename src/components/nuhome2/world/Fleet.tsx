@@ -1,8 +1,10 @@
-import { Component, Suspense, useMemo, type ReactNode } from 'react';
+import { Component, Suspense, useContext, useMemo, type ReactNode } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
+import { NightCtx } from './theme';
 
 /*
  * The DrivingKlass fleet: one premium fastback sedan, generated in Higgsfield from the reference car, shown five times
@@ -14,21 +16,23 @@ import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
 export const FLEET_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan.glb`;
 /** The same car with 30% of the triangles, 33 KB, for slower phones. Both files are meshopt compressed. */
 export const FLEET_LITE_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-lite.glb`;
-export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#fcd116', white: '#f3f3f0', green: '#009e49' } as const;
+export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
-type Prepared = { geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
+export type Prepared = { geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
 
 /** Bake the model into car space: length along x, up y, wheels on y = 0, centred. Then find wheels, nose, roof and plate spots. */
 const prepared = new Map<string, Prepared>();
-function prepare(scene: THREE.Object3D): Prepared {
+export function prepare(scene: THREE.Object3D): Prepared {
   scene.updateMatrixWorld(true);
   const parts: THREE.BufferGeometry[] = [];
   scene.traverse(o => {
     const m = o as THREE.Mesh; if (!m.isMesh || !m.geometry) return;
     const src = m.geometry, pa = src.getAttribute('position'), f = new Float32Array(pa.count * 3);
     for (let i = 0; i < pa.count; i++) { f[i * 3] = pa.getX(i); f[i * 3 + 1] = pa.getY(i); f[i * 3 + 2] = pa.getZ(i); }
-    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(f, 3));
+    const na = src.getAttribute('normal'), nf = new Float32Array(pa.count * 3);
+    if (na) for (let i = 0; i < na.count; i++) { nf[i * 3] = na.getX(i); nf[i * 3 + 1] = na.getY(i); nf[i * 3 + 2] = na.getZ(i); }
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(f, 3)); if (na) out.setAttribute('normal', new THREE.BufferAttribute(nf, 3));
     if (src.index) out.setIndex(new THREE.BufferAttribute(Uint32Array.from(src.index.array as ArrayLike<number>), 1));
     out.applyMatrix4(m.matrixWorld); parts.push(out);
   });
@@ -51,7 +55,7 @@ function prepare(scene: THREE.Object3D): Prepared {
   }
   const ax = fn && rn ? (fx / fn - rx / rn) / 2 : .3 * L, rw = .245 * H;
   const nose = top.f <= top.r ? 1 : -1;   // the hood sits lower than the trunk deck
-  geo = toCreasedNormals(geo, Math.PI / 4.2);   // smooth over the gentle curves, keep the real creases crisp
+  if (!geo.getAttribute('normal')) geo = toCreasedNormals(geo, Math.PI / 4.2);   // older model files carry no normals
   // roof and plate spots, found by casting onto the real surface
   const mesh = new THREE.Mesh(geo), ray = new THREE.Raycaster(), hit = (o: THREE.Vector3, d: THREE.Vector3, fb: THREE.Vector3) => { ray.set(o, d); const h = ray.intersectObject(mesh, false)[0]; return h ? h.point.clone() : fb; };
   const roof = hit(new THREE.Vector3(-.05 * L * nose, H + 2, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, H, 0));
@@ -60,33 +64,64 @@ function prepare(scene: THREE.Object3D): Prepared {
   return { geo, L, H, W, ax, rw, nose, roof, plateF, plateR };
 }
 
-function fleetMaterial(color: string, P: Prepared, twoTone: boolean) {
-  const m = new THREE.MeshPhysicalMaterial({ color, metalness: .5, roughness: .25, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5 });
+let carEnvCache: THREE.Texture | null = null;
+/**
+ * What the paint and glass reflect: a bright sky overhead, a soft grey horizon, a darker ground and two soft light boxes. The
+ * scene's own environment is mostly empty black between its light panels, which showed up as dark stains on the hoods.
+ */
+export function carEnv(gl: THREE.WebGLRenderer) {
+  if (carEnvCache) return carEnvCache;
+  const sc = new THREE.Scene(), g = new THREE.SphereGeometry(50, 48, 24), pos = g.attributes.position as THREE.BufferAttribute, col = new Float32Array(pos.count * 3);
+  const top = new THREE.Color('#d2dff3'), mid = new THREE.Color('#8c9ab0'), low = new THREE.Color('#4b4a4e'), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i) / 50; c.copy(mid); if (y > 0) c.lerp(top, Math.pow(y, .6)); else c.lerp(low, Math.pow(-y, .5)); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  sc.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const box = (w: number, h: number, p: [number, number, number], k: number, tint: string) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(...p); m.lookAt(0, 0, 0); sc.add(m); };
+  box(40, 14, [0, 38, 6], 1.9, '#ffffff'); box(26, 8, [-34, 14, 14], 1.5, '#fff4e0'); box(22, 7, [30, 12, -16], 1.1, '#dfe9ff');
+  const pm = new THREE.PMREMGenerator(gl); carEnvCache = pm.fromScene(sc, .03).texture; pm.dispose();
+  return carEnvCache;
+}
+
+export function fleetMaterial(color: string, P: Prepared, twoTone: boolean, blackRoof = false, env?: THREE.Texture) {
+  // soft, wide reflections: sharp mirror reflections of the empty parts of the sky read as black stains on the hood and roof
+  const m = new THREE.MeshPhysicalMaterial({ color, metalness: .22, roughness: .42, clearcoat: 1, clearcoatRoughness: .16, envMap: env ?? null, envMapIntensity: .7 });
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { uTwoTone: { value: twoTone ? 1 : 0 }, uL: { value: P.L }, uH: { value: P.H }, uW: { value: P.W }, uAx: { value: P.ax }, uRw: { value: P.rw }, uNose: { value: P.nose } });
+    Object.assign(sh.uniforms, { uTwoTone: { value: twoTone ? 1 : 0 }, uBlackRoof: { value: blackRoof ? 1 : 0 }, uL: { value: P.L }, uH: { value: P.H }, uW: { value: P.W }, uAx: { value: P.ax }, uRw: { value: P.rw }, uNose: { value: P.nose } });
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nvarying vec3 vCarN;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvCar = position; vCarN = objectNormal;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nvarying vec3 vCarN;\nuniform float uTwoTone;\nuniform float uL, uH, uW, uAx, uRw, uNose;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nvarying vec3 vCarN;\nuniform float uTwoTone, uBlackRoof;\nuniform float uL, uH, uW, uAx, uRw, uNose;')
       .replace('#include <color_fragment>', `#include <color_fragment>
-        float h = vCar.y / uH, fx = vCar.x * uNose, kRough = .25, kMetal = .5; vec3 glow = vec3(0.);
+        float h = vCar.y / uH, fx = vCar.x * uNose, kRough = .42, kMetal = .22; vec3 glow = vec3(0.);
         vec2 wa = vec2(vCar.x - uAx, vCar.y - uRw), wb = vec2(vCar.x + uAx, vCar.y - uRw); vec2 wc = length(wa) < length(wb) ? wa : wb; float wr = length(wc);
         bool outer = abs(vCar.z) > uW * .5 - .3;
+        // windows: side glass on the tapered flanks, the windshield on the long front slope, the rear glass on the fastback slope.
+        // Between them the surface stays paint: that is what makes the A, B and C pillars read.
+        float f = fx / uL, nz = abs(vCarN.z), nf = vCarN.x * uNose, zz = abs(vCar.z) / (uW * .5), gl = 0.;
+        if (h > .6) {
+          float aboveBelt = smoothstep(.605, .64, h);
+          float side = aboveBelt * smoothstep(.6, .72, nz) * (1. - smoothstep(.62, .72, vCarN.y)) * smoothstep(-.235, -.205, f) * (1. - smoothstep(.17, .2, f));
+          side *= 1. - smoothstep(-.052, -.04, f) * (1. - smoothstep(-.012, .0, f));          // the B pillar
+          float wind = smoothstep(.028, .048, f) * (1. - smoothstep(.215, .24, f)) * smoothstep(.1, .2, nf) * (1. - smoothstep(.3, .4, nz)) * (1. - smoothstep(.56, .64, zz)) * smoothstep(.69, .75, h);
+          float rear = smoothstep(-.43, -.4, f) * (1. - smoothstep(-.245, -.22, f)) * smoothstep(.1, .2, -nf) * (1. - smoothstep(.3, .4, nz)) * (1. - smoothstep(.56, .64, zz)) * smoothstep(.69, .75, h);
+          gl = max(side, max(wind, rear));
+        }
         if (wr < uRw * 1.03 && outer) {
           if (wr < uRw * .7) { float a = atan(wc.y, wc.x); float spoke = smoothstep(.15, .55, sin(a * 10.)); diffuseColor.rgb = mix(vec3(.05), vec3(.62, .64, .67), spoke * step(uRw * .17, wr)); kMetal = .85; kRough = .28; }
           else { diffuseColor.rgb = vec3(.025); kMetal = 0.; kRough = .92; }
-        } else if (h > .62) {
-          // white and black cars keep the black glass roof. The red, yellow and green cars are painted all the way up:
-          // the roof and pillars wear the body colour, and only the windows (the surfaces that face sideways, forward
-          // or back) stay dark glass.
-          bool glass = uTwoTone > .5 || (vCarN.y < .9 && fx < uL * .235 && fx > -uL * .3);   // only the greenhouse, never the hood or the boot lid
-          if (glass) { diffuseColor.rgb = vec3(.02, .025, .03); kMetal = .6; kRough = .07; }
+        } else if (gl > .12) {
+          // real windows: tinted glass with a clear sheen, inside a thin black rubber seal
+          if (gl > .55) { diffuseColor.rgb = vec3(.03, .045, .065); kMetal = .28; kRough = .1; }
+          else { diffuseColor.rgb = vec3(.012, .013, .016); kMetal = .2; kRough = .45; }
+        } else if (h > .6 && f < .25 && f > -.42) {
+          // the roof, pillars and rails above the glass. The white car wears a gloss black roof; every other car is painted to the top.
+          if (uTwoTone > .5 && uBlackRoof > .5) { diffuseColor.rgb = vec3(.012, .013, .016); kMetal = .35; kRough = .22; }
         }
-        else if (h > .596 && abs(vCar.z) > uW * .26) { diffuseColor.rgb = vec3(.8, .82, .86); kMetal = 1.; kRough = .14; }
+        else if (h > .596 && h < .624 && f < .25 && f > -.3 && nz > .6 && abs(vCar.z) > uW * .26) { diffuseColor.rgb = vec3(.8, .82, .86); kMetal = 1.; kRough = .14; }   // the thin chrome line under the side windows only
         else if (h < .16) { diffuseColor.rgb = vec3(.035); kMetal = .1; kRough = .6; }
         if (fx < -(uL * .5 - .16) && h > .09 && h < .21) { vec2 ex = vec2((abs(vCar.z) - uW * .3) / (uW * .11), (h - .15) / .05); if (dot(ex, ex) < 1.) { diffuseColor.rgb = vec3(.78, .8, .84); kMetal = 1.; kRough = .12; } }
         if (fx > uL * .5 - .2 && h > .26 && h < .47 && abs(vCar.z) < uW * .24) { diffuseColor.rgb = vec3(.015, .016, .02); kMetal = .5; kRough = .35; }
-        if (fx < -(uL * .5 - .09) && h > .5 && h < .57) { diffuseColor.rgb = vec3(.55, .02, .02); glow = vec3(1., .07, .04) * .9; }
-        if (fx > uL * .5 - .12 && h > .45 && h < .52 && abs(vCar.z) > uW * .16) { diffuseColor.rgb = vec3(.9, .92, .95); glow = vec3(.85, .9, 1.) * .6; }`)
+        if (fx < -(uL * .5 - .09) && h > .515 && h < .555 && abs(vCar.z) < uW * .43 && abs(vCar.z) > uW * .05) { diffuseColor.rgb = vec3(.32, .01, .01); glow = vec3(1., .05, .03) * .55; }   // a slim red light bar across the tail
+        if (fx > uL * .5 - .12 && h > .465 && h < .51 && abs(vCar.z) > uW * .2 && abs(vCar.z) < uW * .42) { diffuseColor.rgb = vec3(.9, .93, 1.); glow = vec3(.8, .88, 1.) * .55; }`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = kRough;')
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = kMetal;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += glow;');
@@ -101,7 +136,9 @@ function Loaded({ color, plate, position, rotationY, lite }: { color: string; pl
   // the five cars share one prepared model: the work is done once, and the geometry sits on the GPU once
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
   const twoTone = color === FLEET_COLORS.white || color === FLEET_COLORS.black;
-  const mat = useMemo(() => fleetMaterial(color, P, twoTone), [color, P, twoTone]);
+  const gl = useThree((st) => st.gl), mix = useContext(NightCtx);
+  const mat = useMemo(() => fleetMaterial(color, P, twoTone, color === FLEET_COLORS.white, carEnv(gl)), [color, P, twoTone, gl]);
+  useFrame(() => { mat.envMapIntensity = .7 - .4 * mix.current; });   // a duller sky to reflect at night
   const plateMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
   // the scene's cars face +x when rotationY = 0; the model's nose is turned to match
