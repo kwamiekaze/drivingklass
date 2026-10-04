@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { rng } from "@/components/nuhome2/world/theme";
+import { StyleVanSun } from "@/components/nuhome2/StyleVanSun";
 
 /*
  * The student portal's background: the same world as the home page, a soft sky with a sun or a moon, a skyline and slow
@@ -29,7 +30,7 @@ export function StudentSky() {
     <div className="dk-sky" data-theme={night ? "night" : "day"} aria-hidden="true">
       <div className="dk-sky-base" />
       <div className="dk-sky-stars">{twinkles.map((t, i) => <span key={i} style={{ left: `${t.l}%`, top: `${t.t}%`, width: t.s, height: t.s, animationDelay: `${t.d}s` }} />)}</div>
-      <div className="dk-sky-orb"><i className="dk-sun" /><i className="dk-moon" /></div>
+      <div className="dk-sky-orb"><i className="dk-sun"><StyleVanSun /></i><i className="dk-moon" /></div>
       <svg className="dk-sky-city dk-sky-far" viewBox="0 0 1600 200" preserveAspectRatio="none"><path d={far.d} />{far.lit.map((w, i) => <rect key={i} x={w.x} y={w.y} width="8" height="11" />)}</svg>
       <svg className="dk-sky-city dk-sky-near" viewBox="0 0 1600 200" preserveAspectRatio="none"><path d={near.d} />{near.lit.map((w, i) => <rect key={i} x={w.x} y={w.y} width="8" height="11" />)}</svg>
       <div className="dk-sky-floaters">{floaters.map((f, i) => <span key={i} style={{ left: `${f.l}%`, animationDelay: `${f.d}s`, animationDuration: `${f.du}s` }}><svg width={f.s} height={f.s} viewBox="-8 -8 16 16"><path d={star} /></svg></span>)}</div>

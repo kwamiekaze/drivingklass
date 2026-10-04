@@ -279,3 +279,6 @@
 @keyframes n2-glint { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 45%, 55% { opacity: .95; transform: scale(1) rotate(45deg); } }
 .n2-experience[data-pop="true"] .n2-sparkles { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .n2-sparkles svg { animation: none; opacity: .35; transform: scale(.7); } }
+
+/* the car keeps to the right-hand lane, between the gold edge and the white centre line, and drives straight at the vanishing point, so it never crosses a line */
+.n2-cbd-car { transform: scale(calc(1 - var(--fill) * .66)) !important; }

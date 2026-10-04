@@ -5,7 +5,6 @@ import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
 import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
-import { Sparkles } from "@/components/nuhome2/Sparkles";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -228,7 +227,6 @@ export default function NuHome2() {
 
         {sheet && <PackagesPopup packages={packages} onClose={() => setSheet(false)} />}
         {msgOpen && <MessagePopup onClose={() => setMsgOpen(false)} />}
-        <Sparkles />
 
         {lost && gl && (
           <div className="n2-lost" role="alert"><p>The 3D world paused to save your battery.</p>
