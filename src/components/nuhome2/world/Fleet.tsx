@@ -159,16 +159,51 @@ function Loaded({ color, plate, position, rotationY, lite }: { color: string; pl
   </group>;
 }
 
+/**
+ * Body paint for the textured sedan. The baked texture carries the real detail (panel lines, glass, lamps, grille, tyres, rims)
+ * but also a dirty, uneven paint tone. So: wherever the texture is light and neutral (the body) the fleet colour is drawn clean and
+ * glossy; wherever it is dark or coloured (glass, tyres, lamps, trim) the texture shows as drawn. Wheels and lamp zones are never repainted.
+ */
+function paintMaterial(map: THREE.Texture | null, color: string, P: Prepared) {
+  const m = new THREE.MeshPhysicalMaterial({ map, roughness: .22, metalness: .3, clearcoat: 1, clearcoatRoughness: .035, envMapIntensity: 1.15 });
+  const paint = new THREE.Color(color);
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, { uM: { value: P.M }, uPaint: { value: new THREE.Vector3(paint.r, paint.g, paint.b) }, uL: { value: P.L }, uH: { value: P.H }, uW: { value: P.W }, uAx: { value: P.ax }, uRw: { value: P.rw }, uNose: { value: P.nose } });
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nuniform mat4 uM;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvCar = (uM * vec4(position, 1.)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nuniform vec3 uPaint;\nuniform float uL, uH, uW, uAx, uRw, uNose;')
+      .replace('#include <map_fragment>', `
+        vec4 texel = texture2D(map, vMapUv);
+        float lum = dot(texel.rgb, vec3(.2126, .7152, .0722));
+        float sat = max(texel.r, max(texel.g, texel.b)) - min(texel.r, min(texel.g, texel.b));
+        float paintMask = smoothstep(.07, .17, lum) * (1. - smoothstep(.07, .2, sat));
+        vec2 wa = vec2(vCar.x - uAx, vCar.y - uRw), wb = vec2(vCar.x + uAx, vCar.y - uRw);
+        float wr = min(length(wa), length(wb));
+        float wheelZone = (wr < uRw * .9 && abs(vCar.z) > uW * .5 - .32) ? 1. : 0.;
+        float hh = vCar.y / uH, fnx = vCar.x * uNose;
+        float lampZone = (fnx > uL * .5 - .22 && hh > .38 && hh < .56 && abs(vCar.z) > uW * .14 && abs(vCar.z) < uW * .46) ? 1. : 0.;   // the headlights only: the tail light bar is red, so it protects itself
+        paintMask *= (1. - wheelZone) * (1. - lampZone);
+        vec3 body = uPaint * (.9 + .1 * smoothstep(.1, .6, lum));
+        diffuseColor.rgb = mix(texel.rgb, body, paintMask);`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(.62, .2, paintMask);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(.1, .38, paintMask);');
+  };
+  m.customProgramCacheKey = () => 'dk-fleet-paint';
+  return m;
+}
+
 /** The textured sedan: its own baked surface (lamps, grille, window frames, wheels), with the fleet colour as a multiply tint so the black roof, glass and tyres stay black. */
 function LoadedTex({ color, plate, position, rotationY, lite }: { color: string; plate: string; position: [number, number, number]; rotationY: number; lite: boolean }) {
   const url = lite ? FLEET_TEX_LITE_URL : FLEET_TEX_URL;   // phones in the low tier get the lighter textured car, not the painted one
   const { scene } = useGLTF(url);
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
   const root = useMemo(() => {
-    const r = scene.clone(true), tint = new THREE.Color(color); if (tint.r + tint.g + tint.b > .9) tint.multiplyScalar(1.28);   // lift the baked paint so white reads as clean pearl, not grey
-    r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals(); const src = m.material as THREE.MeshStandardMaterial; const c = new THREE.MeshPhysicalMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: .26, metalness: .22, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1 }); c.color.copy(tint); m.material = c; m.castShadow = true; m.receiveShadow = true; });
+    // smooth normals once per model: the file stores 8-bit normals, which is what made the paint look blotchy and crumpled
+    if (!scene.userData.dkSmooth) { scene.userData.dkSmooth = true; scene.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) m.geometry = toCreasedNormals(m.geometry, Math.PI * .31); }); }
+    const r = scene.clone(true);
+    r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.material = paintMaterial((m.material as THREE.MeshStandardMaterial).map ?? null, color, P); m.castShadow = true; m.receiveShadow = true; });
     return r;
-  }, [scene, color]);
+  }, [scene, color, P]);
   const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p, q, sc }; }, [P]);
   const plateMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
