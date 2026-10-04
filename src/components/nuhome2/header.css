@@ -1,0 +1,61 @@
+/*
+ * The DrivingKlass header: a deep navy panel with a gold edge that sweeps down at both ends, the five star steering wheel
+ * emblem, a champagne gold wordmark, the tagline in script and five stars. Everything is HTML, CSS and SVG, so it stays
+ * sharp and responsive. Palette: #061B48 #0B3475 #1756A6 navy, #E5B84A #FFD86A #956716 gold.
+ */
+.n2-hdr { --cap: clamp(46px, 9.5vw, 132px); --pad: clamp(12px, 3.4vw, 44px); position: absolute; inset: 0 0 auto; z-index: 20; padding: max(env(safe-area-inset-top, 0px), 10px) 0 0; border: 0; height: auto; display: block; }
+
+/* panel */
+.n2-hdr-bg { position: absolute; inset: 0; z-index: 0; display: grid; grid-template-columns: var(--cap) minmax(0, 1fr) var(--cap); pointer-events: none; filter: drop-shadow(0 10px 22px rgba(0, 10, 40, .5)); }
+.n2-hdr-bg::after { content: ""; position: absolute; left: var(--cap); right: var(--cap); top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(190, 220, 255, .5), transparent); }
+.n2-hdr-cap { display: block; width: 100%; height: 100%; overflow: visible; }
+.n2-hdr-cap--r { transform: scaleX(-1); }
+.n2-hdr-mid { position: relative; background: radial-gradient(120% 140% at 50% -30%, rgba(23, 86, 166, .55), rgba(23, 86, 166, 0) 62%), linear-gradient(180deg, #0b3475 0%, #082a63 50%, #061b48 100%); }
+.n2-hdr-mid::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: linear-gradient(90deg, #e5b84a 0%, #f3cd68 22%, #ffd86a 50%, #f3cd68 78%, #e5b84a 100%); }
+.n2-hdr-spark { position: absolute; left: 50%; bottom: -3px; width: clamp(120px, 34vw, 360px); height: 6px; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(255, 238, 178, .95), rgba(255, 216, 106, .38) 42%, transparent 72%); }
+
+/* row one: emblem, wordmark, controls */
+.n2-hdr-row { position: relative; z-index: 1; display: flex; align-items: center; gap: clamp(8px, 2vw, 28px); padding: 0 var(--pad); }
+.n2-hdr .n2-brand { display: flex; flex-direction: row; align-items: center; gap: clamp(8px, 2.4vw, 18px); flex: 0 1 auto; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer; }
+.n2-hdr-wheel { flex: none; width: clamp(58px, 17.4vw, 100px); height: auto; aspect-ratio: 1; filter: drop-shadow(0 4px 8px rgba(0, 8, 32, .55)); }
+.n2-hdr-sep { flex: none; width: 1px; height: clamp(38px, 10.5vw, 62px); background: linear-gradient(180deg, transparent, #e5b84a 25%, #e5b84a 75%, transparent); opacity: .85; }
+.n2-hdr-word { position: relative; min-width: 0; padding-bottom: .1em; font-family: "Cinzel", "Cormorant Garamond", Georgia, serif; font-weight: 700; font-size: clamp(20px, 5.9vw, 50px); line-height: 1.02; letter-spacing: .012em; white-space: nowrap; color: #e5b84a;
+  background: linear-gradient(180deg, #fff1b8 0%, #ffd86a 30%, #e5b84a 56%, #b98720 82%, #956716 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 1px 0 rgba(60, 36, 0, .65)) drop-shadow(0 3px 6px rgba(0, 8, 32, .5)); }
+.n2-hdr-word::after { content: ""; position: absolute; left: 2%; right: 2%; bottom: -.04em; height: 1px; background: linear-gradient(90deg, transparent, #e5b84a 18%, #ffd86a 50%, #e5b84a 82%, transparent); opacity: .9; -webkit-text-fill-color: initial; }
+.n2-hdr .n2-nav { flex: 0 0 auto; justify-content: center; margin: 0; }
+.n2-hdr .n2-header-actions { margin-left: auto; gap: clamp(8px, 1.6vw, 14px); }
+.n2-hdr-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: clamp(38px, 10.6vw, 48px); height: clamp(38px, 10.6vw, 48px); padding: 0; border-radius: 999px; cursor: pointer; color: #ffd86a; border: 1.25px solid #e5b84a;
+  background: radial-gradient(circle at 32% 22%, rgba(23, 86, 166, .95), rgba(8, 42, 99, .96) 62%, rgba(6, 27, 72, .98)); box-shadow: inset 0 1px 0 rgba(255, 224, 140, .3), inset 0 -2px 6px rgba(0, 8, 32, .5), 0 3px 10px rgba(0, 8, 32, .45); transition: transform .2s ease, box-shadow .2s ease, color .2s ease; -webkit-tap-highlight-color: transparent; }
+.n2-hdr-btn:hover { transform: translateY(-1px) scale(1.05); color: #fff1b8; box-shadow: inset 0 1px 0 rgba(255, 224, 140, .45), inset 0 -2px 6px rgba(0, 8, 32, .5), 0 0 0 3px rgba(229, 184, 74, .18), 0 6px 14px rgba(0, 8, 32, .5); }
+.n2-hdr-btn:active { transform: scale(.96); }
+.n2-hdr-btn:focus-visible, .n2-hdr .n2-brand:focus-visible { outline: 2px solid #ffd86a; outline-offset: 3px; }
+.n2-hdr-btn svg { width: 45%; height: 45%; }
+
+/* row two and three: the tagline in script, flanked by hairlines, then five stars */
+.n2-hdr-tag { position: relative; z-index: 1; margin: clamp(2px, .6vw, 6px) 0 0; padding: 0 var(--pad); display: flex; align-items: center; justify-content: center; gap: clamp(10px, 2.6vw, 26px); }
+.n2-hdr-tag::before, .n2-hdr-tag::after { content: ""; flex: 1 1 0; max-width: clamp(34px, 17vw, 240px); height: 1px; }
+.n2-hdr-tag::before { background: linear-gradient(90deg, transparent, #e5b84a); } .n2-hdr-tag::after { background: linear-gradient(270deg, transparent, #e5b84a); }
+.n2-hdr-tag span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-weight: 600; font-size: clamp(19px, 5.5vw, 36px); line-height: 1.12; letter-spacing: .01em; white-space: nowrap; color: #e5b84a;
+  background: linear-gradient(180deg, #fff1b8 0%, #ffd86a 38%, #e5b84a 70%, #b98720 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 1px 0 rgba(60, 36, 0, .55)) drop-shadow(0 2px 6px rgba(0, 8, 32, .45)); padding: 0 .06em; }
+.n2-hdr-stars { position: relative; z-index: 1; display: flex; justify-content: center; gap: clamp(14px, 4.4vw, 30px); padding: clamp(3px, 1vw, 8px) 0 clamp(13px, 3.6vw, 20px); }
+.n2-hdr-stars svg:not([width]) { width: clamp(18px, 5.2vw, 30px); height: auto; filter: drop-shadow(0 1px 0 rgba(60, 36, 0, .6)) drop-shadow(0 2px 4px rgba(0, 8, 32, .45)); }
+
+/* wide screens: nav in the middle, the Book button next to the controls, a calmer scale */
+@media (min-width: 821px) {
+  .n2-hdr { --pad: clamp(24px, 4vw, 64px); }
+  .n2-hdr .n2-brand { flex: 1 1 0; justify-content: flex-start; }
+  .n2-hdr .n2-header-actions { flex: 1 1 0; justify-content: flex-end; }
+  .n2-hdr-wheel { width: clamp(70px, 6vw, 88px); }
+  .n2-hdr-sep { height: clamp(46px, 4vw, 58px); }
+  .n2-hdr-word { font-size: clamp(34px, 3.3vw, 48px); }
+  .n2-hdr-tag span { font-size: clamp(24px, 2.2vw, 32px); }
+  .n2-hdr-stars svg:not([width]) { width: clamp(20px, 1.8vw, 26px); }
+  .n2-hdr-stars { gap: clamp(18px, 1.8vw, 26px); padding-bottom: 16px; }
+  .n2-hdr-btn { width: 46px; height: 46px; }
+}
+
+/* the hero no longer repeats the name, the tagline and the stars: the header carries them. The h1 stays for screen readers. */
+.n2-hero .n2-wordmark { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.n2-hero .n2-script, .n2-hero .n2-stars { display: none; }
+@media (min-width: 821px) and (min-aspect-ratio: 4/5) { .n2-experience .n2-hero { top: clamp(206px, 26vh, 262px); } }
+@media (max-width: 820px), (max-aspect-ratio: 4/5) { .n2-experience .n2-hero { top: 150px; } }

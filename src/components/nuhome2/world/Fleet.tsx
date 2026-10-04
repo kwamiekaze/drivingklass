@@ -60,13 +60,13 @@ function prepare(scene: THREE.Object3D): Prepared {
   return { geo, L, H, W, ax, rw, nose, roof, plateF, plateR };
 }
 
-function fleetMaterial(color: string, P: Prepared) {
+function fleetMaterial(color: string, P: Prepared, twoTone: boolean) {
   const m = new THREE.MeshPhysicalMaterial({ color, metalness: .5, roughness: .25, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5 });
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { uL: { value: P.L }, uH: { value: P.H }, uW: { value: P.W }, uAx: { value: P.ax }, uRw: { value: P.rw }, uNose: { value: P.nose } });
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCar;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvCar = position;');
+    Object.assign(sh.uniforms, { uTwoTone: { value: twoTone ? 1 : 0 }, uL: { value: P.L }, uH: { value: P.H }, uW: { value: P.W }, uAx: { value: P.ax }, uRw: { value: P.rw }, uNose: { value: P.nose } });
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nvarying vec3 vCarN;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvCar = position; vCarN = objectNormal;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nuniform float uL, uH, uW, uAx, uRw, uNose;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCar;\nvarying vec3 vCarN;\nuniform float uTwoTone;\nuniform float uL, uH, uW, uAx, uRw, uNose;')
       .replace('#include <color_fragment>', `#include <color_fragment>
         float h = vCar.y / uH, fx = vCar.x * uNose, kRough = .25, kMetal = .5; vec3 glow = vec3(0.);
         vec2 wa = vec2(vCar.x - uAx, vCar.y - uRw), wb = vec2(vCar.x + uAx, vCar.y - uRw); vec2 wc = length(wa) < length(wb) ? wa : wb; float wr = length(wc);
@@ -74,7 +74,13 @@ function fleetMaterial(color: string, P: Prepared) {
         if (wr < uRw * 1.03 && outer) {
           if (wr < uRw * .7) { float a = atan(wc.y, wc.x); float spoke = smoothstep(.15, .55, sin(a * 10.)); diffuseColor.rgb = mix(vec3(.05), vec3(.62, .64, .67), spoke * step(uRw * .17, wr)); kMetal = .85; kRough = .28; }
           else { diffuseColor.rgb = vec3(.025); kMetal = 0.; kRough = .92; }
-        } else if (h > .62) { diffuseColor.rgb = vec3(.02, .025, .03); kMetal = .6; kRough = .07; }
+        } else if (h > .62) {
+          // white and black cars keep the black glass roof. The red, yellow and green cars are painted all the way up:
+          // the roof and pillars wear the body colour, and only the windows (the surfaces that face sideways, forward
+          // or back) stay dark glass.
+          bool glass = uTwoTone > .5 || (vCarN.y < .9 && fx < uL * .235 && fx > -uL * .3);   // only the greenhouse, never the hood or the boot lid
+          if (glass) { diffuseColor.rgb = vec3(.02, .025, .03); kMetal = .6; kRough = .07; }
+        }
         else if (h > .596 && abs(vCar.z) > uW * .26) { diffuseColor.rgb = vec3(.8, .82, .86); kMetal = 1.; kRough = .14; }
         else if (h < .16) { diffuseColor.rgb = vec3(.035); kMetal = .1; kRough = .6; }
         if (fx < -(uL * .5 - .16) && h > .09 && h < .21) { vec2 ex = vec2((abs(vCar.z) - uW * .3) / (uW * .11), (h - .15) / .05); if (dot(ex, ex) < 1.) { diffuseColor.rgb = vec3(.78, .8, .84); kMetal = 1.; kRough = .12; } }
@@ -94,7 +100,8 @@ function Loaded({ color, plate, position, rotationY, lite }: { color: string; pl
   const { scene } = useGLTF(url);
   // the five cars share one prepared model: the work is done once, and the geometry sits on the GPU once
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
-  const mat = useMemo(() => fleetMaterial(color, P), [color, P]);
+  const twoTone = color === FLEET_COLORS.white || color === FLEET_COLORS.black;
+  const mat = useMemo(() => fleetMaterial(color, P, twoTone), [color, P, twoTone]);
   const plateMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
   // the scene's cars face +x when rotationY = 0; the model's nose is turned to match

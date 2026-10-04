@@ -2,6 +2,7 @@ import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, t
 import { ArrowDown, ChevronDown, ChevronUp, Info, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
+import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { ReviewsModal } from "@/components/ReviewsModal";
@@ -12,12 +13,13 @@ import { getPackagesSortedByPosition } from "@/data/packages";
 import { BRAND } from "@/components/nuhome2/content";
 import { STAGES } from "@/components/nuhome2/world/views";
 import "@/components/nuhome2/nuhome2.css";
+import "@/components/nuhome2/header.css";
 
 // The 3D world loads on its own so the page shell, copy and packages paint first.
 const Scene = lazy(() => import("@/components/nuhome2/world/Scene"));
 
 const FONT_HREF =
-  "https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&family=Italianno&family=Poppins:wght@400;500;600;700;800&display=swap";
+  "https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Italianno&family=Poppins:wght@400;500;600;700;800&display=swap";
 
 /** Open 9am to 6pm, every day, by the clock in Georgia (US Eastern). Add ?open=1 or ?open=0 to preview either sign. */
 export function georgiaOpen(now: Date = new Date()) {
@@ -163,21 +165,49 @@ export default function NuHome2() {
         )}
         <div className="n2-tint" aria-hidden="true" />
 
-        <header className="n2-header">
-          <button type="button" className="n2-brand" onClick={() => setStage(0)} aria-label="DrivingKlass home">
-            <span className="n2-brand-name n2-gold">DRIVINGKLASS</span>
-            <span className="n2-brand-tag">Where 5 Star Drivers Are Made</span>
-          </button>
-          <nav className="n2-nav" aria-label="Main navigation">
-            <button type="button" onClick={() => setSheet(true)}>Packages</button>
-            <button type="button" onClick={toContact}>Contact</button>
-          </nav>
-          <div className="n2-header-actions">
-            <button type="button" className="n2-theme" onClick={() => setTheme(night ? "light" : "dark")} aria-label={night ? "Switch to day" : "Switch to night"}>
-              {night ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+        <header className="n2-header n2-hdr">
+          {/* the panel: two curved end caps and a stretched middle, all CSS/SVG so the gold edge stays razor sharp at any width */}
+          <div className="n2-hdr-bg" aria-hidden="true">
+            <svg className="n2-hdr-cap n2-hdr-cap--l" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+              <defs>
+                <linearGradient id="n2h-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0b3475" /><stop offset=".5" stopColor="#082a63" /><stop offset="1" stopColor="#061b48" /></linearGradient>
+                <linearGradient id="n2h-gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#956716" /><stop offset=".45" stopColor="#e5b84a" /><stop offset="1" stopColor="#e5b84a" /></linearGradient>
+              </defs>
+              <path d="M0 0 H100 V100 C58 100 42 80 0 80 Z" fill="url(#n2h-fill)" />
+              <path d="M0 80 C42 80 58 100 100 100" fill="none" stroke="url(#n2h-gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="n2-hdr-mid" />
+            <svg className="n2-hdr-cap n2-hdr-cap--r" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+              <path d="M0 0 H100 V100 C58 100 42 80 0 80 Z" fill="url(#n2h-fill)" />
+              <path d="M0 80 C42 80 58 100 100 100" fill="none" stroke="url(#n2h-gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <span className="n2-hdr-spark" />
+          </div>
+
+          <div className="n2-hdr-row">
+            <button type="button" className="n2-brand" onClick={() => setStage(0)} aria-label="DrivingKlass home">
+              <img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" />
+              <span className="n2-hdr-sep" aria-hidden="true" />
+              <span className="n2-hdr-word">DrivingKlass</span>
             </button>
-            <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
-            <PortalMenuButton variant="hamburger" triggerClassName="n2-theme n2-burger" />
+            <nav className="n2-nav" aria-label="Main navigation">
+              <button type="button" onClick={() => setSheet(true)}>Packages</button>
+              <button type="button" onClick={toContact}>Contact</button>
+            </nav>
+            <div className="n2-header-actions">
+              <button type="button" className="n2-hdr-btn" onClick={() => setTheme(night ? "light" : "dark")} aria-label={night ? "Switch to day" : "Switch to night"}>
+                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
+              </button>
+              <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
+              <PortalMenuButton variant="hamburger" triggerClassName="n2-hdr-btn" />
+            </div>
+          </div>
+          <p className="n2-hdr-tag"><span>Where 5 Star Drivers Are Made</span></p>
+          <div className="n2-hdr-stars" role="img" aria-label="5 stars">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <svg key={i} viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6l3.1 6.9 7.5.8-5.6 5 1.6 7.4L12 17.8l-6.6 3.9 1.6-7.4-5.6-5 7.5-.8z" fill="url(#n2h-star)" stroke="#8a5f12" strokeWidth=".6" strokeLinejoin="round" /></svg>
+            ))}
+            <svg width="0" height="0" aria-hidden="true" style={{ position: "absolute" }}><defs><linearGradient id="n2h-star" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffe9a6" /><stop offset=".5" stopColor="#e5b84a" /><stop offset="1" stopColor="#b8841f" /></linearGradient></defs></svg>
           </div>
         </header>
 
