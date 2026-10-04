@@ -71,7 +71,7 @@ function hasWebGL() {
 
 /**
  * /nuhome2: the DrivingKlass estate. A 3D world with a transparent header, four views behind NEXT VIEW, the Reviews / About Us / Call
- * buttons over the line, and the same message form as the homepage underneath. Unlisted and noindex until it replaces the homepage.
+ * buttons over the line, and the same message form as the homepage underneath. This is the DrivingKlass home page.
  */
 export default function NuHome2() {
   const { theme: pref, resolvedTheme, setTheme } = useTheme();
@@ -101,12 +101,9 @@ export default function NuHome2() {
   useEffect(() => {
     const prevTitle = document.title;
     document.title = "DrivingKlass | Where 5 Star Drivers Are Made";
-    const robots = document.createElement("meta");
-    robots.name = "robots"; robots.content = "noindex, nofollow";
-    document.head.appendChild(robots);
     let link = document.querySelector<HTMLLinkElement>("link[data-nuhome2-fonts]");
     if (!link) { link = document.createElement("link"); link.rel = "stylesheet"; link.href = FONT_HREF; link.dataset.nuhome2Fonts = "true"; document.head.appendChild(link); }
-    return () => { document.title = prevTitle; robots.remove(); };
+    return () => { document.title = prevTitle; };
   }, []);
 
   useEffect(() => {
@@ -215,8 +212,10 @@ export default function NuHome2() {
         </div>
 
         <div className="n2-rail">
-          <button type="button" className="n2-btn n2-btn--gold n2-rail-book" onClick={() => setSheet(true)}>Book a Klass</button>
-          <button type="button" className="n2-next n2-msg-btn" onClick={() => setMsgOpen(true)} aria-label="Send us a message"><MessageSquare size={15} aria-hidden="true" /> MESSAGE</button>
+          <div className="n2-rail-actions">
+            <button type="button" className="n2-btn n2-btn--gold n2-rail-book" onClick={() => setSheet(true)}>Book a Klass</button>
+            <button type="button" className="n2-btn n2-btn--glass n2-rail-msg" onClick={() => setMsgOpen(true)} aria-label="Send us a message"><MessageSquare size={15} aria-hidden="true" /><span>Message</span></button>
+          </div>
           <div className="n2-swipe" role="button" tabIndex={0} aria-label="Scroll down to send us a message" onClick={scrollDown}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollDown(); }}>
             <span className="n2-lbl-touch">SWIPE</span><span className="n2-lbl-mouse">SCROLL</span>

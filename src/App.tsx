@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { StudentShell } from "@/components/portal/StudentShell";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeDebugBadge } from "@/components/ThemeDebugBadge";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -73,6 +74,9 @@ import KlassroomPreview from "./pages/KlassroomPreview";
 import NuHome2 from "./pages/NuHome2";
 const queryClient = new QueryClient();
 
+/** /nuhome2 was the preview address. It now forwards to the home page, keeping any query string. */
+function Nuhome2Redirect() { const { search, hash } = useLocation(); return <Navigate to={{ pathname: "/", search, hash }} replace />; }
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="theme">
@@ -83,12 +87,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Fully public route — NO auth providers, no analytics */}
-            <Route path="/report/public/:slug" element={<PublicReportCard />} />
-            <Route path="/schedule/public/:slug" element={<PublicStudentSchedule />} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/report/public/:slug" element={<StudentShell><PublicReportCard /></StudentShell>} />
+            <Route path="/schedule/public/:slug" element={<StudentShell><PublicStudentSchedule /></StudentShell>} />
+            <Route path="/unsubscribe" element={<StudentShell><Unsubscribe /></StudentShell>} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/play" element={<RoadTestGame publicMode />} />
-            <Route path="/tracker/:token" element={<GuardianTrackerPage />} />
+            <Route path="/tracker/:token" element={<StudentShell><GuardianTrackerPage /></StudentShell>} />
             <Route path="/preview" element={<Preview />} />
             <Route path="/nuhome" element={<KlassroomPreview />} />
 
@@ -101,17 +105,18 @@ const App = () => (
                   <AnalyticsProvider>
                     <Routes>
                       {/* Public Routes */}
-                      <Route path="/" element={<Index />} />
-                      <Route path="/nuhome2" element={<NuHome2 />} />
+                      <Route path="/" element={<NuHome2 />} />
+                      <Route path="/nuhome2" element={<Nuhome2Redirect />} />
+                      <Route path="/classic-home" element={<Index />} />
                       <Route path="/auth" element={<Auth />} />
                       
                       {/* Portal Auth Routes */}
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-                      <Route path="/forgot-password" element={<ForgotPassword />} />
-                      <Route path="/reset-password" element={<ResetPassword />} />
-                      <Route path="/pending-approval" element={<PendingApproval />} />
-                      <Route path="/rejected" element={<RejectedStatus />} />
+                      <Route path="/login" element={<StudentShell><Login /></StudentShell>} />
+                      <Route path="/signup" element={<StudentShell><Signup /></StudentShell>} />
+                      <Route path="/forgot-password" element={<StudentShell><ForgotPassword /></StudentShell>} />
+                      <Route path="/reset-password" element={<StudentShell><ResetPassword /></StudentShell>} />
+                      <Route path="/pending-approval" element={<StudentShell><PendingApproval /></StudentShell>} />
+                      <Route path="/rejected" element={<StudentShell><RejectedStatus /></StudentShell>} />
                       
                       {/* Intake Form */}
                       <Route path="/intake" element={<IntakeForm />} />

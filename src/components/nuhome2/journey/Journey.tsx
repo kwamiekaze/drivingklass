@@ -137,7 +137,7 @@ export function Journey({ theme, onBook, onTheme }: { theme: Theme; onBook: () =
     <header className="n2j-intro">
       <p className="n2j-kicker">THE ROAD TO FIVE STARS</p>
       <h2>Every great driver<br /><em>starts somewhere.</em></h2>
-      <p className="n2j-lead">From an empty parking lot to the open interstate, we coach you one step at a time, in a spotless ride that picks you up at your door. Follow the road and watch the stars light up.</p>
+      <p className="n2j-lead">From an empty parking lot to the open interstate, we’re with you every step of the way, in a spotless ride that picks you up at your door. Follow the road and watch the stars light up.</p>
       <ul className="n2j-pills" aria-label="Jump to a stop">{STOPS.map((s, i) => <li key={s.id}><button type="button" onClick={() => goTo(i)}><span>{s.number}</span>{s.name}</button></li>)}</ul>
       <p className="n2j-cue"><ArrowDown size={16} aria-hidden="true" /> Follow the road</p>
     </header>
@@ -173,7 +173,7 @@ export function Journey({ theme, onBook, onTheme }: { theme: Theme; onBook: () =
 
     <section className="n2j-cta" aria-label="Book your klass">
       <p className="n2j-script">{BRAND.slogan}</p>
-      <p>Pick your package, pick your time, and we will take it from there.</p>
+      <p>Confirm eligibility, pick your package, pick your time, and we will take it from there.</p>
       <div className="n2j-cta-row">
         <button type="button" className="n2j-btn n2j-btn-big" onClick={onBook}>Book your Klass <ArrowUpRight size={20} aria-hidden="true" /></button>
         <a className="n2j-btn n2j-btn-ghost" href={tel}><Phone size={18} aria-hidden="true" /> {BRAND.phone}</a>

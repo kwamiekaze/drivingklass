@@ -86,7 +86,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
         <div className={cn("flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto", isStudent && "n2-hdr-row")}>
           {/* Logo/Brand */}
           {isStudent ? (
-            <Link to="/nuhome2" className="n2-brand" aria-label="DrivingKlass home">
+            <Link to="/" className="n2-brand" aria-label="DrivingKlass home">
               <span className="n2-hdr-wheelwrap" style={{ "--wheel": `url(${wheelUrl})` } as React.CSSProperties}>
                 <img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" />
               </span>
@@ -245,7 +245,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   <User className="mr-2 h-4 w-4" />
                   {t('common.profile')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(isStudent ? '/nuhome2' : '/')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
                   <Home className="mr-2 h-4 w-4" />
                   {t('common.mainSite')}
                 </DropdownMenuItem>

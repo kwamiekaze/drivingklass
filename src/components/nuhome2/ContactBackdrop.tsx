@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { rng } from "./world/theme";
 
 /*
@@ -10,8 +10,25 @@ import { rng } from "./world/theme";
  */
 const star = "M0 -7 L2 -2.2 L7 -2.1 L3 1.2 L4.4 6.2 L0 3.3 L-4.4 6.2 L-3 1.2 L-7 -2.1 L-2 -2.2 Z";
 
+/** The footer film: a looped clip per theme (public/videos/footer-road-day|night.mp4 with a poster of the same name). Optional: if a file is missing the painted road below stays. */
+const base = import.meta.env.BASE_URL;
+const FILM = { day: { src: `${base}videos/footer-road-day.mp4`, poster: `${base}videos/footer-road-day.jpg` }, night: { src: `${base}videos/footer-road-night.mp4`, poster: `${base}videos/footer-road-night.jpg` } };
+
 export function ContactBackdrop({ night }: { night: boolean }) {
   const root = useRef<HTMLDivElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
+  const [near, setNear] = useState(false);        // the film only loads when the footer is close to the screen
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const still = typeof window !== "undefined" && (window.matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true);
+  const film = night ? FILM.night : FILM.day;
+  useEffect(() => {
+    const host = root.current?.parentElement; if (!host || still) return;
+    const io = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "900px 0px" });
+    io.observe(host); return () => io.disconnect();
+  }, [still]);
+  useEffect(() => { setReady(false); setFailed(false); }, [night]);
+  useEffect(() => { const v = vid.current; if (!v) return; if (near) v.play().catch(() => {}); else v.pause(); }, [near, film.src]);
   const twinkles = useMemo(() => { const r = rng(44); return Array.from({ length: 46 }).map(() => ({ l: r() * 100, t: r() * 58, s: 1.4 + r() * 2.4, d: -r() * 7 })); }, []);
   const clouds = useMemo(() => [{ t: 9, s: 1, d: -20, dur: 150 }, { t: 22, s: .7, d: -90, dur: 190 }, { t: 36, s: .85, d: -50, dur: 170 }], []);
 
@@ -39,7 +56,7 @@ export function ContactBackdrop({ night }: { night: boolean }) {
   }, []);
 
   return (
-    <div className="n2-cbd" ref={root} data-theme={night ? "night" : "day"} data-stars="0" aria-hidden="true">
+    <div className="n2-cbd" ref={root} data-theme={night ? "night" : "day"} data-stars="0" data-film={ready && !failed ? "on" : "off"} aria-hidden="true">
       <div className="n2-cbd-sky" />
       <div className="n2-cbd-glow" />
       <div className="n2-cbd-stars">{twinkles.map((t, i) => <span key={i} style={{ left: `${t.l}%`, top: `${t.t}%`, width: t.s, height: t.s, animationDelay: `${t.d}s` }} />)}</div>
@@ -65,6 +82,10 @@ export function ContactBackdrop({ night }: { night: boolean }) {
         </g></g>
       </svg>
       <div className="n2-cbd-five">{[0, 1, 2, 3, 4].map(i => <svg key={i} viewBox="-8 -8 16 16" className="n2-cbd-s" data-i={i}><path d={star} /></svg>)}</div>
+      {near && !still && !failed && (
+        <video key={film.src} ref={vid} className="n2-cbd-film" src={film.src} poster={film.poster} muted loop playsInline autoPlay preload="auto"
+          onCanPlay={() => setReady(true)} onError={() => setFailed(true)} />
+      )}
       <div className="n2-cbd-veil" />
     </div>
   );

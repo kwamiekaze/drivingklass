@@ -10,9 +10,9 @@ export const STOPS: Stop[] = [
 ];
 
 export const STEPS = [
-  { n: '1', title: 'Pick your package', text: 'Choose the hours that fit you, from a single hour to a full program.' },
-  { n: '2', title: 'Choose your time', text: 'Tell us when and where. We pick you up and drop you off.' },
-  { n: '3', title: 'Drive like a five star', text: 'Practice real skills with a patient coach until the road feels like home.' },
+  { n: '1', title: 'Confirm your eligibility', text: 'Send us a message or use the sign up form.' },
+  { n: '2', title: 'Pick your package', text: 'Choose the hours that fit you, from a single hour or much more.' },
+  { n: '3', title: 'Choose your time', text: 'Tell us when and where. We pick you up and drop you off.' },
 ];
 
 export const PLACES = ['Pick up at home', 'Pick up at work', 'Pick up at school', 'Parking lots', 'Neighborhood streets', 'City traffic', 'The interstate', 'Road test practice', 'Permit to license'];
