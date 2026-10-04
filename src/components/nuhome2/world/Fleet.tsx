@@ -24,17 +24,21 @@ export const useTexturedFleet = () => typeof window === 'undefined' || new URLSe
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
-type ImportedFleetAsset = { full: string; lite: string };
-const asset = (name: string): ImportedFleetAsset => ({
+type ImportedFleetAsset = { full: string; lite: string; length?: number; flip?: boolean; roofX?: number };   // length: metres, flip: model nose guess is wrong, roofX: topper position along the car (fraction of length from the middle)
+const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: number } = {}): ImportedFleetAsset => ({
   full: `${import.meta.env.BASE_URL}models/${name}.glb`,
   lite: `${import.meta.env.BASE_URL}models/${name}-lite.glb`,
+  ...o,
 });
 
 /** The three Meshy cars selected for the new homepage. Their baked paint and surface detail are preserved. */
 const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>> = {
   corolla: asset('dk-meshy-future-ev'),
-  civic: asset('dk-meshy-sleek-sport'),
   elantra: asset('dk-meshy-red-sport'),
+  // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
+  civic: asset('dk-meshy-matra-laser', { length: 4.4 }),
+  camry: asset('dk-meshy-orange-sport', { length: 4.5 }),
+  sentra: asset('dk-meshy-red-roadster', { length: 4.5 }),
 };
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
@@ -232,7 +236,7 @@ function LoadedTex({ color, plate, position, rotationY, lite }: { color: string;
 }
 
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
-function LoadedImported({ files, position, rotationY, lite }: { files: ImportedFleetAsset; position: [number, number, number]; rotationY: number; lite: boolean }) {
+function LoadedImported({ files, plate, position, rotationY, lite }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean }) {
   const url = lite ? files.lite : files.full;
   const { scene } = useGLTF(url);
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
@@ -255,13 +259,21 @@ function LoadedImported({ files, position, rotationY, lite }: { files: ImportedF
     });
     return r;
   }, [scene, lite]);
-  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p, q, sc }; }, [P]);
+  const fit = files.length ? files.length / P.L : 1;   // this car's real-world length
+  const nz = (files.flip ? -1 : 1) * P.nose;
+  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p: p.multiplyScalar(fit), q, sc: sc.multiplyScalar(fit) }; }, [P, fit]);
+  const plateMat = useMemo(() => (plate ? new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }) : null), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
+  const rf = P.roof.clone().multiplyScalar(fit), pf = P.plateF.clone().multiplyScalar(fit), pr = P.plateR.clone().multiplyScalar(fit);
   return <group position={position} rotation-y={rotationY}>
-    <group rotation-y={P.nose > 0 ? 0 : Math.PI}>
-      <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * 1.22, P.W * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
+    <group rotation-y={nz > 0 ? 0 : Math.PI}>
+      <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * fit * 1.22, P.W * fit * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
       <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
-      <Topper position={[P.roof.x, P.roof.y - .012, 0]} />
+      {plateMat && <>
+        <mesh position={[pf.x + nz * .012, pf.y, 0]} rotation-y={nz > 0 ? Math.PI / 2 : -Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
+        <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
+      </>}
+      <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
     </group>
   </group>;
 }
@@ -281,5 +293,5 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
   const house = useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
   const imported = IMPORTED_FLEET[specId];
-  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : house;
+  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} plate={['civic', 'camry', 'sentra'].includes(specId) ? plate : undefined} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : house;
 }
