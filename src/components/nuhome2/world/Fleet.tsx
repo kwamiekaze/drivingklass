@@ -19,6 +19,7 @@ export const FLEET_LITE_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-
 /** The same sedan generated WITH surface detail (lamps, grille, panel lines, wheels). Used automatically once public/models/dk-fleet-sedan-textured.glb is in the build. */
 export const FLEET_TEX_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-textured.glb`;
 /** The textured sedan is used whenever its file is in the build; ?fleet=painted forces the painted one for comparison. */
+export const FLEET_TEX_LITE_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-textured-lite.glb`;
 export const useTexturedFleet = () => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('fleet') !== 'painted';
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
@@ -159,9 +160,10 @@ function Loaded({ color, plate, position, rotationY, lite }: { color: string; pl
 }
 
 /** The textured sedan: its own baked surface (lamps, grille, window frames, wheels), with the fleet colour as a multiply tint so the black roof, glass and tyres stay black. */
-function LoadedTex({ color, plate, position, rotationY }: { color: string; plate: string; position: [number, number, number]; rotationY: number }) {
-  const { scene } = useGLTF(FLEET_TEX_URL);
-  const P = useMemo(() => { let p = prepared.get(FLEET_TEX_URL); if (!p) { p = prepare(scene.clone(true)); prepared.set(FLEET_TEX_URL, p); } return p; }, [scene]);
+function LoadedTex({ color, plate, position, rotationY, lite }: { color: string; plate: string; position: [number, number, number]; rotationY: number; lite: boolean }) {
+  const url = lite ? FLEET_TEX_LITE_URL : FLEET_TEX_URL;   // phones in the low tier get the lighter textured car, not the painted one
+  const { scene } = useGLTF(url);
+  const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
   const root = useMemo(() => {
     const r = scene.clone(true), tint = new THREE.Color(color); if (tint.r + tint.g + tint.b > .9) tint.multiplyScalar(1.28);   // lift the baked paint so white reads as clean pearl, not grey
     r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals(); const src = m.material as THREE.MeshStandardMaterial; const c = new THREE.MeshPhysicalMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: .26, metalness: .22, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1 }); c.color.copy(tint); m.material = c; m.castShadow = true; m.receiveShadow = true; });
@@ -194,5 +196,5 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
   const standard = <Fallback fallback={fallback}><Suspense fallback={null}><Loaded color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback>;
   // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
-  return useTexturedFleet() && !lite ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} /></Suspense></Fallback> : standard;
+  return useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
 }
