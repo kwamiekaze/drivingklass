@@ -16,10 +16,13 @@ import { NightCtx } from './theme';
 export const FLEET_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan.glb`;
 /** The same car with 30% of the triangles, 33 KB, for slower phones. Both files are meshopt compressed. */
 export const FLEET_LITE_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-lite.glb`;
+/** Optional upgrade: the same sedan generated WITH surface detail. Preview it with ?fleet=textured once public/models/dk-fleet-sedan-textured.glb is in the build. */
+export const FLEET_TEX_URL = `${import.meta.env.BASE_URL}models/dk-fleet-sedan-textured.glb`;
+export const useTexturedFleet = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fleet') === 'textured';
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
-export type Prepared = { geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
+export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
 
 /** Bake the model into car space: length along x, up y, wheels on y = 0, centred. Then find wheels, nose, roof and plate spots. */
 const prepared = new Map<string, Prepared>();
@@ -39,11 +42,12 @@ export function prepare(scene: THREE.Object3D): Prepared {
   let geo = parts.length === 1 ? parts[0]! : mergeGeometries(parts, false)!;
   geo.computeBoundingBox();
   let s = geo.boundingBox!.getSize(new THREE.Vector3());
-  if (s.z > s.x) geo.rotateY(Math.PI / 2);
+  const M = new THREE.Matrix4();   // model space to car space, so a textured copy of the same model can be placed identically
+  if (s.z > s.x) { geo.rotateY(Math.PI / 2); M.premultiply(new THREE.Matrix4().makeRotationY(Math.PI / 2)); }
   geo.computeBoundingBox(); s = geo.boundingBox!.getSize(new THREE.Vector3());
   const c = geo.boundingBox!.getCenter(new THREE.Vector3());
-  geo.translate(-c.x, -geo.boundingBox!.min.y, -c.z);
-  const k = LENGTH / s.x; geo.scale(k, k, k);
+  M.premultiply(new THREE.Matrix4().makeTranslation(-c.x, -geo.boundingBox!.min.y, -c.z)); geo.translate(-c.x, -geo.boundingBox!.min.y, -c.z);
+  const k = LENGTH / s.x; geo.scale(k, k, k); M.premultiply(new THREE.Matrix4().makeScale(k, k, k));
   geo.computeBoundingBox(); s = geo.boundingBox!.getSize(new THREE.Vector3());
   const L = s.x, H = s.y, W = s.z, p = geo.attributes.position as THREE.BufferAttribute;
   // wheels: the lowest points are where the tyres touch the ground
@@ -61,7 +65,7 @@ export function prepare(scene: THREE.Object3D): Prepared {
   const roof = hit(new THREE.Vector3(-.05 * L * nose, H + 2, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, H, 0));
   const plateF = hit(new THREE.Vector3(nose * (L + 1), .3 * H, 0), new THREE.Vector3(-nose, 0, 0), new THREE.Vector3(nose * L / 2, .3 * H, 0));
   const plateR = hit(new THREE.Vector3(-nose * (L + 1), .42 * H, 0), new THREE.Vector3(nose, 0, 0), new THREE.Vector3(-nose * L / 2, .42 * H, 0));
-  return { geo, L, H, W, ax, rw, nose, roof, plateF, plateR };
+  return { M, geo, L, H, W, ax, rw, nose, roof, plateF, plateR };
 }
 
 let carEnvCache: THREE.Texture | null = null;
@@ -153,6 +157,29 @@ function Loaded({ color, plate, position, rotationY, lite }: { color: string; pl
   </group>;
 }
 
+/** The textured sedan: its own baked surface (lamps, grille, window frames, wheels), with the fleet colour as a multiply tint so the black roof, glass and tyres stay black. */
+function LoadedTex({ color, plate, position, rotationY }: { color: string; plate: string; position: [number, number, number]; rotationY: number }) {
+  const { scene } = useGLTF(FLEET_TEX_URL);
+  const P = useMemo(() => { let p = prepared.get(FLEET_TEX_URL); if (!p) { p = prepare(scene.clone(true)); prepared.set(FLEET_TEX_URL, p); } return p; }, [scene]);
+  const root = useMemo(() => {
+    const r = scene.clone(true), tint = new THREE.Color(color);
+    r.traverse(o => { const m = o as THREE.Mesh; if (!m.isMesh) return; if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals(); const src = m.material as THREE.MeshStandardMaterial; const c = new THREE.MeshPhysicalMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: .3, metalness: .3, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: .8 }); c.color.copy(tint); m.material = c; m.castShadow = true; m.receiveShadow = true; });
+    return r;
+  }, [scene, color]);
+  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p, q, sc }; }, [P]);
+  const plateMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }), [plate]);
+  const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
+  return <group position={position} rotation-y={rotationY}>
+    <group rotation-y={P.nose > 0 ? 0 : Math.PI}>
+      <mesh position={[0, .06, 0]} rotation-x={-Math.PI / 2} scale={[P.L * 1.25, P.W * 1.45, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
+      <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
+      <mesh position={[P.plateF.x + P.nose * .012, P.plateF.y, 0]} rotation-y={P.nose > 0 ? Math.PI / 2 : -Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
+      <mesh position={[P.plateR.x - P.nose * .012, P.plateR.y, 0]} rotation-y={P.nose > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
+      <Topper position={[P.roof.x, P.roof.y - .012, 0]} />
+    </group>
+  </group>;
+}
+
 class Fallback extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -164,5 +191,7 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   const spec = useMemo(() => ({ ...CAR_SPECS[specId]!, color }), [specId, color]);
   const fallback = <Car spec={spec} position={position} rotationY={rotationY} />;
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
-  return <Fallback fallback={fallback}><Suspense fallback={null}><Loaded color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback>;
+  const standard = <Fallback fallback={fallback}><Suspense fallback={null}><Loaded color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback>;
+  // ?fleet=textured previews the textured model; if its file is not there the painted sedan stays
+  return useTexturedFleet() && !lite ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} /></Suspense></Fallback> : standard;
 }
