@@ -146,7 +146,7 @@ function ReservedSign() {
 }
 
 /** The street sign. Front (toward the street): black granite, a champagne frame, five faceted stars, cast DRIVINGKLASS and the slogan.
- *  Back (toward the lot): five bigger stars, centred on the panel. Limestone cap and plinth, uplights, a low hedge at each end. */
+ *  The back is plain granite with the frame. Limestone cap and plinth, uplights, a low hedge at each end. */
 function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boolean }) {
   const mix = useContext(NightCtx);
   const PW = 6.0, PH = 2.35, PD = .5, PY = .82 + PH / 2;                     // panel size and centre height
@@ -155,7 +155,6 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
   const word = useMemo(() => wordGeometry('DRIVINGKLASS', 4.7, .09, .025, .05, lite ? 3 : 6), [lite]);
   const slogan = useMemo(() => wordGeometry('WHERE 5 STAR DRIVERS ARE MADE', 3.0, .03, .008, .04, 3), []);
   const front = useMemo(() => starRow([.2, .2, .2, .2, .2], .56, .5), []);
-  const back = useMemo(() => starRow([.5, .5, .5, .5, .5], 1.14, .5), []);
   const lens = useRef<THREE.MeshStandardMaterial>(null);
   useGlow([metal], .02, .75);
   useFrame(() => { if (lens.current) lens.current.emissiveIntensity = .5 + 2.6 * mix.current; });
@@ -175,9 +174,6 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
     <mesh geometry={word} material={metal} position={[0, PY - .02 - .3, PD / 2 + .012]} castShadow />
     <mesh geometry={slogan} material={metal} position={[0, PY - .82, PD / 2 + .012]} />
     <Halo position={[0, PY + .1, PD / 2 + .05]} size={[7.4, 3.2]} strength={.34} />
-    {/* back: five big stars, dead centre */}
-    <mesh geometry={back} material={metal} position={[0, PY, -PD / 2 - .012]} rotation-y={Math.PI} castShadow />
-    <Halo position={[0, PY, -PD / 2 - .05]} size={[7.4, 3.2]} strength={.3} />
     {/* uplights at the foot of the plinth and a low hedge at each end */}
     {[-2.6, 2.6].map(x => <group key={x} position={[x, .06, .88]}>
       <mesh position={[0, .06, 0]}><boxGeometry args={[.3, .16, .26]} /><meshStandardMaterial color="#1c1c20" roughness={.5} metalness={.5} /></mesh>
