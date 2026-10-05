@@ -91,7 +91,8 @@ function markings() {
   [-1, 1].forEach(s => white.push({ x: s * 1.375, z: -6, w: .16, d: 5 }));   // the reserved stall's lines are a little heavier
   white.push({ x: -31.7, z: 13.3, w: 5, d: .45 });
   // the avenue's own crosswalk, across the gap in the far pavement: ten bars running along the road, inside the white edge lines
-  for (let k = 0; k < 10; k++) cross.push({ x: (k - 4.5) * .72, z: 33.45, w: .62, d: 2.6 });
+  // exactly the street crosswalks' bars turned to run along this road: 2.6 m long, 0.45 m thick, 0.9 m from one to the next (0.45 m gaps), centred on the road
+  for (let k = 0; k < 8; k++) cross.push({ x: (k - 3.5) * .9, z: 33.3, w: .45, d: 2.6 });
   [-1, 1].forEach(s => { for (let z = 19.8; z < 30.9; z += .9) cross.push({ x: s * 7.4, z, w: 2.6, d: .45 }); });
   return { white, avenueW, cross };
 }
