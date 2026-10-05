@@ -17,7 +17,7 @@
 export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
 
-export const T_STOP = 12.5, T_GAP = 2.6;
+export const T_STOP = 12.5, T_GAP = 1.4;   // the car is fully stopped from about T_STOP minus 0.6 s, so it waits 2 seconds at the sign, never more than 3
 /** The moment the car sets off again from the stop sign. */
 export const T_GO = T_STOP + T_GAP, T_PARK = T_GO;
 /** The right blinker goes on this many seconds before the car arrives at the stop sign, and stays on through the wait and the turn. */
@@ -52,7 +52,7 @@ const series = (keys: { t: number; p: V3; l: V3; fov: number }[]) => {
 };
 
 // ---------- the car ----------
-const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z + (START_Z - STOP_Z) * (1 - u) * (1 - u) * (1 - u); };   // braking eases off to nothing: no last-second lurch
+const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z + (START_Z - STOP_Z) * Math.pow(1 - u, 2.5); };   // braking eases off to nothing, but it does arrive: the speed is 0.05 m/s or less for only the last 0.6 s, so there is no long crawl before the stop
 
 /*
  * After the stop sign the car takes the owner's route, as drawn on the picture:

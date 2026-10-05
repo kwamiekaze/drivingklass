@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download, Menu, X } from "lucide-react";
+import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download, Menu, Music, X } from "lucide-react";
 import portalCarIcon from "@/assets/portal-car-icon.png";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { InstallAppModal } from "./InstallAppModal";
@@ -190,6 +190,17 @@ export function PortalMenuButton({ size = "md", variant = "car", triggerClassNam
             <Download className="h-4 w-4 text-gold" />
             <span>Install as App</span>
           </button>
+          {/* 6) Music settings: admin only, home page menu only */}
+          {role === "admin" && (
+            <button
+              role="menuitem"
+              onClick={() => { setOpen(false); window.dispatchEvent(new Event("dk:music-settings")); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 text-left"
+            >
+              <Music className="h-4 w-4 text-gold" />
+              <span>Music settings</span>
+            </button>
+          )}
           </div>
         </div>,
         document.body

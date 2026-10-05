@@ -153,7 +153,17 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
   const metal = useMemo(() => champagneMat(), []);
   const granite = useMemo(() => { const t = makeCanvasTexture(256, 256, (g, w, h) => { const r = rng(21); g.fillStyle = '#0b0b0e'; g.fillRect(0, 0, w, h); for (let i = 0; i < 1800; i++) { const v = 18 + r() * 40; g.fillStyle = `rgba(${v},${v},${v + 3},${.25 + r() * .3})`; g.fillRect(r() * w, r() * h, 1.5, 1.5); } }, 4, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; return new THREE.MeshStandardMaterial({ map: t, color: '#ffffff', roughness: .38, metalness: .25 }); }, []);
   const word = useMemo(() => wordGeometry('DRIVINGKLASS', 4.7, .09, .025, .05, lite ? 3 : 6), [lite]);
-  const slogan = useMemo(() => wordGeometry('WHERE 5 STAR DRIVERS ARE MADE', 3.0, .03, .008, .04, 3), []);
+  // The slogan is painted, not cut: letters 12 cm tall and a few millimetres thick shimmer and crawl from far away as 3D geometry.
+  // A mipmapped, anisotropic texture of larger, bolder letters stays calm at every distance and crisp up close.
+  const slogan = useMemo(() => makeCanvasTexture(2048, 176, (g, w, h) => {
+    g.clearRect(0, 0, w, h); g.textBaseline = 'middle'; g.textAlign = 'left';
+    const text = 'WHERE 5 STAR DRIVERS ARE MADE'; let size = 104, track = size * .09;
+    const measure = () => { g.font = `800 ${size}px ${SIGN_FONT}`; return [...text].reduce((a, c) => a + g.measureText(c).width + track, -track); };
+    while (measure() > w - 70 && size > 40) { size -= 2; track = size * .09; }
+    let x = (w - measure()) / 2; const gr = g.createLinearGradient(0, h * .2, 0, h * .85); gr.addColorStop(0, '#fff3cf'); gr.addColorStop(.55, '#f0d78e'); gr.addColorStop(1, '#d8b45a');
+    g.lineJoin = 'round'; g.lineWidth = size * .07; g.strokeStyle = 'rgba(40,28,6,.55)';
+    for (const c of text) { g.strokeText(c, x, h / 2 + 4); g.fillStyle = gr; g.fillText(c, x, h / 2 + 4); x += g.measureText(c).width + track; }
+  }, 16), []);
   const front = useMemo(() => starRow([.2, .2, .2, .2, .2], .56, .5), []);
   const lens = useRef<THREE.MeshStandardMaterial>(null);
   useGlow([metal], .02, .75);
@@ -172,7 +182,7 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
     {/* front */}
     <mesh geometry={front} material={metal} position={[0, PY + .72, PD / 2 + .012]} />
     <mesh geometry={word} material={metal} position={[0, PY - .02 - .3, PD / 2 + .012]} castShadow />
-    <mesh geometry={slogan} material={metal} position={[0, PY - .82, PD / 2 + .012]} />
+    <mesh position={[0, PY - .76, PD / 2 + .02]} renderOrder={2}><planeGeometry args={[4.75, 4.75 * 176 / 2048]} /><meshBasicMaterial map={slogan} transparent toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} /></mesh>
     <Halo position={[0, PY + .1, PD / 2 + .05]} size={[7.4, 3.2]} strength={.34} />
     {/* uplights at the foot of the plinth and a low hedge at each end */}
     {[-2.6, 2.6].map(x => <group key={x} position={[x, .06, .88]}>
