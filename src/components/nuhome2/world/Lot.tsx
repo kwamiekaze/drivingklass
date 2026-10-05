@@ -90,7 +90,8 @@ function markings() {
   const white: Dec[] = [], avenueW: Dec[] = [], cross: Dec[] = [];
   [-1, 1].forEach(s => white.push({ x: s * 1.375, z: -6, w: .16, d: 5 }));   // the reserved stall's lines are a little heavier
   white.push({ x: -31.7, z: 13.3, w: 5, d: .45 });
-  avenueW.push({ x: 2.05, z: 36.6, w: 4, d: .45 });
+  // the avenue's own crosswalk, across the gap in the far pavement: ten bars running along the road, inside the white edge lines
+  for (let k = 0; k < 10; k++) cross.push({ x: (k - 4.5) * .72, z: 33.45, w: .62, d: 2.6 });
   [-1, 1].forEach(s => { for (let z = 19.8; z < 30.9; z += .9) cross.push({ x: s * 7.4, z, w: 2.6, d: .45 }); });
   return { white, avenueW, cross };
 }
@@ -268,8 +269,10 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
       <meshStandardMaterial color="#e8e6df" roughness={.8} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
     </mesh>)}
     <PaintStrip lines={AVENUE_EDGES} span={8.2} across="u" color="#e8e6df" x={0} z={(31.75 + 240) / 2} width={8.2} height={240 - 31.75} repeat={AVENUE_REPEAT} />
-    <PaintStrip lines={AVENUE_CENTRE} span={8.2} across="u" color="#d9a621" x={0} z={135.75} width={8.2} height={208.5} repeat={AVENUE_REPEAT} />
+    <PaintStrip lines={AVENUE_CENTRE} span={8.2} across="u" color="#d9a621" x={0} z={(36.9 + 240) / 2} width={8.2} height={240 - 36.9} repeat={AVENUE_REPEAT} />   {/* the double yellow ends at the stop bar, as on a real road */}
     <Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
+    {/* the stop bar on the inbound (right-hand) lane, 0.6 m in front of where the school car stops, as bright as the zebra paint (drawn without a shadow lookup, so it never greys at the edge of the shadow map) */}
+    <mesh rotation-x={-Math.PI / 2} position={[2.05, TOP_Y, 36.4]} renderOrder={2}><planeGeometry args={[3.7, .5]} /><meshStandardMaterial color="#f1efe8" roughness={.8} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} /></mesh>
   </group>;
 }
 
