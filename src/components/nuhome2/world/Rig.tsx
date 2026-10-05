@@ -4,7 +4,7 @@ import { useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { FOV, PAN, STAGES, type Stop, type V3 } from './views';
 import { SOLIDS, clearance, GROUND } from './colliders';
-import { T_END, T_DRIVE, T_GO, intro, introAt, parkCarNow, releaseCar } from './intro';
+import { T_END, T_DRIVE, T_GO, carMoving, intro, introAt, parkCarNow, releaseCar } from './intro';
 import { usableShots, type Shot } from './shots';
 import { cinema, stopReel } from './reel';
 import { engine } from '../music/engine';
@@ -74,11 +74,20 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     g.dt += (Math.min(delta, .1) - g.dt) * .12;                         // a running average: one slow frame no longer jolts the whole shot
     if (!g.ready) {
       g.since += delta;
-      if ((!progress.active && g.frames > 24 && g.since > .9) || g.since > 7) { try { gl.compile(state.scene, camera); } catch { /* ignore */ } g.ready = true; g.frames = 0; }
+      if ((!progress.active && g.frames > 24 && g.since > .9) || g.since > 7) {
+        // warm-up: compile every shader, then draw the whole estate once with culling off, so every mesh and texture is already
+        // on the GPU. Otherwise each one uploads the first time it comes into view, and that stall lands mid-drive.
+        const culled: THREE.Object3D[] = [];
+        state.scene.traverse(o => { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); } });
+        try { gl.compile(state.scene, camera); gl.shadowMap.needsUpdate = true; gl.render(state.scene, camera); } catch { /* ignore */ }
+        culled.forEach(o => { o.frustumCulled = true; });
+        g.ready = true; g.frames = 0;
+      }
       return;
     }
-    gl.shadowMap.autoUpdate = false; if (g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;   // shadows refresh every other frame: half the cost, unseen
-    if (!intro.done && introT === null) { intro.t += Math.min(Math.max(g.dt, 1 / 120), .05); if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
+    // shadows refresh every frame while the car rolls (its shadow must move with it), every other frame once nothing moves
+    gl.shadowMap.autoUpdate = false; if (carMoving() || g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;
+    if (!intro.done && introT === null) { intro.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
   }, -5);
   useFrame((state, delta) => {
     if (!controls) return;

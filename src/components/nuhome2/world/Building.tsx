@@ -290,7 +290,6 @@ export function Building({ position, lite, open }: { position: [number, number, 
     <mesh position={[0, WALL_H / 2 + .08, -.5]} material={stone(44.8, 6)}><boxGeometry args={[44.8, WALL_H - .16, 4.9]} /></mesh>
     <Wall x0={-HALF} x1={HALF} y0={.16} y1={WALL_H} z={FRONT} d={DEPTH} openings={wallOps} />
     <mesh position={[0, WALL_H + .25, 0]} material={M.trim} castShadow><boxGeometry args={[HALF * 2 + .4, .5, 7]} /></mesh>
-    <mesh position={[0, WALL_H - .08, FRONT + .55]} material={M.led}><boxGeometry args={[HALF * 2 + .2, .12, .12]} /></mesh>
     <mesh geometry={roofs.main} material={M.roof} position={[0, WALL_H + .5, 0]} castShadow />
     <mesh geometry={roofs.center} material={M.roof} position={[0, WALL_H + .5, -.2]} castShadow />
     <RoofTrim w={45} d={6.6} h={1.9} y={WALL_H + .5} cap={capM} fascia={fasM} />

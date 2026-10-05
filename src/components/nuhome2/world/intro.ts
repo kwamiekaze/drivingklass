@@ -65,21 +65,31 @@ const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z 
 const EAST_X = 31.7, STREET_Z = 28.3, AISLE_Z = -1.9, R1 = 4.5, R2 = 6, R3 = 3.2, R4 = 2.6;
 const V_MAX = 11, A_ACC = 2.6, A_DEC = 3.2, A_LAT = 3.2;   // m/s, m/s2, m/s2 sideways
 type Mark = 'r1s' | 'r1e' | 'l1s' | 'l1e' | 'l2s' | 'l2e' | 'r2s' | 'r2e';
+/*
+ * The drive is built to be perfectly smooth at any frame rate:
+ *   - the route (straights and quarter circles) is sampled every 2 cm, then eased: the car follows the average of the route
+ *     over the metre around it, so it steers into and out of every corner progressively instead of snapping onto the arc,
+ *     and its heading is the true direction of that eased line (it turns continuously, never in steps)
+ *   - the speed is planned along the route (corner grip, engine, brakes), starts from rest and ends at rest, and is itself
+ *     eased so the car never lurches; time follows exactly from it, and position in time is a smooth cubic, not a staircase
+ */
+const DS = .02, EASE = 1.0;   // grid step, and half the length the route is eased over (metres)
 function buildPath() {
-  const pts: [number, number][] = [], kap: number[] = [], marks = {} as Record<Mark, number>;
+  const raw: [number, number][] = [], marks = {} as Record<Mark, number>;
   let x = LANE_X, z = STOP_Z, hx = 0, hz = -1, s = 0;
-  const push = (px: number, pz: number, k: number) => { if (pts.length) s += Math.hypot(px - pts[pts.length - 1]![0], pz - pts[pts.length - 1]![1]); pts.push([px, pz]); kap.push(k); };
+  const push = (px: number, pz: number) => { if (raw.length) s += Math.hypot(px - raw[raw.length - 1]![0], pz - raw[raw.length - 1]![1]); raw.push([px, pz]); };
   const mark = (m: Mark) => { marks[m] = s; };
-  const straight = (len: number) => { const n = Math.max(2, Math.round(len / .25)); for (let i = 1; i <= n; i++) push(x + hx * len * i / n, z + hz * len * i / n, 0); x += hx * len; z += hz * len; };
+  const straight = (len: number) => { const n = Math.max(2, Math.round(len / DS)); for (let i = 1; i <= n; i++) push(x + hx * len * i / n, z + hz * len * i / n); x += hx * len; z += hz * len; };
   /** side +1 turns right, -1 turns left, a quarter circle of radius r. x east, z south: right of (hx,hz) is (-hz,hx). */
   const turn = (side: 1 | -1, r: number) => {
     const px = side > 0 ? -hz : hz, pz = side > 0 ? hx : -hx;      // unit vector toward the centre
-    const v0x = -px * r, v0z = -pz * r, cx = x - v0x, cz = z - v0z, n = Math.max(12, Math.round(r * 6));
-    for (let i = 1; i <= n; i++) { const a = side * (Math.PI / 2) * i / n, c = Math.cos(a), sn = Math.sin(a); push(cx + v0x * c - v0z * sn, cz + v0x * sn + v0z * c, 1 / r); }
+    const v0x = -px * r, v0z = -pz * r, cx = x - v0x, cz = z - v0z, n = Math.ceil((r * Math.PI / 2) / DS);
+    for (let i = 1; i <= n; i++) { const a = side * (Math.PI / 2) * i / n, c = Math.cos(a), sn = Math.sin(a); push(cx + v0x * c - v0z * sn, cz + v0x * sn + v0z * c); }
     const a = side * Math.PI / 2, c = Math.cos(a), sn = Math.sin(a);
     x = cx + v0x * c - v0z * sn; z = cz + v0x * sn + v0z * c; const nx = hx * c - hz * sn, nz = hx * sn + hz * c; hx = Math.round(nx); hz = Math.round(nz);
   };
-  push(x, z, 0);
+  const h0: [number, number] = [hx, hz];
+  push(x, z);
   straight(STOP_Z - (STREET_Z + R1));
   mark('r1s'); turn(1, R1); mark('r1e');
   straight(EAST_X - R2 - x);
@@ -89,14 +99,42 @@ function buildPath() {
   straight(x - R4);
   mark('r2s'); turn(1, R4); mark('r2e');
   straight(z - STALL[2]);
-  // speed: as fast as the corners, the engine and the brakes allow, then time is the sum of ds / speed
-  const n = pts.length, v = new Array<number>(n).fill(V_MAX), ds = (i: number) => Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
-  for (let i = 0; i < n; i++) if (kap[i]! > 0) v[i] = Math.min(V_MAX, Math.sqrt(A_LAT / kap[i]!));
-  v[0] = .5; for (let i = 1; i < n; i++) v[i] = Math.min(v[i]!, Math.sqrt(v[i - 1]! ** 2 + 2 * A_ACC * ds(i)));
-  v[n - 1] = .35; for (let i = n - 2; i >= 0; i--) v[i] = Math.min(v[i]!, Math.sqrt(v[i + 1]! ** 2 + 2 * A_DEC * ds(i + 1)));
-  const cum = [0], tm = [0];
-  for (let i = 1; i < n; i++) { cum.push(cum[i - 1]! + ds(i)); tm.push(tm[i - 1]! + ds(i) / ((v[i]! + v[i - 1]!) / 2)); }
-  return { pts, cum, tm, len: cum[n - 1]!, T: tm[n - 1]!, marks };
+  const len = s, h1: [number, number] = [hx, hz];
+  // the route on an even 2 cm grid, carried on straight for a little before the start and after the end so the easing is exact there
+  const rc = [0]; for (let i = 1; i < raw.length; i++) rc.push(rc[i - 1]! + Math.hypot(raw[i]![0] - raw[i - 1]![0], raw[i]![1] - raw[i - 1]![1]));
+  const at = (sd: number): [number, number] => {
+    if (sd <= 0) return [raw[0]![0] + h0[0] * sd, raw[0]![1] + h0[1] * sd];
+    if (sd >= len) { const e = raw[raw.length - 1]!; return [e[0] + h1[0] * (sd - len), e[1] + h1[1] * (sd - len)]; }
+    let lo = 0, hi = rc.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (rc[mid]! <= sd) lo = mid; else hi = mid; }
+    const f = (sd - rc[lo]!) / ((rc[hi]! - rc[lo]!) || 1); return [raw[lo]![0] + (raw[hi]![0] - raw[lo]![0]) * f, raw[lo]![1] + (raw[hi]![1] - raw[lo]![1]) * f];
+  };
+  const K = Math.round(EASE / DS), N = Math.round(len / DS), G0 = -2 * K, G = N + 4 * K + 1;   // grid index g covers s = (g + G0) * DS
+  const gx = new Float64Array(G), gz = new Float64Array(G);
+  for (let g = 0; g < G; g++) { const p = at((g + G0) * DS); gx[g] = p[0]; gz[g] = p[1]; }
+  const cx = new Float64Array(G + 1), cz = new Float64Array(G + 1);
+  for (let g = 0; g < G; g++) { cx[g + 1] = cx[g]! + gx[g]!; cz[g + 1] = cz[g]! + gz[g]!; }
+  // eased position (window mean), heading (direction across the window) and curvature, for k = 0..N (s = k * DS)
+  const px = new Float64Array(N + 1), pz = new Float64Array(N + 1), yaw = new Float64Array(N + 1), kap = new Float64Array(N + 1);
+  for (let k = 0; k <= N; k++) {
+    const g = k - G0, a = g - K, b = g + K, n = b - a + 1;
+    px[k] = (cx[b + 1]! - cx[a]!) / n; pz[k] = (cz[b + 1]! - cz[a]!) / n;
+    let y = Math.atan2(-(gz[b]! - gz[a]!), gx[b]! - gx[a]!);
+    if (k) { const prev = yaw[k - 1]!; while (y - prev > Math.PI) y -= 2 * Math.PI; while (y - prev < -Math.PI) y += 2 * Math.PI; }
+    yaw[k] = y;
+  }
+  for (let k = 0; k <= N; k++) kap[k] = Math.abs(yaw[Math.min(N, k + 1)]! - yaw[Math.max(0, k - 1)]!) / ((Math.min(N, k + 1) - Math.max(0, k - 1)) * DS);
+  // speed along the route: corner grip, then the engine from rest, then the brakes to rest, then eased
+  const v0 = new Float64Array(N + 1);
+  for (let k = 0; k <= N; k++) v0[k] = kap[k]! > 1e-6 ? Math.min(V_MAX, Math.sqrt(A_LAT / kap[k]!)) : V_MAX;
+  v0[0] = 0; for (let k = 1; k <= N; k++) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k - 1]! ** 2 + 2 * A_ACC * DS));
+  v0[N] = 0; for (let k = N - 1; k >= 0; k--) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k + 1]! ** 2 + 2 * A_DEC * DS));
+  const vs = new Float64Array(N + 1), cv = new Float64Array(N + 2), M = Math.round(1.2 / DS);
+  for (let k = 0; k <= N; k++) cv[k + 1] = cv[k]! + v0[k]!;
+  for (let k = 0; k <= N; k++) { const w = Math.min(M, k, N - k); vs[k] = (cv[k + w + 1]! - cv[k - w]!) / (2 * w + 1); }
+  // time at each grid point: exact for steady acceleration across a 2 cm step; the last step ends at rest
+  const tm = new Float64Array(N + 1);
+  for (let k = 1; k <= N; k++) tm[k] = tm[k - 1]! + 2 * DS / Math.max(1e-4, vs[k - 1]! + vs[k]!);
+  return { N, len: N * DS, px, pz, yaw, vs, tm, T: tm[N]!, marks };
 }
 const PATH = buildPath();
 /** How long the drive from the stop sign to the stall takes. */
@@ -104,13 +142,19 @@ export const T_DRIVE = PATH.T;
 /** When the car comes to rest in the stall, and when the whole opening shot ends. */
 export const T_PARKED = T_GO + PATH.T;
 export const T_END = T_PARKED + 3.2 + 28.9;
-const tAtS = (sd: number) => { const { cum, tm } = PATH; let lo = 0, hi = cum.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cum[mid]! <= sd) lo = mid; else hi = mid; } const f = (sd - cum[lo]!) / ((cum[hi]! - cum[lo]!) || 1); return tm[lo]! + (tm[hi]! - tm[lo]!) * f; };
+const tAtS = (sd: number) => { const k = Math.max(0, Math.min(PATH.N - 1, Math.floor(sd / DS))), f = Math.max(0, Math.min(1, sd / DS - k)); return PATH.tm[k]! + (PATH.tm[k + 1]! - PATH.tm[k]!) * f; };
+/** Distance along the drive at time tau: a cubic between grid points that matches both distance and speed, so motion is smooth at any frame rate. */
+const sAt = (tau: number) => {
+  const { tm, vs, N } = PATH; if (tau <= 0) return 0; if (tau >= PATH.T) return N * DS;
+  let lo = 0, hi = N; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tm[mid]! <= tau) lo = mid; else hi = mid; }
+  const h = tm[hi]! - tm[lo]!, u = (tau - tm[lo]!) / (h || 1), u2 = u * u, u3 = u2 * u;
+  const sd = (2 * u3 - 3 * u2 + 1) * lo * DS + (u3 - 2 * u2 + u) * h * vs[lo]! + (-2 * u3 + 3 * u2) * hi * DS + (u3 - u2) * h * vs[hi]!;
+  return Math.max(lo * DS, Math.min(hi * DS, sd));
+};
 const atTime = (tau: number) => {
-  const { pts, cum, tm } = PATH; tau = Math.max(0, Math.min(PATH.T, tau));
-  let lo = 0, hi = tm.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tm[mid]! <= tau) lo = mid; else hi = mid; }
-  const f = (tau - tm[lo]!) / ((tm[hi]! - tm[lo]!) || 1), a = pts[lo]!, b = pts[hi]!, a2 = pts[Math.max(0, lo - 3)]!, b2 = pts[Math.min(pts.length - 1, hi + 3)]!;
-  const dx = b2[0] - a2[0], dz = b2[1] - a2[1];
-  return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, yaw: Math.atan2(-dz, dx), s: cum[lo]! + (cum[hi]! - cum[lo]!) * f };
+  const { px, pz, yaw, N } = PATH, sd = sAt(Math.max(0, Math.min(PATH.T, tau)));
+  const k = Math.min(N - 1, Math.floor(sd / DS)), f = sd / DS - k;
+  return { x: px[k]! + (px[k + 1]! - px[k]!) * f, z: pz[k]! + (pz[k + 1]! - pz[k]!) * f, yaw: yaw[k]! + (yaw[k + 1]! - yaw[k]!) * f, s: sd };
 };
 /** Which blinker is on at a distance s along the drive: on before each turn, off a little after it. */
 function signalAt(s: number) {
@@ -122,7 +166,9 @@ function signalAt(s: number) {
 /** The height of the ground under the car: the east driveway is a raised apron, 13 cm above the lot. */
 export function groundAt(x: number, z: number) {
   const dx = Math.abs(x - EAST_X), inLane = 1 - Math.min(1, Math.max(0, (dx - 2.4) / .5));
-  const ramp = Math.min(1, Math.max(0, (z - 13.7) / .6)) * (1 - Math.min(1, Math.max(0, (z - 19.4) / .6)));
+  // eased up and down the ramps (zero vertical speed at both ends), the way a car's suspension takes a kerb apron
+  const ss = (a: number, b: number, v: number) => { const u = Math.min(1, Math.max(0, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
+  const ramp = ss(13.5, 14.5, z) * (1 - ss(19.2, 20.2, z));
   return .002 + .13 * inLane * ramp;
 }
 /** Where the car is at time t. yaw is the model's rotation.y: pi/2 means nose toward the building. t3 is when it sets off from the stop sign. */
@@ -151,8 +197,8 @@ function keysFor(narrow: boolean): Key[] {
   const M = PATH.marks, tl1e = T_GO + tAtS(M.l1e), tl2s = T_GO + tAtS(M.l2s), tl2e = T_GO + tAtS(M.l2e);
   const V1: V3 = fv([24, 10.5, 28], [27, 12.5, 36]);
   const cG = carAt(T_GO, T_GO), dG = drift(T_GO), off0: V3 = [dG[0] - cG.x, dG[1] - cG.y, dG[2] - cG.z];
-  for (let t = T_GO + .5; t <= T_PARKED + 1e-6; t += .5) {
-    const c = carAt(t, T_GO), cp: V3 = [c.x, c.y, c.z];
+  for (let t = T_GO + .1; t <= T_PARKED + 1e-6; t += .1) {   // dense keys: the camera tracks the car exactly, no interpolation sag between keys
+    const c = carAt(t, T_GO), cp: V3 = [c.x, .002, c.z];   // the lens ignores the 13 cm driveway apron, so the frame never bobs
     const w0 = ease3((t - T_GO) / 5);                           // from the roadside post to following the car
     const oA: V3 = [off0[0] + (off1[0] - off0[0]) * w0, off0[1] + (off1[1] - off0[1]) * w0, off0[2] + (off1[2] - off0[2]) * w0];
     const w1 = ease3((t - tl1e) / 3.2);                         // off1 -> off2 once it is heading up the driveway
@@ -166,7 +212,6 @@ function keysFor(narrow: boolean): Key[] {
   }
   // C. the car is parked: only now does the camera let go of it
   const signD = f(24.6, 31), signFov = f(40, 54), swoopFov = f(40, 54), tp = T_PARKED, base = tp + 3.2;
-  out.push({ t: base - 2.4, p: [5.2, 5.6, 33.0], l: [8.2, 1.9, 22], fov: f(39, 54) });
   out.push({ t: base, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
   out.push({ t: base + 2.2, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
   out.push({ t: base + 3.4, p: [6.2, 8.6, 18.0], l: [4.0, 3.0, 4.0], fov: signFov });
@@ -193,6 +238,8 @@ export function introAt(t: number, narrow = false): Pose {
 
 /** Shared clock: the rig advances it, the car reads it. Lets the car carry on if the visitor takes the camera. */
 export const intro = { t: 0, t3: T_GO, done: false };
+/** True while the school car is actually rolling (on the avenue, or between the stop sign and its stall). */
+export function carMoving() { return !intro.done && (intro.t < T_STOP || (intro.t >= intro.t3 && intro.t < intro.t3 + T_DRIVE + .3)); }
 /** Called when the visitor takes the camera mid-shot: the car carries on with its route (no waiting for the tour). */
 export function releaseCar() { if (intro.t < T_GO) intro.t3 = Math.max(T_STOP + .6, intro.t + (intro.t < T_STOP ? 0 : .4)); }
 /** No opening shot (repeat visit, reduced motion, ?intro=0): the car is simply parked in its stall. */

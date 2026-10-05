@@ -8,7 +8,7 @@ import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun, skyAnchor } from './S
 import { NightCtx } from './theme';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, type Quality } from './quality';
-import { introAt } from './intro';
+import { carMoving, introAt } from './intro';
 
 export type Theme = 'day' | 'night';
 export type SceneProps = {
@@ -81,6 +81,12 @@ function Ready({ onReady }: { onReady: () => void }) {
   return null;
 }
 
+/** Applies a held pixel ratio change as soon as the car is not rolling. */
+function SettleDpr({ pend, apply }: { pend: { current: number }; apply: (d: number) => void }) {
+  useFrame(() => { if (pend.current && !carMoving()) { const d = pend.current; pend.current = 0; apply(d); } });
+  return null;
+}
+
 /** ?dpr=1 pins the pixel ratio, for screenshots on machines without a GPU. Visitors never see it. */
 function dprOverride(): number | null { if (typeof window === 'undefined') return null; const v = Number(new URLSearchParams(window.location.search).get('dpr')); return v >= .5 && v <= 3 ? v : null; }
 
@@ -94,7 +100,11 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   const [level, setLevel] = useState(0);
   const dprNow = Math.max(1, +(cap * (1 - .17 * level)).toFixed(2));
   const born = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
-  const down = () => setLevel(l => Math.min(3, l + 1)), up = () => { if (performance.now() - born.current > 8000) setLevel(l => Math.max(0, l - 1)); };
+  // a pixel ratio change resizes the canvas, which costs a frame: it waits until the car is not rolling, so the drive never hitches
+  const pend = useRef(0);
+  const apply = (d: number) => setLevel(l => Math.max(0, Math.min(3, l + d)));
+  const down = () => { if (carMoving()) pend.current = 1; else apply(1); };
+  const up = () => { if (performance.now() - born.current <= 8000) return; if (carMoving()) pend.current = -1; else apply(-1); };
   const narrow = typeof window !== 'undefined' && (window.innerWidth < 700 || window.innerWidth / window.innerHeight < .8);
   const k0 = introAt(0, narrow);
   const lost = useRef(onLost);
@@ -113,5 +123,6 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   >
     <World {...rest} quality={quality} shadow={fixed.shadow} onTier={down} onUp={up} />
     <Ready onReady={onReady} />
+    <SettleDpr pend={pend} apply={apply} />
   </Canvas>;
 }
