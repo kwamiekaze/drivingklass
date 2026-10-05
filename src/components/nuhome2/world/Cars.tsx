@@ -19,6 +19,7 @@ export const CAR_SPECS: Record<string, CarSpec> = {
   civic: { id: 'civic', year: 2023, make: 'Honda', model: 'Civic LX', color: '#c3c8ce', L: 4.68, W: 1.80, H: 1.415, WB: 2.74, fo: .96, trunk: .97, roofBack: .96, tire: .31 },
   elantra: { id: 'elantra', year: 2024, make: 'Hyundai', model: 'Elantra SE', color: '#27428f', L: 4.68, W: 1.83, H: 1.43, WB: 2.72, fo: .93, trunk: 1.02, hood: 1.02, tire: .32 },
   camry: { id: 'camry', year: 2024, make: 'Toyota', model: 'Camry LE', color: '#17191d', L: 4.88, W: 1.84, H: 1.445, WB: 2.82, fo: .98, trunk: 1.0, tire: .325 },
+  hero: { id: 'hero', year: 2026, make: 'DrivingKlass', model: 'Five Star', color: '#f2b92a', L: 4.63, W: 1.78, H: 1.435, WB: 2.70, fo: .94, tire: .315 },
   sentra: { id: 'sentra', year: 2023, make: 'Nissan', model: 'Sentra S', color: '#f1efe9', L: 4.64, W: 1.82, H: 1.45, WB: 2.71, fo: .95, hood: .98, tire: .315 },
 };
 

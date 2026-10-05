@@ -8,7 +8,7 @@ import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun, skyAnchor } from './S
 import { NightCtx } from './theme';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, stepDown, type Quality } from './quality';
-import { INTRO_NARROW, INTRO_WIDE } from './views';
+import { introAt } from './intro';
 
 export type Theme = 'day' | 'night';
 export type SceneProps = {
@@ -71,7 +71,7 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     <Butterflies count={lite ? 5 : 9} />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
-    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={4} maxDistance={120} minPolarAngle={.25} maxPolarAngle={1.9} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
+    <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={1} maxDistance={120} minPolarAngle={.1} maxPolarAngle={1.9} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;
 }
 
@@ -90,7 +90,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   const quality = qualityFor(tier);
   const fixed = qualityFor(first.current);
   const narrow = typeof window !== 'undefined' && (window.innerWidth < 700 || window.innerWidth / window.innerHeight < .8);
-  const k0 = (narrow ? INTRO_NARROW : INTRO_WIDE)[0]!;
+  const k0 = introAt(0, narrow);
   const lost = useRef(onLost);
   useEffect(() => { lost.current = onLost; }, [onLost]);
   return <Canvas
@@ -98,7 +98,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
     shadows={fixed.shadow > 0}
     dpr={dprOverride() ?? quality.dpr}
     gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-    camera={{ position: k0.p, fov: k0.fov, near: 2, far: 320 }}
+    camera={{ position: k0.p, fov: k0.fov, near: .5, far: 320 }}
     onCreated={({ gl }) => {
       gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .9;
       gl.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost.current(); }, { once: true });

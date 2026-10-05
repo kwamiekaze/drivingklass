@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { rng } from "./world/theme";
+import { FooterDrive } from "./FooterDrive";
 
 /*
  * The scene behind the contact form: a quiet golden-hour road by day, a starlit road by night. It is a backdrop, never the show.
@@ -10,9 +11,10 @@ import { rng } from "./world/theme";
  */
 const star = "M0 -7 L2 -2.2 L7 -2.1 L3 1.2 L4.4 6.2 L0 3.3 L-4.4 6.2 L-3 1.2 L-7 -2.1 L-2 -2.2 Z";
 
-/** The footer film: a looped clip per theme (public/videos/footer-road-day|night.mp4 with a poster of the same name). Optional: if a file is missing the painted road below stays. */
+/** The footer drive. Phones play the two films (day and night, 720 wide, about 0.7 MB each). Laptops and desktops get the same drive drawn live. */
 const base = import.meta.env.BASE_URL;
-const FILM = { day: { src: `${base}videos/footer-road-day.mp4`, poster: `${base}videos/footer-road-day.jpg` }, night: { src: `${base}videos/footer-road-night.mp4`, poster: `${base}videos/footer-road-night.jpg` } };
+const FILM = { day: { src: `${base}videos/footer-drive-day.mp4`, poster: `${base}videos/footer-drive-day.jpg` }, night: { src: `${base}videos/footer-drive-night.mp4`, poster: `${base}videos/footer-drive-night.jpg` } };
+const SMALL = "(max-width: 820px), (pointer: coarse)";
 
 export function ContactBackdrop({ night }: { night: boolean }) {
   const root = useRef<HTMLDivElement>(null);
@@ -20,6 +22,8 @@ export function ContactBackdrop({ night }: { night: boolean }) {
   const [near, setNear] = useState(false);        // the film only loads when the footer is close to the screen
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [small, setSmall] = useState(() => typeof window !== "undefined" && window.matchMedia(SMALL).matches);
+  useEffect(() => { const mq = window.matchMedia(SMALL), on = () => setSmall(mq.matches); mq.addEventListener("change", on); return () => mq.removeEventListener("change", on); }, []);
   const still = typeof window !== "undefined" && (window.matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true);
   const film = night ? FILM.night : FILM.day;
   useEffect(() => {
@@ -56,7 +60,7 @@ export function ContactBackdrop({ night }: { night: boolean }) {
   }, []);
 
   return (
-    <div className="n2-cbd" ref={root} data-theme={night ? "night" : "day"} data-stars="0" data-film={ready && !failed ? "on" : "off"} aria-hidden="true">
+    <div className="n2-cbd" ref={root} data-theme={night ? "night" : "day"} data-stars="0" data-film={(small && ready && !failed) || !small || failed ? "on" : "off"} aria-hidden="true">
       <div className="n2-cbd-sky" />
       <div className="n2-cbd-glow" />
       <div className="n2-cbd-stars">{twinkles.map((t, i) => <span key={i} style={{ left: `${t.l}%`, top: `${t.t}%`, width: t.s, height: t.s, animationDelay: `${t.d}s` }} />)}</div>
@@ -82,10 +86,12 @@ export function ContactBackdrop({ night }: { night: boolean }) {
         </g></g>
       </svg>
       <div className="n2-cbd-five">{[0, 1, 2, 3, 4].map(i => <svg key={i} viewBox="-8 -8 16 16" className="n2-cbd-s" data-i={i}><path d={star} /></svg>)}</div>
-      {near && !still && !failed && (
+      {small && !failed && near && !still && (
         <video key={film.src} ref={vid} className="n2-cbd-film" src={film.src} poster={film.poster} muted loop playsInline autoPlay preload="auto"
           onCanPlay={() => setReady(true)} onError={() => setFailed(true)} />
       )}
+      {small && !failed && still && <img className="n2-cbd-film" src={film.poster} alt="" onLoad={() => setReady(true)} onError={() => setFailed(true)} />}
+      {(!small || failed) && <FooterDrive key={night ? "n" : "d"} night={night} paused={!near} still={still} />}
       <div className="n2-cbd-veil" />
     </div>
   );

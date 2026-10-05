@@ -1,6 +1,7 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Info, MessageSquare, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
+import { ThemeMenu } from "@/components/nuhome2/ThemeMenu";
 import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
@@ -145,7 +146,7 @@ export default function NuHome2() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const goHome = useCallback(() => { setStage(0); setTouched(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, []);
+  const goHome = useCallback(() => { try { sessionStorage.removeItem("n2-intro"); } catch { /* private mode */ } window.location.assign("/"); }, []);   // the wheel refreshes the home page, opening shot included
   const onIntroDone = useCallback(() => { try { sessionStorage.setItem("n2-intro", "1"); } catch { /* private mode */ } }, []);
   const scrollDown = useCallback(() => window.scrollTo({ top: window.innerHeight * 0.92, behavior: "smooth" }), []);
   const toContact = useCallback(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), []);
@@ -181,9 +182,7 @@ export default function NuHome2() {
               <button type="button" onClick={toContact}>Contact</button>
             </nav>
             <div className="n2-header-actions">
-              <button type="button" className="n2-hdr-btn" onClick={() => setTheme(night ? "light" : "dark")} aria-label={night ? "Switch to day" : "Switch to night"}>
-                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
-              </button>
+              <ThemeMenu night={night} />
               <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
               <PortalMenuButton variant="hamburger" triggerClassName="n2-hdr-btn" />
             </div>

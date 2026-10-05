@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { FOV, INTRO, PAN, STAGES, type Stop, type V3 } from './views';
+import { FOV, PAN, STAGES, type Stop, type V3 } from './views';
+import { SOLIDS, clearance, GROUND } from './colliders';
+import { T_END, T_DRIVE, intro, introAt, parkCarNow, releaseCar } from './intro';
 import { skyAnchor } from './Sky';
 
 type Controls = {
@@ -10,7 +12,6 @@ type Controls = {
 };
 type Mode = 'intro' | 'pan' | 'fly' | 'free';
 const curve = (pts: V3[]) => new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'centripetal');
-const ease = (t: number) => .5 - .5 * Math.cos(Math.PI * Math.min(1, Math.max(0, t)));
 
 /**
  * One camera brain. Intro and Pan are scripted, unbroken moves (see views.ts). NEXT VIEW glides to a stop. As soon as the
@@ -23,10 +24,13 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const narrow = size.width < 700 || size.width / size.height < .8;
   const q = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const hasStage = q.get('stage') !== null, hasCam = q.get('cam') !== null;
-  const mode = useRef<Mode>(reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
-  const clock = useRef(0), panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
+  const introT = q.get('introT') !== null ? Number(q.get('introT')) : null;      // ?introT=30 freezes the opening shot at 30 seconds (for checking)
+  const mode = useRef<Mode>(introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
+  const started = useRef(false);
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = 38; intro.done = false; } else parkCarNow(); }
+  const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
-  const C = useMemo(() => ({ ip: curve(INTRO.p), il: curve(INTRO.l), pp: curve(PAN.p), pl: curve(PAN.l) }), []);
+  const C = useMemo(() => ({ pp: curve(PAN.p), pl: curve(PAN.l) }), []);
   const fovNow = narrow ? FOV.narrow : FOV.wide;
   const stopOf = (i: number): Stop => { const s = STAGES[i] ?? STAGES[0]!; return narrow ? s.narrow : s.wide; };
 
@@ -47,7 +51,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   useEffect(() => { if (first.current) { first.current = false; return; } mode.current = 'fly'; }, [stage, narrow]);
   useEffect(() => {
     if (!controls) return;
-    const grab = () => { if (mode.current !== 'free') mode.current = 'free'; };
+    const grab = () => { if (mode.current === 'intro') releaseCar(); if (mode.current !== 'free') mode.current = 'free'; };
     controls.addEventListener('start', grab);
     return () => controls.removeEventListener('start', grab);
   }, [controls]);
@@ -64,15 +68,17 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     }
     const glide = (p: THREE.Vector3) => { p.x += Math.sin(time * .9) * .03; p.y += Math.sin(time * .7 + 1) * .025; p.z += Math.sin(time * .8 + 2) * .03; };
     const fovTo = (f: number, k = .08) => { if (Math.abs(persp.fov - f) > .01) { persp.fov += (f - persp.fov) * k; persp.updateProjectionMatrix(); } };
-    if (m === 'intro' || m === 'pan') {
-      let u: number;
-      if (m === 'intro') { clock.current += dt; u = ease(clock.current / INTRO.len); }
-      else { panClock.current += dt; u = .5 - .5 * Math.cos((panClock.current / PAN.period) * Math.PI * 2); }
-      const [pc, lc] = m === 'intro' ? [C.ip, C.il] : [C.pp, C.pl];
-      tp.current.copy(pc.getPoint(u)); glide(tp.current); tl.current.copy(lc.getPoint(u));
+    if (!intro.done && !(introT !== null)) { intro.t += dt; if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
+    if (m === 'intro') {
+      const pose = introAt(intro.t, narrow);
+      camera.position.set(...pose.p); controls.target.set(...pose.l); camera.lookAt(controls.target);
+      if (Math.abs(persp.fov - pose.fov) > .005) { persp.fov = pose.fov; persp.updateProjectionMatrix(); }
+      if (introT === null && intro.t >= T_END) { mode.current = 'pan'; panClock.current = 0; }
+    } else if (m === 'pan') {
+      panClock.current += dt; const u = .5 - .5 * Math.cos((panClock.current / PAN.period) * Math.PI * 2);
+      tp.current.copy(C.pp.getPoint(u)); glide(tp.current); tl.current.copy(C.pl.getPoint(u));
       camera.position.copy(tp.current); controls.target.copy(tl.current); camera.lookAt(tl.current);
       fovTo(fovNow);
-      if (m === 'intro' && clock.current >= INTRO.len) { mode.current = 'pan'; panClock.current = 0; }
     } else if (m === 'fly') {
       const st = stopOf(stage), k = reducedMotion ? 1 : 1 - Math.exp(-2.2 * dt);
       tp.current.set(...st.p); tl.current.set(...st.l);
@@ -81,11 +87,18 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       if (camera.position.distanceTo(tp.current) < .06) mode.current = 'free';
     } else {
       controls.target.y += Math.sin(time * .35) * .0012;
-      if (camera.position.y < .8) camera.position.y = .8;
+      // the lens never goes into anything solid or under the ground, however the visitor orbits
+      const cp = camera.position; if (cp.y < GROUND) cp.y = GROUND;
+      for (const sd of SOLIDS) {
+        if (sd.k === 'wire') continue;
+        const d = clearance(sd, [cp.x, cp.y, cp.z]); if (d >= .45) continue;
+        if (sd.k === 'cyl') { const dx = cp.x - sd.x, dz = cp.z - sd.z, h = Math.hypot(dx, dz) || 1e-3; if (cp.y > sd.y1 - .3 || cp.y < sd.y0 + .05) cp.y = cp.y > (sd.y0 + sd.y1) / 2 ? sd.y1 + .5 : Math.max(GROUND, sd.y0 - .5); else { cp.x = sd.x + (dx / h) * (sd.r + .5); cp.z = sd.z + (dz / h) * (sd.r + .5); } }
+        else { const c = [(sd.min[0] + sd.max[0]) / 2, (sd.min[1] + sd.max[1]) / 2, (sd.min[2] + sd.max[2]) / 2], e = [(sd.max[0] - sd.min[0]) / 2 + .5, (sd.max[1] - sd.min[1]) / 2 + .5, (sd.max[2] - sd.min[2]) / 2 + .5], dd = [cp.x - c[0]!, cp.y - c[1]!, cp.z - c[2]!], ax = [0, 1, 2].reduce((best, i) => (e[i]! - Math.abs(dd[i]!) < e[best]! - Math.abs(dd[best]!) ? i : best), 0); const sign = dd[ax]! >= 0 ? 1 : -1; if (ax === 0) cp.x = c[0]! + sign * e[0]!; else if (ax === 1) cp.y = c[1]! + sign * e[1]!; else cp.z = c[2]! + sign * e[2]!; }
+      }
     }
     if (!done.current && m !== 'intro') { done.current = true; onIntroDone(); }
     if (skyAnchor.current) skyAnchor.current.position.set(camera.position.x, 0, camera.position.z);
-    const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 30); t.y = THREE.MathUtils.clamp(t.y, .4, 16);
+    if (m !== 'intro') { const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 45); t.y = THREE.MathUtils.clamp(t.y, .4, 16); }
   });
   return null;
 }

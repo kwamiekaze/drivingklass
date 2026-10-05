@@ -1,4 +1,3 @@
-import type { Key } from './cinema';
 
 export type V3 = [number, number, number];
 /** A camera stop: where the lens sits, what it looks at, and the lens. */
@@ -30,11 +29,6 @@ export const STAGES: Stage[] = [
  * PAN:   from the far right the building sign stays framed while the lens sinks past the monument sign, then climbs
  *        while sliding left. It runs there and back forever (zero speed at each end) until the visitor touches the scene.
  */
-export const INTRO = {
-  len: 17,
-  p: [[1.6, 2.4, 170], [1.4, 2.6, 98], [3, 3.2, 64], [17, 5.0, 46], [34, 7.5, 33]] as V3[],
-  l: [[0, 6.5, -17.5], [0, 6.5, -17.5], [0, 7.2, -16], [-1, 7.9, -15], [-2, 8.2, -15]] as V3[],
-};
 export const PAN = {
   period: 56,
   p: [[34, 7.5, 33], [21, 3.8, 30.5], [10.5, 2.0, 27.5], [-3, 3.0, 30], [-18, 5.6, 31.5], [-33, 9.0, 31]] as V3[],
@@ -42,5 +36,3 @@ export const PAN = {
 };
 export const FOV = { wide: 40, narrow: 58 };
 /** First lens position, read by the canvas before the rig takes over. */
-export const INTRO_WIDE: Key[] = [{ t: 0, p: INTRO.p[0]!, l: INTRO.l[0]!, fov: FOV.wide }];
-export const INTRO_NARROW: Key[] = [{ t: 0, p: INTRO.p[0]!, l: INTRO.l[0]!, fov: FOV.narrow }];

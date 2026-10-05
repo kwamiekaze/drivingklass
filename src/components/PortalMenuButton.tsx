@@ -16,13 +16,15 @@ export function PortalMenuButton({ size = "md", variant = "car", triggerClassNam
 
 
   useEffect(() => {
-    if (!open) return;
+    // the centred hamburger menu lives in a portal with its own backdrop; an outside-click listener here would close it on mouse-down,
+    // before the button under the finger gets its click, which is why the buttons seemed dead
+    if (!open || variant === "hamburger") return;
     const onClick = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+  }, [open, variant]);
 
   const dashboardPath =
     role === "admin" ? "/admin" : role === "instructor" ? "/instructor" : "/student";

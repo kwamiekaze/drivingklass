@@ -153,9 +153,9 @@ const App = () => (
                       <Route path="/instructor/report-cards/edit/:id" element={<ReportCardForm />} />
                       
                       {/* Report Card Routes */}
-                      <Route path="/report-cards/open/:id" element={<ReportCardOpen />} />
+                      <Route path="/report-cards/open/:id" element={<StudentShell><ReportCardOpen /></StudentShell>} />
                       <Route path="/report-cards/:id" element={<ReportCardView />} />
-                      <Route path="/road-test-results/open/:sessionId" element={<RoadTestResultOpen />} />
+                      <Route path="/road-test-results/open/:sessionId" element={<StudentShell><RoadTestResultOpen /></StudentShell>} />
                       <Route path="/road-test-results/:sessionId" element={<RoadTestResultView />} />
                       
                       {/* Admin Portal */}
