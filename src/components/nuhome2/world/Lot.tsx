@@ -226,12 +226,23 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
 function roadGeo(w: number, h: number) { const g = new THREE.PlaneGeometry(w, h), uv = g.attributes.uv as THREE.BufferAttribute; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 10, uv.getY(i) * h / 10); return g; }
 
 // across the street (z, from its centre line): the double centre line and the two edge lines; across the avenue (x): edge lines and the yellow centre pair
-const STREET_LINES: [number, number][] = [[-5.3, .14], [-.09, .1], [.09, .1], [5.3, .14]];
+// (a line at offset c on the street strip lies at world z = 25.25 - c, so the near edge, z 19.95, is +5.3 and the far edge, z 30.55, is -5.3)
+const STREET_CENTRE: [number, number][] = [[-.09, .1], [.09, .1]];
+const STREET_NEAR: [number, number][] = [[5.3, .14]];
+const STREET_FAR: [number, number][] = [[-5.3, .14]];
 const AVENUE_EDGES: [number, number][] = [[-3.85, .14], [3.85, .14]];
 const AVENUE_CENTRE: [number, number][] = [[-.09, .1], [.09, .1]];
 /** The stall lines, one line per 2.75 m bay, repeated along the row. */
 const STALL_LINE: [number, number][] = [[0, .1]];
-const STREET_REPEAT: [number, number] = [130, 1], AVENUE_REPEAT: [number, number] = [1, 52], ROW_A_REPEAT: [number, number] = [22, 1], ROW_B_REPEAT: [number, number] = [9, 1];
+const AVENUE_REPEAT: [number, number] = [1, 52], ROW_A_REPEAT: [number, number] = [22, 1], ROW_B_REPEAT: [number, number] = [9, 1];
+
+/** Radius of the paint that curves from the avenue's edge lines round into the street's far edge line. */
+const CORNER_R = 1.2;
+const STREET_PIECES: [[number, number][], number, number][] = [
+  [STREET_CENTRE, 8.85, 28.8], [STREET_CENTRE, 34.6, 260], [STREET_CENTRE, -260, -8.85],
+  [STREET_FAR, 3.85 + CORNER_R, 260], [STREET_FAR, -260, -(3.85 + CORNER_R)],
+  [STREET_NEAR, 4.2, 28.8], [STREET_NEAR, 34.6, 260], [STREET_NEAR, -29.1, -4.2], [STREET_NEAR, -260, -34.3],
+];
 
 function Road({ asphalt }: { asphalt: THREE.Material }) {
   const street = useMemo(() => roadGeo(520, 12.2), []), avenue = useMemo(() => roadGeo(8.2, 208.65), []);
@@ -248,8 +259,15 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
       <Box p={[s * 132.1, .06, 33.3]} s={[255.8, .12, 3.4]} c={walk} r={.85} cast={false} /><Box p={[s * 132.1, .1, 31.4]} s={[255.8, .2, .3]} c={kerb} r={.8} cast={false} />
     </group>)}
     {[0, -31.7, 31.7].map((x, i) => <mesh key={i} position={[x, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[i ? 5.2 : 8.2, .132, 5.1]} /></mesh>)}
-    <PaintStrip lines={STREET_LINES} span={12.2} across="v" color="#e8e6df" x={0} z={25.25} width={520} height={12.2} repeat={STREET_REPEAT} />
-    <PaintStrip lines={AVENUE_EDGES} span={8.2} across="u" color="#e8e6df" x={0} z={135.75} width={8.2} height={208.5} repeat={AVENUE_REPEAT} />
+    {/* street paint, in pieces so it can break where the real thing does: the centre pair stops at the crosswalks and opens opposite the
+        entrance (x +31.7); the near edge line breaks at the avenue and at both driveways (a little wider at the entrance); the far edge
+        line stops where the avenue's edge lines curve round into it */}
+    {STREET_PIECES.map(([lines, a, b], i) => <PaintStrip key={i} lines={lines} span={12.2} across="v" color="#e8e6df" x={(a + b) / 2} z={25.25} width={b - a} height={12.2} repeat={[(b - a) / 4, 1]} />)}
+    {[-1, 1].map(s => <mesh key={`fil${s}`} rotation-x={-Math.PI / 2} position={[s * (3.85 + CORNER_R), PAINT_Y, 30.55 + CORNER_R]} renderOrder={1} receiveShadow>
+      <ringGeometry args={[CORNER_R - .07, CORNER_R + .07, 28, 1, s > 0 ? Math.PI / 2 : 0, Math.PI / 2]} />
+      <meshStandardMaterial color="#e8e6df" roughness={.8} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+    </mesh>)}
+    <PaintStrip lines={AVENUE_EDGES} span={8.2} across="u" color="#e8e6df" x={0} z={(31.75 + 240) / 2} width={8.2} height={240 - 31.75} repeat={AVENUE_REPEAT} />
     <PaintStrip lines={AVENUE_CENTRE} span={8.2} across="u" color="#d9a621" x={0} z={135.75} width={8.2} height={208.5} repeat={AVENUE_REPEAT} />
     <Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
   </group>;

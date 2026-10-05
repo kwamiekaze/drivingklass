@@ -313,7 +313,6 @@ export function Building({ position, lite, open }: { position: [number, number, 
     {[-1, 1].map(s => <group key={s}>
       <Wall x0={s < 0 ? -13.1 : 7.7} x1={s < 0 ? -7.7 : 13.1} y0={.16} y1={PAV_H} z={FRONT + .6} d={.9} openings={pavOps(s)} />
       <mesh position={[s * 10.4, PAV_H + .3, -.3]} material={M.trim} castShadow><boxGeometry args={[6.1, .6, 7.2]} /></mesh>
-      <mesh position={[s * 10.4, PAV_H - .08, FRONT + 1.2]} material={M.led}><boxGeometry args={[5.9, .12, .12]} /></mesh>
       <mesh geometry={roofs.pav} material={M.roof} position={[s * 10.4, PAV_H + .6, -.1]} castShadow />
       <RoofTrim w={6.4} d={5.6} h={2} y={PAV_H + .6} x={s * 10.4} z={-.1} cap={capM} fascia={fasM} />
       <mesh position={[s * 10.4, (WALL_H + PAV_H) / 2, -.6]} material={stone(5.4, 1.6)}><boxGeometry args={[5.4, PAV_H - WALL_H, 4.2]} /></mesh>
