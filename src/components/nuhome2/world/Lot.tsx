@@ -25,11 +25,12 @@ export const ISLANDS = [{ x: -16.9, z: 10.8, w: 24.4, d: 5.2 }, { x: 16.9, z: 10
 export const ISLAND_TREES: [number, number][] = [[-9.5, 10.8], [-16.5, 10.8], [-23.5, 10.8], [9.5, 10.8], [16.5, 10.8], [23.5, 10.8]];
 const LOT_LAMPS: [number, number][] = [[-13, 10.8], [13, 10.8], [-26, 10.8], [26, 10.8], [-24.4, -8.2], [24.4, -8.2]];
 const AVENUE_LAMPS: [number, number][] = [[6.2, 46], [-6.2, 76], [6.2, 106], [-6.2, 136], [6.2, 166], [-6.2, 196]];
-const PAINT_Y = .04, HI_Y = .16;
+const PAINT_Y = .034, TOP_Y = .046, HI_Y = .16;   // long lines lie at PAINT_Y; the stop bars, zebra stripes and arrows sit above them at TOP_Y, so no two paints ever share a height
 
 type Dec = { x: number; z: number; w: number; d: number };
 
-function Decals({ items, color, y = PAINT_Y }: { items: Dec[]; color: string; y?: number }) {
+/** Short pieces of paint (stop bars, zebra stripes, wide stall lines): flat quads on their own layer, above the long lines. */
+function Decals({ items, color, y = TOP_Y }: { items: Dec[]; color: string; y?: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     const m = ref.current; if (!m) return; const o = new THREE.Object3D();
@@ -37,8 +38,40 @@ function Decals({ items, color, y = PAINT_Y }: { items: Dec[]; color: string; y?
     m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere();
   }, [items, y]);
   return <instancedMesh ref={ref} args={[undefined, undefined, items.length]} receiveShadow frustumCulled={false}>
-    <planeGeometry args={[1, 1]} /><meshStandardMaterial color={color} roughness={.8} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+    <planeGeometry args={[1, 1]} /><meshStandardMaterial color={color} roughness={.8} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} />
   </instancedMesh>;
+}
+
+/**
+ * Long painted lines are drawn as a strip texture repeated along the road, not as thin geometry. A texture is mipmapped and
+ * anisotropically filtered, so a line that is a fraction of a pixel wide at a distance fades smoothly instead of breaking
+ * into dashes and shimmering as the camera moves. `lines` are [centre offset, width] in metres across a road `span` metres wide;
+ * the texel coverage is computed exactly, so edges are perfectly anti-aliased at every size.
+ */
+function stripTexture(lines: [number, number][], span: number, across: 'u' | 'v'): THREE.DataTexture {
+  const N = Math.min(2048, Math.ceil(span / .02)), L = 8, data = new Uint8Array(N * L * 4);
+  for (let i = 0; i < N; i++) {
+    const a = -span / 2 + (i * span) / N, b = a + span / N; let cov = 0;
+    for (const [c, w] of lines) cov += Math.max(0, Math.min(b, c + w / 2) - Math.max(a, c - w / 2));
+    const v = Math.round(255 * Math.min(1, cov / (span / N)));
+    for (let j = 0; j < L; j++) { const k = (across === 'u' ? j * N + i : i * L + j) * 4; data[k] = data[k + 1] = data[k + 2] = v; data[k + 3] = 255; }
+  }
+  const t = across === 'u' ? new THREE.DataTexture(data, N, L, THREE.RGBAFormat) : new THREE.DataTexture(data, L, N, THREE.RGBAFormat);
+  t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.anisotropy = 8;
+  if (across === 'u') { t.wrapS = THREE.ClampToEdgeWrapping; t.wrapT = THREE.RepeatWrapping; } else { t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; }
+  t.needsUpdate = true; return t;
+}
+/**
+ * One strip of paint over a road. The texture holds one repeat across `span` metres; `across` says which way the lines vary
+ * ('u': across x and running along z, 'v': across z and running along x). The plane is `width` (x) by `height` (z) metres and the
+ * texture repeats `repeat` times along the way the lines run (or along x for a row of stall lines, whose tile is one bay).
+ */
+function PaintStrip({ lines, span, across, color, x, z, width, height, repeat, y = PAINT_Y }: { lines: [number, number][]; span: number; across: 'u' | 'v'; color: string; x: number; z: number; width: number; height: number; repeat: [number, number]; y?: number }) {
+  const tex = useMemo(() => { const t = stripTexture(lines, span, across); t.repeat.set(repeat[0], repeat[1]); return t; }, [lines, span, across, repeat]);
+  return <mesh rotation-x={-Math.PI / 2} position={[x, y, z]} renderOrder={1} receiveShadow>
+    <planeGeometry args={[width, height]} />
+    <meshStandardMaterial color={color} alphaMap={tex} transparent depthWrite={false} roughness={.8} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+  </mesh>;
 }
 
 function Arrows({ items }: { items: { x: number; z: number; yaw: number }[] }) {
@@ -46,23 +79,20 @@ function Arrows({ items }: { items: { x: number; z: number; yaw: number }[] }) {
   const geo = useMemo(() => { const s = new THREE.Shape(); s.moveTo(0, 1.6); s.lineTo(.62, .55); s.lineTo(.2, .55); s.lineTo(.2, -1.6); s.lineTo(-.2, -1.6); s.lineTo(-.2, .55); s.lineTo(-.62, .55); s.closePath(); return new THREE.ShapeGeometry(s); }, []);
   useLayoutEffect(() => {
     const m = ref.current; if (!m) return; const o = new THREE.Object3D();
-    items.forEach((it, i) => { o.position.set(it.x, PAINT_Y, it.z); o.rotation.set(-Math.PI / 2, 0, it.yaw); o.scale.set(1, 1, 1); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
+    items.forEach((it, i) => { o.position.set(it.x, TOP_Y, it.z); o.rotation.set(-Math.PI / 2, 0, it.yaw); o.scale.set(1, 1, 1); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
     m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere();
   }, [items]);
-  return <instancedMesh ref={ref} args={[geo, undefined, items.length]} frustumCulled={false}><meshStandardMaterial color="#e8e6df" roughness={.8} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} /></instancedMesh>;
+  return <instancedMesh ref={ref} args={[geo, undefined, items.length]} frustumCulled={false}><meshStandardMaterial color="#e8e6df" roughness={.8} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} /></instancedMesh>;
 }
 
+/** The short pieces of paint. The long lines (stall rows, street and avenue lines) are PaintStrip textures. */
 function markings() {
-  const white: Dec[] = [], yellow: Dec[] = [], yellowHi: Dec[] = [], streetW: Dec[] = [], avenueW: Dec[] = [], cross: Dec[] = [];
-  for (let j = 0; j <= 10; j++) { const x = 1.375 + 2.75 * j; [-1, 1].forEach(s => white.push({ x: s * x, z: -6, w: j === 0 ? .16 : .1, d: 5 })); }
-  for (let k = 1; k <= 9; k++) { const x = 4.125 + 2.75 * k; [-1, 1].forEach(s => white.push({ x: s * x, z: 5.5, w: .1, d: 5 })); }
+  const white: Dec[] = [], avenueW: Dec[] = [], cross: Dec[] = [];
+  [-1, 1].forEach(s => white.push({ x: s * 1.375, z: -6, w: .16, d: 5 }));   // the reserved stall's lines are a little heavier
   white.push({ x: -31.7, z: 13.3, w: 5, d: .45 });
-  [-1, 1].forEach(sx => [-1, 1].forEach(sz => streetW.push({ x: sx * 132.3, z: 25.25 + sz * .09, w: 255.4, d: .1 })));
-  [19.95, 30.55].forEach(z => [-1, 1].forEach(sx => streetW.push({ x: sx * 132.3, z, w: 255.4, d: .14 })));
-  [-1, 1].forEach(s => { yellow.push({ x: s * .09, z: 135.75, w: .1, d: 208.5 }); avenueW.push({ x: s * 3.85, z: 135.75, w: .14, d: 208.5 }); });
   avenueW.push({ x: 2.05, z: 36.6, w: 4, d: .45 });
   [-1, 1].forEach(s => { for (let z = 19.8; z < 30.9; z += .9) cross.push({ x: s * 7.4, z, w: 2.6, d: .45 }); });
-  return { white, yellow, yellowHi, streetW, avenueW, cross };
+  return { white, avenueW, cross };
 }
 
 const lampMat = new THREE.MeshStandardMaterial({ color: '#fff3d8', emissive: '#ffd08a', emissiveIntensity: .6 });
@@ -195,6 +225,14 @@ function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boole
 
 function roadGeo(w: number, h: number) { const g = new THREE.PlaneGeometry(w, h), uv = g.attributes.uv as THREE.BufferAttribute; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 10, uv.getY(i) * h / 10); return g; }
 
+// across the street (z, from its centre line): the double centre line and the two edge lines; across the avenue (x): edge lines and the yellow centre pair
+const STREET_LINES: [number, number][] = [[-5.3, .14], [-.09, .1], [.09, .1], [5.3, .14]];
+const AVENUE_EDGES: [number, number][] = [[-3.85, .14], [3.85, .14]];
+const AVENUE_CENTRE: [number, number][] = [[-.09, .1], [.09, .1]];
+/** The stall lines, one line per 2.75 m bay, repeated along the row. */
+const STALL_LINE: [number, number][] = [[0, .1]];
+const STREET_REPEAT: [number, number] = [130, 1], AVENUE_REPEAT: [number, number] = [1, 52], ROW_A_REPEAT: [number, number] = [22, 1], ROW_B_REPEAT: [number, number] = [9, 1];
+
 function Road({ asphalt }: { asphalt: THREE.Material }) {
   const street = useMemo(() => roadGeo(520, 12.2), []), avenue = useMemo(() => roadGeo(8.2, 208.65), []);
   const mk = useMemo(markings, []);
@@ -210,7 +248,10 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
       <Box p={[s * 132.1, .06, 33.3]} s={[255.8, .12, 3.4]} c={walk} r={.85} cast={false} /><Box p={[s * 132.1, .1, 31.4]} s={[255.8, .2, .3]} c={kerb} r={.8} cast={false} />
     </group>)}
     {[0, -31.7, 31.7].map((x, i) => <mesh key={i} position={[x, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[i ? 5.2 : 8.2, .132, 5.1]} /></mesh>)}
-    <Decals items={mk.streetW} color="#e8e6df" /><Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
+    <PaintStrip lines={STREET_LINES} span={12.2} across="v" color="#e8e6df" x={0} z={25.25} width={520} height={12.2} repeat={STREET_REPEAT} />
+    <PaintStrip lines={AVENUE_EDGES} span={8.2} across="u" color="#e8e6df" x={0} z={135.75} width={8.2} height={208.5} repeat={AVENUE_REPEAT} />
+    <PaintStrip lines={AVENUE_CENTRE} span={8.2} across="u" color="#d9a621" x={0} z={135.75} width={8.2} height={208.5} repeat={AVENUE_REPEAT} />
+    <Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
   </group>;
 }
 
@@ -233,7 +274,10 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     { id: 'hero', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
   ];
   return <group>
-    <Decals items={mk.white} color="#e2dfd6" /><Decals items={mk.yellow} color="#d9a621" /><Arrows items={arrows} />
+    <Decals items={mk.white} color="#e2dfd6" /><Arrows items={arrows} />
+    {/* the stall lines: row A (z -6) from x -30.25 to 30.25, row B (z 5.5) on each side of the fountain drive, 5 m deep */}
+    <PaintStrip lines={STALL_LINE} span={2.75} across="u" color="#e2dfd6" x={0} z={-6} width={60.5} height={5} repeat={ROW_A_REPEAT} />
+    {[-1, 1].map(sg => <PaintStrip key={sg} lines={STALL_LINE} span={2.75} across="u" color="#e2dfd6" x={sg * 17.875} z={5.5} width={24.75} height={5} repeat={ROW_B_REPEAT} />)}
     {/* terrace and kerbs */}
     <Box p={[0, .08, -11.9]} s={[46, .16, 6.6]} c="#d9d2c4" r={.7} />
     <Box p={[0, .1, -8.5]} s={[46.2, .2, .3]} c="#cfc9bd" r={.7} />

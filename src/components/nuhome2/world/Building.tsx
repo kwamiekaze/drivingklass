@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, rng } from './theme';
 import { Plant } from './Plants';
-import { Halo, carveMask, carvedRow, goldMat, stencilled, useGlow, wordGeometry } from './Signage';
+import { Halo, carvedRow, carvedWord, goldMat } from './Signage';
 import { SIGN_FONT, goldGradient, makeCanvasTexture, starShape } from './parts';
 
 /*
@@ -227,26 +227,34 @@ export function Building({ position, lite, open }: { position: [number, number, 
     Object.values(glass).forEach(m => m.color.setScalar(.8 + .2 * n));
   });
 
-  const archGeo = useMemo(() => {
+  const archShape = useMemo(() => {
     const s = new THREE.Shape(), R = 5.55, cy = .55 + 2.3 - R;
     s.moveTo(-5.3, 0); s.lineTo(5.3, 0); s.lineTo(5.3, .4); s.quadraticCurveTo(4.7, .45, 4.4, .6);
     for (let i = 0; i <= 40; i++) { const x = 4.4 - (8.8 * i) / 40; s.lineTo(x, cy + Math.sqrt(R * R - x * x)); }
-    s.quadraticCurveTo(-4.7, .45, -5.3, .4); s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.computeVertexNormals(); return g;
+    s.quadraticCurveTo(-4.7, .45, -5.3, .4); s.closePath(); return s;
   }, []);
   const archLed = useMemo(() => { const R = 5.55, cy = .55 + 2.3 - R, pts: THREE.Vector3[] = []; for (let i = 0; i <= 48; i++) { const x = -4.1 + (8.2 * i) / 48; pts.push(new THREE.Vector3(x, cy + Math.sqrt(R * R - x * x) - .3, 0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, .08, 6, false); }, []);
   const capM = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e6dfd0', roughness: .55 }), []), fasM = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2b2d34', roughness: .5, metalness: .3 }), []);
   const roofs = useMemo(() => ({ main: hipRoof(45, 6.6, 1.9), center: hipRoof(14, 6.4, 4.1), pav: hipRoof(6.4, 5.6, 2.0) }), []);
+  // The sign is carved into the stone, built as real geometry so nothing can flicker: a stone face with the letters and the five stars
+  // cut out of it, the letters seen as gilded cavities (inside walls and floor), the stars as gilded V-cuts.
+  // Faces never overlap at the same depth: face z 5.0 | cavity floor 4.84 | band body ends at 4.78 | arch body ends at 4.75.
   const signGold = useMemo(() => goldMat(), []);
-  // the sign is carved into the stone: a stencil opens the band and the arch exactly where the letters and stars are,
-  // the letters are seen as gilded cavities (their inside walls and floor), the stars as gilded V-cuts
-  const signLetters = useMemo(() => wordGeometry('DRIVINGKLASS', 10.6, .13, 0, .07, lite ? 3 : 7), [lite]);
-  const signStars = useMemo(() => carvedRow([.46, .58, .86, .58, .46], 1.45, [-.16, -.05, 0, -.05, -.16], .2), []);
-  const maskMat = useMemo(() => carveMask(), []);
-  const cavityGold = useMemo(() => { const m = goldMat(); m.side = THREE.BackSide; m.roughness = .38; return m; }, []);
-  const bandStone = useMemo(() => stencilled(stone(12.8, 1.7)), []);   // eslint-disable-line react-hooks/exhaustive-deps
-  const archStone = useMemo(() => stencilled(stone(10.6, 3)), []);   // eslint-disable-line react-hooks/exhaustive-deps
-  useGlow([signGold, cavityGold], .02, .9);
+  const cavityGold = useMemo(() => { const m = goldMat(); m.side = THREE.BackSide; return m; }, []);
+  const signStone = useMemo(() => { const m = stone(12.8, 1.7).clone(); m.emissiveIntensity = .02; return m; }, []);      // eslint-disable-line react-hooks/exhaustive-deps
+  const archStone = useMemo(() => { const m = stone(10.6, 3).clone(); m.emissiveIntensity = .02; return m; }, []);        // eslint-disable-line react-hooks/exhaustive-deps
+  const word = useMemo(() => carvedWord('DRIVINGKLASS', 10.6, 12.76, 1.66, -.5, .16, .07, lite ? 4 : 8), [lite]);
+  const stars = useMemo(() => carvedRow([.46, .58, .86, .58, .46], 1.45, [-.16, -.05, 0, -.05, -.16], .2), []);
+  const archBody = useMemo(() => { const g = new THREE.ExtrudeGeometry(archShape, { depth: .75, bevelEnabled: false }); g.computeVertexNormals(); return g; }, [archShape]);
+  const archFace = useMemo(() => {
+    const sh = archShape.clone(); sh.holes = stars.outlines.map(o => new THREE.Path(o.map(v => new THREE.Vector2(v.x, v.y + .6))));   // star centres sit at 8.2 = arch origin 7.6 + .6
+    const g = new THREE.ExtrudeGeometry(sh, { depth: .25, bevelEnabled: false }); g.computeVertexNormals();
+    // stone texture coordinates 0..1 across the arch, as the plain arch had
+    const p = g.attributes.position as THREE.BufferAttribute, uv = new Float32Array(p.count * 2);
+    for (let i = 0; i < p.count; i++) { uv[i * 2] = (p.getX(i) + 5.3) / 10.6; uv[i * 2 + 1] = p.getY(i) / 3; }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return g;
+  }, [archShape, stars]);
+  useFrame(() => { const n = mix.current; signGold.emissiveIntensity = cavityGold.emissiveIntensity = .02 + .26 * n; });
   const crownGeo = useMemo(() => { const g = new THREE.ExtrudeGeometry(starShape(1, .46), { depth: .34, bevelEnabled: true, bevelThickness: .12, bevelSize: .06, bevelSegments: 2 }); g.translate(0, 0, -.17); g.computeVertexNormals(); return g; }, []);
 
   /** A wall built from boxes with real openings, so every window has depth. */
@@ -344,16 +352,20 @@ export function Building({ position, lite, open }: { position: [number, number, 
     <mesh position={[0, 5.62, 4.75]} material={M.trim} castShadow><boxGeometry args={[13.6, .55, 3.5]} /></mesh>
     <mesh position={[0, 5.26, 6.45]} material={M.led}><boxGeometry args={[13.4, .12, .12]} /></mesh>
     {[-4.4, -2.2, 2.2, 4.4].map(x => <mesh key={x} position={[x, 5.3, 5.0]} rotation-x={Math.PI / 2} material={M.lamp}><circleGeometry args={[.13, 14]} /></mesh>)}
-    <mesh position={[0, 6.75, 4.0]} material={bandStone} castShadow><boxGeometry args={[12.8, 1.7, 2.0]} /></mesh>
-    <mesh geometry={archGeo} material={archStone} position={[0, 7.6, 4.0]} castShadow />
+    {/* the band: a stone body, a thin stone rim, the face with the letters cut out of it, the gilded letter cavities and the stone inside A, D, R */}
+    <mesh position={[0, 6.75, 3.89]} material={signStone} castShadow><boxGeometry args={[12.8, 1.7, 1.78]} /></mesh>
+    {[[12.8, .02, 0, .84], [12.8, .02, 0, -.84], [.02, 1.66, 6.39, 0], [.02, 1.66, -6.39, 0]].map(([bw, bh, bx, by], i) => <mesh key={i} position={[bx!, 6.75 + by!, 4.89]} material={signStone}><boxGeometry args={[bw!, bh!, .22]} /></mesh>)}
+    <mesh geometry={word.face} material={signStone} position={[0, 6.75, 5.0]} />
+    <mesh geometry={word.islands} material={signStone} position={[0, 6.75, 5.0]} />
+    <mesh geometry={word.cavity} material={cavityGold} position={[0, 6.75, 5.0]} />
+    {/* the arch: a stone body and a face with the five stars cut out, each star a gilded V-cut */}
+    <mesh geometry={archBody} material={archStone} position={[0, 7.6, 4.0]} castShadow />
+    <mesh geometry={archFace} material={archStone} position={[0, 7.6, 4.75]} castShadow />
     <mesh geometry={archLed} material={M.led} position={[0, 7.6, 5.04]} />
-    {/* the sign: cast gold lettering, five faceted gold stars on the arch, and a warm glow behind them at night */}
-    <Halo position={[0, 6.75, 5.02]} size={[14.5, 3.4]} strength={.5} />
-    <Halo position={[0, 8.35, 5.02]} size={[9.5, 3.6]} strength={.42} />
-    <mesh geometry={signLetters} material={maskMat} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={-2} />
-    <mesh geometry={signStars.mask} material={maskMat} position={[0, 8.2, 5.002]} renderOrder={-2} />
-    <mesh geometry={signLetters} material={cavityGold} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={1} />
-    <mesh geometry={signStars.cut} material={signGold} position={[0, 8.2, 5.0]} renderOrder={1} />
+    {/* a soft warm halo behind the lettering and the stars at night, kept gentle so the sign never glares */}
+    <Halo position={[0, 6.75, 5.03]} size={[13.5, 2.6]} strength={.1} />
+    <Halo position={[0, 8.35, 5.03]} size={[9, 3]} strength={.08} />
+    <mesh geometry={stars.cut} material={signGold} position={[0, 8.2, 5.0]} />
     <mesh position={[0, WALL_H - .08, FRONT - 2]} visible={false}><boxGeometry args={[.01, .01, .01]} /></mesh>
   </group>;
 }

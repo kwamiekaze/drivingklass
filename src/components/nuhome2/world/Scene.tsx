@@ -113,7 +113,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
     className="n2-canvas"
     shadows={fixed.shadow > 0}
     dpr={dprOverride() ?? dprNow}
-    gl={{ antialias: true, alpha: false, stencil: true, powerPreference: 'high-performance' }}
+    gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
     camera={{ position: k0.p, fov: k0.fov, near: .5, far: 320 }}
     onCreated={({ gl }) => {
       gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .9;
