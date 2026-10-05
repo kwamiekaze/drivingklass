@@ -69,3 +69,25 @@ export function Halo({ position, size, color = '255,190,100', strength = .55 }: 
   useFrame(() => { if (ref.current) ref.current.opacity = strength * (.08 + .92 * mix.current); });
   return <mesh position={position} renderOrder={3}><planeGeometry args={size} /><meshBasicMaterial ref={ref} map={map} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} fog={false} /></mesh>;
 }
+
+/** A star carved into stone: a V-cut, each point a pair of facets sloping down to a centre `depth` behind the surface. */
+export function carvedStar(R: number, depth: number): THREE.BufferGeometry {
+  const rim: [number, number][] = Array.from({ length: 10 }, (_, k) => { const a = Math.PI / 2 + (k * Math.PI) / 5, r = k % 2 ? R * .42 : R; return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const pos: number[] = [];
+  for (let i = 0; i < 10; i++) { const [x0, y0] = rim[i]!, [x1, y1] = rim[(i + 1) % 10]!; pos.push(0, 0, -depth, x0, y0, 0, x1, y1, 0); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
+}
+/** The outline of a star, flat, for the stencil mask that opens the stone where a carved star sits. */
+export function starOutline(R: number): THREE.BufferGeometry {
+  const s = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + (k * Math.PI) / 5, r = k % 2 ? R * .42 : R; if (k) s.lineTo(Math.cos(a) * r, Math.sin(a) * r); else s.moveTo(Math.cos(a) * r, Math.sin(a) * r); } s.closePath();
+  return new THREE.ShapeGeometry(s);
+}
+/** A row of carved stars (and the matching outline row), centre star biggest, outer stars a little lower so the row follows the arch. */
+export function carvedRow(sizes: number[], gap: number, drop: number[], depth: number) {
+  const place = (g: THREE.BufferGeometry, i: number) => g.translate((i - (sizes.length - 1) / 2) * gap, drop[i] ?? 0, 0);
+  return { cut: mergeGeometries(sizes.map((R, i) => place(carvedStar(R, depth * R / Math.max(...sizes)), i)), false)!, mask: mergeGeometries(sizes.map((R, i) => place(starOutline(R), i)), false)! };
+}
+/** Writes 1 into the stencil buffer wherever a carving is: the stone around it is then drawn everywhere except there. */
+export const carveMask = () => new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp });
+/** Turns a stone material into one with holes where the carvings are. */
+export function stencilled<T extends THREE.Material>(m: T): T { const c = m.clone() as T; c.stencilWrite = true; c.stencilRef = 1; c.stencilFunc = THREE.NotEqualStencilFunc; c.stencilFail = THREE.KeepStencilOp; c.stencilZFail = THREE.KeepStencilOp; c.stencilZPass = THREE.KeepStencilOp; return c; }

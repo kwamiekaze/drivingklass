@@ -24,6 +24,8 @@ export function ContactBackdrop({ night }: { night: boolean }) {
   const [failed, setFailed] = useState(false);
   const [small, setSmall] = useState(() => typeof window !== "undefined" && window.matchMedia(SMALL).matches);
   useEffect(() => { const mq = window.matchMedia(SMALL), on = () => setSmall(mq.matches); mq.addEventListener("change", on); return () => mq.removeEventListener("change", on); }, []);
+  // the end cap's emblem sits on the hub of whichever wheel is showing: the phone film's hub is lower than the drawn one
+  useEffect(() => { document.documentElement.style.setProperty("--n2-hub", small && !failed ? "16.5svh" : "25svh"); }, [small, failed]);
   const still = typeof window !== "undefined" && (window.matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true);
   const film = night ? FILM.night : FILM.day;
   useEffect(() => {

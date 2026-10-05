@@ -353,3 +353,18 @@
 .n2-foot span { text-shadow: none !important; }
 .n2-foot span { background: linear-gradient(180deg, #fffbe0, #ffe48a 45%, #f2c85a 80%, #e0b040) !important; -webkit-background-clip: text !important; background-clip: text !important; filter: drop-shadow(0 1px 6px rgba(0, 8, 32, .9)); }
 .n2-foot em { font-size: clamp(22px, 7vw, 28px); text-wrap: balance; }
+
+/* ---- the end of the page: wheel, emblem and the header band upside down, nothing after it ---- */
+.n2-cbd { bottom: 0 !important; }
+.n2-endcap { position: relative; z-index: 3; height: clamp(300px, 44svh, 520px); margin: 0; padding: 0; background: none; pointer-events: none; }
+/* the emblem sits on the hub of the drive's wheel: a quarter of the way up the screen on desktop, about a sixth on the phone film */
+.n2-endcap-emblem { --em: clamp(112px, 17svh, 196px); position: absolute; left: 50%; bottom: calc(var(--n2-hub, 25svh) - var(--em) / 2); width: var(--em); height: var(--em); transform: translateX(-50%); border-radius: 50%; z-index: 2; filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .6)) drop-shadow(0 0 22px rgba(242, 193, 78, .35)); }
+.n2-endcap-emblem img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.n2-endcap-band { position: absolute; left: 0; right: 0; bottom: 0; height: clamp(84px, 11.5svh, 132px); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 1; display: flex; align-items: center; justify-content: center; }
+.n2-endcap-band .n2-hdr-bg { --cap: clamp(46px, 9.5vw, 132px); transform: scaleY(-1); opacity: .74; filter: drop-shadow(0 -10px 22px rgba(0, 10, 40, .5)); }
+.n2-endcap-band .n2-hdr-spark { display: none; }
+.n2-endcap-slogan { position: relative; z-index: 1; margin: 0; padding: 14px 16px 0; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-weight: 700; font-size: clamp(22px, 3.2vw, 40px); letter-spacing: .02em; text-align: center; background: linear-gradient(180deg, #fff1b8, #ffd86a 45%, #e5b84a 78%, #b98720); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; filter: drop-shadow(0 1px 8px rgba(0, 8, 32, .85)); }
+@media (max-width: 820px), (pointer: coarse) {
+  .n2-endcap { height: clamp(300px, 46svh, 480px); }
+  .n2-endcap-slogan { font-size: clamp(20px, 6vw, 30px); padding-top: 18px; }
+}

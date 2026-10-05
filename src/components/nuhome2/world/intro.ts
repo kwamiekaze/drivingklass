@@ -188,27 +188,32 @@ function keysFor(narrow: boolean): Key[] {
   const out: Key[] = [], fov = f(40, 56);
   // A. a high roadside post, a little before the stop sign: the car comes toward it and the camera pans to keep it in view
   const C0: V3 = fv([-7, 14, 64], [-8, 16, 70]);
-  const drift = (t: number): V3 => [C0[0] + .12 * t, C0[1] + .06 * t, C0[2] + .1 * t];
-  for (let t = 0; t <= T_STOP + 1e-6; t += .5) out.push({ t, p: drift(t), l: [LANE_X + 2.2 * (t / T_STOP), 3.2, carZ1(t) - 4 - 4 * (t / T_STOP)], fov });
-  out.push({ t: T_GO, p: drift(T_GO), l: [LANE_X + 2.4, 3.2, STOP_Z - 8.4], fov });
+  const post = (t: number): V3 => [C0[0] + .12 * t, C0[1] + .06 * t, C0[2] + .1 * t];
+  // the slow push in on the stop sign: it starts while the car is still braking and is still easing in after the car pulls away,
+  // so it never stops and the hand-over to the tracking shot is a long, gentle blend
+  const NEAR: V3 = fv([-1.8, 6.6, 50.5], [-2.4, 7.8, 54.5]), MID: V3 = [3.6, 1.5, 38.6];
+  const Z0 = 6.5, Z1 = T_GO + 3.5, zoom = (t: number) => { const u = Math.min(1, Math.max(0, (t - Z0) / (Z1 - Z0))); return u * u * u * (u * (6 * u - 15) + 10); };
+  const drift = (t: number): V3 => { const a = post(Math.min(t, Z1)), k = zoom(t); return [a[0] + (NEAR[0] - a[0]) * k, a[1] + (NEAR[1] - a[1]) * k, a[2] + (NEAR[2] - a[2]) * k]; };
+  const lookA = (t: number): V3 => { const tt = Math.min(t, T_STOP), carL: V3 = [LANE_X + 2.2 * (tt / T_STOP), 3.2, carZ1(tt) - 4 - 4 * (tt / T_STOP)], k = zoom(t); return [carL[0] + (MID[0] - carL[0]) * k, carL[1] + (MID[1] - carL[1]) * k, carL[2] + (MID[2] - carL[2]) * k]; };
+  for (let t = 0; t < T_GO + 1e-6; t += .1) out.push({ t, p: drift(t), l: lookA(t), fov });
   // B. tracking the drive from above. SW of the car through the first turns, then across to a south-east vantage that holds the
   //    whole lot, the black sign and the stall in one frame while the car crosses in front of the building
   const off1: V3 = fv([-9.5, 11.5, 17], [-11, 13, 20]), off2: V3 = fv([-13, 12.5, 14], [-14, 14.5, 17]);
   const M = PATH.marks, tl1e = T_GO + tAtS(M.l1e), tl2s = T_GO + tAtS(M.l2s), tl2e = T_GO + tAtS(M.l2e);
   const V1: V3 = fv([24, 10.5, 28], [27, 12.5, 36]);
-  const cG = carAt(T_GO, T_GO), dG = drift(T_GO), off0: V3 = [dG[0] - cG.x, dG[1] - cG.y, dG[2] - cG.z];
   for (let t = T_GO + .1; t <= T_PARKED + 1e-6; t += .1) {   // dense keys: the camera tracks the car exactly, no interpolation sag between keys
     const c = carAt(t, T_GO), cp: V3 = [c.x, .002, c.z];   // the lens ignores the 13 cm driveway apron, so the frame never bobs
-    const w0 = ease3((t - T_GO) / 5);                           // from the roadside post to following the car
-    const oA: V3 = [off0[0] + (off1[0] - off0[0]) * w0, off0[1] + (off1[1] - off0[1]) * w0, off0[2] + (off1[2] - off0[2]) * w0];
+    const uw = Math.min(1, Math.max(0, (t - T_GO - .4) / 7)), w0 = uw * uw * uw * (uw * (6 * uw - 15) + 10);   // the long hand-over
     const w1 = ease3((t - tl1e) / 3.2);                         // off1 -> off2 once it is heading up the driveway
-    const o: V3 = [oA[0] + (off2[0] - oA[0]) * w1, oA[1] + (off2[1] - oA[1]) * w1, oA[2] + (off2[2] - oA[2]) * w1];
-    const base: V3 = [cp[0] + o[0], cp[1] + o[1], cp[2] + o[2]];
+    const o: V3 = [off1[0] + (off2[0] - off1[0]) * w1, off1[1] + (off2[1] - off1[1]) * w1, off1[2] + (off2[2] - off1[2]) * w1];
+    const follow: V3 = [cp[0] + o[0], cp[1] + o[1], cp[2] + o[2]], hold = drift(t);
+    const base: V3 = [hold[0] + (follow[0] - hold[0]) * w0, hold[1] + (follow[1] - hold[1]) * w0, hold[2] + (follow[2] - hold[2]) * w0];
     const w2 = ease3((t - tl2s) / (tl2e + 2.4 - tl2s)), dv = Math.max(0, t - tl2s);
     const vant: V3 = [V1[0] - .3 * dv, V1[1] + .02 * dv, V1[2] - .15 * dv];
     const p: V3 = [base[0] + (vant[0] - base[0]) * w2, base[1] + (vant[1] - base[1]) * w2, base[2] + (vant[2] - base[2]) * w2];
     const lead = Math.min(1, (t - T_GO) / 1.5);
-    out.push({ t, p, l: [cp[0] - Math.sin(c.yaw) * 0 + (MON[0] - cp[0]) * .06 * w2, cp[1] + .9, cp[2] + (MON[2] - cp[2]) * .05 * w2], fov: fov * (1 + .0 * lead) });
+    const lf: V3 = [cp[0] + (MON[0] - cp[0]) * .06 * w2, cp[1] + .9, cp[2] + (MON[2] - cp[2]) * .05 * w2], la = lookA(t);
+    out.push({ t, p, l: [la[0] + (lf[0] - la[0]) * w0, la[1] + (lf[1] - la[1]) * w0, la[2] + (lf[2] - la[2]) * w0], fov: fov * (1 + .0 * lead) });
   }
   // C. the car is parked: only now does the camera let go of it
   const signD = f(24.6, 31), signFov = f(40, 54), swoopFov = f(40, 54), tp = T_PARKED, base = tp + 3.2;

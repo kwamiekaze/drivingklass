@@ -49,12 +49,7 @@ function wheelArt(w: number, h: number, night: boolean) {
   // hub
   const hub = g.createRadialGradient(cx - R * .1, cy - R * .2, R * .05, cx, cy, R * .5); hub.addColorStop(0, "#26262b"); hub.addColorStop(1, "#08080a");
   g.fillStyle = hub; g.beginPath(); g.ellipse(cx, cy, R * .38, R * .4, 0, 0, 7); g.fill();
-  // five gold stars and the DK badge
-  const star = (x: number, y: number, r: number) => { g.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, q = k % 2 ? r * .42 : r; g[k ? "lineTo" : "moveTo"](x + Math.cos(a) * q, y + Math.sin(a) * q); } g.closePath(); g.fill(); };
-  const gold = g.createLinearGradient(0, cy - R * .3, 0, cy - R * .2); gold.addColorStop(0, "#ffe9a0"); gold.addColorStop(1, "#c8921c"); g.fillStyle = gold;
-  for (let i = 0; i < 5; i++) star(cx + (i - 2) * R * .095, cy - R * .26, R * .036);
-  g.fillStyle = "#0b2a6b"; g.strokeStyle = "#c9d0dc"; g.lineWidth = 3; g.beginPath(); g.ellipse(cx, cy + R * .02, R * .13, R * .075, 0, 0, 7); g.fill(); g.stroke();
-  g.fillStyle = "#f2d37a"; g.font = `700 ${R * .07}px Georgia, serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("DK", cx, cy + R * .025);
+  // the hub is left plain: the DrivingKlass wheel emblem of the page's end cap sits on it
   // thumb buttons
   g.fillStyle = "#0d0e12"; [-1, 1].forEach(s => { g.beginPath(); g.roundRect(cx + s * R * .6 - R * .09, cy - R * .02, R * .18, R * .16, 8); g.fill(); [0, 1, 2].forEach(i => { g.fillStyle = "#1b1c22"; g.fillRect(cx + s * R * .5 - R * .07 + i * R * .06, cy + R * .3, R * .045, R * .1); }); g.fillStyle = "#0d0e12"; });
   return c;
@@ -117,7 +112,7 @@ export function FooterDrive({ night, paused, still }: { night: boolean; paused: 
       } else if (night) { /* keep the pair quiet while waiting */ }
       // haze along the horizon, then the cab
       const hz = ctx.createLinearGradient(0, hy - H * .1, 0, hy + H * .05); hz.addColorStop(0, `rgba(${P.fog},0)`); hz.addColorStop(.6, `rgba(${P.fog},${night ? .35 : .55})`); hz.addColorStop(1, `rgba(${P.fog},0)`); ctx.fillStyle = hz; ctx.fillRect(0, hy - H * .1, W, H * .15);
-      if (wheel) { const wh = wheel.height, ang = Math.sin(time * .23) * .018; ctx.save(); ctx.translate(W / 2, H - wh * .45); ctx.rotate(ang); ctx.drawImage(wheel, -W / 2, -wh * .55, W, wh); ctx.restore(); }
+      if (wheel) { const wh = wheel.height, top = H * .54, ang = Math.sin(time * .23) * .018; ctx.fillStyle = '#050507'; ctx.fillRect(0, top + wh * .9, W, H - top - wh * .9); ctx.save(); ctx.translate(W / 2, top + wh * .55); ctx.rotate(ang); ctx.drawImage(wheel, -W / 2, -wh * .55, W, wh); ctx.restore(); }
     };
     const loop = (ts: number) => { raf = requestAnimationFrame(loop); const dt = Math.min(.05, (ts - last) / 1000 || .016); if (ts - last < 28) return; last = ts; if (live.current.paused || document.hidden) return; draw(dt); };
     if (live.current.still) { draw(0.016); } else raf = requestAnimationFrame(loop);
