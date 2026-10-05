@@ -163,13 +163,9 @@ function signalAt(s: number) {
   const left = within(M.l1s - 9, M.l1e + 2) || within(M.l2s - 7, M.l2e + 1.5);
   return { left, right };
 }
-/** The height of the ground under the car: the east driveway is a raised apron, 13 cm above the lot. */
-export function groundAt(x: number, z: number) {
-  const dx = Math.abs(x - EAST_X), inLane = 1 - Math.min(1, Math.max(0, (dx - 2.4) / .5));
-  // eased up and down the ramps (zero vertical speed at both ends), the way a car's suspension takes a kerb apron
-  const ss = (a: number, b: number, v: number) => { const u = Math.min(1, Math.max(0, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
-  const ramp = ss(13.5, 14.5, z) * (1 - ss(19.2, 20.2, z));
-  return .002 + .13 * inLane * ramp;
+/** The height of the ground under the car. The whole site is one level surface now, so it is the same everywhere. */
+export function groundAt(_x?: number, _z?: number) {
+  return .002;
 }
 /** Where the car is at time t. yaw is the model's rotation.y: pi/2 means nose toward the building. t3 is when it sets off from the stop sign. */
 export function carAt(t: number, t3 = T_GO): { x: number; y: number; z: number; yaw: number; moving: boolean; left: boolean; right: boolean } {

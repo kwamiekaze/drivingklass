@@ -248,6 +248,8 @@ const STREET_PIECES: [[number, number][], number, number][] = [
 
 function Road({ asphalt }: { asphalt: THREE.Material }) {
   const street = useMemo(() => roadGeo(520, 12.2), []), avenue = useMemo(() => roadGeo(8.2, 208.65), []);
+  // from the lot's front edge (z 14.3) to the street's near edge (z 19.15), butted exactly to both so nothing overlaps
+  const apronWide = useMemo(() => roadGeo(8.2, 4.85), []), apronNarrow = useMemo(() => roadGeo(5.2, 4.85), []);
   const mk = useMemo(markings, []);
   const kerb = '#cfc9bd', walk = '#d9d4c8';
   const segs: [number, number][] = [[4.2, 29.1], [34.3, 260]];       // near side, broken at the three driveways
@@ -260,7 +262,8 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
     {[-1, 1].map(s => <group key={`f${s}`}>
       <Box p={[s * 132.1, .06, 33.3]} s={[255.8, .12, 3.4]} c={walk} r={.85} cast={false} /><Box p={[s * 132.1, .1, 31.4]} s={[255.8, .2, .3]} c={kerb} r={.8} cast={false} />
     </group>)}
-    {[0, -31.7, 31.7].map((x, i) => <mesh key={i} position={[x, .066, 16.7]} material={asphalt} receiveShadow><boxGeometry args={[i ? 5.2 : 8.2, .132, 5.1]} /></mesh>)}
+    {/* the three driveways are flat road, level with the street and the lot: no raised apron, so no wall, no shadow line and no step */}
+    {[[0, 8.2], [-31.7, 5.2], [31.7, 5.2]].map(([x, w]) => <mesh key={x} rotation-x={-Math.PI / 2} position={[x!, .006, 16.725]} geometry={w === 8.2 ? apronWide : apronNarrow} material={asphalt} receiveShadow />)}
     {/* street paint, in pieces so it can break where the real thing does: the centre pair stops at the crosswalks and opens opposite the
         entrance (x +31.7); the near edge line breaks at the avenue and at both driveways (a little wider at the entrance); the far edge
         line stops where the avenue's edge lines curve round into it */}
