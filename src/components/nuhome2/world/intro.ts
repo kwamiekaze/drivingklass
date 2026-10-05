@@ -16,7 +16,7 @@
 export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
 
-export const T_STOP = 12.5, T_HOLD = 13.7, T_PARK = 38, T_DRIVE = 10.5, T_END = 48.5;
+export const T_STOP = 12.5, T_HOLD = 13.7, T_PARK = 38, T_END = 48.5;
 export const LANE_X = 2.05, STOP_Z = 39.5, START_Z = 150;
 export const STALL: V3 = [0, 0, -6];
 
@@ -49,33 +49,79 @@ const series = (keys: { t: number; p: V3; l: V3; fov: number }[]) => {
 // ---------- the car ----------
 const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z + (START_Z - STOP_Z) * (1 - u) * (1 - u); };   // eases to a standstill
 
-// after the stop: avenue, round the fountain counter-clockwise (keeping right), then straight into the reserved stall
-const C0: [number, number] = [0, 6.6], R = 5.7;
-const ph0 = Math.atan2(Math.sqrt(R * R - LANE_X * LANE_X), LANE_X), ph1 = -20 * Math.PI / 180;
+/*
+ * After the stop sign the car takes the owner's route, as drawn on the picture:
+ *   1. up the avenue, a right turn onto the street into the right (south) lane, right blinker on
+ *   2. east along the street to the lot's east driveway, a left turn up the driveway, left blinker on before the turn
+ *   3. north up the driveway, a left turn west into the aisle in front of the building, left blinker on again
+ *   4. west along the aisle, a right turn into the reserved stall, right blinker on before the turn
+ * It slows for every corner and brakes to a stop in the stall. All lengths are in metres, x east, z south.
+ */
+const EAST_X = 31.7, STREET_Z = 28.3, AISLE_Z = -1.9, R1 = 4.5, R2 = 6, R3 = 3.2, R4 = 2.6;
+const V_MAX = 11, A_ACC = 2.6, A_DEC = 3.2, A_LAT = 3.2;   // m/s, m/s2, m/s2 sideways
+type Mark = 'r1s' | 'r1e' | 'l1s' | 'l1e' | 'l2s' | 'l2e' | 'r2s' | 'r2e';
 function buildPath() {
-  const pts: [number, number][] = [];
-  for (let z = STOP_Z; z > C0[1] + Math.sqrt(R * R - LANE_X * LANE_X); z -= .25) pts.push([LANE_X, z]);
-  for (let k = 0; k <= 80; k++) { const a = ph0 + (ph1 - ph0) * (k / 80); pts.push([C0[0] + R * Math.cos(a), C0[1] + R * Math.sin(a)]); }
-  const e = pts[pts.length - 1]!, dir: [number, number] = [Math.sin(ph1), -Math.cos(ph1)];   // heading at the end of the arc
-  const P0: [number, number] = e, P1: [number, number] = [e[0] + dir[0] * 6, e[1] + dir[1] * 6], P2: [number, number] = [0, -1.5], P3: [number, number] = [STALL[0], STALL[2]];
-  for (let k = 1; k <= 60; k++) { const u = k / 60, a = (1 - u) ** 3, b = 3 * u * (1 - u) ** 2, c = 3 * u * u * (1 - u), d = u ** 3; pts.push([a * P0[0] + b * P1[0] + c * P2[0] + d * P3[0], a * P0[1] + b * P1[1] + c * P2[1] + d * P3[1]]); }
-  const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1]! + Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]));
-  return { pts, cum, len: cum[cum.length - 1]! };
+  const pts: [number, number][] = [], kap: number[] = [], marks = {} as Record<Mark, number>;
+  let x = LANE_X, z = STOP_Z, hx = 0, hz = -1, s = 0;
+  const push = (px: number, pz: number, k: number) => { if (pts.length) s += Math.hypot(px - pts[pts.length - 1]![0], pz - pts[pts.length - 1]![1]); pts.push([px, pz]); kap.push(k); };
+  const mark = (m: Mark) => { marks[m] = s; };
+  const straight = (len: number) => { const n = Math.max(2, Math.round(len / .25)); for (let i = 1; i <= n; i++) push(x + hx * len * i / n, z + hz * len * i / n, 0); x += hx * len; z += hz * len; };
+  /** side +1 turns right, -1 turns left, a quarter circle of radius r. x east, z south: right of (hx,hz) is (-hz,hx). */
+  const turn = (side: 1 | -1, r: number) => {
+    const px = side > 0 ? -hz : hz, pz = side > 0 ? hx : -hx;      // unit vector toward the centre
+    const v0x = -px * r, v0z = -pz * r, cx = x - v0x, cz = z - v0z, n = Math.max(12, Math.round(r * 6));
+    for (let i = 1; i <= n; i++) { const a = side * (Math.PI / 2) * i / n, c = Math.cos(a), sn = Math.sin(a); push(cx + v0x * c - v0z * sn, cz + v0x * sn + v0z * c, 1 / r); }
+    const a = side * Math.PI / 2, c = Math.cos(a), sn = Math.sin(a);
+    x = cx + v0x * c - v0z * sn; z = cz + v0x * sn + v0z * c; const nx = hx * c - hz * sn, nz = hx * sn + hz * c; hx = Math.round(nx); hz = Math.round(nz);
+  };
+  push(x, z, 0);
+  straight(STOP_Z - (STREET_Z + R1));
+  mark('r1s'); turn(1, R1); mark('r1e');
+  straight(EAST_X - R2 - x);
+  mark('l1s'); turn(-1, R2); mark('l1e');
+  straight(z - (AISLE_Z + R3));
+  mark('l2s'); turn(-1, R3); mark('l2e');
+  straight(x - R4);
+  mark('r2s'); turn(1, R4); mark('r2e');
+  straight(z - STALL[2]);
+  // speed: as fast as the corners, the engine and the brakes allow, then time is the sum of ds / speed
+  const n = pts.length, v = new Array<number>(n).fill(V_MAX), ds = (i: number) => Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
+  for (let i = 0; i < n; i++) if (kap[i]! > 0) v[i] = Math.min(V_MAX, Math.sqrt(A_LAT / kap[i]!));
+  v[0] = .5; for (let i = 1; i < n; i++) v[i] = Math.min(v[i]!, Math.sqrt(v[i - 1]! ** 2 + 2 * A_ACC * ds(i)));
+  v[n - 1] = .35; for (let i = n - 2; i >= 0; i--) v[i] = Math.min(v[i]!, Math.sqrt(v[i + 1]! ** 2 + 2 * A_DEC * ds(i + 1)));
+  const cum = [0], tm = [0];
+  for (let i = 1; i < n; i++) { cum.push(cum[i - 1]! + ds(i)); tm.push(tm[i - 1]! + ds(i) / ((v[i]! + v[i - 1]!) / 2)); }
+  return { pts, cum, tm, len: cum[n - 1]!, T: tm[n - 1]!, marks };
 }
 const PATH = buildPath();
-const atDist = (s: number) => {
-  const { pts, cum, len } = PATH; s = Math.max(0, Math.min(len, s));
-  let lo = 0, hi = cum.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cum[mid]! <= s) lo = mid; else hi = mid; }
-  const f = (s - cum[lo]!) / ((cum[hi]! - cum[lo]!) || 1), a = pts[lo]!, b = pts[hi]!, a2 = pts[Math.max(0, lo - 2)]!, b2 = pts[Math.min(pts.length - 1, hi + 2)]!;
+/** How long the drive from the stop sign to the stall takes. */
+export const T_DRIVE = PATH.T;
+const atTime = (tau: number) => {
+  const { pts, cum, tm } = PATH; tau = Math.max(0, Math.min(PATH.T, tau));
+  let lo = 0, hi = tm.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tm[mid]! <= tau) lo = mid; else hi = mid; }
+  const f = (tau - tm[lo]!) / ((tm[hi]! - tm[lo]!) || 1), a = pts[lo]!, b = pts[hi]!, a2 = pts[Math.max(0, lo - 3)]!, b2 = pts[Math.min(pts.length - 1, hi + 3)]!;
   const dx = b2[0] - a2[0], dz = b2[1] - a2[1];
-  return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, yaw: Math.atan2(-dz, dx) };
+  return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, yaw: Math.atan2(-dz, dx), s: cum[lo]! + (cum[hi]! - cum[lo]!) * f };
 };
+/** Which blinker is on at a distance s along the drive: on before each turn, off a little after it. */
+function signalAt(s: number) {
+  const M = PATH.marks, within = (a: number, b: number) => s >= a && s <= b;
+  const right = within(.6, M.r1e + 1.5) || within(M.r2s - 8, M.r2e + 1.2);
+  const left = within(M.l1s - 9, M.l1e + 2) || within(M.l2s - 7, M.l2e + 1.5);
+  return { left, right };
+}
+/** The height of the ground under the car: the east driveway is a raised apron, 13 cm above the lot. */
+export function groundAt(x: number, z: number) {
+  const dx = Math.abs(x - EAST_X), inLane = 1 - Math.min(1, Math.max(0, (dx - 2.4) / .5));
+  const ramp = Math.min(1, Math.max(0, (z - 13.7) / .6)) * (1 - Math.min(1, Math.max(0, (z - 19.4) / .6)));
+  return .002 + .13 * inLane * ramp;
+}
 /** Where the car is at time t. yaw is the model's rotation.y: pi/2 means nose toward the building. t3 is when it sets off from the stop sign. */
-export function carAt(t: number, t3 = T_PARK) {
-  if (t < T_STOP) return { x: LANE_X, z: carZ1(t), yaw: Math.PI / 2, moving: true };
-  if (t < t3) return { x: LANE_X, z: STOP_Z, yaw: Math.PI / 2, moving: false };
-  const u = Math.min(1, (t - t3) / T_DRIVE), s = u * u * u * (u * (6 * u - 15) + 10);   // smoother-step: gentle start, gentle arrival
-  const q = atDist(PATH.len * s); return { x: q.x, z: q.z, yaw: q.yaw, moving: u < 1 };
+export function carAt(t: number, t3 = T_PARK): { x: number; y: number; z: number; yaw: number; moving: boolean; left: boolean; right: boolean } {
+  if (t < T_STOP) return { x: LANE_X, y: .002, z: carZ1(t), yaw: Math.PI / 2, moving: true, left: false, right: false };
+  if (t < t3) return { x: LANE_X, y: .002, z: STOP_Z, yaw: Math.PI / 2, moving: false, left: false, right: false };
+  const q = atTime(t - t3), sg = signalAt(q.s);
+  return { x: q.x, y: groundAt(q.x, q.z), z: q.z, yaw: q.yaw, moving: t - t3 < PATH.T, left: sg.left, right: sg.right };
 }
 
 // ---------- the camera ----------

@@ -34,6 +34,7 @@ export function Backdrop({ theme, active }: { theme: Theme; active: number }) {
       if (L.noon) L.noon.style.opacity = String(clamp(1 - Math.abs(p - .45) * 2.6, 0, 1));
       if (L.dusk) L.dusk.style.opacity = String(clamp((p - .55) * 2.4, 0, 1));
       if (L.orb) // it first appears in the open sky above the heading, top left, then drifts across and down as you scroll, so it never starts behind the words
+      L.orb.style.transform = `translate3d(${(5 + p * 77).toFixed(1)}vw, ${(1 + Math.sin(p * Math.PI) * 13 + p * 18).toFixed(1)}vh, 0)`;
       L.orb.style.transform = `translate3d(${(5 + p * 77).toFixed(1)}vw, ${(1 + Math.sin(p * Math.PI) * 13 + p * 18).toFixed(1)}svh, 0)`;
       if (L.far) L.far.style.transform = `translate3d(${(-p * 90).toFixed(1)}px, 0, 0)`;
       if (L.near) L.near.style.transform = `translate3d(${(-p * 220).toFixed(1)}px, 0, 0)`;

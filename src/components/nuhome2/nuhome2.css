@@ -114,7 +114,7 @@
 @media (prefers-reduced-motion: reduce) { .n2-gold, .n2-stars svg, .n2-hero, .n2-bar i { animation: none !important; } .n2-gold { background-position: 40% 0; } }
 
 .n2-pop-layer { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: clamp(10px, 3vw, 32px); background: radial-gradient(ellipse at center, rgba(0, 0, 0, .08), rgba(0, 0, 0, .34)); animation: n2-fade .25s ease both; }
-.n2-pop { width: min(1080px, 100%); max-height: min(86svh, 900px); display: flex; flex-direction: column; overflow: hidden; border-radius: 28px; color: #fffaf0; background: rgba(14, 10, 3, .4); border: 1px solid rgba(242, 193, 78, .55); box-shadow: 0 30px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 244, 200, .35); backdrop-filter: blur(9px) saturate(1.35); -webkit-backdrop-filter: blur(9px) saturate(1.35); animation: n2-pop-in .38s cubic-bezier(.2, .9, .25, 1) both; }
+.n2-pop { width: min(1080px, 100%); max-height: min(86vh, 900px); max-height: min(86svh, 900px); display: flex; flex-direction: column; overflow: hidden; border-radius: 28px; color: #fffaf0; background: rgba(14, 10, 3, .4); border: 1px solid rgba(242, 193, 78, .55); box-shadow: 0 30px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 244, 200, .35); backdrop-filter: blur(9px) saturate(1.35); -webkit-backdrop-filter: blur(9px) saturate(1.35); animation: n2-pop-in .38s cubic-bezier(.2, .9, .25, 1) both; }
 .n2-page[data-theme="day"] .n2-pop { background: rgba(20, 14, 4, .42); }
 .n2-pop-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 12px 26px; border-bottom: 1px solid rgba(242, 193, 78, .35); }
 .n2-pop-eyebrow { display: block; font: 700 10px/1 "Poppins", sans-serif; letter-spacing: .5em; color: #f2c14e; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); }
@@ -135,7 +135,7 @@
 @keyframes n2-pop-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
 .n2-burger { padding: 0; }
 @media (max-width: 900px) { .n2-pop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .n2-pop { border-radius: 22px; max-height: 88svh; } .n2-pop-grid { grid-template-columns: minmax(0, 1fr); padding: 12px 12px 4px; } .n2-pop-head { padding: 16px 14px 10px 18px; } }
+@media (max-width: 560px) { .n2-pop { border-radius: 22px; max-height: 88vh; max-height: 88svh; } .n2-pop-grid { grid-template-columns: minmax(0, 1fr); padding: 12px 12px 4px; } .n2-pop-head { padding: 16px 14px 10px 18px; } }
 @media (prefers-reduced-motion: reduce) { .n2-pop, .n2-pop-layer { animation: none !important; } }
 
 /* while the packages popup is open, the page copy behind it steps aside so only the 3D world shows through the glass */

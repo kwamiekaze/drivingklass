@@ -1,4 +1,4 @@
-import { Component, Suspense, useContext, useMemo, type ReactNode } from 'react';
+import { useRef, Component, Suspense, useContext, useMemo, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -235,8 +235,33 @@ function LoadedTex({ color, plate, position, rotationY, lite }: { color: string;
   </group>;
 }
 
+/** The turn signal lamps: a bright amber lens and a soft glow at each corner of the car, flashing at 90 times a minute. Left is the car's left. */
+export type CarSignal = { left: boolean; right: boolean };
+const glowTex = (() => { if (typeof document === 'undefined') return null; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,190,70,1)'); r.addColorStop(.35, 'rgba(255,150,20,.55)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal: { current: CarSignal } }) {
+  const lamps = useRef<(THREE.Group | null)[]>([]);
+  useFrame(({ clock }) => {
+    const on = Math.floor(clock.elapsedTime / .33) % 2 === 0, s = signal.current;
+    // order: front left, rear left, front right, rear right (car space: nose +x, the car's right is +z)
+    const lit = [s.left && on, s.left && on, s.right && on, s.right && on];
+    lamps.current.forEach((g, i) => { if (g) g.visible = lit[i]!; });
+  });
+  const spots: [number, number, number, number][] = [
+    [L / 2 - .1, H * .46, -W * .37, 1], [-L / 2 + .1, H * .6, -W * .36, -1],
+    [L / 2 - .1, H * .46, W * .37, 1], [-L / 2 + .1, H * .6, W * .36, -1],
+  ];
+  return <group>
+    {spots.map(([x, y, z, d], i) => (
+      <group key={i} ref={(g) => { lamps.current[i] = g; }} position={[x, y, z]} visible={false}>
+        <mesh scale={[.07, .05, .13]} rotation-y={d * .35 * (z < 0 ? -1 : 1)}><sphereGeometry args={[1, 14, 10]} /><meshBasicMaterial color="#ffb02e" toneMapped={false} /></mesh>
+        <sprite scale={[.7, .7, .7]}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>
+      </group>
+    ))}
+  </group>;
+}
+
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
-function LoadedImported({ files, plate, position, rotationY, lite }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean }) {
+function LoadedImported({ files, plate, position, rotationY, lite, signal }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean; signal?: { current: CarSignal } }) {
   const url = lite ? files.lite : files.full;
   const { scene } = useGLTF(url);
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
@@ -274,6 +299,7 @@ function LoadedImported({ files, plate, position, rotationY, lite }: { files: Im
         <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
       </>}
       <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
+      {signal && <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={signal} />}
     </group>
   </group>;
 }
@@ -285,7 +311,7 @@ class Fallback extends Component<{ fallback: ReactNode; children: ReactNode }, {
 }
 
 /** One fleet car: three selected Meshy cars plus two house sedans, all with automatic mobile variants and fallbacks. */
-export function FleetCar({ color, plate, specId, position, rotationY = 0, lite = false }: { color: string; plate: string; specId: keyof typeof CAR_SPECS; position: [number, number, number]; rotationY?: number; lite?: boolean }) {
+export function FleetCar({ color, plate, specId, position, rotationY = 0, lite = false, signal }: { color: string; plate: string; specId: keyof typeof CAR_SPECS; position: [number, number, number]; rotationY?: number; lite?: boolean; signal?: { current: CarSignal } }) {
   const spec = useMemo(() => ({ ...CAR_SPECS[specId]!, color }), [specId, color]);
   const fallback = <Car spec={spec} position={position} rotationY={rotationY} />;
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
@@ -293,5 +319,5 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
   const house = useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
   const imported = IMPORTED_FLEET[specId];
-  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} plate={['civic', 'camry', 'sentra'].includes(specId) ? plate : undefined} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : house;
+  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} plate={['civic', 'camry', 'sentra'].includes(specId) ? plate : undefined} position={position} rotationY={rotationY} lite={lite} signal={signal} /></Suspense></Fallback> : house;
 }

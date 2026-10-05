@@ -12,7 +12,7 @@
 .n2j button:focus-visible, .n2j a:focus-visible { outline: 3px solid var(--n2j-gold); outline-offset: 3px; }
 
 /* sky */
-.n2j-bd { position: sticky; top: 0; height: 100svh; margin-bottom: -100svh; z-index: 0; overflow: hidden; pointer-events: none; contain: layout paint; --city-far: rgba(255, 255, 255, .55); --city-near: rgba(176, 150, 96, .55); --lit: #ffe9a8; }
+.n2j-bd { position: sticky; top: 0; height: 100vh; height: 100svh; margin-bottom: -100vh; margin-bottom: -100svh; z-index: 0; overflow: hidden; pointer-events: none; contain: layout paint; --city-far: rgba(255, 255, 255, .55); --city-near: rgba(176, 150, 96, .55); --lit: #ffe9a8; }
 .n2j-bd[data-theme='night'] { --city-far: rgba(60, 52, 90, .8); --city-near: rgba(18, 16, 30, .97); }
 .n2j-bd > * { position: absolute; }
 .n2j-sky { inset: 0; }
@@ -27,8 +27,8 @@
 .n2j-bd[data-theme='night'] .n2j-sun { display: none; } .n2j-bd[data-theme='night'] .n2j-moon { display: block; }
 .n2j-city { left: -12%; width: 124%; height: 34%; fill: var(--city-far); will-change: transform; } .n2j-city-far { bottom: 18%; } .n2j-city-near { bottom: 8%; height: 28%; fill: var(--city-near); }
 .n2j-city .win { fill: var(--lit); opacity: 0; } .n2j-bd[data-theme='night'] .n2j-city .win { opacity: .8; }
-.n2j-floaters { inset: 0; } .n2j-floaters > span { position: absolute; bottom: -8svh; animation: n2j-rise linear infinite; opacity: .8; will-change: transform; } .n2j-floaters svg { display: block; fill: #f2c14e; filter: drop-shadow(0 0 6px rgba(242, 193, 78, .6)); }
-@keyframes n2j-rise { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 0; } 12% { opacity: .85; } 100% { transform: translate3d(24px, -118svh, 0) rotate(160deg); opacity: 0; } }
+.n2j-floaters { inset: 0; } .n2j-floaters > span { position: absolute; bottom: -8vh; bottom: -8svh; animation: n2j-rise linear infinite; opacity: .8; will-change: transform; } .n2j-floaters svg { display: block; fill: #f2c14e; filter: drop-shadow(0 0 6px rgba(242, 193, 78, .6)); }
+@keyframes n2j-rise { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 0; } 12% { opacity: .85; } 100% { transform: translate3d(24px, -118vh, 0) rotate(160deg); transform: translate3d(24px, -118svh, 0) rotate(160deg); opacity: 0; } }
 
 /* intro */
 .n2j-intro { text-align: center; max-width: 1000px; margin: 0 auto; padding: clamp(90px, 14vh, 160px) 22px 50px; }

@@ -39,7 +39,7 @@ body.dk-portal .text-muted-foreground { color: hsl(43 30% 78%); }
 .dk-sky[data-theme="night"] .dk-sky-stars { opacity: 1; }
 .dk-sky-stars span { position: absolute; border-radius: 50%; background: #fff3c4; animation: dk-tw 5s ease-in-out infinite; }
 @keyframes dk-tw { 0%, 100% { opacity: .2; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.25); } }
-.dk-sky-orb { top: 7svh; right: 8vw; width: clamp(80px, 12vw, 150px); aspect-ratio: 1; }
+.dk-sky-orb { top: 7vh; top: 7svh; right: 8vw; width: clamp(80px, 12vw, 150px); aspect-ratio: 1; }
 .dk-sun, .dk-moon { position: absolute; inset: 0; border-radius: 50%; }
 .dk-sun { background: radial-gradient(circle at 38% 36%, #fff6b0, #ffd23f 55%, #f6a31c); box-shadow: 0 0 60px 20px rgba(255, 205, 80, .5); }
 .dk-moon { display: none; background: radial-gradient(circle at 38% 36%, #fffbe8, #efe4bf 60%, #cfc29a); box-shadow: 0 0 50px 14px rgba(255, 244, 214, .38); }
@@ -47,9 +47,9 @@ body.dk-portal .text-muted-foreground { color: hsl(43 30% 78%); }
 .dk-sky-city { left: 0; width: 100%; height: 34%; fill: rgba(255, 255, 255, .5); } .dk-sky-far { bottom: 16%; } .dk-sky-near { bottom: 6%; height: 28%; fill: rgba(176, 150, 96, .55); }
 .dk-sky[data-theme="night"] .dk-sky-far { fill: rgba(60, 52, 90, .85); } .dk-sky[data-theme="night"] .dk-sky-near { fill: rgba(18, 16, 30, .97); }
 .dk-sky-city rect { fill: #ffe9a8; opacity: 0; } .dk-sky[data-theme="night"] .dk-sky-city rect { opacity: .8; }
-.dk-sky-floaters { inset: 0; } .dk-sky-floaters > span { position: absolute; bottom: -8svh; opacity: 0; animation: dk-rise linear infinite; }
+.dk-sky-floaters { inset: 0; } .dk-sky-floaters > span { position: absolute; bottom: -8vh; bottom: -8svh; opacity: 0; animation: dk-rise linear infinite; }
 .dk-sky-floaters svg { display: block; fill: #f2c14e; filter: drop-shadow(0 0 6px rgba(242, 193, 78, .6)); }
-@keyframes dk-rise { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 0; } 12% { opacity: .75; } 100% { transform: translate3d(24px, -118svh, 0) rotate(160deg); opacity: 0; } }
+@keyframes dk-rise { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 0; } 12% { opacity: .75; } 100% { transform: translate3d(24px, -118vh, 0) rotate(160deg); transform: translate3d(24px, -118svh, 0) rotate(160deg); opacity: 0; } }
 .dk-sky-veil { inset: 0; background: linear-gradient(180deg, rgba(6, 27, 72, .35), rgba(6, 27, 72, .1) 40%, rgba(6, 27, 72, .45)); }
 @media (prefers-reduced-motion: reduce) { .dk-sky-stars span, .dk-sky-floaters > span { animation: none; } .dk-sky-floaters { display: none; } }
 
@@ -63,12 +63,12 @@ body.dk-portal input:disabled { opacity: .7; }
 body.dk-portal button[class*="outline"], body.dk-portal button[class*="bg-background"] { background: rgba(6, 22, 56, .7) !important; border-color: rgba(229, 184, 74, .45) !important; color: #fff4d6 !important; }
 
 /* the portal's sun is the home page sun: sunglasses, smile and blush. The SVG carries its own glow, and the disc is a little smaller inside its box, so the box grows. */
-.dk-sky-orb { width: clamp(150px, 21vw, 270px); top: 3svh; right: 5vw; }
+.dk-sky-orb { width: clamp(150px, 21vw, 270px); top: 3vh; top: 3svh; right: 5vw; }
 .dk-sun { background: none !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible; }
 .dk-sun svg { width: 100%; height: 100%; overflow: visible; display: block; }
 
 /* ---- pages outside the portal layout (sign in, sign up, public report card ...): the sky shows through, the panel stays readable ---- */
-.dk-shell { position: relative; min-height: 100svh; }
+.dk-shell { position: relative; min-height: 100vh; min-height: 100svh; }
 .dk-shell-body { position: relative; z-index: 2; }
 .dk-shell .min-h-screen.bg-background, .dk-shell .bg-background.min-h-screen { background: transparent !important; }
 .dk-shell h1, .dk-shell [class*="CardTitle"], .dk-shell [class*="text-2xl"], .dk-shell [class*="text-3xl"] { font-family: "Cinzel", "Cormorant Garamond", Georgia, serif; }

@@ -1,7 +1,6 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Info, MessageSquare, Moon, Phone, Star, Sun } from "lucide-react";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
-import { ThemeMenu } from "@/components/nuhome2/ThemeMenu";
 import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
@@ -182,7 +181,9 @@ export default function NuHome2() {
               <button type="button" onClick={toContact}>Contact</button>
             </nav>
             <div className="n2-header-actions">
-              <ThemeMenu night={night} />
+              <button type="button" className="n2-hdr-btn" onClick={() => { trackClick("theme_toggle", { theme: night ? "light" : "dark" }); setTheme(night ? "light" : "dark"); }} aria-label={night ? "Switch to day" : "Switch to night"}>
+                {night ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
+              </button>
               <button type="button" className="n2-book" onClick={() => setSheet(true)}>Book a Klass</button>
               <PortalMenuButton variant="hamburger" triggerClassName="n2-hdr-btn" />
             </div>

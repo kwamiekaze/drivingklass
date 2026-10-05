@@ -196,7 +196,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
   const lots = lite ? LOT_LAMPS.slice(0, 4) : LOT_LAMPS, aves = lite ? AVENUE_LAMPS.slice(0, 3) : AVENUE_LAMPS;
   const cars: { id: keyof typeof CAR_SPECS; x: number; z: number; r: number }[] = [
     { id: 'corolla', x: -5.5, z: -6, r: Math.PI / 2 }, { id: 'civic', x: 8.25, z: -6, r: Math.PI / 2 }, { id: 'elantra', x: -16.5, z: -6, r: Math.PI / 2 },
-    { id: 'camry', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
+    { id: 'hero', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
   ];
   return <group>
     <Decals items={mk.white} color="#e2dfd6" /><Decals items={mk.yellow} color="#d9a621" /><Arrows items={arrows} />
@@ -224,7 +224,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
     {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}
-    {cars.map((c, i) => <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={['DK24CO', 'DK25ML', 'DK26OR', 'DK27RR', 'DK28GA'][i]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
+    {cars.map((c, i) => <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={['DK24CO', 'DK25ML', 'DK26OR', 'DK5STAR', 'DK28GA'][i]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
     <IntroCar lite={lite} />
   </group>;
 }
