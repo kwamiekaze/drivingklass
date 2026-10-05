@@ -1,4 +1,4 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { NightCtx, rng } from './theme';
@@ -220,7 +220,10 @@ export function Building({ position, lite, open }: { position: [number, number, 
   const letterFace = useMemo(() => new THREE.MeshBasicMaterial({ map: tex.face, transparent: true, toneMapped: false, depthWrite: false }), [tex]);
   const letterSide = useMemo(() => new THREE.MeshBasicMaterial({ map: tex.side, transparent: true, toneMapped: false, depthWrite: false }), [tex]);
 
-  useFrame(() => {
+  // the carved letters are solid geometry, so unlike the flat star cut-outs they would also show through from behind: only draw them from the front
+  const letters = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => {
+    if (letters.current) letters.current.visible = camera.position.z > position[2] + 5.0;
     const n = mix.current;
     M.led.emissiveIntensity = .7 + 3.4 * n; M.lamp.emissiveIntensity = .7 + 2.0 * n; M.crown.emissiveIntensity = .3 + 1.5 * n;
     stoneMats.forEach(m => { m.emissiveIntensity = .03 + .26 * n; });
@@ -246,7 +249,7 @@ export function Building({ position, lite, open }: { position: [number, number, 
   const cavityGold = useMemo(() => { const m = goldMat(); m.side = THREE.BackSide; m.roughness = .38; return m; }, []);
   const bandStone = useMemo(() => stencilled(stone(12.8, 1.7)), []);   // eslint-disable-line react-hooks/exhaustive-deps
   const archStone = useMemo(() => stencilled(stone(10.6, 3)), []);   // eslint-disable-line react-hooks/exhaustive-deps
-  useGlow([signGold, cavityGold], .02, .9);
+  useGlow([signGold, cavityGold], .02, .55);
   const crownGeo = useMemo(() => { const g = new THREE.ExtrudeGeometry(starShape(1, .46), { depth: .34, bevelEnabled: true, bevelThickness: .12, bevelSize: .06, bevelSegments: 2 }); g.translate(0, 0, -.17); g.computeVertexNormals(); return g; }, []);
 
   /** A wall built from boxes with real openings, so every window has depth. */
@@ -348,11 +351,13 @@ export function Building({ position, lite, open }: { position: [number, number, 
     <mesh geometry={archGeo} material={archStone} position={[0, 7.6, 4.0]} castShadow />
     <mesh geometry={archLed} material={M.led} position={[0, 7.6, 5.04]} />
     {/* the sign: cast gold lettering, five faceted gold stars on the arch, and a warm glow behind them at night */}
-    <Halo position={[0, 6.75, 5.02]} size={[14.5, 3.4]} strength={.5} />
-    <Halo position={[0, 8.35, 5.02]} size={[9.5, 3.6]} strength={.42} />
-    <mesh geometry={signLetters} material={maskMat} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={-2} />
+    <Halo position={[0, 6.75, 5.02]} size={[14.5, 3.4]} strength={.3} />
+    <Halo position={[0, 8.35, 5.02]} size={[9.5, 3.6]} strength={.26} />
     <mesh geometry={signStars.mask} material={maskMat} position={[0, 8.2, 5.002]} renderOrder={-2} />
-    <mesh geometry={signLetters} material={cavityGold} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={1} />
+    <group ref={letters}>
+      <mesh geometry={signLetters} material={maskMat} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={-2} />
+      <mesh geometry={signLetters} material={cavityGold} position={[0, 6.75 - .5, 5.0 - .13 + .002]} renderOrder={1} />
+    </group>
     <mesh geometry={signStars.cut} material={signGold} position={[0, 8.2, 5.0]} renderOrder={1} />
     <mesh position={[0, WALL_H - .08, FRONT - 2]} visible={false}><boxGeometry args={[.01, .01, .01]} /></mesh>
   </group>;

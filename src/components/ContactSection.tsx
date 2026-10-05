@@ -16,7 +16,7 @@ export function ContactSection() {
         {/* Header */}
         <div className="text-center mb-10 md:mb-14">
           <h2 
-            className={cn(
+            className={cn("n2-contact-title",
               "text-3xl md:text-4xl lg:text-5xl font-poppins font-extrabold tracking-[0.15em] uppercase mb-4",
               "transition-colors duration-300",
               isDark && "text-neon-gold animate-breathing-glow"
@@ -31,7 +31,7 @@ export function ContactSection() {
             CONTACT DRIVING KLASS
           </h2>
           <p 
-            className="text-base md:text-lg tracking-wide transition-colors duration-300"
+            className="n2-contact-sub text-base md:text-lg tracking-wide transition-colors duration-300"
             style={{
               color: isDark ? 'hsl(42 30% 70%)' : 'hsl(0 0% 30%)',
               textShadow: isDark 
