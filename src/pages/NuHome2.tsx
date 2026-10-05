@@ -74,6 +74,8 @@ function hasWebGL() {
  * /nuhome2: the DrivingKlass estate. A 3D world with a transparent header, four views behind NEXT VIEW, the Reviews / About Us / Call
  * buttons over the line, and the same message form as the homepage underneath. This is the DrivingKlass home page.
  */
+/** True once the home page has shown in this page load: a refresh resets it, moving around the app does not. */
+const INTRO_SEEN = { v: false };
 export default function NuHome2() {
   const { theme: pref, resolvedTheme, setTheme } = useTheme();
   const [clockDay, setClockDay] = useState(() => georgiaDay());
@@ -95,8 +97,9 @@ export default function NuHome2() {
   const gl = useMemo(() => (typeof document === "undefined" ? true : hasWebGL()), []);
   const skipIntro = useMemo(() => {
     if (q.get("intro") === "0" || q.get("stage") !== null) return true;
-    try { return sessionStorage.getItem("n2-intro") === "1"; } catch { return false; }
+    return INTRO_SEEN.v;                              // coming back to the page inside the app skips it; a refresh (a new page load) plays it
   }, [q]);
+  useEffect(() => { INTRO_SEEN.v = true; }, []);
   const packages = useMemo(() => getPackagesSortedByPosition(), []);
 
   useEffect(() => {
@@ -146,8 +149,8 @@ export default function NuHome2() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const goHome = useCallback(() => { try { sessionStorage.removeItem("n2-intro"); } catch { /* private mode */ } window.location.assign("/"); }, []);   // the wheel refreshes the home page, opening shot included
-  const onIntroDone = useCallback(() => { try { sessionStorage.setItem("n2-intro", "1"); } catch { /* private mode */ } }, []);
+  const goHome = useCallback(() => { window.location.assign("/"); }, []);   // the wheel refreshes the home page, opening shot included
+  const onIntroDone = useCallback(() => { /* nothing to remember: the next page load plays it again */ }, []);
   const scrollDown = useCallback(() => window.scrollTo({ top: window.innerHeight * 0.92, behavior: "smooth" }), []);
   const toContact = useCallback(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), []);
 

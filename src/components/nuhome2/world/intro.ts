@@ -14,6 +14,7 @@
  * Every number below was chosen so the camera never touches a thing; colliders.ts lists the solid objects and
  * scripts/check-intro.mjs walks the whole timeline against them.
  */
+import { CAST, STALLS, type Stall } from './cast';
 export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
 
@@ -23,7 +24,6 @@ export const T_GO = T_STOP + T_GAP, T_PARK = T_GO;
 /** The right blinker goes on this many seconds before the car arrives at the stop sign, and stays on through the wait and the turn. */
 export const T_SIGNAL_LEAD = 3.5;
 export const LANE_X = 2.05, STOP_Z = 39.5, START_Z = 62;
-export const STALL: V3 = [0, 0, -6];
 
 // ---------- monotone cubic interpolation: smooth, and it never overshoots a key, so the path stays where it was designed ----------
 function pchip(ts: number[], vs: number[]) {
@@ -74,7 +74,7 @@ type Mark = 'r1s' | 'r1e' | 'l1s' | 'l1e' | 'l2s' | 'l2e' | 'r2s' | 'r2e';
  *     eased so the car never lurches; time follows exactly from it, and position in time is a smooth cubic, not a staircase
  */
 const DS = .02, EASE = 1.0;   // grid step, and half the length the route is eased over (metres)
-function buildPath() {
+function buildPath(st: Stall) {
   const raw: [number, number][] = [], marks = {} as Record<Mark, number>;
   let x = LANE_X, z = STOP_Z, hx = 0, hz = -1, s = 0;
   const push = (px: number, pz: number) => { if (raw.length) s += Math.hypot(px - raw[raw.length - 1]![0], pz - raw[raw.length - 1]![1]); raw.push([px, pz]); };
@@ -96,9 +96,9 @@ function buildPath() {
   mark('l1s'); turn(-1, R2); mark('l1e');
   straight(z - (AISLE_Z + R3));
   mark('l2s'); turn(-1, R3); mark('l2e');
-  straight(x - R4);
-  mark('r2s'); turn(1, R4); mark('r2e');
-  straight(z - STALL[2]);
+  straight(x - (st.x + R4));                                         // west along the aisle to this car's own stall
+  mark('r2s'); turn(st.side, R4); mark('r2e');                       // right into a row A stall (nose north), left into a row B stall (nose south)
+  straight(Math.abs(z - st.z));
   const len = s, h1: [number, number] = [hx, hz];
   // the route on an even 2 cm grid, carried on straight for a little before the start and after the end so the easing is exact there
   const rc = [0]; for (let i = 1; i < raw.length; i++) rc.push(rc[i - 1]! + Math.hypot(raw[i]![0] - raw[i - 1]![0], raw[i]![1] - raw[i - 1]![1]));
@@ -136,12 +136,17 @@ function buildPath() {
   for (let k = 1; k <= N; k++) tm[k] = tm[k - 1]! + 2 * DS / Math.max(1e-4, vs[k - 1]! + vs[k]!);
   return { N, len: N * DS, px, pz, yaw, vs, tm, T: tm[N]!, marks };
 }
-const PATH = buildPath();
+let PATH = buildPath(STALLS[CAST]);
+/** The stall this page load's car parks in. */
+export let STALL_NOW: Stall = STALLS[CAST];
 /** How long the drive from the stop sign to the stall takes. */
-export const T_DRIVE = PATH.T;
+export let T_DRIVE = PATH.T;
 /** When the car comes to rest in the stall, and when the whole opening shot ends. */
-export const T_PARKED = T_GO + PATH.T;
-export const T_END = T_PARKED + 3.2 + 28.9;
+export let T_PARKED = T_GO + PATH.T;
+export let T_END = T_PARKED + 3.2 + 28.9;
+const CACHE: { wide?: ReturnType<typeof series>; narrow?: ReturnType<typeof series> } = {};
+/** Change the car's stall (used by tests; the page picks its stall once, from the cast). */
+export function setStall(st: Stall) { STALL_NOW = st; PATH = buildPath(st); T_DRIVE = PATH.T; T_PARKED = T_GO + PATH.T; T_END = T_PARKED + 3.2 + 28.9; CACHE.wide = CACHE.narrow = undefined; }
 const tAtS = (sd: number) => { const k = Math.max(0, Math.min(PATH.N - 1, Math.floor(sd / DS))), f = Math.max(0, Math.min(1, sd / DS - k)); return PATH.tm[k]! + (PATH.tm[k + 1]! - PATH.tm[k]!) * f; };
 /** Distance along the drive at time tau: a cubic between grid points that matches both distance and speed, so motion is smooth at any frame rate. */
 const sAt = (tau: number) => {
@@ -159,8 +164,9 @@ const atTime = (tau: number) => {
 /** Which blinker is on at a distance s along the drive: on before each turn, off a little after it. */
 function signalAt(s: number) {
   const M = PATH.marks, within = (a: number, b: number) => s >= a && s <= b;
-  const right = within(0, M.r1e + 1.5) || within(M.r2s - 8, M.r2e + 1.2);
-  const left = within(M.l1s - 9, M.l1e + 2) || within(M.l2s - 7, M.l2e + 1.5);
+  const last = within(M.r2s - 8, M.r2e + 1.2);                       // the blinker for the turn into the stall, on the side the stall is on
+  const right = within(0, M.r1e + 1.5) || (STALL_NOW.side > 0 && last);
+  const left = within(M.l1s - 9, M.l1e + 2) || within(M.l2s - 7, M.l2e + 1.5) || (STALL_NOW.side < 0 && last);
   return { left, right };
 }
 /** The height of the ground under the car. The whole site is one level surface now, so it is the same everywhere. */
@@ -196,7 +202,7 @@ function keysFor(narrow: boolean): Key[] {
   //    whole lot, the black sign and the stall in one frame while the car crosses in front of the building
   const off1: V3 = fv([-9.5, 11.5, 17], [-11, 13, 20]), off2: V3 = fv([-13, 12.5, 14], [-14, 14.5, 17]);
   const M = PATH.marks, tl1e = T_GO + tAtS(M.l1e), tl2s = T_GO + tAtS(M.l2s), tl2e = T_GO + tAtS(M.l2e);
-  const V1: V3 = fv([24, 10.5, 28], [27, 12.5, 36]);
+  const sx = STALL_NOW.x, V1: V3 = fv([24 + .3 * sx, 10.5, 28], [27 + .3 * sx, 12.5, 36]);   // the vantage leans toward the stall the car is heading for
   for (let t = T_GO + .1; t <= T_PARKED + 1e-6; t += .1) {   // dense keys: the camera tracks the car exactly, no interpolation sag between keys
     const c = carAt(t, T_GO), cp: V3 = [c.x, .002, c.z];   // the lens ignores the 13 cm driveway apron, so the frame never bobs
     const uw = Math.min(1, Math.max(0, (t - T_GO - .4) / 7)), w0 = uw * uw * uw * (uw * (6 * uw - 15) + 10);   // the long hand-over
@@ -230,7 +236,6 @@ function keysFor(narrow: boolean): Key[] {
   out.push({ t: T_END, p: [34, 7.5, 33], l: [-2, 8.2, -15], fov: f(40, 58) });
   return out;
 }
-const CACHE: { wide?: ReturnType<typeof series>; narrow?: ReturnType<typeof series> } = {};
 /** The camera pose at time t. Narrow is the portrait phone framing. */
 export function introAt(t: number, narrow = false): Pose {
   const S = (CACHE[narrow ? 'narrow' : 'wide'] ??= series(keysFor(narrow)));

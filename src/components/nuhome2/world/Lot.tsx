@@ -5,6 +5,7 @@ import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 import { CAR_SPECS } from './Cars';
 import { IntroCar } from './IntroCar';
+import { CAST } from './cast';
 import { FLEET_COLORS, FleetCar } from './Fleet';
 const FLEET_ORDER = [FLEET_COLORS.white, FLEET_COLORS.red, FLEET_COLORS.green, FLEET_COLORS.yellow, FLEET_COLORS.black];
 import { StopSign } from './StopSign';
@@ -327,7 +328,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
     {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}
-    {cars.map((c, i) => <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={['DK24CO', 'DK25ML', 'DK26OR', 'DK29OR', 'DK28GA'][i]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
+    {cars.map((c, i) => c.id === CAST ? null : <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={['DK24CO', 'DK25ML', 'DK26OR', 'DK29OR', 'DK28GA'][i]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
     <IntroCar lite={lite} />
   </group>;
 }

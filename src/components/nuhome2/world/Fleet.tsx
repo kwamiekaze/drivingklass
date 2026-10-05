@@ -24,6 +24,8 @@ export const useTexturedFleet = () => typeof window === 'undefined' || new URLSe
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
+/** The Meshy files (full and phone size) of a fleet car, so the opening can start loading its car at once. */
+export const fleetFiles = (id: string) => (IMPORTED_FLEET as Record<string, ImportedFleetAsset | undefined>)[id];
 /** The real lamps of a Meshy car, measured on the model in car space (metres, nose +x, up +y). Centre and half size of the lamp on the car's right (+z); the left lamp is its mirror. Lets the turn signal light the car's own headlight and tail light. */
 type LampBox = [cx: number, cy: number, cz: number, hx: number, hy: number, hz: number];
 type Lamps = { front: LampBox; rear: LampBox };
@@ -35,14 +37,14 @@ const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: numbe
 });
 
 /** The three Meshy cars selected for the new homepage. Their baked paint and surface detail are preserved. */
-const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>> = {
-  corolla: asset('dk-meshy-future-ev'),
-  elantra: asset('dk-meshy-red-sport'),
+export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>> = {
+  corolla: asset('dk-meshy-future-ev', { lamps: { front: [2.1, .62, .7, .26, .13, .24], rear: [-2.12, .8, .7, .24, .1, .22] } }),
+  elantra: asset('dk-meshy-red-sport', { lamps: { front: [2.1, .66, .7, .26, .13, .22], rear: [-2.12, .8, .66, .26, .12, .24] } }),
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
-  civic: asset('dk-meshy-matra-laser', { length: 4.4 }),
+  civic: asset('dk-meshy-matra-laser', { length: 4.4, lamps: { front: [-1.85, .58, .62, .26, .12, .22], rear: [1.88, .74, .62, .24, .1, .22] } }),
   camry: asset('dk-meshy-vibranium', { length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
-  sentra: asset('dk-meshy-lamborghini', { length: 4.5 }),
-  hero: asset('dk-meshy-orange-sport', { length: 4.5 }),   // the parked car that used to be the gold sedan
+  sentra: asset('dk-meshy-lamborghini', { length: 4.5, lamps: { front: [1.92, .57, .58, .26, .1, .2], rear: [-1.92, .7, .58, .24, .1, .22] } }),
+  hero: asset('dk-meshy-orange-sport', { length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
 };
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
@@ -315,7 +317,7 @@ function LampHalos({ lamps, u, signal }: { lamps: Lamps; u: LampUniforms; signal
     halos.current.forEach((h, i) => { if (!h) return; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
   });
   const f = lamps.front, r = lamps.rear;
-  const spots: [number, number, number][] = [[f[0] + f[3] * .45, f[1], -f[2]], [r[0] - r[3] * .45, r[1], -r[2]], [f[0] + f[3] * .45, f[1], f[2]], [r[0] - r[3] * .45, r[1], r[2]]];
+  const fo = Math.sign(f[0]) || 1, ro = Math.sign(r[0]) || -1, spots: [number, number, number][] = [[f[0] + fo * f[3] * .45, f[1], -f[2]], [r[0] + ro * r[3] * .45, r[1], -r[2]], [f[0] + fo * f[3] * .45, f[1], f[2]], [r[0] + ro * r[3] * .45, r[1], r[2]]];   // outward from the car, whichever way its model faces
   return <group>{spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}</group>;
 }
 
@@ -348,6 +350,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal }: { f
     return r;
   }, [scene, lite, lampU]);
   const nz = (files.flip ? -1 : 1) * P.nose;
+  const sig = useMemo(() => (signal && nz < 0 ? ({ get current() { const s = signal.current; return { left: s.right, right: s.left }; } } as { current: CarSignal }) : signal), [signal, nz]);
   const plateMat = useMemo(() => (plate ? new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }) : null), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
   const rf = P.roof.clone().multiplyScalar(fit), pf = P.plateF.clone().multiplyScalar(fit), pr = P.plateR.clone().multiplyScalar(fit);
@@ -361,7 +364,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal }: { f
         <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
       </>}
       <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
-      {signal && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={signal} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={signal} />)}
+      {sig && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={sig} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={sig} />)}
     </group>
   </group>;
 }
