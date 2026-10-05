@@ -58,7 +58,7 @@ function stripTexture(lines: [number, number][], span: number, across: 'u' | 'v'
   }
   const t = across === 'u' ? new THREE.DataTexture(data, N, L, THREE.RGBAFormat) : new THREE.DataTexture(data, L, N, THREE.RGBAFormat);
   t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.anisotropy = 8;
-  if (across === 'u') { t.wrapS = THREE.ClampToEdgeWrapping; t.wrapT = THREE.RepeatWrapping; } else { t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; }
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;   // the stall rows repeat across the strip too; the road strips are empty at their edges, so nothing wraps visibly
   t.needsUpdate = true; return t;
 }
 /**

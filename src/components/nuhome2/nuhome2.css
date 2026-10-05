@@ -316,7 +316,8 @@
 
 /* the footer picture is a viewport-sized window: it stays put while the form scrolls over it, so the road, the trees and the wheel always keep their proportions however tall the form is */
 .n2-cbd { clip-path: inset(0); }
-.n2-cbd .n2-cbd-drive, .n2-cbd .n2-cbd-film { position: fixed; inset: auto; left: 0; top: 0; width: 100vw; height: 100vh; height: 100svh; transform: none; }
+/* sized to the LARGE viewport (the screen with the browser toolbar tucked away), so the film reaches the very bottom whatever the toolbar is doing and no sky colour ever shows beneath it */
+.n2-cbd .n2-cbd-drive, .n2-cbd .n2-cbd-film { position: fixed; inset: auto; left: 0; top: 0; width: 100vw; height: 100vh; height: 100lvh; transform: none; }
 
 /* ---- reel, music and admin controls: three round glass buttons in the rail, before SCROLL ---- */
 .n2-ctl { display: flex; gap: 10px; margin: 0 6px 0 auto; }
