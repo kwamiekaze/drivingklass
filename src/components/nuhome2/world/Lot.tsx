@@ -9,6 +9,7 @@ import { FLEET_COLORS, FleetCar } from './Fleet';
 const FLEET_ORDER = [FLEET_COLORS.white, FLEET_COLORS.red, FLEET_COLORS.green, FLEET_COLORS.yellow, FLEET_COLORS.black];
 import { StopSign } from './StopSign';
 import { Plant } from './Plants';
+import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
 
 /*
  * The lot, laid out like a real one. World meters. Building front wall z -14.5, terrace z -15.2 to -8.6.
@@ -144,18 +145,45 @@ function ReservedSign() {
   </group>;
 }
 
-function Monument({ position }: { position: V3 }) {
-  const tex = useMemo(() => makeCanvasTexture(1024, 400, (g, w, h) => {
-    g.fillStyle = '#0e0e12'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(244,239,228,.6)'; g.lineWidth = 6; g.strokeRect(14, 14, w - 28, h - 28);
-    const sh = starShape(34); for (let i = 0; i < 5; i++) { g.save(); g.translate(w / 2 + (i - 2) * 86, 84); g.scale(1, -1); g.beginPath(); sh.getPoints().forEach((p, k) => (k ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.closePath(); g.fillStyle = '#f4efe4'; g.fill(); g.restore(); }
-    g.fillStyle = '#f4efe4'; g.font = `700 112px ${SIGN_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('DRIVINGKLASS', w / 2, 220);
-    g.fillStyle = '#cfc6b6'; g.font = `600 30px ${SIGN_FONT}`; g.fillText('WHERE 5 STAR DRIVERS ARE MADE', w / 2, 330);
-  }), []);
+/** The street sign. Front (toward the street): black granite, a champagne frame, five faceted stars, cast DRIVINGKLASS and the slogan.
+ *  Back (toward the lot): five bigger stars, centred on the panel. Limestone cap and plinth, uplights, a low hedge at each end. */
+function Monument({ position, pl, lite }: { position: V3; pl: Plant; lite: boolean }) {
+  const mix = useContext(NightCtx);
+  const PW = 6.0, PH = 2.35, PD = .5, PY = .82 + PH / 2;                     // panel size and centre height
+  const metal = useMemo(() => champagneMat(), []);
+  const granite = useMemo(() => { const t = makeCanvasTexture(256, 256, (g, w, h) => { const r = rng(21); g.fillStyle = '#0b0b0e'; g.fillRect(0, 0, w, h); for (let i = 0; i < 1800; i++) { const v = 18 + r() * 40; g.fillStyle = `rgba(${v},${v},${v + 3},${.25 + r() * .3})`; g.fillRect(r() * w, r() * h, 1.5, 1.5); } }, 4, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; return new THREE.MeshStandardMaterial({ map: t, color: '#ffffff', roughness: .38, metalness: .25 }); }, []);
+  const word = useMemo(() => wordGeometry('DRIVINGKLASS', 4.7, .09, .025, .05, lite ? 3 : 6), [lite]);
+  const slogan = useMemo(() => wordGeometry('WHERE 5 STAR DRIVERS ARE MADE', 3.0, .03, .008, .04, 3), []);
+  const front = useMemo(() => starRow([.2, .2, .2, .2, .2], .56, .5), []);
+  const back = useMemo(() => starRow([.5, .5, .5, .5, .5], 1.14, .5), []);
+  const lens = useRef<THREE.MeshStandardMaterial>(null);
+  useGlow([metal], .02, .75);
+  useFrame(() => { if (lens.current) lens.current.emissiveIntensity = .5 + 2.6 * mix.current; });
+  const bar = (w: number, h: number, x: number, y: number, z: number, t = .03) => <mesh key={`${x}${y}${w}${z}`} position={[x, y, z]} material={metal}><boxGeometry args={[w, h, t]} /></mesh>;
+  const frame = (z: number, sgn: number) => { const fw = PW - .3, fh = PH - .3, iw = fw - .2, ih = fh - .2, zz = z + sgn * .012; return [
+    bar(fw, .07, 0, PY + fh / 2, zz), bar(fw, .07, 0, PY - fh / 2, zz), bar(.07, fh, -fw / 2, PY, zz), bar(.07, fh, fw / 2, PY, zz),
+    bar(iw, .022, 0, PY + ih / 2, zz), bar(iw, .022, 0, PY - ih / 2, zz), bar(.022, ih, -iw / 2, PY, zz), bar(.022, ih, iw / 2, PY, zz)]; };
   return <group position={position}>
-    <Box p={[0, .35, 0]} s={[6.6, .7, 1.3]} c="#cfc2a8" r={.8} />
-    <Box p={[0, 1.9, 0]} s={[6.2, 2.4, .5]} c="#0e0e12" r={.5} m={.2} />
-    <mesh position={[0, 1.9, .27]}><planeGeometry args={[6.0, 2.3]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
-    <Box p={[0, 3.18, 0]} s={[6.4, .14, .6]} c="#cfc9bd" r={.6} />
+    <Box p={[0, .25, 0]} s={[7.1, .5, 1.45]} c="#d9ceb4" r={.85} />
+    <Box p={[0, .66, 0]} s={[6.7, .32, 1.2]} c="#e2d8c0" r={.85} />
+    <mesh position={[0, PY, 0]} material={granite} castShadow><boxGeometry args={[PW, PH, PD]} /></mesh>
+    <Box p={[0, .82 + PH + .1, 0]} s={[6.5, .2, .8]} c="#e6dcc6" r={.8} />
+    <Box p={[0, .82 + PH + .22, 0]} s={[6.62, .05, .9]} c="#d9ceb4" r={.8} />
+    {frame(PD / 2, 1)}{frame(-PD / 2, -1)}
+    {/* front */}
+    <mesh geometry={front} material={metal} position={[0, PY + .72, PD / 2 + .012]} />
+    <mesh geometry={word} material={metal} position={[0, PY - .02 - .3, PD / 2 + .012]} castShadow />
+    <mesh geometry={slogan} material={metal} position={[0, PY - .82, PD / 2 + .012]} />
+    <Halo position={[0, PY + .1, PD / 2 + .05]} size={[7.4, 3.2]} strength={.34} />
+    {/* back: five big stars, dead centre */}
+    <mesh geometry={back} material={metal} position={[0, PY, -PD / 2 - .012]} rotation-y={Math.PI} castShadow />
+    <Halo position={[0, PY, -PD / 2 - .05]} size={[7.4, 3.2]} strength={.3} />
+    {/* uplights at the foot of the plinth and a low hedge at each end */}
+    {[-2.6, 2.6].map(x => <group key={x} position={[x, .06, .88]}>
+      <mesh position={[0, .06, 0]}><boxGeometry args={[.3, .16, .26]} /><meshStandardMaterial color="#1c1c20" roughness={.5} metalness={.5} /></mesh>
+      <mesh position={[0, .14, -.02]} rotation-x={-.5}><boxGeometry args={[.22, .03, .2]} /><meshStandardMaterial ref={x < 0 ? lens : undefined} color="#fff0cc" emissive="#ffc77a" emissiveIntensity={.6} /></mesh>
+    </group>)}
+    {[-1, 1].map(s => <Hedge key={s} x={s * 4.3} z={0} w={1.5} d={1.0} h={.62} y={0} seed={31 + s} pl={pl} density={.8} />)}
   </group>;
 }
 
@@ -220,7 +248,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {aves.map(([x, z], i) => <Lamp key={`a${i}`} x={x} z={z} rotY={x < 0 ? 0 : Math.PI} tall={8} />)}
     {wells.map((p, i) => <mesh key={i} position={p} material={wellMat}><cylinderGeometry args={[.14, .14, .08, 10]} /></mesh>)}
     <ReservedSign />
-    <Monument position={[10.4, 0, 14.9]} />
+    <Monument position={[10.4, 0, 14.9]} pl={pl} lite={lite} />
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
     {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}

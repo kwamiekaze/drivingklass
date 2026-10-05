@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { FOV, PAN, STAGES, type Stop, type V3 } from './views';
 import { SOLIDS, clearance, GROUND } from './colliders';
@@ -25,7 +26,8 @@ const curve = (pts: V3[]) => new THREE.CatmullRomCurve3(pts.map(p => new THREE.V
  * the lens exactly where it was, so nothing ever jumps.
  */
 export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: number; reducedMotion: boolean; skipIntro: boolean; onIntroDone: () => void }) {
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
+  const progress = useProgress();
   const controls = useThree(s => s.controls) as unknown as Controls | null;
   const narrow = size.width < 700 || size.width / size.height < .8;
   const q = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
@@ -64,9 +66,23 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     return () => controls.removeEventListener('start', grab);
   }, [controls]);
 
+  // The opening's clock is ticked before everything else every frame (negative priority) from a smoothed frame time, and it is held until the
+  // scene's files are in and its shaders are compiled, so the car never pops in late and no hitch lands in the middle of the drive.
+  const gate = useRef({ frames: 0, ready: false, dt: 1 / 60, since: 0 });
+  useFrame((state, delta) => {
+    const g = gate.current; g.frames++;
+    g.dt += (Math.min(delta, .1) - g.dt) * .12;                         // a running average: one slow frame no longer jolts the whole shot
+    if (!g.ready) {
+      g.since += delta;
+      if ((!progress.active && g.frames > 24 && g.since > .9) || g.since > 7) { try { gl.compile(state.scene, camera); } catch { /* ignore */ } g.ready = true; g.frames = 0; }
+      return;
+    }
+    gl.shadowMap.autoUpdate = false; if (g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;   // shadows refresh every other frame: half the cost, unseen
+    if (!intro.done && introT === null) { intro.t += Math.min(Math.max(g.dt, 1 / 120), .05); if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
+  }, -5);
   useFrame((state, delta) => {
     if (!controls) return;
-    const dt = Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
+    const dt = Math.min(gate.current.dt, .05) || Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
     engine.tick(time);
     if (shotQ === null && cinema.reel && mode.current !== 'cinema') { if (mode.current === 'intro') releaseCar(); mode.current = 'cinema'; cut.current.idx = -1; }
     else if (shotQ === null && !cinema.reel && !cinema.auto && mode.current === 'cinema') mode.current = 'free';
@@ -79,7 +95,6 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     }
     const glide = (p: THREE.Vector3) => { p.x += Math.sin(time * .9) * .03; p.y += Math.sin(time * .7 + 1) * .025; p.z += Math.sin(time * .8 + 2) * .03; };
     const fovTo = (f: number, k = .08) => { if (Math.abs(persp.fov - f) > .01) { persp.fov += (f - persp.fov) * k; persp.updateProjectionMatrix(); } };
-    if (!intro.done && !(introT !== null)) { intro.t += dt; if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
     if (m === 'intro') {
       const pose = introAt(intro.t, narrow);
       camera.position.set(...pose.p); controls.target.set(...pose.l); camera.lookAt(controls.target);

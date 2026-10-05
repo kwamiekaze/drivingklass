@@ -7,7 +7,7 @@ import { Butterflies } from './Butterflies';
 import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun, skyAnchor } from './Sky';
 import { NightCtx } from './theme';
 import { Rig } from './Rig';
-import { detectTier, qualityFor, stepDown, type Quality } from './quality';
+import { detectTier, qualityFor, type Quality } from './quality';
 import { introAt } from './intro';
 
 export type Theme = 'day' | 'night';
@@ -51,13 +51,13 @@ function SkyFollow({ children }: { children: React.ReactNode }) {
   return <group ref={n => { skyAnchor.current = n; }}>{children}</group>;
 }
 
-function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'> & { quality: Quality; shadow: number; onTier: () => void }) {
+function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'> & { quality: Quality; shadow: number; onTier: () => void; onUp: () => void }) {
   const { onTier, theme } = p as typeof p & { onTier: () => void };
   const night = theme === 'night';
   const mix = useRef(night ? 1 : 0);
   const lite = quality.lite;
   return <NightCtx.Provider value={mix}>
-    <PerformanceMonitor flipflops={2} onDecline={onTier} />
+    <PerformanceMonitor ms={350} iterations={8} flipflops={3} onDecline={onTier} onIncline={p.onUp} />
     <ThemeDriver night={night} mix={mix} shadow={shadow} />
     <Environment resolution={lite ? 128 : 256}>
       <Lightformer intensity={2.2} position={[0, 8, 4]} scale={[24, 10, 1]} />
@@ -85,10 +85,16 @@ function Ready({ onReady }: { onReady: () => void }) {
 function dprOverride(): number | null { if (typeof window === 'undefined') return null; const v = Number(new URLSearchParams(window.location.search).get('dpr')); return v >= .5 && v <= 3 ? v : null; }
 
 export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
-  const [tier, setTier] = useState(detectTier);
+  const [tier] = useState(detectTier);
   const first = useRef(tier);
-  const quality = qualityFor(tier);
+  const quality = qualityFor(tier);       // fixed for the whole visit: swapping geometry mid-animation is what made frames hitch
   const fixed = qualityFor(first.current);
+  // the pixel ratio is the only thing that adapts: a notch down when frames drop, a notch back up when they recover (never during the first seconds)
+  const cap = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, typeof window !== 'undefined' && window.innerWidth < 900 ? 1.5 : quality.dpr[1]);
+  const [level, setLevel] = useState(0);
+  const dprNow = Math.max(1, +(cap * (1 - .17 * level)).toFixed(2));
+  const born = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
+  const down = () => setLevel(l => Math.min(3, l + 1)), up = () => { if (performance.now() - born.current > 8000) setLevel(l => Math.max(0, l - 1)); };
   const narrow = typeof window !== 'undefined' && (window.innerWidth < 700 || window.innerWidth / window.innerHeight < .8);
   const k0 = introAt(0, narrow);
   const lost = useRef(onLost);
@@ -96,7 +102,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   return <Canvas
     className="n2-canvas"
     shadows={fixed.shadow > 0}
-    dpr={dprOverride() ?? quality.dpr}
+    dpr={dprOverride() ?? dprNow}
     gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
     camera={{ position: k0.p, fov: k0.fov, near: .5, far: 320 }}
     onCreated={({ gl }) => {
@@ -105,7 +111,7 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
     }}
     fallback={<div />}
   >
-    <World {...rest} quality={quality} shadow={fixed.shadow} onTier={() => setTier(stepDown)} />
+    <World {...rest} quality={quality} shadow={fixed.shadow} onTier={down} onUp={up} />
     <Ready onReady={onReady} />
   </Canvas>;
 }

@@ -22,7 +22,7 @@ export const SOLIDS: Solid[] = [
   cyl('reserved sign pole', -1.75, -8.15, .3, 0, 1.8),
   box('hours A-frame', 2.25, 3.15, 0, 1.25, -9.8, -9.0),
   cyl('fountain', 0, 6.6, 4.3, 0, 4.0),
-  box('monument', 7.0, 13.8, 0, 3.4, 14.1, 15.7),
+  box('monument', 6.1, 14.7, 0, 3.6, 14.1, 15.7),
   box('front hedge L', -29.6, -15.6, 0, 1.4, 14.3, 15.7), box('front hedge R', 15.6, 29.6, 0, 1.4, 14.3, 15.7),
   box('island L', -29.2, -4.7, 0, 5, 8.0, 13.6), box('island R', 4.7, 29.2, 0, 5, 8.0, 13.6),
   cyl('stop sign pole', 5.3, 37.5, .35, 0, 2.5), box('stop sign', 4.8, 5.8, 1.8, 2.6, 37.2, 37.8),

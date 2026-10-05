@@ -52,7 +52,7 @@ const series = (keys: { t: number; p: V3; l: V3; fov: number }[]) => {
 };
 
 // ---------- the car ----------
-const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z + (START_Z - STOP_Z) * (1 - u) * (1 - u); };   // eases to a standstill
+const carZ1 = (t: number) => { const u = Math.min(1, t / T_STOP); return STOP_Z + (START_Z - STOP_Z) * (1 - u) * (1 - u) * (1 - u); };   // braking eases off to nothing: no last-second lurch
 
 /*
  * After the stop sign the car takes the owner's route, as drawn on the picture:

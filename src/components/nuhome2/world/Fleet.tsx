@@ -257,7 +257,7 @@ function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal
   useFrame(({ clock }) => {
     const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime) > .5, r = flash(s.right, sr.current, clock.elapsedTime) > .5;
     const lit = [l, l, r, r];   // front left, rear left, front right, rear right (car space: nose +x, the car's right is +z)
-    lamps.current.forEach((g, i) => { if (g) g.visible = lit[i]!; });
+    lamps.current.forEach((g, i) => { if (g) g.scale.setScalar(lit[i]! ? 1 : .0001); });
   });
   const spots: [number, number, number, number][] = [
     [L / 2 - .1, H * .46, -W * .37, 1], [-L / 2 + .1, H * .6, -W * .36, -1],
@@ -312,11 +312,11 @@ function LampHalos({ lamps, u, signal }: { lamps: Lamps; u: LampUniforms; signal
     const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime), r = flash(s.right, sr.current, clock.elapsedTime);
     u.uLeft.value = l; u.uRight.value = r;
     const lit = [l, l, r, r];   // front left, rear left, front right, rear right
-    halos.current.forEach((h, i) => { if (!h) return; h.visible = lit[i]! > .01; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
+    halos.current.forEach((h, i) => { if (!h) return; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
   });
   const f = lamps.front, r = lamps.rear;
   const spots: [number, number, number][] = [[f[0] + f[3] * .45, f[1], -f[2]], [r[0] - r[3] * .45, r[1], -r[2]], [f[0] + f[3] * .45, f[1], f[2]], [r[0] - r[3] * .45, r[1], r[2]]];
-  return <group>{spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]} visible={false}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}</group>;
+  return <group>{spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}</group>;
 }
 
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
