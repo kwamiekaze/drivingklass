@@ -3,14 +3,20 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FOV, PAN, STAGES, type Stop, type V3 } from './views';
 import { SOLIDS, clearance, GROUND } from './colliders';
-import { T_END, T_DRIVE, intro, introAt, parkCarNow, releaseCar } from './intro';
+import { T_END, T_DRIVE, T_GO, intro, introAt, parkCarNow, releaseCar } from './intro';
+import { usableShots, type Shot } from './shots';
+import { cinema, stopReel } from './reel';
+import { engine } from '../music/engine';
 import { skyAnchor } from './Sky';
 
 type Controls = {
   target: THREE.Vector3; enabled: boolean; autoRotate: boolean; autoRotateSpeed: number; getAzimuthalAngle: () => number;
   addEventListener: (t: string, f: () => void) => void; removeEventListener: (t: string, f: () => void) => void;
 };
-type Mode = 'intro' | 'pan' | 'fly' | 'free';
+type Mode = 'intro' | 'pan' | 'fly' | 'free' | 'cinema';
+/** After the opening has run and the visitor has left the scene alone this long, it starts cutting between its angles by itself. */
+const IDLE_BEFORE_CUTS = 12;
+const shuffle = (n: number, seed: number) => { const a = Array.from({ length: n }, (_, i) => i); let x = seed; for (let i = n - 1; i > 0; i--) { x = (x * 1664525 + 1013904223) >>> 0; const j = x % (i + 1); [a[i], a[j]] = [a[j]!, a[i]!]; } return a; };
 const curve = (pts: V3[]) => new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'centripetal');
 
 /**
@@ -24,10 +30,12 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const narrow = size.width < 700 || size.width / size.height < .8;
   const q = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const hasStage = q.get('stage') !== null, hasCam = q.get('cam') !== null;
+  const shotQ = q.get('shot') !== null ? Number(q.get('shot')) : null, shotU = Number(q.get('shotU') ?? .5);   // ?shot=12&shotU=.5 freezes a cut (for checking)
   const introT = q.get('introT') !== null ? Number(q.get('introT')) : null;      // ?introT=30 freezes the opening shot at 30 seconds (for checking)
-  const mode = useRef<Mode>(introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
+  const mode = useRef<Mode>(shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = 38; intro.done = false; } else parkCarNow(); }
+  const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); }
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
   const C = useMemo(() => ({ pp: curve(PAN.p), pl: curve(PAN.l) }), []);
@@ -51,7 +59,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   useEffect(() => { if (first.current) { first.current = false; return; } mode.current = 'fly'; }, [stage, narrow]);
   useEffect(() => {
     if (!controls) return;
-    const grab = () => { if (mode.current === 'intro') releaseCar(); if (mode.current !== 'free') mode.current = 'free'; };
+    const grab = () => { if (mode.current === 'intro') releaseCar(); stopReel(); if (mode.current !== 'free') mode.current = 'free'; };
     controls.addEventListener('start', grab);
     return () => controls.removeEventListener('start', grab);
   }, [controls]);
@@ -59,6 +67,9 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   useFrame((state, delta) => {
     if (!controls) return;
     const dt = Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
+    engine.tick(time);
+    if (shotQ === null && cinema.reel && mode.current !== 'cinema') { if (mode.current === 'intro') releaseCar(); mode.current = 'cinema'; cut.current.idx = -1; }
+    else if (shotQ === null && !cinema.reel && !cinema.auto && mode.current === 'cinema') mode.current = 'free';
     const m = mode.current;
     controls.autoRotate = m === 'free' && !reducedMotion && !hasCam;
     if (controls.autoRotate) {
@@ -79,6 +90,21 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       tp.current.copy(C.pp.getPoint(u)); glide(tp.current); tl.current.copy(C.pl.getPoint(u));
       camera.position.copy(tp.current); controls.target.copy(tl.current); camera.lookAt(tl.current);
       fovTo(fovNow);
+      if (!reducedMotion && panClock.current > IDLE_BEFORE_CUTS) { cinema.auto = true; mode.current = 'cinema'; cut.current.idx = -1; }
+    } else if (m === 'cinema') {
+      const c = cut.current;
+      if (c.narrow !== narrow || !c.list.length) { c.narrow = narrow; c.list = usableShots(narrow); c.order = shuffle(c.list.length, 7 + (narrow ? 1 : 0)); c.idx = -1; }
+      if (!c.list.length) { mode.current = 'free'; }
+      else if (shotQ !== null) { const sh = c.list[shotQ % c.list.length]!, pose = sh.at(shotU, narrow); camera.position.set(...pose.p); controls.target.set(...pose.l); camera.lookAt(controls.target); persp.fov = pose.fov; persp.updateProjectionMatrix(); }
+      else {
+        c.t += dt;
+        const cur = c.idx >= 0 ? c.list[c.idx]! : null;
+        const beatCut = cinema.playing && cinema.beatCuts !== c.consumed && c.t > 1.4, clockCut = cur ? c.t >= (cinema.playing ? cur.dur * 2.2 : cur.dur) : true;
+        if (!cur || beatCut || clockCut) { c.consumed = cinema.beatCuts; c.idx = c.order[c.pos++ % c.order.length]!; c.t = 0; }
+        const sh = c.list[c.idx]!, pose = sh.at(Math.min(1, c.t / sh.dur), narrow);
+        camera.position.set(...pose.p); controls.target.set(...pose.l); camera.lookAt(controls.target);
+        if (Math.abs(persp.fov - pose.fov) > .005) { persp.fov = pose.fov; persp.updateProjectionMatrix(); }
+      }
     } else if (m === 'fly') {
       const st = stopOf(stage), k = reducedMotion ? 1 : 1 - Math.exp(-2.2 * dt);
       tp.current.set(...st.p); tl.current.set(...st.l);
@@ -98,7 +124,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     }
     if (!done.current && m !== 'intro') { done.current = true; onIntroDone(); }
     if (skyAnchor.current) skyAnchor.current.position.set(camera.position.x, 0, camera.position.z);
-    if (m !== 'intro') { const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 45); t.y = THREE.MathUtils.clamp(t.y, .4, 16); }
+    if (m !== 'intro' && m !== 'cinema') { const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 45); t.y = THREE.MathUtils.clamp(t.y, .4, 16); }
   });
   return null;
 }

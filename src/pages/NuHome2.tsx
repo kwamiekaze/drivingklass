@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Info, MessageSquare, Moon, Phone, Star, Sun } from "lucide-react";
+import { MusicControls } from "@/components/nuhome2/music/MusicControls";
 import { PortalMenuButton } from "@/components/PortalMenuButton";
 import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
@@ -216,6 +217,7 @@ export default function NuHome2() {
             <button type="button" className="n2-btn n2-btn--gold n2-rail-book" onClick={() => setSheet(true)}>Book a Klass</button>
             <button type="button" className="n2-btn n2-btn--glass n2-rail-msg" onClick={() => setMsgOpen(true)} aria-label="Send us a message"><MessageSquare size={15} aria-hidden="true" /><span>Message</span></button>
           </div>
+          <MusicControls />
           <div className="n2-swipe" role="button" tabIndex={0} aria-label="Scroll down to send us a message" onClick={scrollDown}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollDown(); }}>
             <span className="n2-lbl-touch">SWIPE</span><span className="n2-lbl-mouse">SCROLL</span>

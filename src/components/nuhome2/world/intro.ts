@@ -1,14 +1,15 @@
 /*
  * The opening shot, written as one pure timeline so it can be tested without a browser.
  *
- *   0 s      a gold DrivingKlass car drives down the avenue in the right-hand lane, the camera chasing it
- *   12.5 s   the car stops at the stop sign
- *   13.7 s   the camera lifts away, over the stop sign, and settles in front of the black DrivingKlass sign
- *   21.8 s   it hovers up and over the lot and sinks straight toward the front door
- *   29 s     ultra close on the OPEN / CLOSED sign
- *   33 s     it pulls back and down to the opening hours board on its A-frame
- *   38 s     it pulls all the way back, up and over everything, to where the idle pan begins
- *   38 s     the car sets off again, round the fountain, and parks in the reserved stall in front of the door
+ *   0 s       the camera hangs high beside the avenue, as in the owner's reference recording, and watches the school car
+ *             approach the stop sign; the right blinker is on before it gets there
+ *   12.5 s    the car stops at the sign, blinker flashing. The camera has the stop sign, the car and, far behind them,
+ *             the black DrivingKlass sign in one frame
+ *   15.1 s    the car sets off. The camera tracks it from above through every turn and every blinker, right onto the
+ *             street, left into the driveway, left into the aisle, right into the reserved stall, always with the lot
+ *             and the signs in view
+ *   ~35.7 s   only once the car is parked does the camera leave it: a smooth move to the black sign, up and forward to
+ *             the OPEN / CLOSED sign on the door, back and down to the hours board, then all the way back
  *
  * Every number below was chosen so the camera never touches a thing; colliders.ts lists the solid objects and
  * scripts/check-intro.mjs walks the whole timeline against them.
@@ -16,10 +17,12 @@
 export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
 
-export const T_STOP = 12.5, T_HOLD = 13.7, T_PARK = 38, T_END = 48.5;
+export const T_STOP = 12.5, T_GAP = 2.6;
+/** The moment the car sets off again from the stop sign. */
+export const T_GO = T_STOP + T_GAP, T_PARK = T_GO;
 /** The right blinker goes on this many seconds before the car arrives at the stop sign, and stays on through the wait and the turn. */
 export const T_SIGNAL_LEAD = 3.5;
-export const LANE_X = 2.05, STOP_Z = 39.5, START_Z = 150;
+export const LANE_X = 2.05, STOP_Z = 39.5, START_Z = 62;
 export const STALL: V3 = [0, 0, -6];
 
 // ---------- monotone cubic interpolation: smooth, and it never overshoots a key, so the path stays where it was designed ----------
@@ -98,6 +101,10 @@ function buildPath() {
 const PATH = buildPath();
 /** How long the drive from the stop sign to the stall takes. */
 export const T_DRIVE = PATH.T;
+/** When the car comes to rest in the stall, and when the whole opening shot ends. */
+export const T_PARKED = T_GO + PATH.T;
+export const T_END = T_PARKED + 3.2 + 28.9;
+const tAtS = (sd: number) => { const { cum, tm } = PATH; let lo = 0, hi = cum.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cum[mid]! <= sd) lo = mid; else hi = mid; } const f = (sd - cum[lo]!) / ((cum[hi]! - cum[lo]!) || 1); return tm[lo]! + (tm[hi]! - tm[lo]!) * f; };
 const atTime = (tau: number) => {
   const { pts, cum, tm } = PATH; tau = Math.max(0, Math.min(PATH.T, tau));
   let lo = 0, hi = tm.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tm[mid]! <= tau) lo = mid; else hi = mid; }
@@ -119,7 +126,7 @@ export function groundAt(x: number, z: number) {
   return .002 + .13 * inLane * ramp;
 }
 /** Where the car is at time t. yaw is the model's rotation.y: pi/2 means nose toward the building. t3 is when it sets off from the stop sign. */
-export function carAt(t: number, t3 = T_PARK): { x: number; y: number; z: number; yaw: number; moving: boolean; left: boolean; right: boolean } {
+export function carAt(t: number, t3 = T_GO): { x: number; y: number; z: number; yaw: number; moving: boolean; left: boolean; right: boolean } {
   if (t < T_STOP) return { x: LANE_X, y: .002, z: carZ1(t), yaw: Math.PI / 2, moving: true, left: false, right: t >= T_STOP - T_SIGNAL_LEAD };
   if (t < t3) return { x: LANE_X, y: .002, z: STOP_Z, yaw: Math.PI / 2, moving: false, left: false, right: true };   // waiting at the sign to turn right
   const q = atTime(t - t3), sg = signalAt(q.s);
@@ -128,31 +135,54 @@ export function carAt(t: number, t3 = T_PARK): { x: number; y: number; z: number
 
 // ---------- the camera ----------
 type Key = { t: number; p: V3; l: V3; fov: number };
+const MON: V3 = [10.4, 1.9, 15.2];   // the black DrivingKlass sign
+const ease3 = (u: number) => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
 function keysFor(narrow: boolean): Key[] {
-  const W = narrow ? 1 : 0, f = (w: number, n: number) => (narrow ? n : w);
-  const out: Key[] = [];
-  const chaseFov = f(38, 54), back = f(7.6, 9.6), up = f(2.3, 2.7);
-  for (let t = 0; t <= T_STOP + 1e-6; t += .5) { const z = carZ1(t); out.push({ t, p: [LANE_X - .9, up, z + back], l: [LANE_X, 1.25, z - 5], fov: chaseFov }); }
-  const stopP: V3 = [LANE_X - .9, up, STOP_Z + back], stopL: V3 = [LANE_X, 1.25, STOP_Z - 5];
-  const signD = f(24.6, 31), signFov = f(40, 54), swoopFov = f(40, 54);
-  out.push({ t: T_HOLD, p: stopP, l: stopL, fov: chaseFov });
-  out.push({ t: 17.2, p: [5.2, 5.6, 33.0], l: [8.2, 1.9, 22], fov: f(39, 54) });
-  out.push({ t: 19.6, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
-  out.push({ t: 21.8, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
-  out.push({ t: 23.0, p: [6.2, 8.6, 18.0], l: [4.0, 3.0, 4.0], fov: signFov });
-  out.push({ t: 25.2, p: [1.2, 8.2, 8.0], l: [1.2, 2.6, -6.0], fov: swoopFov });
-  out.push({ t: 27.4, p: [.8, 3.4, -8.6], l: [1.3, 2.7, -14.4], fov: f(34, 46) });
-  const doorZ = f(-12.9, -12.0), doorFov = f(31, 46);   // close enough that OPEN fills the screen, with the whole sign in view
-  out.push({ t: 29.0, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
-  out.push({ t: 31.0, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
-  out.push({ t: 33.0, p: [1.15, 2.2, -11.0], l: [2.2, 1.4, -9.8], fov: f(30, 44) });
-  out.push({ t: 35.2, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });   // the board sits in the clear band between the header and the buttons
-  out.push({ t: 38.0, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });
-  out.push({ t: 41.0, p: [1.4, 6.0, -1.5], l: [.5, 3.0, -14.0], fov: f(38, 54) });
-  out.push({ t: 43.5, p: [3.0, 9.8, 10.5], l: [0, 6.0, -15.0], fov: f(40, 56) });
-  out.push({ t: 46.0, p: [14.0, 10.5, 22.0], l: [-2, 8.0, -14.0], fov: f(40, 58) });
+  const f = (w: number, n: number) => (narrow ? n : w), fv = (w: V3, n: V3): V3 => (narrow ? n : w);
+  const out: Key[] = [], fov = f(40, 56);
+  // A. a high roadside post, a little before the stop sign: the car comes toward it and the camera pans to keep it in view
+  const C0: V3 = fv([-7, 14, 64], [-8, 16, 70]);
+  const drift = (t: number): V3 => [C0[0] + .12 * t, C0[1] + .06 * t, C0[2] + .1 * t];
+  for (let t = 0; t <= T_STOP + 1e-6; t += .5) out.push({ t, p: drift(t), l: [LANE_X + 2.2 * (t / T_STOP), 3.2, carZ1(t) - 4 - 4 * (t / T_STOP)], fov });
+  out.push({ t: T_GO, p: drift(T_GO), l: [LANE_X + 2.4, 3.2, STOP_Z - 8.4], fov });
+  // B. tracking the drive from above. SW of the car through the first turns, then across to a south-east vantage that holds the
+  //    whole lot, the black sign and the stall in one frame while the car crosses in front of the building
+  const off1: V3 = fv([-9.5, 11.5, 17], [-11, 13, 20]), off2: V3 = fv([-13, 12.5, 14], [-14, 14.5, 17]);
+  const M = PATH.marks, tl1e = T_GO + tAtS(M.l1e), tl2s = T_GO + tAtS(M.l2s), tl2e = T_GO + tAtS(M.l2e);
+  const V1: V3 = fv([24, 10.5, 28], [27, 12.5, 36]);
+  const cG = carAt(T_GO, T_GO), dG = drift(T_GO), off0: V3 = [dG[0] - cG.x, dG[1] - cG.y, dG[2] - cG.z];
+  for (let t = T_GO + .5; t <= T_PARKED + 1e-6; t += .5) {
+    const c = carAt(t, T_GO), cp: V3 = [c.x, c.y, c.z];
+    const w0 = ease3((t - T_GO) / 5);                           // from the roadside post to following the car
+    const oA: V3 = [off0[0] + (off1[0] - off0[0]) * w0, off0[1] + (off1[1] - off0[1]) * w0, off0[2] + (off1[2] - off0[2]) * w0];
+    const w1 = ease3((t - tl1e) / 3.2);                         // off1 -> off2 once it is heading up the driveway
+    const o: V3 = [oA[0] + (off2[0] - oA[0]) * w1, oA[1] + (off2[1] - oA[1]) * w1, oA[2] + (off2[2] - oA[2]) * w1];
+    const base: V3 = [cp[0] + o[0], cp[1] + o[1], cp[2] + o[2]];
+    const w2 = ease3((t - tl2s) / (tl2e + 2.4 - tl2s)), dv = Math.max(0, t - tl2s);
+    const vant: V3 = [V1[0] - .3 * dv, V1[1] + .02 * dv, V1[2] - .15 * dv];
+    const p: V3 = [base[0] + (vant[0] - base[0]) * w2, base[1] + (vant[1] - base[1]) * w2, base[2] + (vant[2] - base[2]) * w2];
+    const lead = Math.min(1, (t - T_GO) / 1.5);
+    out.push({ t, p, l: [cp[0] - Math.sin(c.yaw) * 0 + (MON[0] - cp[0]) * .06 * w2, cp[1] + .9, cp[2] + (MON[2] - cp[2]) * .05 * w2], fov: fov * (1 + .0 * lead) });
+  }
+  // C. the car is parked: only now does the camera let go of it
+  const signD = f(24.6, 31), signFov = f(40, 54), swoopFov = f(40, 54), tp = T_PARKED, base = tp + 3.2;
+  out.push({ t: base - 2.4, p: [5.2, 5.6, 33.0], l: [8.2, 1.9, 22], fov: f(39, 54) });
+  out.push({ t: base, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
+  out.push({ t: base + 2.2, p: [9.6, 2.4, signD], l: [10.4, 1.9, 15.2], fov: signFov });
+  out.push({ t: base + 3.4, p: [6.2, 8.6, 18.0], l: [4.0, 3.0, 4.0], fov: signFov });
+  out.push({ t: base + 5.6, p: [1.2, 8.2, 8.0], l: [1.2, 2.6, -6.0], fov: swoopFov });
+  out.push({ t: base + 7.8, p: [.8, 3.4, -8.6], l: [1.3, 2.7, -14.4], fov: f(34, 46) });
+  const doorZ = f(-12.9, -12.0), doorFov = f(31, 46);   // close enough that OPEN (or CLOSED) fills the screen, with the whole sign in view
+  out.push({ t: base + 9.4, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
+  out.push({ t: base + 11.4, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
+  out.push({ t: base + 13.4, p: [1.15, 2.2, -11.0], l: [2.2, 1.4, -9.8], fov: f(30, 44) });
+  out.push({ t: base + 15.6, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });   // the hours board sits in the clear band between the header and the buttons
+  out.push({ t: base + 18.4, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });
+  out.push({ t: base + 21.4, p: [1.4, 6.0, -1.5], l: [.5, 3.0, -14.0], fov: f(38, 54) });
+  out.push({ t: base + 23.9, p: [3.0, 9.8, 10.5], l: [0, 6.0, -15.0], fov: f(40, 56) });
+  out.push({ t: base + 26.4, p: [14.0, 10.5, 22.0], l: [-2, 8.0, -14.0], fov: f(40, 58) });
   out.push({ t: T_END, p: [34, 7.5, 33], l: [-2, 8.2, -15], fov: f(40, 58) });
-  void W; return out;
+  return out;
 }
 const CACHE: { wide?: ReturnType<typeof series>; narrow?: ReturnType<typeof series> } = {};
 /** The camera pose at time t. Narrow is the portrait phone framing. */
@@ -162,8 +192,8 @@ export function introAt(t: number, narrow = false): Pose {
 }
 
 /** Shared clock: the rig advances it, the car reads it. Lets the car carry on if the visitor takes the camera. */
-export const intro = { t: 0, t3: T_PARK, done: false };
-/** Called when the visitor takes the camera mid-shot: the car stops waiting for the tour and heads for its stall. */
-export function releaseCar() { if (intro.t < T_PARK) intro.t3 = Math.max(T_HOLD, intro.t + (intro.t < T_STOP ? 0 : .6)); }
+export const intro = { t: 0, t3: T_GO, done: false };
+/** Called when the visitor takes the camera mid-shot: the car carries on with its route (no waiting for the tour). */
+export function releaseCar() { if (intro.t < T_GO) intro.t3 = Math.max(T_STOP + .6, intro.t + (intro.t < T_STOP ? 0 : .4)); }
 /** No opening shot (repeat visit, reduced motion, ?intro=0): the car is simply parked in its stall. */
 export function parkCarNow() { intro.t = T_END + T_DRIVE + 1; intro.t3 = 0; intro.done = true; }
