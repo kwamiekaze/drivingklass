@@ -246,12 +246,6 @@ export default function NuHome2() {
       <section className="n2-below text-foreground">
         <ContactBackdrop night={night} />
         <ContactSection />
-        {/* the end of the page: the steering wheel of the drive behind, the DrivingKlass wheel on its hub, and the header's navy and gold
-            band turned upside down, running to the very bottom */}
-        <footer className="n2-endcap">
-          <span className="n2-endcap-emblem" aria-hidden="true"><img src={wheelUrl} alt="" width={480} height={480} decoding="async" loading="lazy" /></span>
-          <div className="n2-endcap-band"><HeaderPanel /><p className="n2-endcap-slogan">{BRAND.slogan}</p></div>
-        </footer>
       </section>
 
       <ReviewsModal isOpen={reviewsOpen} onClose={() => setReviewsOpen(false)} />

@@ -368,3 +368,13 @@
   .n2-endcap { height: clamp(300px, 46svh, 480px); }
   .n2-endcap-slogan { font-size: clamp(20px, 6vw, 30px); padding-top: 18px; }
 }
+
+
+/* ---- the page now ends right under the contact form: no footer band, nothing to scroll past ---- */
+.n2-below #contact { padding-bottom: clamp(20px, 4svh, 36px) !important; }
+
+/* ---- the contact heading wears the header's look: Cinzel in polished gold, a Cormorant italic line under it ---- */
+.n2-below .n2-contact-title { font-family: "Cinzel", "Cormorant Garamond", Georgia, serif !important; font-weight: 700; letter-spacing: .08em !important; line-height: 1.12; text-wrap: balance; animation: none !important;
+  font-size: clamp(26px, 8vw, 52px); background: linear-gradient(180deg, #fff6c9 0%, #ffe08a 38%, #e5b84a 72%, #b98720 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; text-shadow: none !important; filter: drop-shadow(0 2px 10px rgba(0, 8, 32, .75)) drop-shadow(0 0 14px rgba(229, 184, 74, .28)); }
+.n2-below .n2-contact-title::after { content: ""; display: block; width: min(220px, 52%); height: 1px; margin: 14px auto 0; background: linear-gradient(90deg, transparent, #e5b84a 20%, #ffd86a 50%, #e5b84a 80%, transparent); -webkit-text-fill-color: initial; }
+.n2-below .n2-contact-sub { font-family: "Cormorant Garamond", Georgia, serif !important; font-style: italic; font-weight: 600; font-size: clamp(20px, 5.4vw, 30px) !important; letter-spacing: .02em !important; color: #fff1c4 !important; text-shadow: 0 1px 10px rgba(0, 8, 32, .9), 0 0 2px rgba(0, 8, 32, .7) !important; }
