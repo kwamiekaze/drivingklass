@@ -24,8 +24,11 @@ export const useTexturedFleet = () => typeof window === 'undefined' || new URLSe
 export const FLEET_COLORS = { red: '#ce1126', black: '#101114', yellow: '#f7c600', white: '#f3f3f0', green: '#009e49' } as const;
 const LENGTH = 4.9;   // metres, the reference car's class
 
-type ImportedFleetAsset = { full: string; lite: string; length?: number; flip?: boolean; roofX?: number };   // length: metres, flip: model nose guess is wrong, roofX: topper position along the car (fraction of length from the middle)
-const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: number } = {}): ImportedFleetAsset => ({
+/** The real lamps of a Meshy car, measured on the model in car space (metres, nose +x, up +y). Centre and half size of the lamp on the car's right (+z); the left lamp is its mirror. Lets the turn signal light the car's own headlight and tail light. */
+type LampBox = [cx: number, cy: number, cz: number, hx: number, hy: number, hz: number];
+type Lamps = { front: LampBox; rear: LampBox };
+type ImportedFleetAsset = { full: string; lite: string; length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number };   // length: metres, flip: model nose guess is wrong, roofX: topper position along the car (fraction of length from the middle)
+const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number } = {}): ImportedFleetAsset => ({
   full: `${import.meta.env.BASE_URL}models/${name}.glb`,
   lite: `${import.meta.env.BASE_URL}models/${name}-lite.glb`,
   ...o,
@@ -37,7 +40,7 @@ const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>
   elantra: asset('dk-meshy-red-sport'),
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
   civic: asset('dk-meshy-matra-laser', { length: 4.4 }),
-  camry: asset('dk-meshy-orange-sport', { length: 4.5 }),
+  camry: asset('dk-meshy-vibranium', { length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
   sentra: asset('dk-meshy-lamborghini', { length: 4.5 }),
 };
 
@@ -235,15 +238,24 @@ function LoadedTex({ color, plate, position, rotationY, lite }: { color: string;
   </group>;
 }
 
-/** The turn signal lamps: a bright amber lens and a soft glow at each corner of the car, flashing at 90 times a minute. Left is the car's left. */
+/** The turn signal: left is the car's left. Flashes at 90 a minute, 50% on, and always starts on, the way a real stalk does. */
 export type CarSignal = { left: boolean; right: boolean };
 const glowTex = (() => { if (typeof document === 'undefined') return null; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,190,70,1)'); r.addColorStop(.35, 'rgba(255,150,20,.55)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const FLASH = .66, ON = .33;
+const ss = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** One side's flasher: 0 to 1, with a quick lamp warm-up and fade-out. `since` is when that side's signal was switched on. */
+function flash(on: boolean, since: { v: number }, now: number) {
+  if (!on) { since.v = -1; return 0; }
+  if (since.v < 0) since.v = now;
+  const c = (now - since.v) % FLASH;
+  return c < ON ? ss(0, .045, c) : 1 - ss(ON, ON + .06, c);
+}
+/** The generic lamps for a car whose file does not say where its lights are: a lens and a glow at each corner. */
 function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal: { current: CarSignal } }) {
-  const lamps = useRef<(THREE.Group | null)[]>([]);
+  const lamps = useRef<(THREE.Group | null)[]>([]), sl = useRef({ v: -1 }), sr = useRef({ v: -1 });
   useFrame(({ clock }) => {
-    const on = Math.floor(clock.elapsedTime / .33) % 2 === 0, s = signal.current;
-    // order: front left, rear left, front right, rear right (car space: nose +x, the car's right is +z)
-    const lit = [s.left && on, s.left && on, s.right && on, s.right && on];
+    const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime) > .5, r = flash(s.right, sr.current, clock.elapsedTime) > .5;
+    const lit = [l, l, r, r];   // front left, rear left, front right, rear right (car space: nose +x, the car's right is +z)
     lamps.current.forEach((g, i) => { if (g) g.visible = lit[i]!; });
   });
   const spots: [number, number, number, number][] = [
@@ -260,17 +272,67 @@ function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal
   </group>;
 }
 
+/**
+ * The turn signal of a car with measured lamps. The car's own headlight and tail light light up amber: the paint shader finds the
+ * bright parts of the lamp in the model's texture, inside the lamp's box, and turns exactly those amber, so the glow follows the
+ * real lamp shape on the real surface. A soft halo sits just outside each lamp. `u` holds the two flasher values the shader reads.
+ */
+type LampUniforms = { uLeft: { value: number }; uRight: { value: number }; uToCar: { value: THREE.Matrix4 }; uFc: { value: THREE.Vector3 }; uFh: { value: THREE.Vector3 }; uRc: { value: THREE.Vector3 }; uRh: { value: THREE.Vector3 } };
+const makeLampUniforms = (lamps: Lamps, toCar: THREE.Matrix4): LampUniforms => ({
+  uLeft: { value: 0 }, uRight: { value: 0 }, uToCar: { value: toCar },
+  uFc: { value: new THREE.Vector3(...lamps.front.slice(0, 3) as [number, number, number]) }, uFh: { value: new THREE.Vector3(...lamps.front.slice(3) as [number, number, number]) },
+  uRc: { value: new THREE.Vector3(...lamps.rear.slice(0, 3) as [number, number, number]) }, uRh: { value: new THREE.Vector3(...lamps.rear.slice(3) as [number, number, number]) },
+});
+function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms) {
+  material.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLp;\nuniform mat4 uToCar;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLp = (uToCar * vec4(position, 1.)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vLp;
+        uniform float uLeft, uRight; uniform vec3 uFc, uFh, uRc, uRh;
+        float lampIn(vec3 p, vec3 c, vec3 h) { vec3 d = abs(p - c) / h; return 1. - smoothstep(.72, .96, max(d.x, max(d.y, d.z))); }`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        {
+          vec3 q = vec3(vLp.x, vLp.y, abs(vLp.z));
+          float inside = max(lampIn(q, uFc, uFh), lampIn(q, uRc, uRh));
+          float on = vLp.z > 0. ? uRight : uLeft;
+          float lum = dot(diffuseColor.rgb, vec3(.3, .59, .11));
+          float lit = inside * on * (.08 + .92 * smoothstep(.05, .4, lum));
+          totalEmissiveRadiance += vec3(1., .46, .03) * lit * 3.6;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1., .5, .06), lit * .35);
+        }`);
+  };
+  material.customProgramCacheKey = () => 'dk-lamps-v1';
+}
+function LampHalos({ lamps, u, signal }: { lamps: Lamps; u: LampUniforms; signal: { current: CarSignal } }) {
+  const halos = useRef<(THREE.Sprite | null)[]>([]), sl = useRef({ v: -1 }), sr = useRef({ v: -1 });
+  useFrame(({ clock }) => {
+    const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime), r = flash(s.right, sr.current, clock.elapsedTime);
+    u.uLeft.value = l; u.uRight.value = r;
+    const lit = [l, l, r, r];   // front left, rear left, front right, rear right
+    halos.current.forEach((h, i) => { if (!h) return; h.visible = lit[i]! > .01; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
+  });
+  const f = lamps.front, r = lamps.rear;
+  const spots: [number, number, number][] = [[f[0] + f[3] * .45, f[1], -f[2]], [r[0] - r[3] * .45, r[1], -r[2]], [f[0] + f[3] * .45, f[1], f[2]], [r[0] - r[3] * .45, r[1], r[2]]];
+  return <group>{spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]} visible={false}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}</group>;
+}
+
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
 function LoadedImported({ files, plate, position, rotationY, lite, signal }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean; signal?: { current: CarSignal } }) {
   const url = lite ? files.lite : files.full;
   const { scene } = useGLTF(url);
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
+  const fit = files.length ? files.length / P.L : 1;   // this car's real-world length
+  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p: p.multiplyScalar(fit), q, sc: sc.multiplyScalar(fit) }; }, [P, fit]);
+  const lampU = useMemo(() => (signal && files.lamps ? makeLampUniforms(files.lamps, new THREE.Matrix4().compose(xf.p, xf.q, xf.sc)) : null), [signal, files.lamps, xf]);
   const root = useMemo(() => {
     const r = scene.clone(true);
     const polish = (source: THREE.Material) => {
       const material = source.clone();
       if (material instanceof THREE.MeshStandardMaterial) {
         material.envMapIntensity = lite ? .75 : 1.05;
+        if (lampU) lampShader(material, lampU);
         material.needsUpdate = true;
       }
       return material;
@@ -283,13 +345,12 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal }: { f
       m.receiveShadow = !lite;
     });
     return r;
-  }, [scene, lite]);
-  const fit = files.length ? files.length / P.L : 1;   // this car's real-world length
+  }, [scene, lite, lampU]);
   const nz = (files.flip ? -1 : 1) * P.nose;
-  const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p: p.multiplyScalar(fit), q, sc: sc.multiplyScalar(fit) }; }, [P, fit]);
   const plateMat = useMemo(() => (plate ? new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }) : null), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
   const rf = P.roof.clone().multiplyScalar(fit), pf = P.plateF.clone().multiplyScalar(fit), pr = P.plateR.clone().multiplyScalar(fit);
+  if (files.plateRy != null) pr.y = files.plateRy;   // this car's tail is curved: the plate sits where the body is flat
   return <group position={position} rotation-y={rotationY}>
     <group rotation-y={nz > 0 ? 0 : Math.PI}>
       <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * fit * 1.22, P.W * fit * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
@@ -299,7 +360,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal }: { f
         <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
       </>}
       <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
-      {signal && <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={signal} />}
+      {signal && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={signal} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={signal} />)}
     </group>
   </group>;
 }

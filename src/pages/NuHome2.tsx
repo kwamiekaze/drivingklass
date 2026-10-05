@@ -29,10 +29,10 @@ export function georgiaOpen(now: Date = new Date()) {
   const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
   return h >= 9 && h < 18;
 }
-/** The default theme: day from 7am to 7pm Georgia time, night otherwise. A visitor's own choice, once made, wins. */
+/** The default theme: day from 7am to 6pm Georgia time, night otherwise. A visitor's own choice, once made, wins. */
 function georgiaDay(now: Date = new Date()) {
   const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
-  return h >= 7 && h < 19;
+  return h >= 7 && h < 18;
 }
 function openOverride(): boolean | null {
   if (typeof window === "undefined") return null;

@@ -38,9 +38,12 @@ function getSystemTheme(): Theme | null {
   return null;
 }
 
+/** Day starts at 7:00 AM and ends at 6:00 PM, Georgia time. */
+export const DAY_START_HOUR = 7;
+export const DAY_END_HOUR = 18;
 /**
  * Time-based theme using GEORGIA time (America/New_York):
- * Light 7:00 AM – 7:00 PM, Dark otherwise.
+ * Light 7:00 AM – 6:00 PM, Dark otherwise.
  */
 function getTimeBasedTheme(): Theme {
   try {
@@ -50,11 +53,11 @@ function getTimeBasedTheme(): Theme {
       hour12: false,
     }).format(new Date());
     const hour = parseInt(hourStr, 10);
-    if (!Number.isNaN(hour) && hour >= 7 && hour < 19) return "light";
+    if (!Number.isNaN(hour) && hour >= DAY_START_HOUR && hour < DAY_END_HOUR) return "light";
     return "dark";
   } catch {
     const hour = new Date().getHours();
-    return hour >= 7 && hour < 19 ? "light" : "dark";
+    return hour >= DAY_START_HOUR && hour < DAY_END_HOUR ? "light" : "dark";
   }
 }
 
@@ -93,19 +96,22 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system", // Default to system (Auto) - follows device preference
+  defaultTheme = "time-based", // Default: day 7AM-6PM Georgia time, night otherwise
   storageKey = "theme",
 }: ThemeProviderProps) {
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
-    // Priority: 1) localStorage (user's explicit choice), 2) default to 'system' (Auto)
+    // Priority: 1) localStorage (the visitor tapped the sun or moon), 2) the default, time of day.
+    // "system" was the old default and is no longer offered anywhere, so a saved "system" is the old default, not a choice.
     if (typeof localStorage !== "undefined") {
       const fromStorage = localStorage.getItem(storageKey);
-      if (isThemePreference(fromStorage)) return fromStorage;
+      if (isThemePreference(fromStorage) && fromStorage !== "system") return fromStorage;
     }
     return defaultTheme;
   });
 
-  const resolvedTheme = useMemo(() => resolveTheme(themePreference), [themePreference]);
+  const [clock, setClock] = useState(0);   // bumps every minute so a time-of-day theme flips at 7AM and 6PM without a reload
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const resolvedTheme = useMemo(() => resolveTheme(themePreference), [themePreference, clock]);
 
   // Apply theme on mount and whenever it changes
   useEffect(() => {
@@ -132,6 +138,7 @@ export function ThemeProvider({
 
     const checkAndApply = () => {
       applyTheme(getTimeBasedTheme());
+      setClock(c => c + 1);
     };
 
     // Check immediately

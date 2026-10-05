@@ -79,7 +79,7 @@ function Nuhome2Redirect() { const { search, hash } = useLocation(); return <Nav
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="theme">
+    <ThemeProvider defaultTheme="time-based" storageKey="theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />

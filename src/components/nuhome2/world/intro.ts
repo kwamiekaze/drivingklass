@@ -17,6 +17,8 @@ export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
 
 export const T_STOP = 12.5, T_HOLD = 13.7, T_PARK = 38, T_END = 48.5;
+/** The right blinker goes on this many seconds before the car arrives at the stop sign, and stays on through the wait and the turn. */
+export const T_SIGNAL_LEAD = 3.5;
 export const LANE_X = 2.05, STOP_Z = 39.5, START_Z = 150;
 export const STALL: V3 = [0, 0, -6];
 
@@ -106,7 +108,7 @@ const atTime = (tau: number) => {
 /** Which blinker is on at a distance s along the drive: on before each turn, off a little after it. */
 function signalAt(s: number) {
   const M = PATH.marks, within = (a: number, b: number) => s >= a && s <= b;
-  const right = within(.6, M.r1e + 1.5) || within(M.r2s - 8, M.r2e + 1.2);
+  const right = within(0, M.r1e + 1.5) || within(M.r2s - 8, M.r2e + 1.2);
   const left = within(M.l1s - 9, M.l1e + 2) || within(M.l2s - 7, M.l2e + 1.5);
   return { left, right };
 }
@@ -118,8 +120,8 @@ export function groundAt(x: number, z: number) {
 }
 /** Where the car is at time t. yaw is the model's rotation.y: pi/2 means nose toward the building. t3 is when it sets off from the stop sign. */
 export function carAt(t: number, t3 = T_PARK): { x: number; y: number; z: number; yaw: number; moving: boolean; left: boolean; right: boolean } {
-  if (t < T_STOP) return { x: LANE_X, y: .002, z: carZ1(t), yaw: Math.PI / 2, moving: true, left: false, right: false };
-  if (t < t3) return { x: LANE_X, y: .002, z: STOP_Z, yaw: Math.PI / 2, moving: false, left: false, right: false };
+  if (t < T_STOP) return { x: LANE_X, y: .002, z: carZ1(t), yaw: Math.PI / 2, moving: true, left: false, right: t >= T_STOP - T_SIGNAL_LEAD };
+  if (t < t3) return { x: LANE_X, y: .002, z: STOP_Z, yaw: Math.PI / 2, moving: false, left: false, right: true };   // waiting at the sign to turn right
   const q = atTime(t - t3), sg = signalAt(q.s);
   return { x: q.x, y: groundAt(q.x, q.z), z: q.z, yaw: q.yaw, moving: t - t3 < PATH.T, left: sg.left, right: sg.right };
 }
