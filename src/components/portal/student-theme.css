@@ -88,3 +88,10 @@ body.dk-portal button[class*="outline"], body.dk-portal button[class*="bg-backgr
 /* beats the light theme's own card rule (it is !important too, so this one is more specific) */
 :root[data-theme] body.dk-portal .dk-shell .luxury-card, html body.dk-portal .dk-shell .luxury-card.luxury-card, :root[data-theme="light"] body.dk-portal [class*="luxury-card"], .light body.dk-portal [class*="luxury-card"] { background: linear-gradient(180deg, rgba(14, 54, 122, .8), rgba(7, 29, 74, .88)) !important; border-color: rgba(229, 184, 74, .55) !important; }
 :root[data-theme="light"] body.dk-portal .luxury-card, .light body.dk-portal .luxury-card, :root[data-theme="light"] body.dk-portal [class*="bg-white"], :root[data-theme="light"] body.dk-portal .service-button { background-color: transparent; }
+
+/* ---- the brand on the sign in, sign up and password pages: the home page header's wheel and wordmark, a little larger ---- */
+.dk-authbrand { display: inline-flex; align-items: center; gap: clamp(10px, 3vw, 18px); margin-bottom: 14px; text-decoration: none; max-width: 100%; }
+.dk-authbrand .n2-hdr-wheel { width: clamp(70px, 21vw, 96px); }
+.dk-authbrand .n2-hdr-sep { height: clamp(46px, 13vw, 66px); }
+.dk-authbrand .n2-hdr-word { font-size: clamp(26px, 8vw, 42px); }
+.dk-authbrand:focus-visible { outline: 2px solid #ffd86a; outline-offset: 6px; border-radius: 14px; }

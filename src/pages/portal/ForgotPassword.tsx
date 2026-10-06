@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AuthBrand } from "@/components/portal/AuthBrand";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Car, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function ForgotPassword() {
@@ -50,10 +51,7 @@ export default function ForgotPassword() {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <Car className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-gold-shimmer">DrivingKlass</span>
-          </Link>
+          <AuthBrand />
           <p className="text-muted-foreground">Klassroom Portal</p>
         </div>
 
