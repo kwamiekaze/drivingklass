@@ -227,7 +227,7 @@ function keysFor(narrow: boolean): Key[] {
   const doorZ = f(-12.9, -12.0), doorFov = f(31, 46);   // close enough that OPEN (or CLOSED) fills the screen, with the whole sign in view
   out.push({ t: base + 9.4, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
   out.push({ t: base + 11.4, p: [1.05, 2.72, doorZ], l: [1.45, 2.86, -14.4], fov: doorFov });
-  out.push({ t: base + 13.4, p: [1.15, 2.2, -11.0], l: [2.2, 1.4, -9.8], fov: f(30, 44) });
+  out.push({ t: base + 13.4, p: [1.5, 2.3, -11.0], l: [2.2, 1.4, -9.8], fov: f(30, 44) });
   out.push({ t: base + 15.6, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });   // the hours board sits in the clear band between the header and the buttons
   out.push({ t: base + 18.4, p: [2.0, 1.45, -6.7], l: [2.7, .83, -9.45], fov: f(34, 46) });
   out.push({ t: base + 21.4, p: [1.4, 6.0, -1.5], l: [.5, 3.0, -14.0], fov: f(38, 54) });

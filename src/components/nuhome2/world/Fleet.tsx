@@ -43,7 +43,8 @@ export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFlee
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
   civic: asset('dk-meshy-matra-laser', { length: 4.4, lamps: { front: [-1.85, .58, .62, .26, .12, .22], rear: [1.88, .74, .62, .24, .1, .22] } }),
   camry: asset('dk-meshy-vibranium', { length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
-  sentra: asset('dk-meshy-lamborghini', { length: 4.5, lamps: { front: [1.92, .57, .58, .26, .1, .2], rear: [-1.92, .7, .58, .24, .1, .22] } }),
+  // the black and orange striped sports car (Meshy, "high detail"); its model faces the other way, so its lamps are measured at -x (front) and +x (rear)
+  sentra: asset('dk-meshy-detail-sport', { length: 4.5, lamps: { front: [-1.88, .7, .69, .28, .13, .22], rear: [1.95, .78, .69, .24, .12, .22] } }),
   hero: asset('dk-meshy-orange-sport', { length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
 };
 
@@ -281,12 +282,12 @@ function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal
  * real lamp shape on the real surface. A soft halo sits just outside each lamp. `u` holds the two flasher values the shader reads.
  */
 type LampUniforms = { uLeft: { value: number }; uRight: { value: number }; uToCar: { value: THREE.Matrix4 }; uFc: { value: THREE.Vector3 }; uFh: { value: THREE.Vector3 }; uRc: { value: THREE.Vector3 }; uRh: { value: THREE.Vector3 } };
-const makeLampUniforms = (lamps: Lamps, toCar: THREE.Matrix4): LampUniforms => ({
+export const makeLampUniforms = (lamps: Lamps, toCar: THREE.Matrix4): LampUniforms => ({
   uLeft: { value: 0 }, uRight: { value: 0 }, uToCar: { value: toCar },
   uFc: { value: new THREE.Vector3(...lamps.front.slice(0, 3) as [number, number, number]) }, uFh: { value: new THREE.Vector3(...lamps.front.slice(3) as [number, number, number]) },
   uRc: { value: new THREE.Vector3(...lamps.rear.slice(0, 3) as [number, number, number]) }, uRh: { value: new THREE.Vector3(...lamps.rear.slice(3) as [number, number, number]) },
 });
-function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms) {
+export function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms) {
   material.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLp;\nuniform mat4 uToCar;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLp = (uToCar * vec4(position, 1.)).xyz;');

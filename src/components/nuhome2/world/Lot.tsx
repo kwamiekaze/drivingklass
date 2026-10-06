@@ -5,7 +5,7 @@ import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 import { CAR_SPECS } from './Cars';
 import { IntroCar } from './IntroCar';
-import { CAST } from './cast';
+import { CAST, PLATES, type CastId } from './cast';
 import { FLEET_COLORS, FleetCar } from './Fleet';
 const FLEET_ORDER = [FLEET_COLORS.white, FLEET_COLORS.red, FLEET_COLORS.green, FLEET_COLORS.yellow, FLEET_COLORS.black];
 import { StopSign } from './StopSign';
@@ -298,6 +298,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
   const cars: { id: keyof typeof CAR_SPECS; x: number; z: number; r: number }[] = [
     { id: 'corolla', x: -5.5, z: -6, r: Math.PI / 2 }, { id: 'civic', x: 8.25, z: -6, r: Math.PI / 2 }, { id: 'elantra', x: -16.5, z: -6, r: Math.PI / 2 },
     { id: 'hero', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
+    { id: 'camry', x: 0, z: -6, r: Math.PI / 2 },   // the school's black car in the reserved stall in front of the door (when it is not the one driving in)
   ];
   return <group>
     <Decals items={mk.white} color="#e2dfd6" /><Arrows items={arrows} />
@@ -328,7 +329,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {/* the stop sign for traffic coming up the avenue: on the grass beside the avenue, just before the stop bar */}
     <StopSign position={[5.3, 0, 37.6]} />
     {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}
-    {cars.map((c, i) => c.id === CAST ? null : <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={['DK24CO', 'DK25ML', 'DK26OR', 'DK29OR', 'DK28GA'][i]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
+    {cars.map((c, i) => c.id === CAST ? null : <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={PLATES[c.id as CastId]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
     <IntroCar lite={lite} />
   </group>;
 }

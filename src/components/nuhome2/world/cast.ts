@@ -13,7 +13,7 @@ export const STALLS: Record<CastId, Stall> = {
   corolla: { x: -5.5, z: -6, side: 1 },      // the white car, row A
   civic: { x: 8.25, z: -6, side: 1 },        // the pale blue Matra, row A
   elantra: { x: -16.5, z: -6, side: 1 },     // the red sports car, row A
-  sentra: { x: -13.75, z: 5.5, side: -1 },   // the silver and red Lamborghini, row B west
+  sentra: { x: -13.75, z: 5.5, side: -1 },   // the black and orange striped sports car, row B west
 };
 export const PLATES: Record<CastId, string> = { hero: 'DK29OR', camry: 'DK27RR', corolla: 'DK24CO', civic: 'DK25ML', elantra: 'DK26OR', sentra: 'DK28GA' };
 const ORDER: CastId[] = ['hero', 'camry', 'corolla', 'civic', 'elantra', 'sentra'];
