@@ -350,7 +350,8 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
 const BL = { x0: -34.2, x1: 34.2, zs: -26.2, zn: -53.9, kerb: .3 };   // x edges line up with the plaza's side kerbs (x +-34.35); zs leaves room for the patio between the building and the lot
 const PHX = 27, PHW = 968, PHH = 779, PH_RIGHT = 25.0, PH_FRONT = -26.5;   // the layout sits nearer the middle of the lot than before (9 m left, 3 m back)
 const bx = (u: number) => PH_RIGHT - (PHW - u) / PHX, bz = (v: number) => PH_FRONT - (PHH - v) / PHX;
-const BL_U_LEFT = bx(366), BL_SHARED = 15.8, BL_BOX_RIGHT = bx(660), BL_TOP = bz(83), BL_FOOT_Z = bz(315), BL_FOOT_X = bx(290), BL_BOX_TOP = bz(207), BL_BOX_BOTTOM = -41.7;
+// every number comes from a pixel of the photo, so the whole layout moves as one when PH_RIGHT or PH_FRONT change (the shared side was once typed in metres and got left behind)
+const BL_U_LEFT = bx(366), BL_SHARED = bx(476), BL_BOX_RIGHT = bx(660), BL_TOP = bz(83), BL_FOOT_Z = bz(315), BL_FOOT_X = bx(290), BL_BOX_TOP = bz(207), BL_BOX_BOTTOM = bz(288);
 const BL_LW = .2;
 /** [x0, z0, x1, z1] centre lines, in metres. */
 const BL_LINES: [number, number, number, number][] = [
