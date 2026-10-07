@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Billboard } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { intro } from './intro';
+import { intro, T_DRIVE } from './intro';
 import { park, startPark } from './park';
 import { PBOX } from './rearlot';
 
@@ -23,6 +23,9 @@ function makeHalo() {
   return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: '#ff9a4a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 }
 /** Where the marker floats: just past the east end of the box, level with its middle, at about the height of a car roof. */
+/** The hero car is in its stall once the entrance drive is over; no need to wait for the whole opening tour. */
+const ready = () => intro.done || intro.t >= intro.t3 + T_DRIVE;
+
 export const SPOT_POS: [number, number, number] = [PBOX.x1 + 1.7, 1.6, (PBOX.zKerb + PBOX.zLane) / 2];
 
 export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean }) {
@@ -32,7 +35,7 @@ export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean })
   const mats = useMemo(() => ({ halo: makeHalo(), ring: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, toneMapped: false, depthWrite: false }), disc: new THREE.MeshBasicMaterial({ color: '#ff7a1a', toneMapped: false }) }), []);
   useFrame(({ clock, camera }) => {
     const o = outer.current, h = holder.current; if (!o || !h) return;
-    const show = intro.done && park.phase === 'idle';
+    const show = ready() && park.phase === 'idle';
     if (o.visible !== show) o.visible = show;
     if (!show) return;
     // a steady size on screen: small up close, never lost from far away
@@ -42,7 +45,7 @@ export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean })
     if (ring.current) { ring.current.scale.setScalar(1 + t * 1.2); mats.ring.opacity = (1 - t) * .85; }
     if (disc.current) { const s = hover ? 1.25 : 1; disc.current.scale.lerp(tmp.set(s, s, s), .2); }
   });
-  const choose = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta > 8) return; if (intro.done && park.phase === 'idle') { document.body.style.cursor = 'auto'; startPark(); } };
+  const choose = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta > 8) return; if (ready() && park.phase === 'idle') { document.body.style.cursor = 'auto'; startPark(); } };
   const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; };
   const out = () => { setHover(false); document.body.style.cursor = 'auto'; };
   return <group ref={outer} visible={false} name="park-spot">
