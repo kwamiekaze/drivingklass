@@ -3,11 +3,11 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { NightCtx, radialTexture, rng } from './theme';
-import { Box, makeCanvasTexture, starShape } from './parts';
+import { Box, makeCanvasTexture } from './parts';
 import { Hedge, PaintStrip, Topiary, type HedgePlant } from './Lot';
 
 /*
- * The back patio: a limestone terrace behind the building, level with the ground, edged in gold, with a star medallion in front of the
+ * The back patio: a limestone terrace behind the building, level with the ground, edged in gold on three sides, with
  * back steps, round café tables with chairs and umbrellas, a clipped hedge along the lot side with a gap and two topiaries at the walkway,
  * and strings of warm lights from the building to posts in the hedge. World metres. The building's back wall is at z -20.45 and its cornice at -21.0.
  */
@@ -71,7 +71,6 @@ export function BackPatio({ pl }: { pl: HedgePlant }) {
   const paver = useMemo(() => { const t = paverTexture(); t.repeat.set(W / 3.2, D / 3.2); return t; }, [W, D]);
   const paverMat = useMemo(() => new THREE.MeshStandardMaterial({ map: paver, roughness: .85, emissive: '#ffcf80', emissiveMap: paver, emissiveIntensity: .04 }), [paver]);
   const goldMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d9ab3a', roughness: .4, metalness: .5, emissive: '#ffb830', emissiveIntensity: .05 }), []);
-  const starGeo = useMemo(() => { const g = new THREE.ShapeGeometry(starShape(1.0, .45)); g.rotateX(-Math.PI / 2); return g; }, []);
   const tablesRef = useRef<THREE.InstancedMesh>(null), chairsRef = useRef<THREE.InstancedMesh>(null), umbrellasRef = useRef<THREE.InstancedMesh>(null), coreRef = useRef<THREE.InstancedMesh>(null);
   const lights = useMemo(() => {
     const out: [number, number, number][] = [];
@@ -95,12 +94,8 @@ export function BackPatio({ pl }: { pl: HedgePlant }) {
   return <group>
     {/* the terrace and its gold border */}
     <mesh rotation-x={-Math.PI / 2} position={[0, .012, cz]} material={paverMat} receiveShadow><planeGeometry args={[W, D]} /></mesh>
-    <PaintStrip lines={[[0, .14]]} span={1} across="v" color="#d9ab3a" x={0} z={PZ1 + .35} width={W - .7} height={1} repeat={[1, 1]} y={.02} />
     <PaintStrip lines={[[0, .14]]} span={1} across="u" color="#d9ab3a" x={PX0 + .35} z={cz} width={1} height={D - .7} repeat={[1, 1]} y={.02} />
     <PaintStrip lines={[[0, .14]]} span={1} across="u" color="#d9ab3a" x={PX1 - .35} z={cz} width={1} height={D - .7} repeat={[1, 1]} y={.02} />
-    {/* the star medallion in front of the back steps */}
-    <mesh rotation-x={-Math.PI / 2} position={[0, .019, -24.15]} material={goldMat}><ringGeometry args={[1.28, 1.4, 48]} /></mesh>
-    <mesh geometry={starGeo} position={[0, .02, -24.15]} scale={[1.05, 1, 1.05]} material={goldMat} />
     {/* furniture */}
     <instancedMesh ref={tablesRef} args={[tableGeo, undefined, TABLES.length]} castShadow receiveShadow frustumCulled={false}><meshStandardMaterial vertexColors roughness={.5} metalness={.15} /></instancedMesh>
     <instancedMesh ref={chairsRef} args={[chairGeo, undefined, chairCount]} castShadow receiveShadow frustumCulled={false}><meshStandardMaterial vertexColors roughness={.7} /></instancedMesh>

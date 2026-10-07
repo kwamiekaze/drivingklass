@@ -3,14 +3,15 @@ import { Billboard } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { intro, T_DRIVE } from './intro';
-import { park, startPark } from './park';
-import { PBOX } from './rearlot';
+import { canStartPark, park, startPark, type ParkKind } from './park';
+import { BAY, PBOX } from './rearlot';
 
 /**
- * The "!" beside the parallel-parking space in the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the
- * repair markers of fixing365.com. Tap it and the car that opened the page backs out of its stall and parallel parks in the box (park.ts).
- * It floats at the east end of the box, beside the space rather than in it, keeps a steady size on screen at any distance, and is hidden
- * while the car is working and until the opening shot has finished.
+ * The two "!" markers of the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the repair markers of fixing365.com.
+ *   parallel   beside the parallel-parking space, at the east end of the box: the car that opened the page backs out of its stall and parallel parks (park.ts)
+ *   bay        right behind the closed end of the reverse bay: the car reverses into the bay (from its stall, or by backing out of the parallel box first)
+ * Each keeps a steady size on screen at any distance and is hidden while the car is working, until the car is in its stall (the entrance drive is over),
+ * and once it has no drive left to offer.
  */
 const ringGeo = new THREE.RingGeometry(.78, 1, 48), discGeo = new THREE.CircleGeometry(.64, 40), barGeo = new THREE.PlaneGeometry(.17, .44), dotGeo = new THREE.CircleGeometry(.105, 20), hitGeo = new THREE.SphereGeometry(1.7, 10, 8), haloGeo = new THREE.CircleGeometry(1.6, 40);
 const white = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
@@ -27,15 +28,18 @@ function makeHalo() {
 const ready = () => intro.done || intro.t >= intro.t3 + T_DRIVE;
 
 export const SPOT_POS: [number, number, number] = [PBOX.x1 + 1.7, 1.6, (PBOX.zKerb + PBOX.zLane) / 2];
+export const BAY_SPOT_POS: [number, number, number] = [(BAY.xW + BAY.xE) / 2, 1.6, BAY.zEnd - 1.3];
+/** Is this marker on offer now? Not while a drive runs; the first drive only from the stall; the bay from the stall or the box. */
+const offered = (kind: ParkKind) => canStartPark(kind) && (park.loc !== 'front' || ready());
 
-export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean }) {
+export function ParkSpot({ kind, reducedMotion = false }: { kind: ParkKind; reducedMotion?: boolean }) {
   const [hover, setHover] = useState(false);
   const outer = useRef<THREE.Group>(null), holder = useRef<THREE.Group>(null), ring = useRef<THREE.Mesh>(null), disc = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const mats = useMemo(() => ({ halo: makeHalo(), ring: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, toneMapped: false, depthWrite: false }), disc: new THREE.MeshBasicMaterial({ color: '#ff7a1a', toneMapped: false }) }), []);
   useFrame(({ clock, camera }) => {
     const o = outer.current, h = holder.current; if (!o || !h) return;
-    const show = ready() && park.phase === 'idle';
+    const show = offered(kind);
     if (o.visible !== show) o.visible = show;
     if (!show) return;
     // a steady size on screen: small up close, never lost from far away
@@ -45,11 +49,11 @@ export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean })
     if (ring.current) { ring.current.scale.setScalar(1 + t * 1.2); mats.ring.opacity = (1 - t) * .85; }
     if (disc.current) { const s = hover ? 1.25 : 1; disc.current.scale.lerp(tmp.set(s, s, s), .2); }
   });
-  const choose = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta > 8) return; if (ready() && park.phase === 'idle') { document.body.style.cursor = 'auto'; startPark(); } };
+  const choose = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta > 8) return; if (offered(kind)) { document.body.style.cursor = 'auto'; startPark(kind); } };
   const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; };
   const out = () => { setHover(false); document.body.style.cursor = 'auto'; };
-  return <group ref={outer} visible={false} name="park-spot">
-    <Billboard position={SPOT_POS} ref={holder}>
+  return <group ref={outer} visible={false} name={`park-spot-${kind}`}>
+    <Billboard position={kind === 'bay' ? BAY_SPOT_POS : SPOT_POS} ref={holder}>
       <group onClick={choose} onPointerOver={over} onPointerOut={out}>
         <mesh geometry={hitGeo} material={hitMat} />
         <mesh geometry={haloGeo} material={mats.halo} renderOrder={9} />

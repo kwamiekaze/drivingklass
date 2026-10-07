@@ -9,7 +9,7 @@ import { usableShots, type Shot } from './shots';
 import { cinema, stopReel } from './reel';
 import { engine } from '../music/engine';
 import { skyAnchor } from './Sky';
-import { park, parkMoving, parkTotal, startPark } from './park';
+import { finishPark, park, parkMoving, parkTotal, startPark } from './park';
 import { parkCamAt } from './parkcam';
 
 type Controls = {
@@ -40,7 +40,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { startPark(); park.t = parkT; } }
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { if (q.get('parkFrom') === 'box') park.loc = 'box'; startPark(q.get('park') === 'bay' ? 'bay' : 'parallel'); park.t = parkT; } }   // ?park=bay (&parkFrom=box) picks the other drive
   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
@@ -91,7 +91,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     }
     // shadows refresh every frame while the car rolls (its shadow must move with it), every other frame once nothing moves
     gl.shadowMap.autoUpdate = false; if (carMoving() || parkMoving() || g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;
-    if (park.phase === 'run' && parkT === null) { park.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (park.t >= parkTotal()) { park.t = parkTotal(); park.phase = 'done'; } }
+    if (park.phase === 'run' && parkT === null) { park.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (park.t >= parkTotal()) finishPark(); }
     if (!intro.done && introT === null) { intro.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
   }, -5);
   useFrame((state, delta) => {

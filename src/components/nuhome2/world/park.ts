@@ -1,17 +1,20 @@
 /*
- * The parallel-parking drive, as one pure, testable timeline (no React, no three.js), like intro.ts.
+ * The two parking drives, as pure, testable timelines (no React, no three.js), like intro.ts.
  *
- * Press the "!" beside the parallel space in the back lot and the car that opened the page (the CAST car) does this, start to finish:
+ * Press the "!" beside the parallel space in the back lot ("parallel") and the car that opened the page (the CAST car) does this, start to finish.
+ * Press the "!" behind the reverse bay ("bay") and the same car reverses into the bay: from its stall in the front lot (it drives to the back lot, stops
+ * at the white stop line, drives up to the second white line) or, when it is already in the parallel box, by backing out of the box first (see planBay).
+ * The parallel drive:
  *
  *   EXIT_SIGNAL .. EXIT_REVERSE     the signal for the side the tail swings to comes on BEFORE the car moves, then it backs out of its stall
  *   DRIVE_TO_REAR_LOT               east along the aisle, left up the east side road, left into the back lot (the owner's red route)
  *   STOP_AT_ENTRY_LINE              a full stop at the white stop line
- *   PULL_FORWARD_TO_SETUP           straight on until the nose is on the blue line
+ *   PULL_FORWARD_TO_SETUP           straight on until the nose is on the second white line
  *   SIGNAL_RIGHT, SHIFT_TO_REVERSE  right signal on, then into reverse
  *   REVERSE_STRAIGHT_1              wheels straight until the tail reaches the black line, stop
  *   REVERSE_FULL_RIGHT              (stopped) wheel hard right, back up on the arc, stop
  *   REVERSE_STRAIGHT_2              wheels straight until the right mirror is abeam of the next cone, stop
- *   REVERSE_FULL_LEFT               (stopped) left signal, wheel hard left, back up until the car is parallel, stop
+ *   REVERSE_FULL_LEFT               (stopped) wheel hard left (the right signal stays on: the left one is never used here), back up until the car is parallel, stop
  *   FINAL_ALIGNMENT, PARKED         straighten, a small roll forward to centre it, signals off
  *
  * Nothing here is faked with a translate plus a rotate. The car is a kinematic bicycle (wheelbase 2.7 m, steering limited to 33 degrees and
@@ -21,14 +24,20 @@
  * Positions are of the REAR AXLE while the plan is built (that is the point a car pivots about); the car's centre, which is the model's origin, is 1.35 m ahead of it.
  */
 import { CAST, STALLS, type Stall } from './cast';
-import { BL_CONES, CONE_R, CONN_X, PBOX, STOP_LINE } from './rearlot';
+import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, PBOX, STOP_LINE } from './rearlot';
 
 export type ParkState =
   | 'EXIT_SIGNAL' | 'EXIT_SHIFT_R' | 'EXIT_REVERSE' | 'EXIT_STRAIGHTEN' | 'EXIT_SHIFT_D'
   | 'DRIVE_TO_REAR_LOT' | 'STOP_AT_ENTRY_LINE' | 'PULL_FORWARD_TO_SETUP' | 'SIGNAL_RIGHT' | 'SHIFT_TO_REVERSE'
   | 'REVERSE_STRAIGHT_1' | 'STOP_AT_BLACK_LINE' | 'STEER_FULL_RIGHT' | 'REVERSE_FULL_RIGHT' | 'STRAIGHTEN_1' | 'REVERSE_STRAIGHT_2'
-  | 'SIGNAL_LEFT' | 'STEER_FULL_LEFT' | 'REVERSE_FULL_LEFT' | 'STRAIGHTEN_2' | 'FINAL_ALIGNMENT' | 'PARKED';
-const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE', 'EXIT_STRAIGHTEN', 'EXIT_SHIFT_D', 'DRIVE_TO_REAR_LOT', 'STOP_AT_ENTRY_LINE', 'PULL_FORWARD_TO_SETUP', 'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'SIGNAL_LEFT', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED'];
+  | 'STEER_FULL_LEFT' | 'REVERSE_FULL_LEFT' | 'STRAIGHTEN_2' | 'FINAL_ALIGNMENT' | 'PARKED'
+  | 'BOX_SIGNAL_R' | 'BOX_SHIFT_R' | 'BOX_STEER_R' | 'BOX_REVERSE' | 'BOX_STOP' | 'BOX_SIGNAL_L' | 'BOX_STEER_0' | 'BOX_SHIFT_D' | 'BOX_PULL_OUT'
+  | 'DRIVE_TO_BAY_LINE' | 'STOP_AT_BAY_LINE' | 'BAY_SIGNAL_RIGHT' | 'BAY_SHIFT_R' | 'BAY_REVERSE_1' | 'BAY_STOP_1' | 'BAY_STEER_RIGHT' | 'BAY_REVERSE_ARC' | 'BAY_STRAIGHTEN' | 'BAY_REVERSE_2' | 'BAY_PARKED';
+const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE', 'EXIT_STRAIGHTEN', 'EXIT_SHIFT_D', 'DRIVE_TO_REAR_LOT', 'STOP_AT_ENTRY_LINE', 'PULL_FORWARD_TO_SETUP', 'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',
+  'BOX_SIGNAL_R', 'BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_0', 'BOX_SHIFT_D', 'BOX_PULL_OUT',
+  'DRIVE_TO_BAY_LINE', 'STOP_AT_BAY_LINE', 'BAY_SIGNAL_RIGHT', 'BAY_SHIFT_R', 'BAY_REVERSE_1', 'BAY_STOP_1', 'BAY_STEER_RIGHT', 'BAY_REVERSE_ARC', 'BAY_STRAIGHTEN', 'BAY_REVERSE_2', 'BAY_PARKED'];
+/** Which drive: the parallel park from the stall, the bay from the stall, or the bay from the parallel box. */
+export type ParkMode = 'parallel' | 'bayFront' | 'bayBox';
 
 // ---------- the car ----------
 export const WB = 2.7;                       // wheelbase
@@ -41,11 +50,13 @@ const MIRROR_F = 2.3, MIRROR_W = 1.1;        // a door mirror sits this far ahea
 const STEER_RATE = 36 * Math.PI / 180;       // how fast the wheel is turned, radians per second of the front wheels
 
 // ---------- where things are (world metres, x east, z south) ----------
-const LANE_E = -.3;                          // the eastbound lane of the aisle in front of the building
+const LANE_E = .9;                           // the eastbound lane of the aisle in front of the building: the south (right-hand) half, not the middle
 const TURN_N = 6.2, TURN_W = 5.6;            // radii of the left turn up the east road and the left turn into the back lot
 const LANE_Z = (STOP_LINE.z0 + STOP_LINE.z1) / 2;           // the lane of the back lot, the middle of the stop line
+const LANE_N = CONN_X + 1.0;                 // the northbound lane of the east road: its east (right-hand) half, not the middle
 const NOSE_STOP_X = STOP_LINE.x + .4;        // the nose stops this far short of the white line
-const BLUE_X = -3.0;                         // the nose on the blue line (measured off the owner's photo: 16.5 px to the metre)
+const LINE2_X = BAY_LINE.x + .4;             // and this far short of the second white line (the owner's blue line)
+const BLUE_X = BAY_LINE.x;
 const SETUP_Z = -42.2;                      // the car's lane position beside the box: the first guess; the solver may move it a little off the kerb
 export const BOX_CX = (PBOX.x0 + PBOX.x1) / 2 - .19, BOX_CZ = (PBOX.zKerb + PBOX.zLane) / 2 + .19;   // where the car's centre is aimed: a little west and to the lane side of the very middle, which is what the cones leave room for   // the middle of the box: where the car's centre ends
 const CONE_NEAR = ((): [number, number] => { let best = BL_CONES[0]!; for (const c of BL_CONES) if (Math.hypot(c[0] - PBOX.x0, c[1] - PBOX.zLane) < Math.hypot(best[0] - PBOX.x0, best[1] - PBOX.zLane)) best = c; return best; })();   // the cone at the near, open corner of the box: "the cone just right of the black line"
@@ -69,7 +80,9 @@ const mirror = (p: Pose, side: 1 | -1): [number, number] => { const n = nose(p.y
 
 // ---------- samples ----------
 type Sample = { x: number; z: number; yaw: number; steer: number; v: number; a: number; lat: number; left: boolean; right: boolean; rev: boolean; st: number };
-type Plan = { s: Sample[]; T: number; marks: Partial<Record<ParkState, number>>; ends: Partial<Record<ParkState, number>>; end: Pose; setup: { blueX: number; blackX: number; phi: number; phi2: number; s2: number; startRA: number; endCentre: [number, number]; setupZ: number; clearance: number } };
+type Setup = { blueX: number; blackX: number; phi: number; phi2: number; s2: number; startRA: number; endCentre: [number, number]; setupZ: number; clearance: number };
+type BayInfo = { lineX: number; z0: number; s1: number; s3: number; xB: number; endCentre: [number, number]; box: { d: number; r: number; a1: number; s: number; gap: number } | null };
+type Plan = { s: Sample[]; T: number; marks: Partial<Record<ParkState, number>>; ends: Partial<Record<ParkState, number>>; end: Pose; setup: Setup | null; bay: BayInfo | null };
 const FPS = 60, DT = 1 / FPS;
 
 type Leg = { N: number; ds: number; px: Float64Array; pz: Float64Array; yaw: Float64Array; steer: Float64Array; dir: 1 | -1; vs: Float64Array; tm: Float64Array; T: number };
@@ -202,7 +215,8 @@ function exitLeg(st: Stall) {
   return { leg, side: sgn > 0 ? 'left' as const : 'right' as const, start };
 }
 
-function planOnce(st: Stall): Plan {
+/** From the stall to a full stop at the white stop line of the back lot: the signal, the reverse out, the drive round, in the right-hand lane all the way. */
+function planFront(st: Stall) {
   const ex = exitLeg(st), rec = new Rec(ex.start), sideL = ex.side === 'left';
   // 1. the signal, before the car moves at all
   if (sideL) rec.left = true; else rec.right = true;
@@ -211,22 +225,30 @@ function planOnce(st: Stall): Plan {
   rec.run('EXIT_REVERSE', ex.leg);
   rec.rev = true; rec.steerTo('EXIT_STRAIGHTEN', 0, .9);
   rec.left = false; rec.right = false; rec.rev = false; rec.hold('EXIT_SHIFT_D', .8);
-  // 2. forward: east along the aisle, left up the east side road, left into the back lot, stop at the white line
+  // 2. forward: east along the aisle in its right-hand (south) half, left up the east road into its right-hand (east) half, left into the back lot, stop at the white line
   const p0 = rec.p, toLane = LANE_E - p0.z;   // the rear axle is on this z now, the eastbound lane is here: drift across it smoothly
-  const GAP = Math.min(22, (CONN_X - TURN_N - p0.x) * .8);                              // the distance over which the drift happens
-  const xTurn = CONN_X - TURN_N;
+  const GAP = Math.min(22, (LANE_N - TURN_N - p0.x) * .8);                              // the distance over which the drift happens
+  const xTurn = LANE_N - TURN_N;
   const zTurn = LANE_Z + TURN_W;               // the left turn into the back lot starts when the rear axle is this far from the lane (it is heading north)
   const lenAisle = xTurn - p0.x, lenNorth = (LANE_E - TURN_N) - zTurn;
-  const stopRA = NOSE_STOP_X + NOSE, lenWest = (CONN_X - TURN_W) - stopRA;
+  const stopRA = NOSE_STOP_X + NOSE, lenWest = (LANE_N - TURN_W) - stopRA;
   const ops: Op[] = [{ k: 'S', len: GAP, dz: toLane }, { k: 'S', len: lenAisle - GAP }, { k: 'T', side: 1, r: TURN_N }, { k: 'S', len: lenNorth }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }];
   const fwd = pathLeg(p0, ops, 5.4, 1.5, 2.1, 2.0);
   // left blinker for each left turn: on 9 m before it, off 1.5 m after
   const lenTurn1 = TURN_N * Math.PI / 2, lenTurn2 = TURN_W * Math.PI / 2, s1 = lenAisle, sB = lenAisle + lenTurn1 + lenNorth;
   rec.run('DRIVE_TO_REAR_LOT', fwd, s => ({ left: (s > s1 - 9 && s < s1 + lenTurn1 + 1.5) || (s > sB - 9 && s < sB + lenTurn2 + 1.5), right: false }));
   rec.left = false; rec.hold('STOP_AT_ENTRY_LINE', 1.9);
-  // 3. pull forward, drifting to the kerb side of the lane, until the nose is on the blue line
-  const solved = solveMane();
-  const p1 = rec.p, setupRA = BLUE_X + NOSE, drift = solved.setupZ - p1.z, lenPull = p1.x - setupRA;
+  return rec;
+}
+
+let SOLVED: ReturnType<typeof solveMane> | null = null;
+const solved = () => (SOLVED ??= solveMane());
+
+/** The parallel park: from the stop line, up to the second white line, then the two reverse arcs. The right signal is on from the setup to the end. The left one is never used here. */
+function planParallel(st: Stall): Plan {
+  const rec = planFront(st), solved1 = solved();
+  // 3. pull forward, drifting to the kerb side of the lane, until the nose is on the second white line
+  const p1 = rec.p, setupRA = LINE2_X + NOSE, drift = solved1.setupZ - p1.z, lenPull = p1.x - setupRA;
   const pull = pathLeg(p1, [{ k: 'S', len: 11, dz: drift }, { k: 'S', len: lenPull - 11 }], 4.2, 1.3, 1.7, 2);
   rec.run('PULL_FORWARD_TO_SETUP', pull);
   rec.hold('PULL_FORWARD_TO_SETUP', .6);
@@ -234,28 +256,111 @@ function planOnce(st: Stall): Plan {
   const R = R_MIN;
   rec.right = true; rec.hold('SIGNAL_RIGHT', 1.6);
   rec.rev = true; rec.hold('SHIFT_TO_REVERSE', 1.0);
-  const backStraight = Math.max(.05, solved.startRA - rec.p.x);
+  const backStraight = Math.max(.05, solved1.startRA - rec.p.x);
   rec.run('REVERSE_STRAIGHT_1', kinLeg(rec.p, -1, backStraight, () => 0, 1.1, .45, .8));
   rec.rev = false; rec.hold('STOP_AT_BLACK_LINE', 1.0);
   rec.rev = true; rec.steerTo('STEER_FULL_RIGHT', -DMAX, 1.4);
-  rec.run('REVERSE_FULL_RIGHT', kinLeg(rec.p, -1, R * solved.phi1, () => -DMAX, .85, .4, .7));
+  rec.run('REVERSE_FULL_RIGHT', kinLeg(rec.p, -1, R * solved1.phi1, () => -DMAX, .85, .4, .7));
   rec.rev = false; rec.hold('REVERSE_FULL_RIGHT', .9);
   rec.rev = true; rec.steerTo('STRAIGHTEN_1', 0, 1.2);
-  rec.run('REVERSE_STRAIGHT_2', kinLeg(rec.p, -1, solved.s2, () => 0, .9, .4, .7));
+  rec.run('REVERSE_STRAIGHT_2', kinLeg(rec.p, -1, solved1.s2, () => 0, .9, .4, .7));
   rec.rev = false; rec.hold('REVERSE_STRAIGHT_2', 1.0);
-  rec.right = false; rec.left = true; rec.hold('SIGNAL_LEFT', 1.2);
-  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);
-  rec.run('REVERSE_FULL_LEFT', kinLeg(rec.p, -1, R * solved.phi2, () => DMAX, .85, .4, .7));
+  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);          // the wheel goes left; the signal stays on the right, the side the car is parking on
+  rec.run('REVERSE_FULL_LEFT', kinLeg(rec.p, -1, R * solved1.phi2, () => DMAX, .85, .4, .7));
   rec.rev = false; rec.hold('REVERSE_FULL_LEFT', .9);
   // 5. final alignment, the way an examiner expects it in a box this size (1.5 car lengths): the car is nearly parallel, so it rolls forward a
   //    little with the wheel to the right, which squares it up and centres it, then the wheels are straightened and it is parked
   rec.hold('FINAL_ALIGNMENT', .8);
   rec.steerTo('FINAL_ALIGNMENT', -DMAX, 1.4);
-  rec.run('FINAL_ALIGNMENT', kinLeg(rec.p, 1, R * (solved.phi1 - solved.phi2), () => -DMAX, .7, .35, .6));
+  rec.run('FINAL_ALIGNMENT', kinLeg(rec.p, 1, R * (solved1.phi1 - solved1.phi2), () => -DMAX, .7, .35, .6));
   rec.hold('FINAL_ALIGNMENT', .8);
   rec.steerTo('FINAL_ALIGNMENT', 0, 1.2);
   rec.left = false; rec.right = false; rec.hold('PARKED', 3);
-  return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: { blueX: BLUE_X, blackX: solved.startRA + TAIL, phi: solved.phi1, phi2: solved.phi2, s2: solved.s2, startRA: solved.startRA, endCentre: solved.end, setupZ: solved.setupZ, clearance: solved.clearance } };
+  return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: { blueX: BLUE_X, blackX: solved1.startRA + TAIL, phi: solved1.phi1, phi2: solved1.phi2, s2: solved1.s2, startRA: solved1.startRA, endCentre: solved1.end, setupZ: solved1.setupZ, clearance: solved1.clearance }, bay: null };
+}
+
+const BAY_REAR_GAP = 1.0;                    // the rear bumper stops this far from the closed end's line
+/**
+ * The reverse into the bay, from rest with the nose at the second white line and the car on the lane (heading west). The right signal first, then reverse:
+ * straight back, the wheel hard right (stopped) and a quarter circle that points the car down the bay, the wheel straight, straight back to the closed end.
+ */
+function bayReverse(rec: Rec) {
+  const R = R_MIN, p = rec.p, xB = (BAY.xW + BAY.xE) / 2, s1 = xB - R - p.x;
+  const zAxleEnd = BAY.zEnd + BAY_REAR_GAP + TAIL, s3 = (p.z - R) - zAxleEnd;
+  rec.right = true; rec.hold('BAY_SIGNAL_RIGHT', 1.6);
+  rec.rev = true; rec.hold('BAY_SHIFT_R', 1.0);
+  rec.run('BAY_REVERSE_1', kinLeg(rec.p, -1, s1, () => 0, 1.0, .45, .8));
+  rec.rev = false; rec.hold('BAY_STOP_1', 1.0);
+  rec.rev = true; rec.steerTo('BAY_STEER_RIGHT', -DMAX, 1.4);
+  rec.run('BAY_REVERSE_ARC', kinLeg(rec.p, -1, R * Math.PI / 2, () => -DMAX, .85, .4, .7));
+  rec.rev = false; rec.hold('BAY_REVERSE_ARC', .9);
+  rec.rev = true; rec.steerTo('BAY_STRAIGHTEN', 0, 1.2);
+  rec.run('BAY_REVERSE_2', kinLeg(rec.p, -1, s3, () => 0, 1.0, .45, .8));
+  rec.rev = false; rec.hold('BAY_REVERSE_2', 1.0);
+  rec.left = false; rec.right = false; rec.hold('BAY_PARKED', 3);
+  return { s1, s3, xB, z0: p.z };
+}
+const bayEndCentre = (rec: Rec): [number, number] => [rec.p.x + RA * Math.cos(rec.p.yaw), rec.p.z - RA * Math.sin(rec.p.yaw)];
+
+/** The bay, from the stall: the same drive round to the stop line, then straight on to the second white line, then the reverse. */
+function planBayFront(st: Stall): Plan {
+  const rec = planFront(st), p1 = rec.p;
+  rec.run('DRIVE_TO_BAY_LINE', pathLeg(p1, [{ k: 'S', len: p1.x - (LINE2_X + NOSE), dz: LANE_Z - p1.z }], 4.2, 1.3, 1.7, 2));
+  rec.hold('STOP_AT_BAY_LINE', 1.4);
+  const b = bayReverse(rec);
+  return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: { lineX: BAY_LINE.x, z0: b.z0, s1: b.s1, s3: b.s3, xB: b.xB, endCentre: bayEndCentre(rec), box: null } };
+}
+
+/** The distance from the car's body (4.6 x 2.15 m) to the nearest cone, edge to edge, with the rear axle at p. */
+const coneGapAt = (p: Pose): number => {
+  const cx = p.x + RA * Math.cos(p.yaw), cz = p.z - RA * Math.sin(p.yaw), cs = Math.cos(p.yaw), sn = Math.sin(p.yaw);
+  let m = 9; for (const [px, pz] of BL_CONES) { const dx = px - cx, dz = pz - cz, a = dx * cs - dz * sn, b = -dx * sn - dz * cs, g = Math.hypot(Math.max(Math.abs(a) - 2.3, 0), Math.max(Math.abs(b) - 1.075, 0)) - CONE_R; if (g < m) m = g; }
+  return m;
+};
+/**
+ * Backing out of the box: a short reverse with the wheel hard right (the tail comes back a little toward the kerb, the nose swings toward the lane), then forward:
+ * a left arc out of the box, a straight, a right arc that points the car west again on the lane. Searched so the whole move keeps well clear of every cone.
+ */
+function solveBoxExit(start: Pose) {
+  const R = R_MIN, x2 = LINE2_X + NOSE;
+  let best: { d: number; r: number; a1: number; s: number; gap: number; ops: Op[]; sOff: number } | null = null;
+  // (a wider search showed the best answer is always about here: the tail cones limit how far it can back up, the cone ahead how soon it must swing out)
+  for (const d of [.9, 1.0, 1.1, 1.2]) for (const r of [4.2, 4.4, 5.0, 6.0]) for (let deg = 30; deg <= 55; deg += 2.5) {
+    const a1 = deg * Math.PI / 180, th = d / R + a1, p1 = arc(start, -1, d, -DMAX), dl = Math.atan(WB / r);
+    const q = arc(p1, 1, r * a1, dl), q2 = arc(q, 1, r * th, -dl), s = (LANE_Z - q2.z) / Math.sin(th);
+    if (!(s >= .3)) continue;
+    const xEnd = q2.x + s * Math.cos(p1.yaw + a1), lenEnd = xEnd - x2;
+    if (lenEnd < 2.6) continue;
+    const ops: Op[] = [{ k: 'T', side: 1, r, deg }, { k: 'S', len: s }, { k: 'T', side: -1, r, deg: th * 180 / Math.PI }, { k: 'S', len: lenEnd }];
+    const leg = pathLeg(p1, ops, 3.6, 1.2, 1.6, 1.8);
+    let gap = 9;
+    for (let k = 0; k <= Math.round(d / .05); k++) gap = Math.min(gap, coneGapAt(arc(start, -1, Math.min(d, k * .05), -DMAX)));
+    for (let k = 0; k <= leg.N; k += 5) gap = Math.min(gap, coneGapAt({ x: leg.px[k]!, z: leg.pz[k]!, yaw: leg.yaw[k]! }));
+    if (Math.abs(leg.pz[leg.N]! - LANE_Z) > .05) continue;
+    if (!best || gap > best.gap + .02 || (Math.abs(gap - best.gap) <= .02 && s < best.s)) best = { d, r, a1, s, gap, ops, sOff: r * a1 + s + r * th + 1.0 };
+  }
+  if (!best) throw new Error('no way out of the box');
+  return best;
+}
+
+/** The bay, from the parallel box (where the first drive left the car): back out, signal left, drive to the second white line, then the same reverse. */
+function planBayBox(): Plan {
+  const start = planFor('parallel').end;        // the car stands in the box: the rear axle is here
+  const rec = new Rec(start), ex = solveBoxExit(start);
+  // 1. the signal for the side the tail swings to (right: toward the kerb), before the car moves, then a short, slow reverse with the wheel hard right
+  rec.right = true; rec.hold('BOX_SIGNAL_R', 1.8);
+  rec.rev = true; rec.hold('BOX_SHIFT_R', .9);
+  rec.steerTo('BOX_STEER_R', -DMAX, 1.0);
+  rec.run('BOX_REVERSE', kinLeg(rec.p, -1, ex.d, () => -DMAX, .8, .4, .7));
+  rec.rev = false; rec.hold('BOX_STOP', .9);
+  // 2. the left signal, then straight the wheel and forward out of the box into the lane, and on west to the second white line
+  rec.right = false; rec.left = true; rec.hold('BOX_SIGNAL_L', 1.6);
+  rec.steerTo('BOX_STEER_0', 0, 1.0);
+  rec.hold('BOX_SHIFT_D', .8);
+  rec.run('BOX_PULL_OUT', pathLeg(rec.p, ex.ops, 3.6, 1.2, 1.6, 1.8), s => ({ left: s < ex.sOff, right: false }));
+  rec.left = false; rec.hold('STOP_AT_BAY_LINE', 1.4);
+  const b = bayReverse(rec);
+  return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: { lineX: BAY_LINE.x, z0: b.z0, s1: b.s1, s3: b.s3, xB: b.xB, endCentre: bayEndCentre(rec), box: { d: ex.d, r: ex.r, a1: ex.a1, s: ex.s, gap: ex.gap } } };
 }
 
 /**
@@ -315,16 +420,22 @@ function solveMane() {
 }
 
 // ---------- the plan for this page's car ----------
-let STALL_USED: Stall = STALLS[CAST], PLAN: Plan | null = null;
-const plan = () => (PLAN ??= planOnce(STALL_USED));
+let STALL_USED: Stall = STALLS[CAST], MODE: ParkMode = 'parallel';
+const PLANS: Partial<Record<ParkMode, Plan>> = {};
+function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : planBayBox()); }
+const plan = () => planFor(MODE);
 /** Use a different stall (tests; the page uses its own car's stall). */
-export function setParkStall(st: Stall) { STALL_USED = st; PLAN = null; }
+export function setParkStall(st: Stall) { STALL_USED = st; for (const k of Object.keys(PLANS)) delete PLANS[k as ParkMode]; }
+/** Which drive the accessors below describe (tests; the page sets it when a drive starts). */
+export function setParkMode(m: ParkMode) { MODE = m; }
+export const parkMode = () => MODE;
 export function parkTotal() { return plan().T; }
 export function parkMarks() { return plan().marks; }
 export function parkEnds() { return plan().ends; }
-export function parkSetup() { return plan().setup; }
+export function parkSetup() { return plan().setup!; }
+export function parkBay() { return plan().bay!; }
 export const PARK_STATES = STATE_LIST;
-export const PARK_GEOM = { LANE_Z, NOSE_STOP_X, BLUE_X, SETUP_Z, BOX_CX, BOX_CZ, R_MIN, CONE_NEAR };
+export const PARK_GEOM = { LANE_Z, LANE_E, LANE_N, NOSE_STOP_X, BLUE_X, LINE2_X, SETUP_Z, BOX_CX, BOX_CZ, R_MIN, CONE_NEAR, BAY_REAR_GAP };
 
 export type ParkCar = { x: number; y: number; z: number; yaw: number; steer: number; speed: number; accel: number; lat: number; left: boolean; right: boolean; reversing: boolean; state: ParkState; moving: boolean; t: number };
 const OUT: ParkCar = { x: 0, y: .002, z: 0, yaw: 0, steer: 0, speed: 0, accel: 0, lat: 0, left: false, right: false, reversing: false, state: 'EXIT_SIGNAL', moving: false, t: 0 };
@@ -340,9 +451,18 @@ export function parkCarAt(t: number, out: ParkCar = OUT): ParkCar {
 /** The rear axle's pose at time t (what the planner steers), for tests. */
 export function parkAxleAt(t: number) { const c = parkCarAt(t); return { x: c.x - RA * Math.cos(c.yaw), z: c.z + RA * Math.sin(c.yaw), yaw: c.yaw }; }
 
-/** The clock of the demonstration: the rig advances it, the car reads it. */
-export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0 };
-export function startPark() { if (park.phase === 'run') return false; park.phase = 'run'; park.t = 0; park.seq++; return true; }
+/** The clock of the demonstration: the rig advances it, the car reads it. `loc` is where the car stands between drives: its stall, the parallel box, the bay. */
+export type ParkKind = 'parallel' | 'bay';
+export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'box' | 'bay' };
+/** Can this drive start now? The parallel park only from the stall; the bay from the stall or from the box. */
+export function canStartPark(kind: ParkKind) { if (park.phase === 'run') return false; return kind === 'parallel' ? park.loc === 'front' : park.loc !== 'bay'; }
+export function startPark(kind: ParkKind = 'parallel') {
+  if (!canStartPark(kind)) return false;
+  MODE = kind === 'parallel' ? 'parallel' : park.loc === 'front' ? 'bayFront' : 'bayBox';
+  park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
+}
+/** The drive is over: the car stays where it parked. */
+export function finishPark() { park.t = parkTotal(); park.phase = 'done'; park.loc = park.kind === 'parallel' ? 'box' : 'bay'; }
 export const parkRunning = () => park.phase === 'run';
 /** True while the car is rolling in the demonstration (for the shadow refresh and the pixel-ratio hold). */
 export function parkMoving() { return park.phase === 'run' && parkCarAt(park.t).moving; }

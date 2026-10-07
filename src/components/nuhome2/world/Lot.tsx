@@ -13,7 +13,7 @@ import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
 import { BackPatio } from './BackPatio';
-import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0 } from './rearlot';
+import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0, BAY_LINE } from './rearlot';
 import { ParkSpot } from './ParkSpot';
 
 /*
@@ -359,7 +359,8 @@ const BL_LINES: [number, number, number, number][] = [
   [BL_SHARED, BL_TOP, BL_SHARED, BL_BOX_BOTTOM],          // its right side, which is also the left side of the parallel box
   [BL_SHARED, BL_BOX_TOP, BL_BOX_RIGHT, BL_BOX_TOP],      // the box's far line
   [BL_BOX_RIGHT, BL_BOX_TOP, BL_BOX_RIGHT, BL_BOX_BOTTOM],
-  [bx(727), bz(327), bx(727), bz(458)],                   // the lone stop line
+  [bx(727), bz(327), bx(727), bz(458)],                   // the stop line
+  [BAY_LINE.x, BAY_LINE.z0, BAY_LINE.x, BAY_LINE.z1],     // the second line, where the car stops before it backs into the bay
 ];
 const coneGeo = (() => {
   const parts: THREE.BufferGeometry[] = [], tint = (g: THREE.BufferGeometry, c: string) => { const col = new THREE.Color(c), n = g.attributes.position!.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
@@ -427,7 +428,7 @@ function BackLot({ asphalt }: { asphalt: THREE.Material }) {
     })}
     <Arrows items={[{ x: CONN_X, z: -19.5, yaw: 0 }, { x: -CONN_X, z: -19.5, yaw: Math.PI }]} />
     <Cones list={BL_CONES} />
-    <ParkSpot />
+    <ParkSpot kind="parallel" /><ParkSpot kind="bay" />
     {[-18, 12].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
     {[[-27.6, -21, Math.PI], [27.6, -21, 0]].map(([x, z, r]) => <Lamp key={`cl${x}`} x={x!} z={z!} rotY={r!} />)}
   </group>;

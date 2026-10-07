@@ -23,3 +23,8 @@ export const PBOX = { x0: bx(476), x1: bx(660), zKerb: bz(207), zLane: bz(288) }
 export const STOP_LINE = { x: bx(727), z0: bz(327), z1: bz(458) };
 /** The cones that mark the box, as the car sees them: the kerb row, the near-end corner cone, the lane-side tail. */
 export const CONE_R = .24, CONE_H = .7;
+
+/** The second white line, like the stop line (same length, same z span, so the two line up): where the car's nose stops before it backs into the bay. In line with the first cone of the kerb row. */
+export const BAY_LINE = { x: bx(160), z0: STOP_LINE.z0, z1: STOP_LINE.z1 };
+/** The reverse bay (the closed-end space beside the parallel box): the painted side lines, the closed end (north) and the foot where it opens (south). */
+export const BAY = { xW: bx(366), xE: bx(476), zEnd: bz(83), zOpen: bz(315) };
