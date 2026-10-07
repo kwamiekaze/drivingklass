@@ -9,6 +9,7 @@ import { NightCtx } from './theme';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, type Quality } from './quality';
 import { carMoving, introAt } from './intro';
+import { parkMoving } from './park';
 
 export type Theme = 'day' | 'night';
 export type SceneProps = {
@@ -83,7 +84,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 
 /** Applies a held pixel ratio change as soon as the car is not rolling. */
 function SettleDpr({ pend, apply }: { pend: { current: number }; apply: (d: number) => void }) {
-  useFrame(() => { if (pend.current && !carMoving()) { const d = pend.current; pend.current = 0; apply(d); } });
+  useFrame(() => { if (pend.current && !carMoving() && !parkMoving()) { const d = pend.current; pend.current = 0; apply(d); } });
   return null;
 }
 
@@ -103,8 +104,8 @@ export default function Scene({ onReady, onLost, ...rest }: SceneProps) {
   // a pixel ratio change resizes the canvas, which costs a frame: it waits until the car is not rolling, so the drive never hitches
   const pend = useRef(0);
   const apply = (d: number) => setLevel(l => Math.max(0, Math.min(3, l + d)));
-  const down = () => { if (carMoving()) pend.current = 1; else apply(1); };
-  const up = () => { if (performance.now() - born.current <= 8000) return; if (carMoving()) pend.current = -1; else apply(-1); };
+  const down = () => { if (carMoving() || parkMoving()) pend.current = 1; else apply(1); };
+  const up = () => { if (performance.now() - born.current <= 8000) return; if (carMoving() || parkMoving()) pend.current = -1; else apply(-1); };
   const narrow = typeof window !== 'undefined' && (window.innerWidth < 700 || window.innerWidth / window.innerHeight < .8);
   const k0 = introAt(0, narrow);
   const lost = useRef(onLost);

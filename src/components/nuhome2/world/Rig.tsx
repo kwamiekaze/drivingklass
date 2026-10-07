@@ -9,12 +9,14 @@ import { usableShots, type Shot } from './shots';
 import { cinema, stopReel } from './reel';
 import { engine } from '../music/engine';
 import { skyAnchor } from './Sky';
+import { park, parkMoving, parkTotal, startPark } from './park';
+import { parkCamAt } from './parkcam';
 
 type Controls = {
   target: THREE.Vector3; enabled: boolean; autoRotate: boolean; autoRotateSpeed: number; getAzimuthalAngle: () => number;
   addEventListener: (t: string, f: () => void) => void; removeEventListener: (t: string, f: () => void) => void;
 };
-type Mode = 'intro' | 'pan' | 'fly' | 'free' | 'cinema';
+type Mode = 'intro' | 'pan' | 'fly' | 'free' | 'cinema' | 'park';
 /** After the opening has run and the visitor has left the scene alone this long, it starts cutting between its angles by itself. */
 const IDLE_BEFORE_CUTS = 12;
 const shuffle = (n: number, seed: number) => { const a = Array.from({ length: n }, (_, i) => i); let x = seed; for (let i = n - 1; i > 0; i--) { x = (x * 1664525 + 1013904223) >>> 0; const j = x % (i + 1); [a[i], a[j]] = [a[j]!, a[i]!]; } return a; };
@@ -34,10 +36,12 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const hasStage = q.get('stage') !== null, hasCam = q.get('cam') !== null;
   const shotQ = q.get('shot') !== null ? Number(q.get('shot')) : null, shotU = Number(q.get('shotU') ?? .5);   // ?shot=12&shotU=.5 freezes a cut (for checking)
   const introT = q.get('introT') !== null ? Number(q.get('introT')) : null;      // ?introT=30 freezes the opening shot at 30 seconds (for checking)
-  const mode = useRef<Mode>(shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
+  const parkT = q.get('parkT') !== null ? Number(q.get('parkT')) : null;         // ?parkT=40 freezes the parallel-parking drive at 40 seconds (for checking)
+  const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); }
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { startPark(); park.t = parkT; } }
+  const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
   const C = useMemo(() => ({ pp: curve(PAN.p), pl: curve(PAN.l) }), []);
@@ -61,7 +65,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   useEffect(() => { if (first.current) { first.current = false; return; } mode.current = 'fly'; }, [stage, narrow]);
   useEffect(() => {
     if (!controls) return;
-    const grab = () => { if (mode.current === 'intro') releaseCar(); stopReel(); if (mode.current !== 'free') mode.current = 'free'; };
+    const grab = () => { if (mode.current === 'intro') releaseCar(); stopReel(); if (mode.current !== 'free') mode.current = 'free'; };   // the parking drive carries on by its own clock
     controls.addEventListener('start', grab);
     return () => controls.removeEventListener('start', grab);
   }, [controls]);
@@ -86,15 +90,19 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       return;
     }
     // shadows refresh every frame while the car rolls (its shadow must move with it), every other frame once nothing moves
-    gl.shadowMap.autoUpdate = false; if (carMoving() || g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;
+    gl.shadowMap.autoUpdate = false; if (carMoving() || parkMoving() || g.frames % 2 === 0) gl.shadowMap.needsUpdate = true;
+    if (park.phase === 'run' && parkT === null) { park.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (park.t >= parkTotal()) { park.t = parkTotal(); park.phase = 'done'; } }
     if (!intro.done && introT === null) { intro.t += Math.min(Math.max(g.dt, 1 / 250), .05); if (intro.t >= intro.t3 + T_DRIVE && intro.t >= T_END) intro.done = true; }
   }, -5);
   useFrame((state, delta) => {
     if (!controls) return;
+    const sstep = (u: number) => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
     const dt = Math.min(gate.current.dt, .05) || Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
     engine.tick(time);
     if (shotQ === null && cinema.reel && mode.current !== 'cinema') { if (mode.current === 'intro') releaseCar(); mode.current = 'cinema'; cut.current.idx = -1; }
     else if (shotQ === null && !cinema.reel && !cinema.auto && mode.current === 'cinema') mode.current = 'free';
+    if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) { if (mode.current === 'intro') releaseCar(); cinema.auto = false; stopReel(); mode.current = 'park'; }
+    if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) parkFrom.current = { p: camera.position.clone(), l: controls.target.clone(), fov: (camera as THREE.PerspectiveCamera).fov, seq: park.seq };
     const m = mode.current;
     controls.autoRotate = m === 'free' && !reducedMotion && !hasCam;
     if (controls.autoRotate) {
@@ -109,6 +117,13 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       camera.position.set(...pose.p); controls.target.set(...pose.l); camera.lookAt(controls.target);
       if (Math.abs(persp.fov - pose.fov) > .005) { persp.fov = pose.fov; persp.updateProjectionMatrix(); }
       if (introT === null && intro.t >= T_END) { mode.current = 'pan'; panClock.current = 0; }
+    } else if (m === 'park') {
+      // the parallel-parking drive: a scripted camera (parkcam.ts) that starts from wherever the lens was, and hands the scene back to the visitor when the car is parked
+      const pose = parkCamAt(Math.min(park.t, parkTotal()), narrow), from = parkFrom.current, k = from && parkT === null ? sstep(park.t / 2.4) : 1;
+      if (from && k < 1) { camera.position.set(from.p.x + (pose.p[0] - from.p.x) * k, from.p.y + (pose.p[1] - from.p.y) * k, from.p.z + (pose.p[2] - from.p.z) * k); controls.target.set(from.l.x + (pose.l[0] - from.l.x) * k, from.l.y + (pose.l[1] - from.l.y) * k, from.l.z + (pose.l[2] - from.l.z) * k); persp.fov = from.fov + (pose.fov - from.fov) * k; }
+      else { camera.position.set(...pose.p); controls.target.set(...pose.l); persp.fov = pose.fov; }
+      camera.lookAt(controls.target); persp.updateProjectionMatrix();
+      if (parkT === null && park.phase === 'done') mode.current = 'free';
     } else if (m === 'pan') {
       panClock.current += dt; const u = .5 - .5 * Math.cos((panClock.current / PAN.period) * Math.PI * 2);
       tp.current.copy(C.pp.getPoint(u)); glide(tp.current); tl.current.copy(C.pl.getPoint(u));
@@ -148,7 +163,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     }
     if (!done.current && m !== 'intro') { done.current = true; onIntroDone(); }
     if (skyAnchor.current) skyAnchor.current.position.set(camera.position.x, 0, camera.position.z);
-    if (m !== 'intro' && m !== 'cinema') { const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 45); t.y = THREE.MathUtils.clamp(t.y, .4, 16); }
+    if (m !== 'intro' && m !== 'cinema' && m !== 'park') { const t = controls.target; t.x = THREE.MathUtils.clamp(t.x, -45, 45); t.z = THREE.MathUtils.clamp(t.z, -45, 45); t.y = THREE.MathUtils.clamp(t.y, .4, 16); }
   });
   return null;
 }

@@ -13,6 +13,8 @@ import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
 import { BackPatio } from './BackPatio';
+import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0 } from './rearlot';
+import { ParkSpot } from './ParkSpot';
 
 /*
  * The lot, laid out like a real one. World meters. Building front wall z -14.5, terrace z -15.2 to -8.6.
@@ -347,10 +349,6 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
  * the cones are 1.9 m apart. The layout is the photo, scaled at 27 px to the metre: u, v are pixels of that photo.
  * Two flat roads join it to the front lot's side lanes, so a car can leave by the east lane, drive round and come back by the west one.
  */
-const BL = { x0: -34.2, x1: 34.2, zs: -26.2, zn: -53.9, kerb: .3 };   // x edges line up with the plaza's side kerbs (x +-34.35); zs leaves room for the patio between the building and the lot
-const PHX = 27, PHW = 968, PHH = 779, PH_RIGHT = 25.0, PH_FRONT = -26.5;   // the layout sits nearer the middle of the lot than before (9 m left, 3 m back)
-const bx = (u: number) => PH_RIGHT - (PHW - u) / PHX, bz = (v: number) => PH_FRONT - (PHH - v) / PHX;
-// every number comes from a pixel of the photo, so the whole layout moves as one when PH_RIGHT or PH_FRONT change (the shared side was once typed in metres and got left behind)
 const BL_U_LEFT = bx(366), BL_SHARED = bx(476), BL_BOX_RIGHT = bx(660), BL_TOP = bz(83), BL_FOOT_Z = bz(315), BL_FOOT_X = bx(290), BL_BOX_TOP = bz(207), BL_BOX_BOTTOM = bz(288);
 const BL_LW = .2;
 /** [x0, z0, x1, z1] centre lines, in metres. */
@@ -363,14 +361,6 @@ const BL_LINES: [number, number, number, number][] = [
   [BL_BOX_RIGHT, BL_BOX_TOP, BL_BOX_RIGHT, BL_BOX_BOTTOM],
   [bx(727), bz(327), bx(727), bz(458)],                   // the lone stop line
 ];
-const BL_CONES: [number, number][] = [
-  [362, 66], [425, 66], [477, 66],                                     // behind the closed end
-  [360, 115], [360, 180], [360, 240], [360, 300], [320, 303], [280, 308],   // the left side and its foot
-  [478, 108], [475, 173], [470, 250], [472, 305],                      // the shared side
-  [524, 198], [572, 198], [619, 198], [662, 198], [656, 247], [656, 298], [700, 298], [740, 297],   // the parallel box and its tail
-  ...Array.from({ length: 12 }, (_, i) => [160 + 51.1 * i, 627] as [number, number]),               // the kerb line row
-].map(([u, v]) => [bx(u!), bz(v!)] as [number, number]);
-
 const coneGeo = (() => {
   const parts: THREE.BufferGeometry[] = [], tint = (g: THREE.BufferGeometry, c: string) => { const col = new THREE.Color(c), n = g.attributes.position!.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
   const R0 = .16, R1 = .028, H = .7, rAt = (y: number) => R0 + (R1 - R0) * (y / H);
@@ -415,7 +405,6 @@ function KerbReturn({ x0, z0, sx, sz, r, asphalt }: { x0: number; z0: number; sx
   </group>;
 }
 
-const CONN_X = 31.7, CONN_Z0 = -14.7;   // the two roads leave the plaza's side lanes here and run north to the back lot
 function BackLot({ asphalt }: { asphalt: THREE.Material }) {
   const W = BL.x1 - BL.x0, D = BL.zs - BL.zn, CL = CONN_Z0 - BL.zs, lot = useMemo(() => roadGeo(W, D), []), conn = useMemo(() => roadGeo(5.2, CL), []);
   const kerb = '#cfc9bd', cz = (BL.zs + BL.zn) / 2, ccz = (CONN_Z0 + BL.zs) / 2, R = 1.0;
@@ -438,6 +427,7 @@ function BackLot({ asphalt }: { asphalt: THREE.Material }) {
     })}
     <Arrows items={[{ x: CONN_X, z: -19.5, yaw: 0 }, { x: -CONN_X, z: -19.5, yaw: Math.PI }]} />
     <Cones list={BL_CONES} />
+    <ParkSpot />
     {[-18, 12].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
     {[[-27.6, -21, Math.PI], [27.6, -21, 0]].map(([x, z, r]) => <Lamp key={`cl${x}`} x={x!} z={z!} rotY={r!} />)}
   </group>;

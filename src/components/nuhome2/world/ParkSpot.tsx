@@ -1,0 +1,64 @@
+import { useMemo, useRef, useState } from 'react';
+import { Billboard } from '@react-three/drei';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import * as THREE from 'three';
+import { intro } from './intro';
+import { park, startPark } from './park';
+import { PBOX } from './rearlot';
+
+/**
+ * The "!" beside the parallel-parking space in the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the
+ * repair markers of fixing365.com. Tap it and the car that opened the page backs out of its stall and parallel parks in the box (park.ts).
+ * It floats at the east end of the box, beside the space rather than in it, keeps a steady size on screen at any distance, and is hidden
+ * while the car is working and until the opening shot has finished.
+ */
+const ringGeo = new THREE.RingGeometry(.78, 1, 48), discGeo = new THREE.CircleGeometry(.64, 40), barGeo = new THREE.PlaneGeometry(.17, .44), dotGeo = new THREE.CircleGeometry(.105, 20), hitGeo = new THREE.SphereGeometry(1.7, 10, 8), haloGeo = new THREE.CircleGeometry(1.6, 40);
+const white = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
+const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+function makeHalo() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d')!, r = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,0.5)'); r.addColorStop(.4, 'rgba(255,255,255,0.18)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: '#ff9a4a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+}
+/** Where the marker floats: just past the east end of the box, level with its middle, at about the height of a car roof. */
+export const SPOT_POS: [number, number, number] = [PBOX.x1 + 1.7, 1.6, (PBOX.zKerb + PBOX.zLane) / 2];
+
+export function ParkSpot({ reducedMotion = false }: { reducedMotion?: boolean }) {
+  const [hover, setHover] = useState(false);
+  const outer = useRef<THREE.Group>(null), holder = useRef<THREE.Group>(null), ring = useRef<THREE.Mesh>(null), disc = useRef<THREE.Group>(null);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  const mats = useMemo(() => ({ halo: makeHalo(), ring: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, toneMapped: false, depthWrite: false }), disc: new THREE.MeshBasicMaterial({ color: '#ff7a1a', toneMapped: false }) }), []);
+  useFrame(({ clock, camera }) => {
+    const o = outer.current, h = holder.current; if (!o || !h) return;
+    const show = intro.done && park.phase === 'idle';
+    if (o.visible !== show) o.visible = show;
+    if (!show) return;
+    // a steady size on screen: small up close, never lost from far away
+    const d = camera.position.distanceTo(h.getWorldPosition(tmp));
+    h.scale.setScalar(Math.min(3.4, Math.max(.34, d * .03)));
+    const t = reducedMotion ? .4 : (clock.elapsedTime * .8) % 1;
+    if (ring.current) { ring.current.scale.setScalar(1 + t * 1.2); mats.ring.opacity = (1 - t) * .85; }
+    if (disc.current) { const s = hover ? 1.25 : 1; disc.current.scale.lerp(tmp.set(s, s, s), .2); }
+  });
+  const choose = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta > 8) return; if (intro.done && park.phase === 'idle') { document.body.style.cursor = 'auto'; startPark(); } };
+  const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; };
+  const out = () => { setHover(false); document.body.style.cursor = 'auto'; };
+  return <group ref={outer} visible={false} name="park-spot">
+    <Billboard position={SPOT_POS} ref={holder}>
+      <group onClick={choose} onPointerOver={over} onPointerOut={out}>
+        <mesh geometry={hitGeo} material={hitMat} />
+        <mesh geometry={haloGeo} material={mats.halo} renderOrder={9} />
+        <mesh ref={ring} geometry={ringGeo} material={mats.ring} renderOrder={10} />
+        <group ref={disc}>
+          <mesh geometry={discGeo} material={mats.disc} renderOrder={11} />
+          <group renderOrder={12}>
+            <mesh geometry={barGeo} material={white} position={[0, .1, .001]} />
+            <mesh geometry={dotGeo} material={white} position={[0, -.27, .001]} />
+          </group>
+        </group>
+      </group>
+    </Billboard>
+  </group>;
+}

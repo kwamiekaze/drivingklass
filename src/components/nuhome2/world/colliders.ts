@@ -1,3 +1,4 @@
+import { BL, BL_CONES, CONE_H, CONE_R } from './rearlot';
 /** The solid things in the scene, in world metres, as the camera has to see them. Used to push a free camera out of objects and to test the opening shot. */
 export type Solid = { n: string } & ({ k: 'box'; min: [number, number, number]; max: [number, number, number] } | { k: 'cyl'; x: number; z: number; r: number; y0: number; y1: number } | { k: 'wire'; a: [number, number]; b: [number, number] });
 const box = (n: string, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): Solid => ({ n, k: 'box', min: [x0, y0, z0], max: [x1, y1, z1] });
@@ -31,6 +32,9 @@ export const SOLIDS: Solid[] = [
   ...[[-13, 10.8], [13, 10.8], [-26, 10.8], [26, 10.8], [-24.4, -8.2], [24.4, -8.2]].map(([x, z]) => cyl('lot lamp', x!, z!, .3, 0, 8.4)),
   ...[46, 76, 106, 136, 166, 196].map((z, i) => cyl('avenue lamp', i % 2 ? -6.2 : 6.2, z, .3, 0, 8.4)),
   ...WIRE_POLES.map(([x, z]) => cyl('canopy pole', x, z, .35, 0, 7.8)),
+  // the back lot: every cone of the training layout, and its four lamps
+  ...BL_CONES.map(([x, z]) => cyl('cone', x, z, CONE_R, 0, CONE_H)),
+  ...[[-18, BL.zn + 1.1], [12, BL.zn + 1.1], [-27.6, -21], [27.6, -21]].map(([x, z]) => cyl('back lot lamp', x!, z!, .3, 0, 8.4)),
 ];
 /** The sagging star strings, so the camera can keep clear of them. */
 for (let i = 0; i < WIRE_POLES.length - 1; i++) SOLIDS.push({ n: 'star string', k: 'wire', a: WIRE_POLES[i]!, b: WIRE_POLES[i + 1]! });
