@@ -94,7 +94,6 @@ function Arrows({ items }: { items: { x: number; z: number; yaw: number }[] }) {
 function markings() {
   const white: Dec[] = [], avenueW: Dec[] = [], cross: Dec[] = [];
   [-1, 1].forEach(s => white.push({ x: s * 1.375, z: -6, w: .16, d: 5 }));   // the reserved stall's lines are a little heavier
-  white.push({ x: -31.7, z: 13.3, w: 5, d: .45 });
   // the avenue's own crosswalk, across the gap in the far pavement: ten bars running along the road, inside the white edge lines
   // exactly the street crosswalks' bars turned to run along this road: 2.6 m long, 0.45 m thick, 0.9 m from one to the next (0.45 m gaps), centred on the road
   for (let k = 0; k < 8; k++) cross.push({ x: (k - 3.5) * .9, z: 33.3, w: .45, d: 2.6 });
@@ -388,18 +387,18 @@ function Cones({ list }: { list: [number, number][] }) {
 }
 
 /**
- * A kerb return: the rounded corner where a kerb turns, like the front entrance has. (x0, z0) is the sharp corner of the lawn or planting
+ * A kerb return: the rounded corner where a kerb turns, like the front entrance has. (x0, z0) is the sharp corner of the two kerb centre lines
  * next to the road, which spreads from it toward +sx in x and +sz in z. The corner is cut to a quarter circle of radius r, a kerb band follows
  * the curve and the little cut left over is filled with asphalt so the road corner is rounded too.
  */
 function KerbReturn({ x0, z0, sx, sz, r, asphalt }: { x0: number; z0: number; sx: number; sz: number; r: number; asphalt: THREE.Material }) {
   const parts = useMemo(() => {
-    const cx = x0 + sx * r, cz = z0 + sz * r, N = 16, aS = Math.atan2(-sz, 0), aE = Math.atan2(0, -sx);
+    const cx = x0 + sx * r, cz = z0 + sz * r, N = 16, H = .15, aS = Math.atan2(-sz, 0), aE = Math.atan2(0, -sx);
     let da = aE - aS; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
     const arc = (rad: number) => Array.from({ length: N + 1 }, (_, i) => { const a = aS + da * i / N; return [cx + rad * Math.cos(a), cz + rad * Math.sin(a)] as [number, number]; });
     const shape = (pts: [number, number][]) => new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)));
-    const kerb = new THREE.ExtrudeGeometry(shape([...arc(r + .3), ...arc(r).reverse()]), { depth: .2, bevelEnabled: false }); kerb.rotateX(-Math.PI / 2);
-    const fill = new THREE.ShapeGeometry(shape([[x0, z0], [x0 + sx * r, z0], ...arc(r + .3), [x0, z0 + sz * r]])); fill.rotateX(-Math.PI / 2);
+    const kerb = new THREE.ExtrudeGeometry(shape([...arc(r + H), ...arc(r - H).reverse()]), { depth: .2, bevelEnabled: false }); kerb.rotateX(-Math.PI / 2);
+    const fill = new THREE.ShapeGeometry(shape([[x0 - sx * H, z0 - sz * H], ...arc(r + H)])); fill.rotateX(-Math.PI / 2);
     const uv = fill.attributes.uv as THREE.BufferAttribute, ps = fill.attributes.position as THREE.BufferAttribute; for (let i = 0; i < uv.count; i++) uv.setXY(i, ps.getX(i) / 10, ps.getZ(i) / 10);
     return { kerb, fill };
   }, [x0, z0, sx, sz, r]);
@@ -420,7 +419,7 @@ function BackLot({ asphalt }: { asphalt: THREE.Material }) {
     <Box p={[0, .1, BL.zn - .15]} s={[W + .6, .2, BL.kerb]} c={kerb} r={.8} cast={false} />
     {[-1, 1].map(sg => <Box key={`ks${sg}`} p={[sg * (BL.x1 + .15), .1, cz]} s={[BL.kerb, .2, D + .6]} c={kerb} r={.8} cast={false} />)}
     <Box p={[0, .1, BL.zs + .15]} s={[2 * (29.0 - R), .2, BL.kerb]} c={kerb} r={.8} cast={false} />
-    {[-1, 1].map(sg => <KerbReturn key={`kr${sg}`} x0={sg * 29.0} z0={BL.zs} sx={-sg} sz={1} r={R} asphalt={asphalt} />)}
+    {[-1, 1].map(sg => <KerbReturn key={`kr${sg}`} x0={sg * 29.0} z0={BL.zs + .15} sx={-sg} sz={1} r={R} asphalt={asphalt} />)}
     {[-1, 1].map(sg => <Box key={`kc${sg}`} p={[sg * 29.0, .1, ccz + R / 2]} s={[BL.kerb, .2, CL - R]} c={kerb} r={.8} cast={false} />)}
     {[-1, 1].map(sg => <Box key={`ko${sg}`} p={[sg * 34.35, .1, ccz]} s={[BL.kerb, .2, CL]} c={kerb} r={.8} cast={false} />)}
     {/* lane paint, like the front lot's lanes: an edge line each side, and an arrow in the lane */}
