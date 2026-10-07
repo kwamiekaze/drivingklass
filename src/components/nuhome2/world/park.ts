@@ -46,7 +46,8 @@ const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE', 
   'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP', 'BACK_SHIFT_R', 'BACK_REVERSE', 'BACK_DONE',
   'OUT_SHIFT_D', 'OUT_TO_STOP', 'OUT_STOP_SIGN', 'OUT_TURN_OUT'];
 /** Which drive: the parallel park from the stall, the bay from the stall or from the parallel box, the turnabout out of the bay, the straight back along the lane, the way out. */
-export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit' | 'enterStall' | 'enterLive' | 'parallelE' | 'bayE';
+export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit' | 'enterStall' | 'enterLive' | 'parallelE' | 'bayE'
+  | 'exitFront' | 'exitLive' | 'exitEntry' | 'exitBox' | 'exitBay' | 'exitLine';
 
 // ---------- the car ----------
 export const WB = 2.7;                       // wheelbase
@@ -427,27 +428,48 @@ function planBack(): Plan {
 
 // The way out. Rear-axle radii are all above the 4.16 m full-lock radius.
 const OUT_XS = 21.0;                         // the road the car takes south at the east end: well east of the last cone of the kerb row (x 15.9)
+const OUT_XT = 2.0, OUT_R6 = 6.0;            // ...and, for a car heading west on the lane, where it starts to ease across to the lane along the building (a long S: 45 degrees left, straight, 45 degrees right), well west of the kerb row's first cone (x -4.9) when it crosses its line
 const OUT_ZW = -29.6;                        // the lane along the back of the building: about 1.1 m clear of the kerb row's cones and of the building kerb at the tightest corner
 const OUT_R1 = 5.0, OUT_R2 = 4.6, OUT_R3 = 7.0, OUT_R4 = 5.0;    // right (face the building), right (along the building), left (down the west road), right (onto the street)
 const OUT_TURN_Z = 18.4;                     // the rear axle is here when the car turns right onto the street: the nose is already over the street edge, the body clear of the driveway kerb
 const STREET_LANE = 23.4;                    // the rear axle's lane on the street after the turn: the north (right-hand) half for traffic heading west
 const OUT_CUT_X = -78;                       // the drive ends when the car has gone this far west: out of the scene, still at speed
+const opsLen = (ops: Op[]) => ops.reduce((a, o) => a + (o.k === 'S' ? o.len : o.r * (o.deg ?? 90) * Math.PI / 180), 0);
+
 /**
- * The way out, from the west white line (nose east): forward along the lane, a right turn south to face the building, a right turn west along the back of the building,
- * a left turn south down the west road (the right-hand lane), straight to the new stop sign where the car stops, right signal on. Then the right turn onto the street
- * and away. Right signal before each right turn, left before the left turn.
+ * The way out of the back lot, the same from wherever the car starts. `from` is the rear axle where the common route begins (on the lane of the back lot, heading east or west);
+ * `prefix` is whatever the car still has to do first (leave the box, leave the bay), as ops from the car's pose, `prefixSig` its signals.
+ * Heading east (from the east or west white line): forward, right to face the building, right along the back of the building. Heading west (from the stop line, the box, the bay):
+ * on west, then a long S (left 45 degrees, straight, right 45 degrees) across to the lane along the back of the building. Then, for both: left down the west road (right-hand lane), straight to the new stop sign, a full stop,
+ * right signal on, and the right turn onto the street and away. A right signal before each right turn, a left before each left turn, and the right again as it brakes for the sign.
  */
-function planExit(): Plan {
-  const start = planFor('back').end, rec = new Rec(start);
-  rec.hold('OUT_SHIFT_D', 1.4);
-  const p0 = rec.p, laneX = EXIT.laneX, stopRA = EXIT.zNose - NOSE;
-  const len1 = OUT_XS - OUT_R1 - p0.x, s2 = Math.max(.3, (OUT_ZW - OUT_R2) - (p0.z + OUT_R1)), len3 = (OUT_XS - OUT_R2) - (laneX + OUT_R3), len5 = stopRA - (OUT_ZW + OUT_R3);
-  const ops: Op[] = [{ k: 'S', len: len1 }, { k: 'T', side: -1, r: OUT_R1 }, { k: 'S', len: s2 }, { k: 'T', side: -1, r: OUT_R2 }, { k: 'S', len: len3 }, { k: 'T', side: 1, r: OUT_R3 }, { k: 'S', len: len5 }];
-  const a1 = OUT_R1 * Math.PI / 2, a2 = OUT_R2 * Math.PI / 2, a3 = OUT_R3 * Math.PI / 2;
-  const sR0 = len1, sR1 = len1 + a1 + s2 + a2, sL = sR1 + len3, total = sL + a3 + len5;
-  const legA = pathLeg(p0, ops, 7.5, 1.5, 2.2, 2.0);
-  // right on 9 m before the first right turn until 1.5 m after the second; left for the left turn; right again for the last 10 m before the stop sign
-  rec.run('OUT_TO_STOP', legA, s => ({ right: (s > sR0 - 9 && s < sR1 + 1.5) || s > total - 10, left: s > sL - 9 && s < sL + a3 + 1.5 }));
+function exitOps(from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' | 'R' | null) {
+  const east = Math.cos(from.yaw) > 0, laneX = EXIT.laneX, stopRA = EXIT.zNose - NOSE, ops: Op[] = [...prefix], turns: { side: 1 | -1; a: number; b: number }[] = [];
+  const prefixLen = opsLen(prefix); let s = prefixLen, x = from.x, z = from.z;
+  const S = (len: number) => { ops.push({ k: 'S', len }); s += len; };
+  const T = (side: 1 | -1, r: number, deg = 90) => { ops.push({ k: 'T', side, r, deg }); turns.push({ side, a: s, b: s + r * deg * Math.PI / 180 }); s += r * deg * Math.PI / 180; };
+  if (east) { S(OUT_XS - OUT_R1 - x); T(-1, OUT_R1); z += OUT_R1; S(Math.max(.3, (OUT_ZW - OUT_R2) - z)); T(-1, OUT_R2); x = OUT_XS - OUT_R2; }
+  else {
+    const c45 = Math.SQRT1_2, ld = (OUT_ZW - z - 2 * OUT_R6 * (1 - c45)) / c45;     // the straight between the two 45 degree arcs that carries the car across to the lane along the building
+    const xt = Math.min(OUT_XT, x - .3);                                              // (a car that starts further west eases across at once)
+    S(x - xt); T(1, OUT_R6, 45); S(ld); T(-1, OUT_R6, 45); x = xt - 2 * OUT_R6 * c45 - ld * c45;
+  }
+  S(x - (laneX + OUT_R3)); T(1, OUT_R3); S(stopRA - (OUT_ZW + OUT_R3));
+  const total = s;
+  const sig = (d: number) => {
+    if (d < prefixLen) { const g = prefixSig?.(d) ?? null; return { left: g === 'L', right: g === 'R' }; }
+    let side = 0;
+    for (const t of turns) if (d >= t.a && d <= t.b + 1.5) side = t.side;                                           // in a turn (the later one wins), or just out of it
+    if (!side) { let best = 1e9; for (const t of turns) if (d < t.a && t.a - d < 9 && t.a - d < best) { best = t.a - d; side = t.side; } }   // 9 m before the next one
+    if (!side && d > total - 10) side = -1;                                                                          // the right signal for the last 10 m before the stop sign
+    return { left: side > 0, right: side < 0 };
+  };
+  return { ops, sig, total, prefixLen };
+}
+/** The drive itself: along the route to a full stop at the stop sign (right signal on), a pause, then the right turn onto the street and away, cut where the car leaves the scene. */
+function exitDrive(rec: Rec, from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' | 'R' | null, v0 = 0): Plan {
+  const o = exitOps(from, prefix, prefixSig), laneX = EXIT.laneX;
+  rec.run('OUT_TO_STOP', pathLeg(rec.p, o.ops, 7.5, 1.5, 2.2, 2.0, 1.4, v0), o.sig);
   rec.left = false; rec.right = true; rec.hold('OUT_STOP_SIGN', 2.6);       // a full stop at the sign, right signal flashing
   const p1 = rec.p, lenB = OUT_TURN_Z - p1.z, aB = OUT_R4 * Math.PI / 2, farX = OUT_CUT_X - 22;
   const legB = pathLeg(p1, [{ k: 'S', len: lenB }, { k: 'T', side: -1, r: OUT_R4 }, { k: 'S', len: (laneX - OUT_R4) - farX }], 7.5, 1.5, 2.2, 2.0);
@@ -456,6 +478,44 @@ function planExit(): Plan {
   const cut = rec.s.findIndex((q, i) => i > 0 && q.x < OUT_CUT_X);
   if (cut > 0) { rec.s.length = cut + 1; rec.t = rec.s.length * DT; rec.ends.OUT_TURN_OUT = rec.t; const q = rec.s[cut]!; rec.p = { x: q.x, z: q.z, yaw: q.yaw }; }
   return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: null };
+}
+/** From a white line, nose east (the west line after the straight back, or the east line after the turnabout). */
+function planExitFrom(start: Pose): Plan { const rec = new Rec(start); rec.hold('OUT_SHIFT_D', 1.4); return exitDrive(rec, rec.p); }
+const planExit = () => planExitFrom(planFor('back').end);
+const planExitLine = () => planExitFrom(planFor('turn').end);
+/** From the stop line of the back lot, nose west (the car came in by the PARKING sign). */
+function planExitEntry(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('OUT_SHIFT_D', 1.0); return exitDrive(rec, rec.p); }
+/** From the stall: out of the stall, round to the back lot and a stop at its stop line, then the way out. */
+function planExitFront(st: Stall): Plan { const rec = planFront(st); return exitDrive(rec, rec.p); }
+/** From the opening drive, when the car is on the driveway heading north: carry on, left into the back lot, a stop at its stop line, then the way out. */
+function planExitLive(c: LiveCar): Plan { const rec = liveToEntry(c); rec.hold('STOP_AT_ENTRY_LINE', 1.9); return exitDrive(rec, rec.p); }
+/** From the parallel box: the short reverse and the pull out onto the lane exactly as the bay drive does it, then straight on west and round. */
+function planExitBox(): Plan {
+  const start = planFor('parallel').end, rec = new Rec(start), ex = solveBoxExit(start);
+  rec.rev = true; rec.hold('BOX_SHIFT_R', 1.2);
+  rec.steerTo('BOX_STEER_R', -DMAX, 1.0);
+  rec.run('BOX_REVERSE', kinLeg(rec.p, -1, ex.d, () => -DMAX, .8, .4, .7));
+  rec.rev = false; rec.hold('BOX_STOP', .9);
+  rec.left = true; rec.hold('BOX_SIGNAL_L', 1.6);
+  rec.steerTo('BOX_STEER_0', 0, 1.0);
+  rec.hold('OUT_SHIFT_D', .8);
+  return exitDrive(rec, { x: LINE2_X + NOSE, z: LANE_Z, yaw: Math.PI }, ex.ops, s => (s < ex.sOff ? 'L' : null));
+}
+/** From the bay (nose south): the right signal, forward out of the bay, one smooth right turn onto the lane heading west (searched to keep clear of the cones), then on and round. */
+function planExitBay(): Plan {
+  const start = planFor('bayFront').end;
+  let best: { gap: number; r: number; lz: number; s0: number } | null = null;
+  for (const r of [4.4, 4.8, 5.2, 5.6, 6.0]) for (const lz of [LANE_Z - 1.5, LANE_Z - 1, LANE_Z - .5, LANE_Z]) {
+    const s0 = (lz - r) - start.z; if (s0 < 0) continue;
+    const pre: Op[] = [{ k: 'S', len: s0 }, { k: 'T', side: -1, r }];
+    const o = exitOps({ x: start.x - r, z: lz, yaw: Math.PI }, pre), leg = pathLeg(start, o.ops, 7.5, 1.5, 2.2, 2.0);
+    let gap = 9; for (let k = 0; k <= leg.N; k += 5) gap = Math.min(gap, coneGapAt({ x: leg.px[k]!, z: leg.pz[k]!, yaw: leg.yaw[k]! }));
+    if (!best || gap > best.gap + .01) best = { gap, r, lz, s0 };
+  }
+  if (!best) throw new Error('no way out of the bay');
+  const rec = new Rec(start), sOff = best.s0 + best.r * Math.PI / 2 + 1.2;
+  rec.right = true; rec.hold('OUT_SHIFT_D', 1.8);                           // the signal first, then the car moves
+  return exitDrive(rec, { x: start.x - best.r, z: best.lz, yaw: Math.PI }, [{ k: 'S', len: best.s0 }, { k: 'T', side: -1, r: best.r }], s => (s < sOff ? 'R' : null));
 }
 
 /**
@@ -527,7 +587,7 @@ function planParallelE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('ST
 function planBayE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('STOP_AT_ENTRY_LINE', .8); return bayTail(rec); }
 
 /** Tests: fix the state of the car for the live drive into the back lot. */
-export function setLiveCar(c: LiveCar | null) { LIVE = c; delete PLANS.enterLive; }
+export function setLiveCar(c: LiveCar | null) { LIVE = c; delete PLANS.enterLive; delete PLANS.exitLive; }
 /** What the opening drive tells us about the car when the PARKING sign is pressed: its centre, speed and blinkers. */
 export type LiveCar = { x: number; z: number; v: number; left: boolean; right: boolean };
 let LIVE: LiveCar | null = null;
@@ -536,21 +596,23 @@ let LIVE: LiveCar | null = null;
  * at the speed it has, drifts into the right-hand lane, signals left, turns left into the back lot and stops at the stop line. Position, heading and speed at the
  * first sample are the car's own, so nothing jumps.
  */
-function planEnterLive(c: LiveCar): Plan {
+function planEnterLive(c: LiveCar): Plan { const rec = liveToEntry(c); rec.hold('STOP_AT_ENTRY_LINE', 5.3); return planOf(rec); }
+/** The live drive's first part: from the car's own pose and speed, on to the back lot's stop line (a full stop there). */
+function liveToEntry(c: LiveCar): Rec {
   const start: Pose = { x: c.x, z: c.z + RA, yaw: Math.PI / 2 }, rec = new Rec(start);
   const zTurn = LANE_Z + TURN_W, stopRA = NOSE_STOP_X + NOSE;
   const lenNorth = start.z - zTurn, lenWest = (LANE_N - TURN_W) - stopRA, lenT = TURN_W * Math.PI / 2;
   const leg = pathLeg(start, [{ k: 'S', len: 18, dx: LANE_N - start.x }, { k: 'S', len: lenNorth - 18 }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }], 5.4, 1.5, 2.1, 2.0, 1.4, Math.max(.05, c.v));
   rec.left = c.left; rec.right = c.right; rec.begin(Math.max(.05, c.v));
   rec.run('DRIVE_TO_REAR_LOT', leg, s => ({ left: s > lenNorth - 9 && s < lenNorth + lenT + 1.5, right: false }));
-  rec.left = false; rec.hold('STOP_AT_ENTRY_LINE', 5.3);
-  return planOf(rec);
+  rec.left = false;
+  return rec;
 }
 
 // ---------- the plan for this page's car ----------
 let STALL_USED: Stall = STALLS[CAST], MODE: ParkMode = 'parallel';
 const PLANS: Partial<Record<ParkMode, Plan>> = {};
-function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : m === 'exit' ? planExit() : m === 'enterStall' ? planEnterStall(STALL_USED) : m === 'parallelE' ? planParallelE() : m === 'bayE' ? planBayE() : planEnterLive(LIVE!)); }
+function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : m === 'exit' ? planExit() : m === 'exitLine' ? planExitLine() : m === 'exitEntry' ? planExitEntry() : m === 'exitFront' ? planExitFront(STALL_USED) : m === 'exitBox' ? planExitBox() : m === 'exitBay' ? planExitBay() : m === 'exitLive' ? planExitLive(LIVE!) : m === 'enterStall' ? planEnterStall(STALL_USED) : m === 'parallelE' ? planParallelE() : m === 'bayE' ? planBayE() : planEnterLive(LIVE!)); }
 const plan = () => planFor(MODE);
 /** Use a different stall (tests; the page uses its own car's stall). */
 export function setParkStall(st: Stall) { STALL_USED = st; for (const k of Object.keys(PLANS)) delete PLANS[k as ParkMode]; }
@@ -581,24 +643,25 @@ export function parkAxleAt(t: number) { const c = parkCarAt(t); return { x: c.x 
 
 /** The clock of the demonstration: the rig advances it, the car reads it. `loc` is where the car stands between drives: its stall, the parallel box, the bay. */
 export type ParkKind = 'parallel' | 'bay' | 'turn' | 'back' | 'exit' | 'enter';
-export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'entry' | 'box' | 'bay' | 'line' | 'rear' | 'gone', enterPending: false };
+export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'entry' | 'box' | 'bay' | 'line' | 'rear' | 'gone', enterPending: false, exitPending: false };
 /** Can this drive start now? The five drives go in order: the parallel park from the stall; the bay from the stall or the box; the turnabout from the bay; the straight back from the east white line; the way out from the west white line. */
 export function canStartPark(kind: ParkKind) {
-  if (park.phase === 'run') return false;
+  if (park.phase === 'run' || park.exitPending) return false;
   switch (kind) {
     case 'enter': return park.loc === 'front' && !park.enterPending;                       // the PARKING sign: only while the car is in the front lot
     case 'parallel': return park.loc === 'front' || park.loc === 'entry';
     case 'bay': return park.loc === 'front' || park.loc === 'entry' || park.loc === 'box';
     case 'turn': return park.loc === 'bay';
     case 'back': return park.loc === 'line';
-    default: return park.loc === 'rear';
+    default: return park.loc !== 'gone';                                                   // the way out: from wherever the car is (see requestExit for the car still on its way in)
   }
 }
 export function startPark(kind: ParkKind = 'parallel') {
   if (!canStartPark(kind)) return false;
   const here = park.loc;
-  MODE = kind === 'parallel' ? (here === 'entry' ? 'parallelE' : 'parallel') : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'exit' ? 'exit' : kind === 'enter' ? 'enterStall' : here === 'front' ? 'bayFront' : here === 'entry' ? 'bayE' : 'bayBox';
-  park.enterPending = false; park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
+  const out = here === 'front' ? 'exitFront' : here === 'entry' ? 'exitEntry' : here === 'box' ? 'exitBox' : here === 'bay' ? 'exitBay' : here === 'line' ? 'exitLine' : 'exit';
+  MODE = kind === 'exit' ? out : kind === 'parallel' ? (here === 'entry' ? 'parallelE' : 'parallel') : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'enter' ? 'enterStall' : here === 'front' ? 'bayFront' : here === 'entry' ? 'bayE' : 'bayBox';
+  park.enterPending = false; park.exitPending = false; park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
 }
 /**
  * The PARKING sign was pressed. Parked in its stall: it drives out and round to the back lot at once. Still driving: it carries on down its own path and diverts, with no jump:
@@ -618,6 +681,36 @@ export function tickEnter() {
   if (c.s >= M.l1e! + 3 && c.s <= M.l2s! - 8) {       // on the driveway, heading north, well before the aisle: go straight on
     park.enterPending = false; LIVE = { x: c.x, z: c.z, v: c.v, left: c.left, right: c.right }; delete PLANS.enterLive;
     if (startPark('enter')) MODE = 'enterLive';
+  }
+}
+/**
+ * Can the EXIT sign be offered? From the moment the car is working on the way to the back lot (the PARKING sign or a "!" was pressed) until it has left, and never twice.
+ * Parked in its stall with nothing asked of it yet, there is nothing to leave.
+ */
+export function canRequestExit() {
+  if (park.exitPending || park.loc === 'gone' || (park.kind === 'exit' && park.phase === 'run')) return false;
+  return park.loc !== 'front' || park.enterPending || park.phase === 'run';
+}
+/**
+ * The EXIT sign was pressed. Like the PARKING sign: a car standing still (in its stall, at a line, in the box or the bay) sets off at once and finds its way out from where it is.
+ * A car in the middle of a manoeuvre finishes that manoeuvre first (it is never snatched out of a reverse or a turn) and then goes. A car still on its way in (the opening drive)
+ * carries on down its own path and diverts once it is on the driveway heading north: straight on to the back lot, a stop at its line, then out. If it has already begun the turn
+ * into the aisle, it parks first and then drives out and round.
+ */
+export function requestExit() {
+  if (!canRequestExit()) return false;
+  park.enterPending = false; park.exitPending = true;
+  tickExit();
+  return true;
+}
+/** Called every frame by the rig: carries out a pending EXIT request at the right moment. */
+export function tickExit() {
+  if (!park.exitPending || park.phase === 'run') return;
+  if (park.loc !== 'front' || introParked()) { park.exitPending = false; startPark('exit'); return; }
+  const c = introCarState(), M = introMarks();
+  if (c.s >= M.l1e! + 3 && c.s <= M.l2s! - 8) {          // on the driveway, heading north, well before the aisle: go straight on, into the back lot and out
+    park.exitPending = false; LIVE = { x: c.x, z: c.z, v: c.v, left: c.left, right: c.right }; delete PLANS.exitLive;
+    if (startPark('exit')) MODE = 'exitLive';
   }
 }
 /** The drive is over: the car stays where it parked. */

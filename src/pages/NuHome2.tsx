@@ -7,6 +7,7 @@ import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
 import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
 import { ExitSign } from "@/components/nuhome2/ExitSign";
+import { SteeringLive } from "@/components/nuhome2/SteeringLive";
 import { ParkingSign } from "@/components/nuhome2/ParkingSign";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
@@ -178,7 +179,7 @@ export default function NuHome2() {
 
           <div className="n2-hdr-row">
             <button type="button" className="n2-brand" onClick={goHome} aria-label="DrivingKlass home">
-              <span className="n2-hdr-wheelwrap" style={{ "--wheel": `url(${wheelUrl})` } as React.CSSProperties}><img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" /></span>
+              <span className="n2-hdr-wheelwrap" style={{ "--wheel": `url(${wheelUrl})` } as React.CSSProperties}><img className="n2-hdr-wheel" src={wheelUrl} alt="" width={480} height={480} decoding="async" /><SteeringLive /></span>
               <span className="n2-hdr-sep" aria-hidden="true" />
               <span className="n2-hdr-word">DrivingKlass</span>
             </button>

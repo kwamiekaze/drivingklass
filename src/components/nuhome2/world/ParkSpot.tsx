@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { intro, T_DRIVE, parkCarNow } from './intro';
 import { canStartPark, park, startPark } from './park';
 import { BAY, BAY_LINE, PBOX, STOP_LINE } from './rearlot';
+import { SOLIDS } from './colliders';
 
 /**
  * The four "!" markers of the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the repair markers of fixing365.com.
@@ -14,12 +15,34 @@ import { BAY, BAY_LINE, PBOX, STOP_LINE } from './rearlot';
  *   back       just past the west white line: the car backs slowly and straight until its tail touches that line (the exit sign appears when it gets there)
  * Each keeps a steady size on screen at any distance and is hidden while the car is working and once it has no drive left to offer. The parallel one is there from the
  * first frame of the page: if it is pressed while the opening drive is still running, the car goes straight to its stall and the parking drive starts at once.
- * The discs are drawn without a depth test, so the ground, a car or the building never cuts a ring: it shows whole from every angle.
+ * The discs are drawn without a depth test, so the ground never cuts a ring: it shows whole from every angle. They are hidden, whole, when a solid object (the building, the
+ * street sign, a wall, a parked car) stands between the lens and the marker: a sight line from the lens to the marker is tested against colliders.ts every frame.
  */
 type SpotKind = 'parallel' | 'bay' | 'turn' | 'back';
 const ringGeo = new THREE.RingGeometry(.78, 1, 48), discGeo = new THREE.CircleGeometry(.64, 40), barGeo = new THREE.PlaneGeometry(.17, .44), dotGeo = new THREE.CircleGeometry(.105, 20), hitGeo = new THREE.SphereGeometry(1.7, 10, 8), haloGeo = new THREE.CircleGeometry(1.6, 40);
 const white = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false, transparent: true, depthTest: false, depthWrite: false });
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+/** Does a solid stand between a and b (world points)? Boxes and upright cylinders, by the slab method; thin things (cones, lamp posts, wires) never hide a marker. */
+function blocked(a: THREE.Vector3, b: THREE.Vector3): boolean {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+  for (const sd of SOLIDS) {
+    if (sd.k === 'wire' || (sd.k === 'cyl' && sd.r < .5)) continue;
+    let t0 = 0, t1 = 1;
+    const slab = (p: number, d: number, lo: number, hi: number) => {
+      if (Math.abs(d) < 1e-9) return p >= lo && p <= hi;
+      let u = (lo - p) / d, v = (hi - p) / d; if (u > v) { const w = u; u = v; v = w; }
+      t0 = Math.max(t0, u); t1 = Math.min(t1, v); return t0 <= t1;
+    };
+    if (sd.k === 'box') { if (slab(a.x, dx, sd.min[0], sd.max[0]) && slab(a.y, dy, sd.min[1], sd.max[1]) && slab(a.z, dz, sd.min[2], sd.max[2])) return true; continue; }
+    if (!slab(a.y, dy, sd.y0, sd.y1)) continue;
+    const ox = a.x - sd.x, oz = a.z - sd.z, A = dx * dx + dz * dz, B = 2 * (ox * dx + oz * dz), C = ox * ox + oz * oz - sd.r * sd.r;
+    if (A < 1e-9) { if (C <= 0) return true; continue; }
+    const disc = B * B - 4 * A * C; if (disc < 0) continue;
+    const q = Math.sqrt(disc), u = (-B - q) / (2 * A), v = (-B + q) / (2 * A);
+    if (Math.max(t0, u) <= Math.min(t1, v)) return true;
+  }
+  return false;
+}
 function makeHalo() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d')!, r = g.createRadialGradient(32, 32, 4, 32, 32, 32);
@@ -46,12 +69,14 @@ export function ParkSpot({ kind, reducedMotion = false }: { kind: SpotKind; redu
   const [hover, setHover] = useState(false);
   const outer = useRef<THREE.Group>(null), holder = useRef<THREE.Group>(null), ring = useRef<THREE.Mesh>(null), disc = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
-  const mats = useMemo(() => ({ halo: makeHalo(), ring: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, toneMapped: false, depthWrite: false }), disc: new THREE.MeshBasicMaterial({ color: '#ff7a1a', toneMapped: false }) }), []);
+  const mats = useMemo(() => ({ halo: makeHalo(), ring: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, depthTest: false, toneMapped: false, depthWrite: false }), disc: new THREE.MeshBasicMaterial({ color: '#ff7a1a', transparent: true, depthTest: false, depthWrite: false, toneMapped: false }) }), []);
+  const seen = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3() }), []);
   useFrame(({ clock, camera }) => {
     const o = outer.current, h = holder.current; if (!o || !h) return;
-    const show = offered(kind);
+    let show = offered(kind);
+    if (show) { seen.a.copy(camera.position); seen.b.set(...SPOTS[kind]); seen.b.lerp(seen.a, Math.min(1, 1.0 / Math.max(1e-3, seen.a.distanceTo(seen.b)))); show = !blocked(seen.a, seen.b); }   // hidden whole while a solid is in the way (the sight line stops 1 m short of the marker)
     if (o.visible !== show) o.visible = show;
-    if (!show) return;
+    if (!show) { if (hover) { setHover(false); document.body.style.cursor = 'auto'; } return; }
     // a steady size on screen: small up close, never lost from far away
     const d = camera.position.distanceTo(h.getWorldPosition(tmp));
     h.scale.setScalar(Math.min(3.4, Math.max(.34, d * .03)));

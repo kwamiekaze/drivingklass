@@ -9,7 +9,7 @@ import { usableShots, type Shot } from './shots';
 import { cinema, stopReel } from './reel';
 import { engine } from '../music/engine';
 import { skyAnchor } from './Sky';
-import { finishPark, park, parkMoving, parkTotal, startPark, tickEnter } from './park';
+import { finishPark, park, parkMoving, parkTotal, startPark, tickEnter, tickExit } from './park';
 import { parkCamAt } from './parkcam';
 
 type Controls = {
@@ -40,7 +40,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? Number(q.get('introFrom') ?? 0); intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'), from = q.get('parkFrom'); if (from === 'box') park.loc = 'box'; if (from === 'entry') park.loc = 'entry'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' || pk === 'enter' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? Number(q.get('introFrom') ?? 0); intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'), from = q.get('parkFrom'); if (from === 'box') park.loc = 'box'; if (from === 'entry') park.loc = 'entry'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = from === 'entry' || from === 'box' || from === 'bay' || from === 'line' || from === 'front' ? from : 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' || pk === 'enter' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
@@ -99,7 +99,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     const sstep = (u: number) => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
     const dt = Math.min(gate.current.dt, .05) || Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
     engine.tick(time);
-    tickEnter();                                                  // a PARKING request made mid-drive is carried out here, at the right moment
+    tickExit(); tickEnter();                                                  // a PARKING request made mid-drive is carried out here, at the right moment
     if (shotQ === null && cinema.reel && mode.current !== 'cinema') { if (mode.current === 'intro') releaseCar(); mode.current = 'cinema'; cut.current.idx = -1; }
     else if (shotQ === null && !cinema.reel && !cinema.auto && mode.current === 'cinema') mode.current = 'free';
     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) { if (mode.current === 'intro') releaseCar(); cinema.auto = false; stopReel(); mode.current = 'park'; }
