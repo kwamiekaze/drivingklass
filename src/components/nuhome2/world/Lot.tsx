@@ -1,6 +1,7 @@
 import { useContext, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { NightCtx, radialTexture, rng } from './theme';
 import { Box, Cyl, SIGN_FONT, V3, makeCanvasTexture, starShape } from './parts';
 import { CAR_SPECS } from './Cars';
@@ -311,6 +312,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {[-1, 1].map(s => <Box key={`sk${s}`} p={[s * 34.35, .1, -.2]} s={[.3, .2, 29]} c="#cfc9bd" r={.7} />)}
     {[-1, 1].map(s => <Box key={`fk${s}`} p={[s * 16.65, .1, 14.35]} s={[25.1, .2, .3]} c="#cfc9bd" r={.7} />)}
     <Road asphalt={asphalt} />
+    <BackLot asphalt={asphalt} />
     {/* planted islands, front strip, building beds */}
     {ISLANDS.map((i, k) => <Island key={k} {...i} pl={pl} density={1} />)}
     {[-1, 1].map(s => <Hedge key={`fh${s}`} x={s * 22.6} y={.2} z={15.0} w={13.6} d={1.1} h={.9} seed={6 + s} pl={pl} density={.7} />)}
@@ -331,5 +333,78 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {/* three selected Meshy cars plus two house fleet sedans; every car receives the shared five-star roof topper */}
     {cars.map((c, i) => c.id === CAST ? null : <FleetCar key={c.id} specId={c.id} color={FLEET_ORDER[i]!} plate={PLATES[c.id as CastId]} position={[c.x, .002, c.z]} rotationY={c.r} lite={tier === 'lite'} />)}
     <IntroCar lite={lite} />
+  </group>;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ the back lot */
+/*
+ * A training lot behind the building, drawn to the owner's layout: a bay with a closed end (reverse parking), a long box
+ * (parallel parking), a row of cones for the kerb line, and a stop line. Sizes follow the fleet: the cars are 4.5 to 4.7 m long and
+ * 2.0 m wide, so the reverse bay is 4.2 m wide and 8.6 m deep, the parallel box is 7.0 m long (1.5 car lengths) and 3.1 m deep,
+ * the cones are 1.9 m apart. The layout is the photo, scaled at 27 px to the metre: u, v are pixels of that photo.
+ * Two flat roads join it to the front lot's side lanes, so a car can leave by the east lane, drive round and come back by the west one.
+ */
+const BL = { x0: -34.6, x1: 34.6, zs: -22.4, zn: -50.9, kerb: .3 };
+const PHX = 27, PHW = 968, PHH = 779, PH_RIGHT = 34.0, PH_FRONT = -23.5;
+const bx = (u: number) => PH_RIGHT - (PHW - u) / PHX, bz = (v: number) => PH_FRONT - (PHH - v) / PHX;
+const BL_U_LEFT = bx(366), BL_SHARED = 15.8, BL_BOX_RIGHT = bx(660), BL_TOP = bz(83), BL_FOOT_Z = bz(315), BL_FOOT_X = bx(290), BL_BOX_TOP = bz(207), BL_BOX_BOTTOM = -41.7;
+const BL_LW = .2;
+/** [x0, z0, x1, z1] centre lines, in metres. */
+const BL_LINES: [number, number, number, number][] = [
+  [BL_U_LEFT, BL_TOP, BL_SHARED, BL_TOP],                 // closed end of the reverse bay
+  [BL_U_LEFT, BL_TOP, BL_U_LEFT, BL_FOOT_Z],              // its left side
+  [BL_U_LEFT, BL_FOOT_Z, BL_FOOT_X, BL_FOOT_Z],           // the foot turning outward
+  [BL_SHARED, BL_TOP, BL_SHARED, BL_BOX_BOTTOM],          // its right side, which is also the left side of the parallel box
+  [BL_SHARED, BL_BOX_TOP, BL_BOX_RIGHT, BL_BOX_TOP],      // the box's far line
+  [BL_BOX_RIGHT, BL_BOX_TOP, BL_BOX_RIGHT, BL_BOX_BOTTOM],
+  [bx(727), bz(327), bx(727), bz(458)],                   // the lone stop line
+];
+const BL_CONES: [number, number][] = [
+  [362, 66], [425, 66], [477, 66],                                     // behind the closed end
+  [360, 115], [360, 180], [360, 240], [360, 300], [320, 303], [280, 308],   // the left side and its foot
+  [478, 108], [475, 173], [470, 250], [472, 305],                      // the shared side
+  [524, 198], [572, 198], [619, 198], [662, 198], [656, 247], [656, 298], [700, 298], [740, 297],   // the parallel box and its tail
+  ...Array.from({ length: 12 }, (_, i) => [160 + 51.1 * i, 627] as [number, number]),               // the kerb line row
+].map(([u, v]) => [bx(u!), bz(v!)] as [number, number]);
+
+const coneGeo = (() => {
+  const parts: THREE.BufferGeometry[] = [], tint = (g: THREE.BufferGeometry, c: string) => { const col = new THREE.Color(c), n = g.attributes.position!.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  const R0 = .16, R1 = .028, H = .7, rAt = (y: number) => R0 + (R1 - R0) * (y / H);
+  const base = new THREE.BoxGeometry(.44, .04, .44); base.translate(0, .02, 0); parts.push(tint(base, '#e8541c'));
+  const body = new THREE.CylinderGeometry(R1, R0, H, 20, 1, true); body.translate(0, .04 + H / 2, 0); parts.push(tint(body, '#ff6a22'));
+  for (const [a, b] of [[.2, .31], [.4, .5]] as const) { const h = b - a, g = new THREE.CylinderGeometry(rAt(b) + .004, rAt(a) + .004, h, 20, 1, true); g.translate(0, .04 + (a + b) / 2, 0); parts.push(tint(g, '#f4f1ea')); }
+  const cap = new THREE.CylinderGeometry(R1, R1, .02, 12); cap.translate(0, .04 + H, 0); parts.push(tint(cap, '#ff6a22'));
+  const merged = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g))!; merged.computeVertexNormals(); return merged;
+})();
+
+function Cones({ list }: { list: [number, number][] }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = ref.current; if (!m) return; const o = new THREE.Object3D(), r = rng(8);
+    list.forEach(([x, z], i) => { o.position.set(x, .006, z); o.rotation.set(0, r() * 6.28, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
+    m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere();
+  }, [list]);
+  return <instancedMesh ref={ref} args={[coneGeo, undefined, list.length]} castShadow receiveShadow frustumCulled={false}>
+    <meshStandardMaterial vertexColors roughness={.55} side={THREE.DoubleSide} emissive="#ff4a10" emissiveIntensity={.12} />
+  </instancedMesh>;
+}
+
+function BackLot({ asphalt }: { asphalt: THREE.Material }) {
+  const W = BL.x1 - BL.x0, D = BL.zs - BL.zn, lot = useMemo(() => roadGeo(W, D), []), conn = useMemo(() => roadGeo(5.2, 7.7), []);
+  const kerb = '#cfc9bd', cz = (BL.zs + BL.zn) / 2;
+  return <group>
+    <mesh rotation-x={-Math.PI / 2} position={[0, .006, -(Math.abs(BL.zs) + Math.abs(BL.zn)) / 2]} geometry={lot} material={asphalt} receiveShadow />
+    {/* the two roads that join it to the side lanes, flat and level with everything else */}
+    {[-31.7, 31.7].map(x => <mesh key={x} rotation-x={-Math.PI / 2} position={[x, .006, -18.55]} geometry={conn} material={asphalt} receiveShadow />)}
+    {/* kerbs: along the back and both sides, and along the building side between the two roads */}
+    <Box p={[0, .1, BL.zn - .15]} s={[W + .6, .2, BL.kerb]} c={kerb} r={.8} cast={false} />
+    {[-1, 1].map(s => <Box key={`ks${s}`} p={[s * (BL.x1 + .15), .1, cz]} s={[BL.kerb, .2, D + .6]} c={kerb} r={.8} cast={false} />)}
+    {[-1, 1].map(s => <Box key={`kf${s}`} p={[s * 15.8, .1, BL.zs + .15]} s={[28.6, .2, BL.kerb]} c={kerb} r={.8} cast={false} />)}
+    {BL_LINES.map(([x0, z0, x1, z1], i) => {
+      const horiz = Math.abs(z1 - z0) < .01, len = (horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0)) + BL_LW;
+      return <PaintStrip key={i} lines={[[0, BL_LW]]} span={1} across={horiz ? 'v' : 'u'} color="#f1efe8" x={(x0 + x1) / 2} z={(z0 + z1) / 2} width={horiz ? len : 1} height={horiz ? 1 : len} repeat={[1, 1]} y={TOP_Y} />;
+    })}
+    <Cones list={BL_CONES} />
+    {[-22, 3].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
   </group>;
 }

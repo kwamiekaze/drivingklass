@@ -114,14 +114,14 @@ export function Estate({ quality, open, children }: { quality: Quality; open: bo
     const r = rng(15); const out: TreeSpec[] = [];
     for (let i = 0; out.length < quality.trees && i < 900; i++) {
       const a = r() * Math.PI * 2, rad = 38 + r() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
-      if (Math.abs(x) < 46 && z > -34 && z < 14.5) continue;       // lot
+      if (Math.abs(x) < 46 && z > -64 && z < 14.5) continue;       // lot and the back lot
       if (z > 12 && z < 40) continue;                              // street and sidewalks
       if (Math.abs(x) < 14 && z > 0) continue;                     // the avenue
       const k = r(); out.push({ x, z, s: .9 + r() * .7, kind: k < .14 ? 'cypress' : k < .3 ? 'blossom' : 'oak' });
     }
     return out;
   }, [quality.trees]);
-  const framing = useMemo<TreeSpec[]>(() => [[-30, -16, 1.2, 'oak'], [30, -16, 1.15, 'blossom'], [-27, -28, 1.35, 'oak'], [27, -28, 1.3, 'oak'], [-40, 2, 1.3, 'blossom'], [40, 3, 1.25, 'oak'], [-44, -20, 1.4, 'oak'], [44, -21, 1.35, 'cypress'], [-14, -34, 1.5, 'oak'], [15, -34, 1.5, 'oak'], [0, -38, 1.6, 'oak'], [-38, 40, 1.4, 'oak'], [38, 42, 1.4, 'blossom'], [-24, 52, 1.5, 'oak'], [26, 56, 1.4, 'oak']].map(([x, z, s, kind]) => ({ x, z, s, kind }) as TreeSpec), []);
+  const framing = useMemo<TreeSpec[]>(() => [[-41, -16, 1.2, 'oak'], [41, -16, 1.15, 'blossom'], [-43, -30, 1.35, 'oak'], [43, -30, 1.3, 'oak'], [-40, 2, 1.3, 'blossom'], [40, 3, 1.25, 'oak'], [-46, -20, 1.4, 'oak'], [46, -21, 1.35, 'cypress'], [-18, -62, 1.5, 'oak'], [17, -62, 1.5, 'oak'], [0, -66, 1.6, 'oak'], [-38, 40, 1.4, 'oak'], [38, 42, 1.4, 'blossom'], [-24, 52, 1.5, 'oak'], [26, 56, 1.4, 'oak']].map(([x, z, s, kind]) => ({ x, z, s, kind }) as TreeSpec), []);
   const young = useMemo<TreeSpec[]>(() => ISLAND_TREES.map(([x, z], i) => ({ x, z, s: .52 + (i % 3) * .05, kind: (i % 3 === 1 ? 'blossom' : 'oak') as TreeSpec['kind'] })), []);
   const spots = useMemo(() => {
     const out: { x: number; z: number; y?: number; r: number; n: number; kind: 'flower' | 'bush' }[] = [];
