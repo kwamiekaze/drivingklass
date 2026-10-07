@@ -28,3 +28,10 @@ export const CONE_R = .24, CONE_H = .7;
 export const BAY_LINE = { x: bx(160), z0: STOP_LINE.z0, z1: STOP_LINE.z1 };
 /** The reverse bay (the closed-end space beside the parallel box): the painted side lines, the closed end (north) and the foot where it opens (south). */
 export const BAY = { xW: bx(366), xE: bx(476), zEnd: bz(83), zOpen: bz(315) };
+
+/**
+ * The way out of the back lot, the west road and the new stop sign, in world metres. The car drives south down the west road in its right-hand (west) lane,
+ * stops with its nose at zNose, 0.55 m short of the white stop bar (zBar) across that lane, and the stop sign stands on the grass to its right (west) beside the driveway,
+ * facing north toward the car (the circle on the owner's photo: just before the sidewalk, outside the driveway).
+ */
+export const EXIT = { laneX: -(CONN_X + .5), zBar: 15.3, zNose: 14.75, signX: -35.9, signZ: 15.0 };

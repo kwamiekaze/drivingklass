@@ -26,6 +26,7 @@ export function IntroCar({ lite }: { lite: boolean }) {
       // the parallel-parking drive (park.ts): the pose, the signals and the weight of the car all come from the simulated steering
       const c = parkCarAt(park.t);
       m.position.set(c.x, c.y, c.z); m.rotation.y = c.yaw;
+      m.visible = !(park.kind === 'exit' && park.phase === 'done');       // the car has driven out of the scene
       signal.current.left = c.left; signal.current.right = c.right;
       const b = body.current, k = 1 - Math.exp(-6 * Math.min(dt, .05));
       if (b) { const L = lean.current; L.pitch += (Math.max(-.035, Math.min(.035, .011 * c.accel)) - L.pitch) * k; L.roll += (Math.max(-.03, Math.min(.03, .0045 * c.lat)) - L.roll) * k; b.rotation.z = L.pitch; b.rotation.x = L.roll; }

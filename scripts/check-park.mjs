@@ -1,4 +1,4 @@
-// Walks the drives (parallel park from the stall, the bay from the stall or from the parallel box, the turnabout, the straight back) for all six cars of the cast (each starts in its own stall) on a fine clock and checks:
+// Walks the drives (parallel park from the stall, the bay from the stall or from the parallel box, the turnabout, the straight back, the way out) for all six cars of the cast (each starts in its own stall) on a fine clock and checks:
 //   - the car's body (4.5 x 2.1 m with the mirrors) never touches a cone (0.12 m clear at least), a parked car, a lamp, a pole, the building or a kerb
 //   - the signal for the side the tail swings to is on BEFORE the car moves, and stays on until it is driving forward
 //   - the parallel park uses the right signal only (never the left); the bay drive: right signal before the reverse, and from the box: right, then left, then right again
@@ -10,7 +10,7 @@
 import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkStall, setParkMode, PARK_GEOM, RA, WB, DMAX } from '../src/components/nuhome2/world/park.ts';
 import { STALLS } from '../src/components/nuhome2/world/cast.ts';
 import { SOLIDS } from '../src/components/nuhome2/world/colliders.ts';
-import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
+import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
 import { parkCamAt, resetParkCam } from '../src/components/nuhome2/world/parkcam.ts';
 import { GROUND, clearance } from '../src/components/nuhome2/world/colliders.ts';
 const L = 4.5, W = 2.1;
@@ -29,7 +29,7 @@ const boxGap = (c, bx0, bx1, bz0, bz1) => {
   for (const [px, pz] of [[bx0, bz0], [bx0, bz1], [bx1, bz0], [bx1, bz1]]) best = Math.min(best, toCar(c, px, pz));
   return best;
 };
-const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero]);
+const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero], ['exit', 'out', STALLS.hero]);
 for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
   setParkStall(st); setParkMode(mode); resetParkCam();
   const T = parkTotal(), M = parkMarks(), E = parkEnds(), su = mode === 'parallel' ? parkSetup() : null, by = mode === 'bayFront' || mode === 'bayBox' ? parkBay() : null, bad = [];
@@ -47,18 +47,19 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     }
     // the side roads and the back lot's edge: the body must stay on the asphalt
     const cs = Math.cos(c.yaw), sn = Math.sin(c.yaw);
-    for (const [a, b] of [[L / 2, W / 2], [L / 2, -W / 2], [-L / 2, W / 2], [-L / 2, -W / 2]]) { const wx = c.x + a * cs - b * sn, wz = c.z - a * sn - b * cs; if (wz < -15 && wz > -26 && (wx < 29.2 || wx > 34.2)) bad.push(`off the east road at t=${t.toFixed(1)} (${wx.toFixed(1)}, ${wz.toFixed(1)})`); if (wz < -26 && (wx < -34.2 || wx > 34.2 || wz < -53.9)) bad.push(`off the back lot at t=${t.toFixed(1)}`); }
+    for (const [a, b] of [[L / 2, W / 2], [L / 2, -W / 2], [-L / 2, W / 2], [-L / 2, -W / 2]]) { const wx = c.x + a * cs - b * sn, wz = c.z - a * sn - b * cs; if (wz < -15 && wz > -26 && (((mode === 'exit' ? -wx : wx)) < 29.2 || ((mode === 'exit' ? -wx : wx)) > 34.2)) bad.push(`off the ${mode === 'exit' ? 'west' : 'east'} road at t=${t.toFixed(1)} (${wx.toFixed(1)}, ${wz.toFixed(1)})`); if (wz < -26 && (wx < -34.2 || wx > 34.2 || wz < -53.9)) bad.push(`off the back lot at t=${t.toFixed(1)}`); }
     if (prev) { maxDSteer = Math.max(maxDSteer, Math.abs(c.steer - prev.steer) * 30); maxDYaw = Math.max(maxDYaw, Math.abs(c.yaw - prev.yaw) * 30); maxStep = Math.max(maxStep, Math.hypot(c.x - prev.x, c.z - prev.z) * 30); }
     prev = c;
   }
   if (worstCone < .1) bad.push(`car passes ${worstCone.toFixed(2)} m from a cone at t=${worstT.toFixed(1)}`);
   if (worstSolid < .2) bad.push(`car passes ${worstSolid.toFixed(2)} m from ${solidName}`);
   if (maxDSteer > 75 * Math.PI / 180) bad.push(`steering moves ${(maxDSteer * 180 / Math.PI).toFixed(0)} deg/s`);
-  if (maxStep > 6.2) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
+  if (maxStep > (mode === 'exit' ? 8.2 : 6.2)) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
   // signals
   const first = (pred) => { for (let t = 0; t <= T; t += 1 / 60) if (pred(parkCarAt(t))) return t; return null; };
   const tMove = first(c => c.moving), tSig = first(c => c.left || c.right), sideL = { ...parkCarAt(0) }.left;
   if (mode === 'back') { if (tSig !== null) bad.push('the straight back uses a signal'); }
+  else if (mode === 'exit') { if (tSig === null || tSig < M.OUT_TO_STOP - .05) bad.push('the way out: a signal comes on before the car is driving'); }
   else if (mode === 'bayBox') { if (tSig === null || tSig < M.BOX_SIGNAL_L - .05) bad.push(`pulling out of the parallel box: a signal at ${tSig} before the left one (${M.BOX_SIGNAL_L})`); }
   else if (tSig === null || tSig > .2 || tMove - tSig < 1.5) bad.push(`signal at ${tSig}, car moves at ${tMove?.toFixed(2)}`);
   const exitName = front ? 'EXIT_REVERSE' : 'BOX_REVERSE';
@@ -74,12 +75,20 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     always(M.SIGNAL_RIGHT + .1, T - 3.2, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup to the end');
     always(M.STOP_AT_ENTRY_LINE, M.SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the setup');
   } else if (mode === 'turn') {
-    // the turn out of the bay is toward the WEST, the car's right hand (it stands nose south): the signal is the one for that side, on before the car moves, off after the turn
-    always(M.TURN_SIGNAL + .1, E.TURN_SHIFT_D, c => c.right && !c.left && !c.moving, 'turnabout: right signal on while still, before the car moves');
-    always(M.TURN_DRIVE + .1, M.TURN_DRIVE + 3, c => c.right && !c.left, 'turnabout: signal stays on through the turn');
+    // the turn out of the bay is toward the EAST, the car's LEFT hand (it stands nose south): the signal is the one for that side, on before the car moves, off after the turn
+    always(M.TURN_SIGNAL + .1, E.TURN_SHIFT_D, c => c.left && !c.right && !c.moving, 'turnabout: left signal on while still, before the car moves');
+    always(M.TURN_DRIVE + .1, M.TURN_DRIVE + 3, c => c.left && !c.right, 'turnabout: signal stays on through the turn');
     always(E.TURN_DRIVE - .02, T, c => !c.right && !c.left, 'turnabout: signal off once the turn is done');
-    const tOff = first(c => c.state === 'TURN_DRIVE' && !c.right), cOff = { ...parkCarAt(tOff) };
-    if (!(Math.abs(wrapA(cOff.yaw - Math.PI)) < .03)) bad.push(`turnabout: signal goes off before the car is straight on the lane (yaw ${(cOff.yaw * 180 / Math.PI).toFixed(0)})`);
+    const tOff = first(c => c.state === 'TURN_DRIVE' && !c.left), cOff = { ...parkCarAt(tOff) };
+    if (!(Math.abs(wrapA(cOff.yaw)) < .03)) bad.push(`turnabout: signal goes off before the car is straight on the lane (yaw ${(cOff.yaw * 180 / Math.PI).toFixed(0)})`);
+  } else if (mode === 'exit') {
+    // right signal before the two right turns, left before the left turn, right on again as the car brakes to the stop sign, still on through the stop and the turn onto the street
+    const stopped = { ...parkCarAt(E.OUT_TO_STOP + 1) };
+    if (!stopped.right || stopped.left || stopped.moving) bad.push('the way out: at the stop sign the car must be stopped with the right signal on');
+    always(E.OUT_TO_STOP - 2.5, E.OUT_STOP_SIGN, c => c.right && !c.left, 'the way out: right signal on while braking to and standing at the stop sign');
+    always(M.OUT_TURN_OUT, M.OUT_TURN_OUT + 3, c => c.right && !c.left, 'the way out: right signal stays on as it pulls away to turn right');
+    for (let t = 0; t < M.OUT_TO_STOP; t += 1 / 30) if (parkCarAt(t).left || parkCarAt(t).right) { bad.push('the way out: a signal before the car moves'); break; }
+    let sawLeft = false, sawRight = false; for (let t = M.OUT_TO_STOP; t < E.OUT_TO_STOP; t += 1 / 30) { const c = parkCarAt(t); sawLeft ||= c.left; sawRight ||= c.right; } if (!sawLeft || !sawRight) bad.push('the way out: expected both a right and a left signal on the way to the stop sign');
   } else if (mode === 'back') {
     always(0, T, c => !c.left && !c.right, 'straight back: no signal');
     always(M.BACK_REVERSE + .5, E.BACK_REVERSE - .5, c => c.reversing && Math.abs(c.steer) < 1e-6 && c.speed < 0, 'straight back: in reverse, wheels straight');
@@ -103,7 +112,7 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
       for (let t = 0; t <= M.BAY_SIGNAL_RIGHT - .1; t += 1 / 20) if (parkCarAt(t).right) { bad.push(`right signal on at t=${t.toFixed(1)} while pulling out of the box`); break; }
     }
   }
-  const f = parkCarAt(T - .05), cx = f.x, cz = f.z;
+  const f = { ...parkCarAt(T - .05) }, cx = f.x, cz = f.z;
   const csn = Math.cos(f.yaw), snn = Math.sin(f.yaw);
   if (mode === 'parallel') {
     const endOk = Math.hypot(cx - su.endCentre[0], cz - su.endCentre[1]) < .03 && Math.hypot(cx - (PBOX.x0 + PBOX.x1) / 2, cz - (PBOX.zKerb + PBOX.zLane) / 2) < .9 && Math.abs(Math.abs(f.yaw) - Math.PI) < .004 && Math.abs(f.steer) < .003 && !f.moving && !f.left && !f.right;
@@ -112,17 +121,23 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     for (const [a, b] of [[L / 2, 1], [L / 2, -1], [-L / 2, 1], [-L / 2, -1]]) { const wx = f.x + a * csn - b * snn, wz = f.z - a * snn - b * csn; if (wx < PBOX.x0 || wx > PBOX.x1 || wz < PBOX.zKerb || wz > PBOX.zLane) bad.push('a corner of the car is outside the painted box'); }
   } else if (mode === 'turn') {
     const noseX = f.x + 2.25 * Math.cos(f.yaw);
-    if (Math.abs(wrapA(f.yaw - Math.PI)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`turnabout ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
-    if (noseX < BAY_LINE.x + .2 || noseX > BAY_LINE.x + .7) bad.push(`turnabout: nose at x=${noseX.toFixed(2)}, the white line is at ${BAY_LINE.x.toFixed(2)}`);
-    if (f.z < BAY_LINE.z0 + 1 || f.z > BAY_LINE.z1 - 1) bad.push(`turnabout: the car is not centred on the white line (z ${f.z.toFixed(2)})`);
+    if (Math.abs(wrapA(f.yaw)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`turnabout ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
+    if (noseX > STOP_LINE.x - .2 || noseX < STOP_LINE.x - .7) bad.push(`turnabout: nose at x=${noseX.toFixed(2)}, the east white line is at ${STOP_LINE.x.toFixed(2)}`);
+    if (f.z < STOP_LINE.z0 + 1 || f.z > STOP_LINE.z1 - 1) bad.push(`turnabout: the car is not centred on the white line (z ${f.z.toFixed(2)})`);
     // left the bay: at the start it stands in it, at the end it is clear of it
     const g0 = { ...parkCarAt(0) }; if (Math.hypot(g0.x - (BAY.xW + BAY.xE) / 2, g0.z + 49.03) > .05) bad.push('turnabout does not start from the bay');
   } else if (mode === 'back') {
     const tailX = f.x - 2.25 * Math.cos(f.yaw);
-    if (Math.abs(wrapA(f.yaw - Math.PI)) > .004 || Math.abs(f.steer) > .003 || f.moving) bad.push(`straight back ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}`);
-    if (tailX > STOP_LINE.x + .001 || tailX < STOP_LINE.x - .12) bad.push(`straight back: the tail is at x=${tailX.toFixed(3)}, the line is at ${STOP_LINE.x.toFixed(3)}`);
-    if (f.z < STOP_LINE.z0 + 1 || f.z > STOP_LINE.z1 - 1) bad.push(`straight back: the car is not centred on the line (z ${f.z.toFixed(2)})`);
+    if (Math.abs(wrapA(f.yaw)) > .004 || Math.abs(f.steer) > .003 || f.moving) bad.push(`straight back ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}`);
+    if (tailX < BAY_LINE.x - .001 || tailX > BAY_LINE.x + .12) bad.push(`straight back: the tail is at x=${tailX.toFixed(3)}, the west line is at ${BAY_LINE.x.toFixed(3)}`);
+    if (f.z < BAY_LINE.z0 + 1 || f.z > BAY_LINE.z1 - 1) bad.push(`straight back: the car is not centred on the line (z ${f.z.toFixed(2)})`);
     const g0 = { ...parkCarAt(0) }; for (let t = 0; t <= T; t += 1 / 30) { const c = parkCarAt(t); if (Math.abs(c.z - g0.z) > .001) { bad.push('straight back is not straight'); break; } }
+  } else if (mode === 'exit') {
+    // the car stands with its nose short of the stop bar, then leaves the scene to the west on the street's right-hand lane
+    const g = { ...parkCarAt(E.OUT_TO_STOP + 1) }, noseZ = g.z + 2.25;
+    if (Math.abs(noseZ - EXIT.zNose) > .08 || noseZ > EXIT.zBar - .45 || Math.abs(g.x - EXIT.laneX) > .05 || Math.abs(wrapA(g.yaw - 1.5 * Math.PI)) > .02) bad.push(`the way out: stops with its nose at z=${noseZ.toFixed(2)} (bar at ${EXIT.zBar}), x=${g.x.toFixed(2)}, yaw ${(g.yaw * 180 / Math.PI).toFixed(1)}`);
+    if (f.x > -75 || Math.abs(wrapA(f.yaw - Math.PI)) > .02 || f.z < 22.2 || f.z > 24.2) bad.push(`the way out ends at (${f.x.toFixed(1)}, ${f.z.toFixed(1)}) yaw ${(f.yaw * 180 / Math.PI).toFixed(1)}: it should be heading west on the north lane of the street`);
+    for (let t = 0; t <= T; t += 1 / 30) { const c = parkCarAt(t); if (c.z > 14 && c.z < 19.4 && c.x > -36 && c.x < -30.5) { const cc = Math.cos(c.yaw), ss = Math.sin(c.yaw); for (const [a, b] of [[L / 2, W / 2], [L / 2, -W / 2], [-L / 2, W / 2], [-L / 2, -W / 2]]) { const wx = c.x + a * cc - b * ss, wz = c.z - a * ss - b * cc; if (wz < 19.1 && (wx < -34.3 || wx > -29.1)) { bad.push(`the way out: a corner leaves the driveway at t=${t.toFixed(1)}`); t = T; break; } } } }
   } else {
     const endOk = Math.hypot(cx - by.endCentre[0], cz - by.endCentre[1]) < .03 && Math.abs(wrapA(f.yaw - 1.5 * Math.PI)) < .004 && Math.abs(f.steer) < .003 && !f.moving && !f.left && !f.right;
     if (!endOk) bad.push(`ends at (${cx.toFixed(2)}, ${cz.toFixed(2)}) yaw ${(f.yaw * 180 / Math.PI).toFixed(2)} steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);

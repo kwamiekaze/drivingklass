@@ -40,7 +40,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'); if (q.get('parkFrom') === 'box') park.loc = 'box'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'); if (q.get('parkFrom') === 'box') park.loc = 'box'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
@@ -123,7 +123,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       if (from && k < 1) { camera.position.set(from.p.x + (pose.p[0] - from.p.x) * k, from.p.y + (pose.p[1] - from.p.y) * k, from.p.z + (pose.p[2] - from.p.z) * k); controls.target.set(from.l.x + (pose.l[0] - from.l.x) * k, from.l.y + (pose.l[1] - from.l.y) * k, from.l.z + (pose.l[2] - from.l.z) * k); persp.fov = from.fov + (pose.fov - from.fov) * k; }
       else { camera.position.set(...pose.p); controls.target.set(...pose.l); persp.fov = pose.fov; }
       camera.lookAt(controls.target); persp.updateProjectionMatrix();
-      if (parkT === null && park.phase === 'done') mode.current = 'free';
+      if (parkT === null && park.phase === 'done') mode.current = park.kind === 'exit' ? 'fly' : 'free';   // after the car has left the scene the lens glides back to the page's own view
     } else if (m === 'pan') {
       panClock.current += dt; const u = .5 - .5 * Math.cos((panClock.current / PAN.period) * Math.PI * 2);
       tp.current.copy(C.pp.getPoint(u)); glide(tp.current); tl.current.copy(C.pl.getPoint(u));

@@ -13,7 +13,7 @@ import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
 import { BackPatio } from './BackPatio';
-import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0, BAY_LINE } from './rearlot';
+import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0, BAY_LINE, EXIT } from './rearlot';
 import { ParkSpot } from './ParkSpot';
 
 /*
@@ -283,6 +283,9 @@ function Road({ asphalt }: { asphalt: THREE.Material }) {
     <Decals items={mk.avenueW} color="#e8e6df" /><Decals items={mk.cross} color="#f1efe8" />
     {/* the stop bar on the inbound (right-hand) lane, 0.6 m in front of where the school car stops, as bright as the zebra paint (drawn without a shadow lookup, so it never greys at the edge of the shadow map) */}
     <mesh rotation-x={-Math.PI / 2} position={[2.05, TOP_Y, 36.4]} renderOrder={2}><planeGeometry args={[3.7, .5]} /><meshStandardMaterial color="#f1efe8" roughness={.8} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} /></mesh>
+    {/* the way out of the west driveway: a stop bar across the right-hand (west) lane, and the stop sign on the grass beside it, facing the cars coming down the west road */}
+    <mesh rotation-x={-Math.PI / 2} position={[-33.0, TOP_Y, EXIT.zBar]} renderOrder={2}><planeGeometry args={[2.5, .5]} /><meshStandardMaterial color="#f1efe8" roughness={.8} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} /></mesh>
+    <StopSign position={[EXIT.signX, 0, EXIT.signZ]} rotationY={Math.PI} />
   </group>;
 }
 

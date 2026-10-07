@@ -20,12 +20,12 @@ function faceTexture() {
   }, 8, false);
 }
 
-export function StopSign({ position }: { position: [number, number, number] }) {
+export function StopSign({ position, rotationY = 0 }: { position: [number, number, number]; rotationY?: number }) {
   const tex = useMemo(faceTexture, []);
   const face = useMemo(() => new THREE.MeshStandardMaterial({ map: tex, roughness: .35, metalness: .15 }), [tex]);
   const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: '#8d9198', roughness: .45, metalness: .75 }), []);
   const geo = useMemo(() => new THREE.CircleGeometry(R, 8, Math.PI / 8), []);
-  return <group position={position}>
+  return <group position={position} rotation-y={rotationY}>
     <mesh position={[0, (POLE_H - .01) / 2, -.07]} material={metal} castShadow><cylinderGeometry args={[.036, .04, POLE_H - .01, 12]} /></mesh>
     <mesh position={[0, CY, -.03]} rotation-z={0} geometry={geo} material={metal} scale={1.02}><meshStandardMaterial color="#8d9198" roughness={.5} metalness={.7} side={THREE.BackSide} /></mesh>
     <mesh position={[0, CY, .0]} geometry={geo} material={face} castShadow />

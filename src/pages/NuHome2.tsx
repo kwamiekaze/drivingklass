@@ -6,6 +6,7 @@ import { ContactBackdrop } from "@/components/nuhome2/ContactBackdrop";
 import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
 import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
+import { ExitSign } from "@/components/nuhome2/ExitSign";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -200,6 +201,7 @@ export default function NuHome2() {
             <svg width="0" height="0" aria-hidden="true" style={{ position: "absolute" }}><defs><linearGradient id="n2h-star" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffe9a6" /><stop offset=".5" stopColor="#e5b84a" /><stop offset="1" stopColor="#b8841f" /></linearGradient></defs></svg>
           </div>
         </header>
+        <ExitSign />
 
         <div className="n2-hero" data-hidden={stage !== 0}>
           <div className="n2-eyebrow"><span className="n2-eline" /> {BRAND.eyebrow} <span className="n2-eline" /></div>
