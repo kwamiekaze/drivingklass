@@ -16,7 +16,7 @@ import { SIGN_FONT, goldGradient, makeCanvasTexture, starShape } from './parts';
  * no two surfaces sit closer than 5 cm; thin trim is thick enough (7 cm and up) to survive the far zoom; the stone
  * texture has soft mortar lines and mipmaps; lettering is stacked in layers 3 cm apart for depth instead of one decal.
  */
-const WALL_H = 6.4, PAV_H = 8.0, FRONT = 3, DEPTH = .9, HALF = 22.4;
+const WALL_H = 6.4, PAV_H = 8.0, FRONT = 3, DEPTH = .9, HALF = 22.4, BACK = -2.95;   // BACK: the back wall's outer face, in building space
 
 function limestone() {
   const c = document.createElement('canvas'); c.width = c.height = 512;
@@ -281,6 +281,20 @@ export function Building({ position, lite, open }: { position: [number, number, 
     </group>;
   };
 
+  /** The same frame and lit room as the front windows, on the back wall (local z -2.95), looking out over the patio, with a stone sill. */
+  const BackBay = ({ cx, w, y0, y1, kind, rows = 2, sill = true }: { cx: number; w: number; y0: number; y1: number; kind: keyof typeof glass; rows?: number; sill?: boolean }) => {
+    const h = y1 - y0, zf = BACK - .1, f = .13;
+    return <group>
+      <mesh position={[cx, (y0 + y1) / 2, BACK - .03]} rotation-y={Math.PI} material={glass[kind]}><planeGeometry args={[w + .3, h + .3]} /></mesh>
+      {[-1, 1].map(s => <mesh key={s} position={[cx + s * (w / 2 - f / 2), (y0 + y1) / 2, zf]} material={M.black}><boxGeometry args={[f, h, .22]} /></mesh>)}
+      {[y0 + f / 2, y1 - f / 2].map(y => <mesh key={y} position={[cx, y, zf]} material={M.black}><boxGeometry args={[w, f, .22]} /></mesh>)}
+      <mesh position={[cx, (y0 + y1) / 2, zf]} material={M.black}><boxGeometry args={[.08, h, .2]} /></mesh>
+      {Array.from({ length: rows - 1 }).map((_, i) => <mesh key={i} position={[cx, y0 + (h * (i + 1)) / rows, zf]} material={M.black}><boxGeometry args={[w, .08, .2]} /></mesh>)}
+      {sill && <mesh position={[cx, y0 - .08, BACK - .2]} material={M.trim} castShadow><boxGeometry args={[w + .5, .14, .42]} /></mesh>}
+      {sill && <mesh position={[cx, y1 + .14, BACK - .12]} material={M.trim}><boxGeometry args={[w + .4, .18, .26]} /></mesh>}
+    </group>;
+  };
+
   const Planter = ({ x, z, kind }: { x: number; z: number; kind: 'cone' | 'ball' | 'tree' | 'small' }) => {
     const ph = kind === 'small' ? .5 : .95, pw = kind === 'small' ? .9 : 1.5;
     return <group position={[x, 0, z]}>
@@ -365,6 +379,30 @@ export function Building({ position, lite, open }: { position: [number, number, 
     <Halo position={[0, 6.75, 5.03]} size={[13.5, 2.6]} strength={.1} />
     <Halo position={[0, 8.35, 5.03]} size={[9, 3]} strength={.08} />
     <mesh geometry={stars.cut} material={signGold} position={[0, 8.2, 5.0]} />
+    {/* the back: the same lit windows as the front, a back door with its own small portico over the patio, lanterns and a light line under the cornice */}
+    {[-1, 1].map(sg => <group key={`bw${sg}`}>
+      <BackBay cx={sg * 6.55} w={2.1} y0={1.0} y1={4.9} kind={sg < 0 ? 'meeting' : 'tv'} />
+      <BackBay cx={sg * 10.5} w={2.0} y0={1.0} y1={6.0} kind="hall" rows={3} />
+      <BackBay cx={sg * 15.4} w={2.1} y0={1.0} y1={4.9} kind="office" />
+      <BackBay cx={sg * 19.4} w={2.1} y0={1.0} y1={4.9} kind={sg < 0 ? 'tv' : 'meeting'} />
+    </group>)}
+    <BackBay cx={0} w={3.4} y0={.98} y1={4.4} kind="lobby" rows={3} sill={false} />
+    {[-.34, .34].map(x => <mesh key={x} position={[x, 2.45, BACK - .27]} material={M.gold}><boxGeometry args={[.07, .9, .07]} /></mesh>)}
+    {/* landing and three steps down to the patio, no rails to hide the door */}
+    <mesh position={[0, .48, BACK - .575]} material={stone(6.2, .96)} castShadow receiveShadow><boxGeometry args={[6.2, .96, 1.15]} /></mesh>
+    {[.72, .48, .24].map((top, i) => <mesh key={top} position={[0, top / 2, BACK - 1.15 - .19 - i * .38]} material={stone(6.2, top)} castShadow receiveShadow><boxGeometry args={[6.2, top, .38]} /></mesh>)}
+    {/* two columns and a flat canopy with a light line and downlights */}
+    {[-1, 1].map(sg => <group key={`bc${sg}`}>
+      <mesh position={[sg * 3.9, 3.06, BACK - 1.0]} material={M.trim} castShadow><cylinderGeometry args={[.4, .4, 4.2, 28]} /></mesh>
+      <mesh position={[sg * 3.9, 1.06, BACK - 1.0]} material={M.trim}><cylinderGeometry args={[.56, .6, .22, 28]} /></mesh>
+      <mesh position={[sg * 3.9, 5.1, BACK - 1.0]} material={M.trim}><cylinderGeometry args={[.58, .44, .22, 28]} /></mesh>
+      <mesh position={[sg * 2.7, 3.35, BACK - .1]} material={M.black}><boxGeometry args={[.14, .06, .2]} /></mesh>
+      <mesh position={[sg * 2.7, 3.2, BACK - .16]} material={M.lamp}><boxGeometry args={[.2, .4, .2]} /></mesh>
+    </group>)}
+    <mesh position={[0, 5.4, BACK - 1.45]} material={M.trim} castShadow><boxGeometry args={[9.4, .5, 2.9]} /></mesh>
+    <mesh position={[0, 5.12, BACK - 2.88]} material={M.led}><boxGeometry args={[9.2, .1, .1]} /></mesh>
+    {[-3, -1.5, 0, 1.5, 3].map(x => <mesh key={x} position={[x, 5.13, BACK - 1.3]} rotation-x={Math.PI / 2} material={M.lamp}><circleGeometry args={[.12, 14]} /></mesh>)}
+    <mesh position={[0, WALL_H - .08, BACK - .6]} material={M.led}><boxGeometry args={[HALF * 2 + .2, .12, .12]} /></mesh>
     <mesh position={[0, WALL_H - .08, FRONT - 2]} visible={false}><boxGeometry args={[.01, .01, .01]} /></mesh>
   </group>;
 }

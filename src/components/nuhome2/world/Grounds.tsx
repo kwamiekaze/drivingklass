@@ -7,8 +7,8 @@ import { NightCtx, rng } from './theme';
 export function paved(x: number, z: number, margin = 0) {
   if (Math.abs(x) < 34.6 + margin && z > -15.4 - margin && z < 14.7 + margin) return true;   // lot, terrace, islands
   if (Math.abs(x) < 25 + margin && z < -14 + margin && z > -30) return true;                // plinth and building
-  if (Math.abs(x) < 34.6 + margin && z < -22 + margin && z > -51.2 - margin) return true;   // the back lot
-  if (Math.abs(Math.abs(x) - 31.7) < 2.6 + margin && z < -14.5 + margin && z > -23 - margin) return true;   // the two roads that lead to it
+  if (Math.abs(x) < 34.6 + margin && z < -26 + margin && z > -54.2 - margin) return true;   // the back lot
+  if (Math.abs(Math.abs(x) - 31.7) < 2.9 + margin && z < -14.5 + margin && z > -26.5 - margin) return true;   // the two roads that lead to it
   if (z > 14.4 - margin && z < 35.2 + margin) return true;                                  // sidewalks and street
   if (Math.abs(x) < 6 + margin && z > 14) return true;                                       // the avenue
   return false;

@@ -12,6 +12,7 @@ const FLEET_ORDER = [FLEET_COLORS.white, FLEET_COLORS.red, FLEET_COLORS.green, F
 import { StopSign } from './StopSign';
 import { Plant } from './Plants';
 import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
+import { BackPatio } from './BackPatio';
 
 /*
  * The lot, laid out like a real one. World meters. Building front wall z -14.5, terrace z -15.2 to -8.6.
@@ -68,7 +69,7 @@ function stripTexture(lines: [number, number][], span: number, across: 'u' | 'v'
  * ('u': across x and running along z, 'v': across z and running along x). The plane is `width` (x) by `height` (z) metres and the
  * texture repeats `repeat` times along the way the lines run (or along x for a row of stall lines, whose tile is one bay).
  */
-function PaintStrip({ lines, span, across, color, x, z, width, height, repeat, y = PAINT_Y }: { lines: [number, number][]; span: number; across: 'u' | 'v'; color: string; x: number; z: number; width: number; height: number; repeat: [number, number]; y?: number }) {
+export function PaintStrip({ lines, span, across, color, x, z, width, height, repeat, y = PAINT_Y }: { lines: [number, number][]; span: number; across: 'u' | 'v'; color: string; x: number; z: number; width: number; height: number; repeat: [number, number]; y?: number }) {
   const tex = useMemo(() => { const t = stripTexture(lines, span, across); t.repeat.set(repeat[0], repeat[1]); return t; }, [lines, span, across, repeat]);
   return <mesh rotation-x={-Math.PI / 2} position={[x, y, z]} renderOrder={1} receiveShadow>
     <planeGeometry args={[width, height]} />
@@ -112,9 +113,10 @@ function foliageTexture() {
 }
 
 type Plant = { core: THREE.Material; blob: THREE.BufferGeometry; leaf: THREE.Material; k: number };
+export type HedgePlant = Plant;
 
 /** A clipped hedge built the way a real one looks: a solid core, covered in hundreds of small leaf clusters in varied greens. */
-function Hedge({ x, z, w, d = 1, h = .9, y = .16, seed = 1, pl, density = 1 }: { x: number; z: number; w: number; d?: number; h?: number; y?: number; seed?: number; pl: Plant; density?: number }) {
+export function Hedge({ x, z, w, d = 1, h = .9, y = .16, seed = 1, pl, density = 1 }: { x: number; z: number; w: number; d?: number; h?: number; y?: number; seed?: number; pl: Plant; density?: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const area = w * (2 * h + d), n = Math.max(30, Math.round(area * 70 * pl.k * density));
   useLayoutEffect(() => {
@@ -147,7 +149,7 @@ function Island({ x, z, w, d, pl, density }: { x: number; z: number; w: number; 
   </group>;
 }
 
-function Lamp({ x, z, rotY = 0, tall = 7.2 }: { x: number; z: number; rotY?: number; tall?: number }) {
+export function Lamp({ x, z, rotY = 0, tall = 7.2 }: { x: number; z: number; rotY?: number; tall?: number }) {
   return <group position={[x, 0, z]} rotation-y={rotY}>
     <Cyl p={[0, .22, 0]} r={.2} h={.44} c="#26262b" m={.5} rough={.5} seg={12} />
     <Cyl p={[0, tall / 2, 0]} r={.06} rb={.09} h={tall} c="#26262b" m={.5} rough={.45} seg={10} />
@@ -159,7 +161,7 @@ function Lamp({ x, z, rotY = 0, tall = 7.2 }: { x: number; z: number; rotY?: num
 }
 
 const topiaryGeo = (() => { const g = new THREE.IcosahedronGeometry(1, 3), p = g.attributes.position as THREE.BufferAttribute, r = rng(77); for (let i = 0; i < p.count; i++) { const k = 1 + (Math.sin(p.getX(i) * 9) * Math.cos(p.getY(i) * 7 + p.getZ(i) * 5)) * .035 + (r() - .5) * .02; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } g.computeVertexNormals(); return g; })();
-function Topiary({ x, z, y = .3, s = 1 }: { x: number; z: number; y?: number; s?: number }) {
+export function Topiary({ x, z, y = .3, s = 1 }: { x: number; z: number; y?: number; s?: number }) {
   return <group position={[x, y, z]} scale={s}>
     <mesh position={[0, .34, 0]} castShadow><cylinderGeometry args={[.46, .36, .68, 18]} /><meshStandardMaterial color="#3b3a3f" roughness={.55} metalness={.15} /></mesh>
     <Plant kind="ball" y={.62} seed={5} scale={.75} />
@@ -313,6 +315,7 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
     {[-1, 1].map(s => <Box key={`fk${s}`} p={[s * 16.65, .1, 14.35]} s={[25.1, .2, .3]} c="#cfc9bd" r={.7} />)}
     <Road asphalt={asphalt} />
     <BackLot asphalt={asphalt} />
+    <BackPatio pl={pl} />
     {/* planted islands, front strip, building beds */}
     {ISLANDS.map((i, k) => <Island key={k} {...i} pl={pl} density={1} />)}
     {[-1, 1].map(s => <Hedge key={`fh${s}`} x={s * 22.6} y={.2} z={15.0} w={13.6} d={1.1} h={.9} seed={6 + s} pl={pl} density={.7} />)}
@@ -344,8 +347,8 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
  * the cones are 1.9 m apart. The layout is the photo, scaled at 27 px to the metre: u, v are pixels of that photo.
  * Two flat roads join it to the front lot's side lanes, so a car can leave by the east lane, drive round and come back by the west one.
  */
-const BL = { x0: -34.6, x1: 34.6, zs: -22.4, zn: -50.9, kerb: .3 };
-const PHX = 27, PHW = 968, PHH = 779, PH_RIGHT = 34.0, PH_FRONT = -23.5;
+const BL = { x0: -34.2, x1: 34.2, zs: -26.2, zn: -53.9, kerb: .3 };   // x edges line up with the plaza's side kerbs (x +-34.35); zs leaves room for the patio between the building and the lot
+const PHX = 27, PHW = 968, PHH = 779, PH_RIGHT = 25.0, PH_FRONT = -26.5;   // the layout sits nearer the middle of the lot than before (9 m left, 3 m back)
 const bx = (u: number) => PH_RIGHT - (PHW - u) / PHX, bz = (v: number) => PH_FRONT - (PHH - v) / PHX;
 const BL_U_LEFT = bx(366), BL_SHARED = 15.8, BL_BOX_RIGHT = bx(660), BL_TOP = bz(83), BL_FOOT_Z = bz(315), BL_FOOT_X = bx(290), BL_BOX_TOP = bz(207), BL_BOX_BOTTOM = -41.7;
 const BL_LW = .2;
@@ -389,22 +392,52 @@ function Cones({ list }: { list: [number, number][] }) {
   </instancedMesh>;
 }
 
-function BackLot({ asphalt }: { asphalt: THREE.Material }) {
-  const W = BL.x1 - BL.x0, D = BL.zs - BL.zn, lot = useMemo(() => roadGeo(W, D), []), conn = useMemo(() => roadGeo(5.2, 7.7), []);
-  const kerb = '#cfc9bd', cz = (BL.zs + BL.zn) / 2;
+/**
+ * A kerb return: the rounded corner where a kerb turns, like the front entrance has. (x0, z0) is the sharp corner of the lawn or planting
+ * next to the road, which spreads from it toward +sx in x and +sz in z. The corner is cut to a quarter circle of radius r, a kerb band follows
+ * the curve and the little cut left over is filled with asphalt so the road corner is rounded too.
+ */
+function KerbReturn({ x0, z0, sx, sz, r, asphalt }: { x0: number; z0: number; sx: number; sz: number; r: number; asphalt: THREE.Material }) {
+  const parts = useMemo(() => {
+    const cx = x0 + sx * r, cz = z0 + sz * r, N = 16, aS = Math.atan2(-sz, 0), aE = Math.atan2(0, -sx);
+    let da = aE - aS; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    const arc = (rad: number) => Array.from({ length: N + 1 }, (_, i) => { const a = aS + da * i / N; return [cx + rad * Math.cos(a), cz + rad * Math.sin(a)] as [number, number]; });
+    const shape = (pts: [number, number][]) => new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const kerb = new THREE.ExtrudeGeometry(shape([...arc(r + .3), ...arc(r).reverse()]), { depth: .2, bevelEnabled: false }); kerb.rotateX(-Math.PI / 2);
+    const fill = new THREE.ShapeGeometry(shape([[x0, z0], [x0 + sx * r, z0], ...arc(r + .3), [x0, z0 + sz * r]])); fill.rotateX(-Math.PI / 2);
+    const uv = fill.attributes.uv as THREE.BufferAttribute, ps = fill.attributes.position as THREE.BufferAttribute; for (let i = 0; i < uv.count; i++) uv.setXY(i, ps.getX(i) / 10, ps.getZ(i) / 10);
+    return { kerb, fill };
+  }, [x0, z0, sx, sz, r]);
   return <group>
-    <mesh rotation-x={-Math.PI / 2} position={[0, .006, -(Math.abs(BL.zs) + Math.abs(BL.zn)) / 2]} geometry={lot} material={asphalt} receiveShadow />
-    {/* the two roads that join it to the side lanes, flat and level with everything else */}
-    {[-31.7, 31.7].map(x => <mesh key={x} rotation-x={-Math.PI / 2} position={[x, .006, -18.55]} geometry={conn} material={asphalt} receiveShadow />)}
-    {/* kerbs: along the back and both sides, and along the building side between the two roads */}
+    <mesh geometry={parts.kerb} receiveShadow><meshStandardMaterial color="#cfc9bd" roughness={.8} /></mesh>
+    <mesh geometry={parts.fill} position={[0, .007, 0]} material={asphalt} receiveShadow />
+  </group>;
+}
+
+const CONN_X = 31.7, CONN_Z0 = -14.7;   // the two roads leave the plaza's side lanes here and run north to the back lot
+function BackLot({ asphalt }: { asphalt: THREE.Material }) {
+  const W = BL.x1 - BL.x0, D = BL.zs - BL.zn, CL = CONN_Z0 - BL.zs, lot = useMemo(() => roadGeo(W, D), []), conn = useMemo(() => roadGeo(5.2, CL), []);
+  const kerb = '#cfc9bd', cz = (BL.zs + BL.zn) / 2, ccz = (CONN_Z0 + BL.zs) / 2, R = 1.0;
+  return <group>
+    <mesh rotation-x={-Math.PI / 2} position={[0, .006, cz]} geometry={lot} material={asphalt} receiveShadow />
+    {/* the two roads that join it to the side lanes, flat and level with everything else; east is the way in, west the way out */}
+    {[-CONN_X, CONN_X].map(x => <mesh key={x} rotation-x={-Math.PI / 2} position={[x, .006, ccz]} geometry={conn} material={asphalt} receiveShadow />)}
+    {/* kerbs: along the back, both sides, and the building side between the two roads, with rounded returns where they meet the roads */}
     <Box p={[0, .1, BL.zn - .15]} s={[W + .6, .2, BL.kerb]} c={kerb} r={.8} cast={false} />
-    {[-1, 1].map(s => <Box key={`ks${s}`} p={[s * (BL.x1 + .15), .1, cz]} s={[BL.kerb, .2, D + .6]} c={kerb} r={.8} cast={false} />)}
-    {[-1, 1].map(s => <Box key={`kf${s}`} p={[s * 15.8, .1, BL.zs + .15]} s={[28.6, .2, BL.kerb]} c={kerb} r={.8} cast={false} />)}
+    {[-1, 1].map(sg => <Box key={`ks${sg}`} p={[sg * (BL.x1 + .15), .1, cz]} s={[BL.kerb, .2, D + .6]} c={kerb} r={.8} cast={false} />)}
+    <Box p={[0, .1, BL.zs + .15]} s={[2 * (29.0 - R), .2, BL.kerb]} c={kerb} r={.8} cast={false} />
+    {[-1, 1].map(sg => <KerbReturn key={`kr${sg}`} x0={sg * 29.0} z0={BL.zs} sx={-sg} sz={1} r={R} asphalt={asphalt} />)}
+    {[-1, 1].map(sg => <Box key={`kc${sg}`} p={[sg * 29.0, .1, ccz + R / 2]} s={[BL.kerb, .2, CL - R]} c={kerb} r={.8} cast={false} />)}
+    {[-1, 1].map(sg => <Box key={`ko${sg}`} p={[sg * 34.35, .1, ccz]} s={[BL.kerb, .2, CL]} c={kerb} r={.8} cast={false} />)}
+    {/* lane paint, like the front lot's lanes: an edge line each side, and an arrow in the lane */}
+    {[-CONN_X, CONN_X].map(x => <PaintStrip key={`el${x}`} lines={[[-2.25, .12], [2.25, .12]]} span={5.2} across="u" color="#e8e6df" x={x} z={ccz} width={5.2} height={CL - 1.6} repeat={[1, 1]} />)}
     {BL_LINES.map(([x0, z0, x1, z1], i) => {
       const horiz = Math.abs(z1 - z0) < .01, len = (horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0)) + BL_LW;
       return <PaintStrip key={i} lines={[[0, BL_LW]]} span={1} across={horiz ? 'v' : 'u'} color="#f1efe8" x={(x0 + x1) / 2} z={(z0 + z1) / 2} width={horiz ? len : 1} height={horiz ? 1 : len} repeat={[1, 1]} y={TOP_Y} />;
     })}
+    <Arrows items={[{ x: CONN_X, z: -19.5, yaw: 0 }, { x: -CONN_X, z: -19.5, yaw: Math.PI }]} />
     <Cones list={BL_CONES} />
-    {[-22, 3].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
+    {[-18, 12].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
+    {[[-27.6, -21, Math.PI], [27.6, -21, 0]].map(([x, z, r]) => <Lamp key={`cl${x}`} x={x!} z={z!} rotY={r!} />)}
   </group>;
 }
