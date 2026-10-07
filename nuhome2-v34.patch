@@ -1,0 +1,637 @@
+From 3693a4a14135e03ee9fdee2ca3126c37f7a2d405 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 7 Oct 2026 12:36:44 -0400
+Subject: [PATCH] nuhome2 v34: parking sign, live divert to the back lot,
+ signal and camera fixes
+
+- Parallel park: right signal goes off as the car starts its left swing into the space
+- New PARKING sign in the EXIT sign's spot; sends the car to the back lot
+- Pressed during the opening drive: car carries on past the aisle (live drive, same position/heading/speed); once it has turned into the aisle it parks first, then drives out
+- Reverse-park drives end on a camera that shows the next "!" (checked by projection on 7 screen sizes)
+- Chained entry modes (parallelE, bayE); check-park and new check-enter scripts
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UganUXFhNd5M1gKdckBG4L
+---
+ scripts/check-enter.mjs                 |  48 ++++++++++
+ scripts/check-park.mjs                  |  56 ++++++++---
+ src/components/nuhome2/ParkingSign.tsx  |  38 ++++++++
+ src/components/nuhome2/world/Rig.tsx    |   5 +-
+ src/components/nuhome2/world/intro.ts   |  12 +++
+ src/components/nuhome2/world/park.ts    | 118 +++++++++++++++++++-----
+ src/components/nuhome2/world/parkcam.ts |  31 ++++---
+ src/pages/NuHome2.tsx                   |   2 +
+ 8 files changed, 260 insertions(+), 50 deletions(-)
+ create mode 100644 scripts/check-enter.mjs
+ create mode 100644 src/components/nuhome2/ParkingSign.tsx
+
+diff --git a/scripts/check-enter.mjs b/scripts/check-enter.mjs
+new file mode 100644
+index 0000000..e21e336
+--- /dev/null
++++ b/scripts/check-enter.mjs
+@@ -0,0 +1,48 @@
++// The PARKING sign pressed at every moment of the opening drive (and after it): the car must never jump, vanish or reappear.
++//   - before the car has begun its left turn into the aisle: it carries on, then goes straight on at the driveway instead (the live drive)
++//   - once it has begun that turn: it finishes the drive into its stall, parks, then drives out and round to the back lot (the stall drive)
++//   - after it is parked: the stall drive at once
++// Every frame (60 per second) the car's pose is taken as the page would draw it (intro.ts while the opening drive runs, park.ts once a drive has started)
++// and compared with the frame before: no step bigger than the car's own speed allows, no sudden turn, and the two ends of every hand-over line up.
++// run: npx tsx scripts/check-enter.mjs
++import { park, canStartPark, requestEnter, tickEnter, parkCarAt, parkTotal, finishPark, parkMode, setParkStall, startPark } from '../src/components/nuhome2/world/park.ts';
++import { intro, carAt, T_GO, T_STOP, T_PARKED, T_DRIVE, introParked, setStall } from '../src/components/nuhome2/world/intro.ts';
++import { STALLS } from '../src/components/nuhome2/world/cast.ts';
++const wrap = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
++let fail = 0; const DT = 1 / 60;
++for (const [sid, st] of Object.entries(STALLS)) {
++  setStall(st); setParkStall(st);
++  const T0 = T_PARKED + 4, rows = [];
++  for (let ct = 0.5; ct <= T0; ct += 0.61) {
++    // a fresh page at intro time ct
++    Object.assign(park, { phase: 'idle', t: 0, seq: 0, kind: 'parallel', loc: 'front', enterPending: false }); intro.t = ct; intro.t3 = T_GO; intro.done = false;
++    const bad = [];
++    if (!canStartPark('enter')) { bad.push('sign not on offer'); }
++    requestEnter();
++    let prev = null, modes = new Set(), startedAt = null, handover = null;
++    for (let f = 0; f < 60 * 140; f++) {
++      tickEnter();
++      let pose, speed;
++      if (park.phase !== 'idle') {
++        if (startedAt === null) { startedAt = f * DT; handover = { ...parkCarAt(0) }; modes.add(parkMode()); if (prev && Math.hypot(handover.x - prev.x, handover.z - prev.z) > 0.9 * (prev.v ?? 3) * DT + 0.03 + 0.15) bad.push(`hand-over jump ${Math.hypot(handover.x - prev.x, handover.z - prev.z).toFixed(3)} m at intro t=${ct.toFixed(1)}`); if (prev && Math.abs(wrap(handover.yaw - prev.yaw)) > 0.05) bad.push(`hand-over turn ${(wrap(handover.yaw - prev.yaw) * 57.3).toFixed(1)} deg at intro t=${ct.toFixed(1)}`); }
++        const c = parkCarAt(park.t); pose = { x: c.x, z: c.z, yaw: c.yaw, v: Math.abs(c.speed), src: 'park' };
++        park.t += DT; if (park.t >= parkTotal()) { finishPark(); break; }
++      } else {
++        if (!introParked()) intro.t += DT;
++        const c = carAt(intro.t, intro.t3), prevT = Math.max(0, intro.t - DT), p0 = carAt(prevT, intro.t3), v = Math.hypot(c.x - p0.x, c.z - p0.z) / DT;
++        pose = { x: c.x, z: c.z, yaw: c.yaw, v, src: 'intro' };
++      }
++      if (prev) { const step = Math.hypot(pose.x - prev.x, pose.z - prev.z), allow = Math.max(prev.v, pose.v, 0.3) * DT * 1.6 + 0.02; if (step > allow && prev.src === pose.src) bad.push(`step ${step.toFixed(3)} m (allowed ${allow.toFixed(3)}) at frame ${f}, ${pose.src}`); if (prev.src !== pose.src && pose.src === 'intro') bad.push('went back to the opening drive'); if (Math.abs(wrap(pose.yaw - prev.yaw)) > 0.12 && prev.src === pose.src) bad.push(`heading step ${(wrap(pose.yaw - prev.yaw) * 57.3).toFixed(1)} deg at frame ${f}`); }
++      prev = pose;
++    }
++    if (park.phase !== 'done') bad.push('never finished'); else if (park.loc !== 'entry') bad.push(`ended at loc ${park.loc}`);
++    const finalMode = [...modes][0];
++    // after a drive from its stall: the car had parked first when it was past the turn
++    rows.push([ct, finalMode, startedAt, bad]);
++    if (bad.length) { fail += bad.length; console.log(`${sid.padEnd(8)} click at intro t=${ct.toFixed(1)}: ${[...new Set(bad)].slice(0, 3).join(' | ')}`); }
++  }
++  const live = rows.filter(r => r[1] === 'enterLive'), stall = rows.filter(r => r[1] === 'enterStall');
++  console.log(`${sid.padEnd(8)} ${rows.length} presses: ${live.length} diverted live (first at intro t=${live[0]?.[0].toFixed(1)}, last ${live[live.length - 1]?.[0].toFixed(1)}), ${stall.length} drove to the stall first`);
++}
++console.log(fail ? `PROBLEMS: ${fail}` : 'ok');
++process.exit(fail ? 1 : 0);
+diff --git a/scripts/check-park.mjs b/scripts/check-park.mjs
+index eae3b4f..e1a1834 100644
+--- a/scripts/check-park.mjs
++++ b/scripts/check-park.mjs
+@@ -7,8 +7,9 @@
+ //   - the car ends in the middle of the box, parallel, facing west (the arrow), wheels straight, stopped
+ //   - the steering is smooth (no jump bigger than the rate limit) and so is the heading
+ // run: npx tsx scripts/check-park.mjs
+-import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkStall, setParkMode, PARK_GEOM, RA, WB, DMAX } from '../src/components/nuhome2/world/park.ts';
++import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkStall, setParkMode, setLiveCar, PARK_GEOM, RA, WB, DMAX } from '../src/components/nuhome2/world/park.ts';
+ import { STALLS } from '../src/components/nuhome2/world/cast.ts';
++import { introCarState, introMarks, T_GO, setStall } from '../src/components/nuhome2/world/intro.ts';
+ import { SOLIDS } from '../src/components/nuhome2/world/colliders.ts';
+ import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
+ import { parkCamAt, resetParkCam } from '../src/components/nuhome2/world/parkcam.ts';
+@@ -29,11 +30,18 @@ const boxGap = (c, bx0, bx1, bz0, bz1) => {
+   for (const [px, pz] of [[bx0, bz0], [bx0, bz1], [bx1, bz0], [bx1, bz1]]) best = Math.min(best, toCar(c, px, pz));
+   return best;
+ };
+-const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero], ['exit', 'out', STALLS.hero]);
+-for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+-  setParkStall(st); setParkMode(mode); resetParkCam();
+-  const T = parkTotal(), M = parkMarks(), E = parkEnds(), su = mode === 'parallel' ? parkSetup() : null, by = mode === 'bayFront' || mode === 'bayBox' ? parkBay() : null, bad = [];
+-  const front = mode === 'parallel' || mode === 'bayFront', bayish = mode === 'bayFront' || mode === 'bayBox';
++const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['enterStall', 'stall', STALLS.hero], ['parallelE', 'entry', STALLS.hero], ['bayE', 'entry', STALLS.hero], ['enterLive', 'early', STALLS.hero, .0], ['enterLive', 'mid', STALLS.hero, .5], ['enterLive', 'late', STALLS.hero, 1], ['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero], ['exit', 'out', STALLS.hero]);
++for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
++  setParkStall(st); setStall(st); resetParkCam();
++  let live = null;
++  if (mode === 'enterLive') {   // the car is on the driveway, heading north: the earliest moment the sign can divert it, the middle of the window, the last moment
++    const M0 = introMarks(), a = M0.l1e + 3, b = M0.l2s - 8, target = a + (b - a) * liveAt;
++    let t = T_GO; while (introCarState(t).s < target) t += 1 / 120;
++    live = introCarState(t); setLiveCar({ x: live.x, z: live.z, v: live.v, left: live.left, right: live.right });
++  }
++  setParkMode(mode);
++  const T = parkTotal(), M = parkMarks(), E = parkEnds(), su = mode === 'parallel' || mode === 'parallelE' ? parkSetup() : null, by = mode === 'bayFront' || mode === 'bayBox' || mode === 'bayE' ? parkBay() : null, bad = [];
++  const par = mode === 'parallel' || mode === 'parallelE', front = mode === 'parallel' || mode === 'bayFront' || mode === 'enterStall', bayish = mode === 'bayFront' || mode === 'bayBox';
+   let worstCone = 9, worstSolid = 9, solidName = '', worstT = 0;
+   const own = !front ? null : SOLIDS.find(s => s.k === 'box' && s.n.startsWith('car') && Math.abs((s.min[0] + s.max[0]) / 2 - st.x) < .6 && Math.abs((s.min[2] + s.max[2]) / 2 - st.z) < .6);
+   let prev = null, maxDSteer = 0, maxDYaw = 0, maxStep = 0;
+@@ -54,11 +62,13 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+   if (worstCone < .1) bad.push(`car passes ${worstCone.toFixed(2)} m from a cone at t=${worstT.toFixed(1)}`);
+   if (worstSolid < .2) bad.push(`car passes ${worstSolid.toFixed(2)} m from ${solidName}`);
+   if (maxDSteer > 75 * Math.PI / 180) bad.push(`steering moves ${(maxDSteer * 180 / Math.PI).toFixed(0)} deg/s`);
+-  if (maxStep > (mode === 'exit' ? 8.2 : 6.2)) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
++  if (maxStep > (mode === 'exit' ? 8.2 : mode === 'enterLive' ? 11.5 : 6.2)) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
+   // signals
+   const first = (pred) => { for (let t = 0; t <= T; t += 1 / 60) if (pred(parkCarAt(t))) return t; return null; };
+   const tMove = first(c => c.moving), tSig = first(c => c.left || c.right), sideL = { ...parkCarAt(0) }.left;
+   if (mode === 'back') { if (tSig !== null) bad.push('the straight back uses a signal'); }
++  else if (mode === 'enterLive') { /* the blinker state of the live car carries on; checked below */ }
++  else if (mode === 'parallelE' || mode === 'bayE') { if (tSig === null || tSig < (M.SIGNAL_RIGHT ?? M.BAY_SIGNAL_RIGHT) - .05) bad.push('a signal before the setup'); }
+   else if (mode === 'exit') { if (tSig === null || tSig < M.OUT_TO_STOP - .05) bad.push('the way out: a signal comes on before the car is driving'); }
+   else if (mode === 'bayBox') { if (tSig === null || tSig < M.BOX_SIGNAL_L - .05) bad.push(`pulling out of the parallel box: a signal at ${tSig} before the left one (${M.BOX_SIGNAL_L})`); }
+   else if (tSig === null || tSig > .2 || tMove - tSig < 1.5) bad.push(`signal at ${tSig}, car moves at ${tMove?.toFixed(2)}`);
+@@ -71,9 +81,23 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+   if (front && !dirOk) bad.push('exit signal side does not match the way the tail swings');
+   const sigAt = (t) => ({ ...parkCarAt(t) });
+   const always = (t0, t1, pred, what) => { for (let t = t0; t <= t1; t += 1 / 30) if (!pred(sigAt(t))) { bad.push(`${what} at t=${t.toFixed(1)}`); return; } };
+-  if (mode === 'parallel') {
+-    always(M.SIGNAL_RIGHT + .1, T - 3.2, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup to the end');
++  if (par) {
++    always(M.SIGNAL_RIGHT + .1, M.STEER_FULL_LEFT, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup until the left swing into the space');
++    always(M.STEER_FULL_LEFT + .05, T, c => !c.right && !c.left, 'parallel park: NO signal once the car turns left into the space');
+     always(M.STOP_AT_ENTRY_LINE, M.SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the setup');
++  } else if (mode === 'enterStall' || mode === 'enterLive') {
++    always(E.DRIVE_TO_REAR_LOT, T, c => !c.left && !c.right, 'drive into the back lot: no signal once the car has arrived');
++    if (mode === 'enterLive') {
++      always(M.DRIVE_TO_REAR_LOT, E.DRIVE_TO_REAR_LOT, c => !c.right, 'drive into the back lot: never a right signal (only left turns)');
++      let any = false; for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) if (parkCarAt(t).left) any = true; if (!any) bad.push('no left signal before the left turn into the back lot');
++      // no glitch: the first frame IS the car, at its own speed; speed and heading never step
++      const g0 = { ...parkCarAt(0) }; if (Math.hypot(g0.x - live.x, g0.z - live.z) > .005 || Math.abs(wrapA(g0.yaw - live.yaw)) > .005 || Math.abs(g0.speed - live.v) > .1) bad.push(`live drive does not start from the car: dpos ${Math.hypot(g0.x - live.x, g0.z - live.z).toFixed(3)} dyaw ${wrapA(g0.yaw - live.yaw).toFixed(3)} dv ${(g0.speed - live.v).toFixed(2)}`);
++      let pv = g0.speed, py = g0.yaw, maxDv = 0, maxA = 0, maxYr = 0; for (let t = 1 / 60; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 60) { const c = parkCarAt(t); maxDv = Math.max(maxDv, Math.abs(c.speed - pv)); maxYr = Math.max(maxYr, Math.abs(c.yaw - py) * 60); maxA = Math.max(maxA, Math.abs(c.accel)); pv = c.speed; py = c.yaw; }
++      if (maxDv > .06) bad.push(`live drive: speed steps by ${maxDv.toFixed(3)} m/s in one frame`);
++      if (maxA > 4) bad.push(`live drive: acceleration ${maxA.toFixed(1)} m/s2`);
++      if (maxYr > 1.0) bad.push(`live drive: turns at ${maxYr.toFixed(2)} rad/s`);
++      for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) { const c = parkCarAt(t); if (c.z < -3 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .6) { bad.push(`live drive: not in the right-hand lane of the east road (x ${c.x.toFixed(2)})`); break; } }
++    }
+   } else if (mode === 'turn') {
+     // the turn out of the bay is toward the EAST, the car's LEFT hand (it stands nose south): the signal is the one for that side, on before the car moves, off after the turn
+     always(M.TURN_SIGNAL + .1, E.TURN_SHIFT_D, c => c.left && !c.right && !c.moving, 'turnabout: left signal on while still, before the car moves');
+@@ -93,7 +117,7 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+     always(0, T, c => !c.left && !c.right, 'straight back: no signal');
+     always(M.BACK_REVERSE + .5, E.BACK_REVERSE - .5, c => c.reversing && Math.abs(c.steer) < 1e-6 && c.speed < 0, 'straight back: in reverse, wheels straight');
+   } else {
+-    if (mode === 'bayFront') always(M.STOP_AT_ENTRY_LINE, M.BAY_SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the second line');
++    if (mode === 'bayFront' || mode === 'bayE') always(M.STOP_AT_ENTRY_LINE, M.BAY_SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the second line');
+     always(M.BAY_SIGNAL_RIGHT + .1, M.BAY_REVERSE, c => c.right && !c.left, 'bay: the right signal on before the reverse');
+     // ONE motion: from the first inch of the reverse to the last, the car never stops and the speed never falls below a crawl, until the final braking
+     { let vmin = 9, tv = 0; for (let t = M.BAY_REVERSE + 2.6; t < E.BAY_REVERSE - 2.2; t += 1 / 30) { const v = Math.abs(parkCarAt(t).speed); if (v < vmin) { vmin = v; tv = t; } } if (vmin < .6) bad.push(`bay reverse slows to ${vmin.toFixed(2)} m/s at t=${tv.toFixed(1)}`); let vmax = 0; for (let t = M.BAY_REVERSE; t <= E.BAY_REVERSE; t += 1 / 30) vmax = Math.max(vmax, Math.abs(parkCarAt(t).speed)); if (vmax > 1.0) bad.push(`bay reverse reaches ${vmax.toFixed(2)} m/s (not slow)`); }
+@@ -114,11 +138,16 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+   }
+   const f = { ...parkCarAt(T - .05) }, cx = f.x, cz = f.z;
+   const csn = Math.cos(f.yaw), snn = Math.sin(f.yaw);
+-  if (mode === 'parallel') {
++  if (par) {
+     const endOk = Math.hypot(cx - su.endCentre[0], cz - su.endCentre[1]) < .03 && Math.hypot(cx - (PBOX.x0 + PBOX.x1) / 2, cz - (PBOX.zKerb + PBOX.zLane) / 2) < .9 && Math.abs(Math.abs(f.yaw) - Math.PI) < .004 && Math.abs(f.steer) < .003 && !f.moving && !f.left && !f.right;
+     if (!endOk) bad.push(`ends at (${cx.toFixed(2)}, ${cz.toFixed(2)}) yaw ${(f.yaw * 180 / Math.PI).toFixed(2)} steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
+     // the car must be entirely inside the box's lines (all four wheels): corners of the body against the painted rectangle
+     for (const [a, b] of [[L / 2, 1], [L / 2, -1], [-L / 2, 1], [-L / 2, -1]]) { const wx = f.x + a * csn - b * snn, wz = f.z - a * snn - b * csn; if (wx < PBOX.x0 || wx > PBOX.x1 || wz < PBOX.zKerb || wz > PBOX.zLane) bad.push('a corner of the car is outside the painted box'); }
++  } else if (mode === 'enterStall' || mode === 'enterLive') {
++    const noseX = f.x + 2.25 * Math.cos(f.yaw);
++    if (Math.abs(wrapA(f.yaw - Math.PI)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`drive into the back lot ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
++    if (noseX < STOP_LINE.x + .2 || noseX > STOP_LINE.x + .7) bad.push(`drive into the back lot: nose at x=${noseX.toFixed(2)}, the stop line is at ${STOP_LINE.x.toFixed(2)}`);
++    if (Math.abs(f.z - (STOP_LINE.z0 + STOP_LINE.z1) / 2) > .06) bad.push(`drive into the back lot: not on the lane (z ${f.z.toFixed(2)})`);
+   } else if (mode === 'turn') {
+     const noseX = f.x + 2.25 * Math.cos(f.yaw);
+     if (Math.abs(wrapA(f.yaw)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`turnabout ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
+@@ -158,8 +187,9 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+       for (const s of SOLIDS) { const d = clearance(s, p); if (d < camMin) { camMin = d; camName = s.n + ' t=' + t.toFixed(1) + (narrow ? ' narrow' : ''); } }
+       { const d = Math.hypot(p[0] - c.x, p[1] - .8, p[2] - c.z); if (d < carMin) { carMin = d; camCarT = t; } }   // a bird's eye: the lens is never close to the car
+       // is the car (its centre) inside the middle of the frame? angle between the view direction and the direction to the car, against the half field of view
+-      const vx = l[0] - p[0], vy = l[1] - p[1], vz = l[2] - p[2], tx = c.x - p[0], ty = .7 - p[1], tz = c.z - p[2], cosA = (vx * tx + vy * ty + vz * tz) / (Math.hypot(vx, vy, vz) * Math.hypot(tx, ty, tz) || 1), ang = Math.acos(Math.min(1, Math.max(-1, cosA))) * 180 / Math.PI;
+-      nF++; if (ang < fov * .5 * (narrow ? .75 : 1.0)) framed++;
++      // is the car (its centre) inside the frame? project it with the real aspect of a phone (portrait) or a laptop (wide), with the header and the buttons taking the top and bottom edge
++      { const fx = l[0] - p[0], fy = l[1] - p[1], fz = l[2] - p[2], fn = Math.hypot(fx, fy, fz), F = [fx / fn, fy / fn, fz / fn]; let R = [-F[2], 0, F[0]]; const rn = Math.hypot(...R) || 1; R = R.map(v => v / rn); const U = [R[1] * F[2] - R[2] * F[1], R[2] * F[0] - R[0] * F[2], R[0] * F[1] - R[1] * F[0]], d = [c.x - p[0], .7 - p[1], c.z - p[2]], zc = d[0] * F[0] + d[1] * F[1] + d[2] * F[2], xc = d[0] * R[0] + d[1] * R[1] + d[2] * R[2], yc = d[0] * U[0] + d[1] * U[1] + d[2] * U[2], th = Math.tan(fov * Math.PI / 360), asp = narrow ? 390 / 844 : 1440 / 900, sx = .5 + xc / (zc * th * asp) / 2, sy = .5 - yc / (zc * th) / 2;
++        nF++; if (zc > 0 && sx > .03 && sx < .97 && sy > .14 && sy < .86) framed++; }
+       if (pp) { camJump = Math.max(camJump, Math.hypot(p[0] - pp.p[0], p[1] - pp.p[1], p[2] - pp.p[2]) * 30); fovJump = Math.max(fovJump, Math.abs(fov - pp.fov) * 30); }
+       pp = { p, fov };
+     } }
+diff --git a/src/components/nuhome2/ParkingSign.tsx b/src/components/nuhome2/ParkingSign.tsx
+new file mode 100644
+index 0000000..234ae4f
+--- /dev/null
++++ b/src/components/nuhome2/ParkingSign.tsx
+@@ -0,0 +1,38 @@
++import { useEffect, useState } from "react";
++import { canStartPark, requestEnter } from "./world/park";
++
++/**
++ * The parking-lot sign: the twin of the exit sign (ExitSign.tsx), in the same place (top right of the screen, just under the header) and the same navy-and-gold glass.
++ * It is on offer while the school car is in the front lot (on its way to its stall, or parked in it). Pressing it sends the car to the back lot: if it is still driving
++ * it carries on down its own path and diverts (park.ts, requestEnter), and the "!" markers of the back lot are waiting when it gets there.
++ * The state lives in park.ts (not React), so it is read a few times a second.
++ */
++export function ParkingSign() {
++  const [show, setShow] = useState(false), [top, setTop] = useState(150);
++  useEffect(() => {
++    let raf = 0, last = 0;
++    const tick = (now: number) => {
++      if (now - last > 120) {
++        last = now;
++        const s = canStartPark("enter");
++        setShow(p => (p === s ? p : s));
++        const h = document.querySelector(".n2-hdr");
++        if (h) { const b = Math.round(h.getBoundingClientRect().bottom) + 10; setTop(p => (Math.abs(p - b) < 1 ? p : b)); }
++      }
++      raf = requestAnimationFrame(tick);
++    };
++    raf = requestAnimationFrame(tick);
++    return () => cancelAnimationFrame(raf);
++  }, []);
++  if (!show) return null;
++  return (
++    <button type="button" className="n2-exit n2-park" style={{ top }} aria-label="Go to the back parking lot" onClick={() => requestEnter()}>
++      <svg viewBox="0 0 512 512" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="34" strokeLinecap="round" strokeLinejoin="round">
++        <rect x="62" y="62" width="388" height="388" rx="62" />
++        <path d="M188 356V158h86a56 56 0 0 1 0 112h-86" />
++        <path d="M300 396h92M360 366l32 30-32 30" />
++      </svg>
++      <span>PARKING</span>
++    </button>
++  );
++}
+diff --git a/src/components/nuhome2/world/Rig.tsx b/src/components/nuhome2/world/Rig.tsx
+index 1ff2d79..39a4b2c 100644
+--- a/src/components/nuhome2/world/Rig.tsx
++++ b/src/components/nuhome2/world/Rig.tsx
+@@ -9,7 +9,7 @@ import { usableShots, type Shot } from './shots';
+ import { cinema, stopReel } from './reel';
+ import { engine } from '../music/engine';
+ import { skyAnchor } from './Sky';
+-import { finishPark, park, parkMoving, parkTotal, startPark } from './park';
++import { finishPark, park, parkMoving, parkTotal, startPark, tickEnter } from './park';
+ import { parkCamAt } from './parkcam';
+ 
+ type Controls = {
+@@ -40,7 +40,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
+   const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
+   const started = useRef(false);
+   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
+-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'); if (q.get('parkFrom') === 'box') park.loc = 'box'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
++  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? Number(q.get('introFrom') ?? 0); intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'), from = q.get('parkFrom'); if (from === 'box') park.loc = 'box'; if (from === 'entry') park.loc = 'entry'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' || pk === 'enter' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
+   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
+   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
+   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
+@@ -99,6 +99,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
+     const sstep = (u: number) => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
+     const dt = Math.min(gate.current.dt, .05) || Math.min(delta, .05), time = state.clock.elapsedTime, persp = camera as THREE.PerspectiveCamera;
+     engine.tick(time);
++    tickEnter();                                                  // a PARKING request made mid-drive is carried out here, at the right moment
+     if (shotQ === null && cinema.reel && mode.current !== 'cinema') { if (mode.current === 'intro') releaseCar(); mode.current = 'cinema'; cut.current.idx = -1; }
+     else if (shotQ === null && !cinema.reel && !cinema.auto && mode.current === 'cinema') mode.current = 'free';
+     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) { if (mode.current === 'intro') releaseCar(); cinema.auto = false; stopReel(); mode.current = 'park'; }
+diff --git a/src/components/nuhome2/world/intro.ts b/src/components/nuhome2/world/intro.ts
+index 83371af..38ca64e 100644
+--- a/src/components/nuhome2/world/intro.ts
++++ b/src/components/nuhome2/world/intro.ts
+@@ -250,3 +250,15 @@ export function carMoving() { return !intro.done && (intro.t < T_STOP || (intro.
+ export function releaseCar() { if (intro.t < T_GO) intro.t3 = Math.max(T_STOP + .6, intro.t + (intro.t < T_STOP ? 0 : .4)); }
+ /** No opening shot (repeat visit, reduced motion, ?intro=0): the car is simply parked in its stall. */
+ export function parkCarNow() { intro.t = T_END + T_DRIVE + 1; intro.t3 = 0; intro.done = true; }
++
++/** The car's own state during the drive from the stop sign to the stall: distance along the route, speed, and where the route's turns are (for the PARKING sign). */
++export function introCarState(t = intro.t, t3 = intro.t3) {
++  const c = carAt(t, t3);
++  if (t < t3) return { x: c.x, z: c.z, yaw: c.yaw, left: c.left, right: c.right, s: -1, v: 0 };
++  const q = atTime(t - t3), k = Math.min(PATH.N - 1, Math.floor(q.s / DS)), f = q.s / DS - k;
++  return { x: c.x, z: c.z, yaw: c.yaw, left: c.left, right: c.right, s: q.s, v: PATH.vs[k]! + (PATH.vs[k + 1]! - PATH.vs[k]!) * f };
++}
++/** Distances along the route: the left turn up the driveway ends at l1e; the left turn into the aisle starts at l2s. */
++export const introMarks = () => PATH.marks;
++/** Is the car at rest in its stall? */
++export const introParked = () => intro.done || intro.t >= intro.t3 + T_DRIVE + .3;
+diff --git a/src/components/nuhome2/world/park.ts b/src/components/nuhome2/world/park.ts
+index f0b1327..0f32760 100644
+--- a/src/components/nuhome2/world/park.ts
++++ b/src/components/nuhome2/world/park.ts
+@@ -28,6 +28,7 @@
+  * Positions are of the REAR AXLE while the plan is built (that is the point a car pivots about); the car's centre, which is the model's origin, is 1.35 m ahead of it.
+  */
+ import { CAST, STALLS, type Stall } from './cast';
++import { intro, introCarState, introMarks, introParked } from './intro';
+ import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from './rearlot';
+ 
+ export type ParkState =
+@@ -45,7 +46,7 @@ const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE',
+   'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP', 'BACK_SHIFT_R', 'BACK_REVERSE', 'BACK_DONE',
+   'OUT_SHIFT_D', 'OUT_TO_STOP', 'OUT_STOP_SIGN', 'OUT_TURN_OUT'];
+ /** Which drive: the parallel park from the stall, the bay from the stall or from the parallel box, the turnabout out of the bay, the straight back along the lane, the way out. */
+-export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit';
++export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit' | 'enterStall' | 'enterLive' | 'parallelE' | 'bayE';
+ 
+ // ---------- the car ----------
+ export const WB = 2.7;                       // wheelbase
+@@ -96,10 +97,10 @@ const FPS = 60, DT = 1 / FPS;
+ type Leg = { N: number; ds: number; px: Float64Array; pz: Float64Array; yaw: Float64Array; steer: Float64Array; dir: 1 | -1; vs: Float64Array; tm: Float64Array; T: number };
+ 
+ /** The speed along a leg: grip in corners, the engine from rest, the brakes to rest, then eased so nothing lurches. */
+-function profile(N: number, ds: number, kap: Float64Array | null, vMax: number, aAcc: number, aDec: number, aLat: number) {
++function profile(N: number, ds: number, kap: Float64Array | null, vMax: number, aAcc: number, aDec: number, aLat: number, vStart = 0) {
+   const v0 = new Float64Array(N + 1);
+   for (let k = 0; k <= N; k++) { const kk = kap ? Math.abs(kap[k]!) : 0; v0[k] = kk > 1e-6 ? Math.min(vMax, Math.sqrt(aLat / kk)) : vMax; }
+-  v0[0] = 0; for (let k = 1; k <= N; k++) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k - 1]! ** 2 + 2 * aAcc * ds));
++  v0[0] = vStart; for (let k = 1; k <= N; k++) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k - 1]! ** 2 + 2 * aAcc * ds));
+   v0[N] = 0; for (let k = N - 1; k >= 0; k--) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k + 1]! ** 2 + 2 * aDec * ds));
+   const vs = new Float64Array(N + 1), cv = new Float64Array(N + 2), M = Math.max(1, Math.round(vMax * .42 / ds));
+   for (let k = 0; k <= N; k++) cv[k + 1] = cv[k]! + v0[k]!;
+@@ -128,15 +129,16 @@ function kinLeg(start: Pose, dir: 1 | -1, D: number, steerAt: (s: number) => num
+ }
+ 
+ /** A forward drive along a route of straights and arcs (of the rear axle), eased so the car steers into and out of every turn progressively. */
+-type Op = { k: 'S'; len: number; dz?: number } | { k: 'T'; side: 1 | -1; r: number; deg?: number };
+-function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4): Leg {
++type Op = { k: 'S'; len: number; dz?: number; dx?: number } | { k: 'T'; side: 1 | -1; r: number; deg?: number };
++/** `v0` is the speed the car already has at the start (a drive that carries on from a moving car); the start is then held exactly: position, heading and speed are the car's own. */
++function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4, v0 = 0): Leg {
+   const DS = .02, raw: [number, number][] = [[start.x, start.z]];
+   let x = start.x, z = start.z, yw = start.yaw;
+   for (const o of ops) {
+     if (o.k === 'S') {
+-      const n = Math.max(1, Math.round(o.len / DS)), [hx, hz] = nose(yw), z0 = z;
+-      for (let i = 1; i <= n; i++) { const f = i / n; raw.push([x + hx * o.len * f, z0 + hz * o.len * f + (o.dz ?? 0) * sstep(f)]); }
+-      x += hx * o.len; z += hz * o.len + (o.dz ?? 0);
++      const n = Math.max(1, Math.round(o.len / DS)), [hx, hz] = nose(yw), z0 = z, x0 = x;
++      for (let i = 1; i <= n; i++) { const f = i / n; raw.push([x0 + hx * o.len * f + (o.dx ?? 0) * sstep(f), z0 + hz * o.len * f + (o.dz ?? 0) * sstep(f)]); }
++      x += hx * o.len + (o.dx ?? 0); z += hz * o.len + (o.dz ?? 0);
+     } else {
+       // a turn of radius r (of the rear axle): the wheel angle that holds it is atan(wheelbase / r), positive to the left
+       const a = (o.deg ?? 90) * Math.PI / 180, n = Math.max(2, Math.ceil(o.r * a / DS)), d = Math.atan(WB / o.r) * o.side, from: Pose = { x, z, yaw: yw };
+@@ -165,9 +167,13 @@ function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: numbe
+     let y = Math.atan2(-(gz[b]! - gz[a]!), gx[b]! - gx[a]!); while (y - prev > Math.PI) y -= 2 * Math.PI; while (y - prev < -Math.PI) y += 2 * Math.PI;
+     yaw[k] = y; prev = y;
+   }
++  if (v0 > 0) {   // carrying on from a moving car: the first metres are pinned to the car's own position and heading, the correction fading out over 2 m
++    const ex = start.x - px[0]!, ez = start.z - pz[0]!; let ey = start.yaw - yaw[0]!; while (ey > Math.PI) ey -= 2 * Math.PI; while (ey < -Math.PI) ey += 2 * Math.PI;
++    for (let k = 0; k <= N; k++) { const w = 1 - sstep(k * ds / 2); if (w <= 0) break; px[k]! += ex * w; pz[k]! += ez * w; yaw[k]! += ey * w; }
++  }
+   const W = Math.max(2, Math.round(.12 / ds));   // curvature from the heading change over about a quarter metre
+   for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; steer[k] = Math.atan(WB * kap[k]!) * sstep(Math.min(k, N - k) * ds / .6); }
+-  const pr = profile(N, ds, kap, vMax, aAcc, aDec, aLat);
++  const pr = profile(N, ds, kap, Math.max(vMax, v0), aAcc, aDec, aLat, v0);
+   return { N, ds, px, pz, yaw, steer, dir: 1, ...pr };
+ }
+ 
+@@ -178,6 +184,8 @@ class Rec {
+   constructor(start: Pose) { this.p = { ...start }; }
+   private mark(name: ParkState) { if (this.marks[name] === undefined) this.marks[name] = this.t; this.st = STATE_LIST.indexOf(name); }
+   private emit(v: number, a: number, lat: number) { this.s.push({ x: this.p.x, z: this.p.z, yaw: this.p.yaw, steer: this.steer, v, a, lat, left: this.left, right: this.right, rev: this.rev, st: this.st }); this.t = this.s.length * DT; }
++  /** The first sample of a drive that carries on from a moving car: its own pose at speed v. */
++  begin(v: number) { this.emit(v, 0, 0); }
+   /** Stand still for dur seconds. */
+   hold(name: ParkState, dur: number) { this.mark(name); const n = Math.max(1, Math.round(dur * FPS)); for (let i = 0; i < n; i++) this.emit(0, 0, 0); this.ends[name] = this.t; }
+   /** Stand still while the wheel is turned to angle `to`, smoothly (it eases in and out), at least minDur seconds. */
+@@ -189,7 +197,7 @@ class Rec {
+   /** Drive a leg from rest to rest. sig gives the signals along it by distance. */
+   run(name: ParkState, L: Leg, sig?: (s: number) => { left: boolean; right: boolean }) {
+     this.mark(name); this.rev = L.dir < 0;
+-    const n = Math.ceil(L.T * FPS); let vPrev = 0;
++    const n = Math.ceil(L.T * FPS); let vPrev = L.vs[0]!;
+     for (let i = 1; i <= n; i++) {
+       const tau = Math.min(L.T, i * DT), sd = sOf(L, tau), kf = Math.min(L.N - 1, Math.floor(sd / L.ds)), f = sd / L.ds - kf;
+       const x = L.px[kf]! + (L.px[kf + 1]! - L.px[kf]!) * f, z = L.pz[kf]! + (L.pz[kf + 1]! - L.pz[kf]!) * f, yaw = L.yaw[kf]! + (L.yaw[kf + 1]! - L.yaw[kf]!) * f, steer = L.steer[kf]! + (L.steer[kf + 1]! - L.steer[kf]!) * f;
+@@ -252,9 +260,10 @@ function planFront(st: Stall) {
+ let SOLVED: ReturnType<typeof solveMane> | null = null;
+ const solved = () => (SOLVED ??= solveMane());
+ 
+-/** The parallel park: from the stop line, up to the second white line, then the two reverse arcs. The right signal is on from the setup to the end. The left one is never used here. */
+-function planParallel(st: Stall): Plan {
+-  const rec = planFront(st), solved1 = solved();
++/** The parallel park: from the stop line, up to the second white line, then the two reverse arcs. The right signal is on from the setup until the car starts its left swing into the space (the wheel goes left). The left one is never used here. */
++function planParallel(st: Stall): Plan { return parallelTail(planFront(st)); }
++function parallelTail(rec: Rec): Plan {
++  const solved1 = solved();
+   // 3. pull forward, drifting to the kerb side of the lane, until the nose is on the second white line
+   const p1 = rec.p, setupRA = LINE2_X + NOSE, drift = solved1.setupZ - p1.z, lenPull = p1.x - setupRA;
+   const pull = pathLeg(p1, [{ k: 'S', len: 11, dz: drift }, { k: 'S', len: lenPull - 11 }], 4.2, 1.3, 1.7, 2);
+@@ -273,7 +282,8 @@ function planParallel(st: Stall): Plan {
+   rec.rev = true; rec.steerTo('STRAIGHTEN_1', 0, 1.2);
+   rec.run('REVERSE_STRAIGHT_2', kinLeg(rec.p, -1, solved1.s2, () => 0, .9, .4, .7));
+   rec.rev = false; rec.hold('REVERSE_STRAIGHT_2', 1.0);
+-  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);          // the wheel goes left; the signal stays on the right, the side the car is parking on
++  rec.right = false;                                                  // the car turns LEFT now to swing into the space: the right signal goes off as the wheel goes left
++  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);
+   rec.run('REVERSE_FULL_LEFT', kinLeg(rec.p, -1, R * solved1.phi2, () => DMAX, .85, .4, .7));
+   rec.rev = false; rec.hold('REVERSE_FULL_LEFT', .9);
+   // 5. final alignment, the way an examiner expects it in a box this size (1.5 car lengths): the car is nearly parallel, so it rolls forward a
+@@ -316,8 +326,9 @@ const BAY_SIGNAL_OFF = 1.3;                   // the right signal goes off this
+ const bayEndCentre = (rec: Rec): [number, number] => [rec.p.x + RA * Math.cos(rec.p.yaw), rec.p.z - RA * Math.sin(rec.p.yaw)];
+ 
+ /** The bay, from the stall: the same drive round to the stop line, then straight on to the second white line, then the reverse. */
+-function planBayFront(st: Stall): Plan {
+-  const rec = planFront(st), p1 = rec.p;
++function planBayFront(st: Stall): Plan { return bayTail(planFront(st)); }
++function bayTail(rec: Rec): Plan {
++  const p1 = rec.p;
+   rec.run('DRIVE_TO_BAY_LINE', pathLeg(p1, [{ k: 'S', len: p1.x - (LINE2_X + NOSE), dz: LANE_Z - p1.z }], 4.2, 1.3, 1.7, 2));
+   rec.hold('STOP_AT_BAY_LINE', 1.4);
+   const b = bayReverse(rec);
+@@ -503,10 +514,43 @@ function solveMane() {
+   return { phi1: best!.phi1, phi2: best!.phi2, startRA: best!.X, s2: best!.s2, end: best!.end, clearance: best!.mc, setupZ: best!.z };
+ }
+ 
++
++// ---------- the drive into the back lot (the PARKING sign), and the two parks that start from the stop line ----------
++/** The rear axle at the stop line of the back lot, nose west: where every drive into the back lot ends. */
++const ENTRY_POSE = (): Pose => ({ x: NOSE_STOP_X + NOSE, z: LANE_Z, yaw: Math.PI });
++const planOf = (rec: Rec): Plan => ({ s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: null });
++/** From the stall to the stop line of the back lot (the PARKING sign pressed while the car stands in its stall): the same drive the two parks begin with. */
++function planEnterStall(st: Stall): Plan { const rec = planFront(st); rec.hold('STOP_AT_ENTRY_LINE', 3.4); return planOf(rec); }   // (the extra stand lets the camera rise to the view with the next "!")
++/** The parallel park, from the stop line (the car came in by the PARKING sign). */
++function planParallelE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('STOP_AT_ENTRY_LINE', .8); return parallelTail(rec); }
++/** The bay, from the stop line. */
++function planBayE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('STOP_AT_ENTRY_LINE', .8); return bayTail(rec); }
++
++/** Tests: fix the state of the car for the live drive into the back lot. */
++export function setLiveCar(c: LiveCar | null) { LIVE = c; delete PLANS.enterLive; }
++/** What the opening drive tells us about the car when the PARKING sign is pressed: its centre, speed and blinkers. */
++export type LiveCar = { x: number; z: number; v: number; left: boolean; right: boolean };
++let LIVE: LiveCar | null = null;
++/**
++ * The PARKING sign pressed while the car is still on its way to its stall, on the driveway heading north: it does not turn into the aisle but carries on north
++ * at the speed it has, drifts into the right-hand lane, signals left, turns left into the back lot and stops at the stop line. Position, heading and speed at the
++ * first sample are the car's own, so nothing jumps.
++ */
++function planEnterLive(c: LiveCar): Plan {
++  const start: Pose = { x: c.x, z: c.z + RA, yaw: Math.PI / 2 }, rec = new Rec(start);
++  const zTurn = LANE_Z + TURN_W, stopRA = NOSE_STOP_X + NOSE;
++  const lenNorth = start.z - zTurn, lenWest = (LANE_N - TURN_W) - stopRA, lenT = TURN_W * Math.PI / 2;
++  const leg = pathLeg(start, [{ k: 'S', len: 18, dx: LANE_N - start.x }, { k: 'S', len: lenNorth - 18 }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }], 5.4, 1.5, 2.1, 2.0, 1.4, Math.max(.05, c.v));
++  rec.left = c.left; rec.right = c.right; rec.begin(Math.max(.05, c.v));
++  rec.run('DRIVE_TO_REAR_LOT', leg, s => ({ left: s > lenNorth - 9 && s < lenNorth + lenT + 1.5, right: false }));
++  rec.left = false; rec.hold('STOP_AT_ENTRY_LINE', 5.3);
++  return planOf(rec);
++}
++
+ // ---------- the plan for this page's car ----------
+ let STALL_USED: Stall = STALLS[CAST], MODE: ParkMode = 'parallel';
+ const PLANS: Partial<Record<ParkMode, Plan>> = {};
+-function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : planExit()); }
++function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : m === 'exit' ? planExit() : m === 'enterStall' ? planEnterStall(STALL_USED) : m === 'parallelE' ? planParallelE() : m === 'bayE' ? planBayE() : planEnterLive(LIVE!)); }
+ const plan = () => planFor(MODE);
+ /** Use a different stall (tests; the page uses its own car's stall). */
+ export function setParkStall(st: Stall) { STALL_USED = st; for (const k of Object.keys(PLANS)) delete PLANS[k as ParkMode]; }
+@@ -536,20 +580,48 @@ export function parkCarAt(t: number, out: ParkCar = OUT): ParkCar {
+ export function parkAxleAt(t: number) { const c = parkCarAt(t); return { x: c.x - RA * Math.cos(c.yaw), z: c.z + RA * Math.sin(c.yaw), yaw: c.yaw }; }
+ 
+ /** The clock of the demonstration: the rig advances it, the car reads it. `loc` is where the car stands between drives: its stall, the parallel box, the bay. */
+-export type ParkKind = 'parallel' | 'bay' | 'turn' | 'back' | 'exit';
+-export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'box' | 'bay' | 'line' | 'rear' | 'gone' };
++export type ParkKind = 'parallel' | 'bay' | 'turn' | 'back' | 'exit' | 'enter';
++export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'entry' | 'box' | 'bay' | 'line' | 'rear' | 'gone', enterPending: false };
+ /** Can this drive start now? The five drives go in order: the parallel park from the stall; the bay from the stall or the box; the turnabout from the bay; the straight back from the east white line; the way out from the west white line. */
+ export function canStartPark(kind: ParkKind) {
+   if (park.phase === 'run') return false;
+-  return kind === 'parallel' ? park.loc === 'front' : kind === 'bay' ? park.loc === 'front' || park.loc === 'box' : kind === 'turn' ? park.loc === 'bay' : kind === 'back' ? park.loc === 'line' : park.loc === 'rear';
++  switch (kind) {
++    case 'enter': return park.loc === 'front' && !park.enterPending;                       // the PARKING sign: only while the car is in the front lot
++    case 'parallel': return park.loc === 'front' || park.loc === 'entry';
++    case 'bay': return park.loc === 'front' || park.loc === 'entry' || park.loc === 'box';
++    case 'turn': return park.loc === 'bay';
++    case 'back': return park.loc === 'line';
++    default: return park.loc === 'rear';
++  }
+ }
+ export function startPark(kind: ParkKind = 'parallel') {
+   if (!canStartPark(kind)) return false;
+-  MODE = kind === 'parallel' ? 'parallel' : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'exit' ? 'exit' : park.loc === 'front' ? 'bayFront' : 'bayBox';
+-  park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
++  const here = park.loc;
++  MODE = kind === 'parallel' ? (here === 'entry' ? 'parallelE' : 'parallel') : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'exit' ? 'exit' : kind === 'enter' ? 'enterStall' : here === 'front' ? 'bayFront' : here === 'entry' ? 'bayE' : 'bayBox';
++  park.enterPending = false; park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
++}
++/**
++ * The PARKING sign was pressed. Parked in its stall: it drives out and round to the back lot at once. Still driving: it carries on down its own path and diverts, with no jump:
++ * once it is on the driveway heading north (and has not yet begun the left turn into the aisle) it goes straight on to the back lot instead. If it has already begun
++ * that turn, it first drives into its stall and parks, and then drives out and round to the back lot.
++ */
++export function requestEnter() {
++  if (!canStartPark('enter')) return false;
++  if (introParked()) return startPark('enter');
++  park.enterPending = true; return true;
++}
++/** Called every frame by the rig: carries out a pending PARKING request at the right moment. */
++export function tickEnter() {
++  if (!park.enterPending || park.phase === 'run') return;
++  if (introParked()) { park.enterPending = false; startPark('enter'); return; }
++  const c = introCarState(), M = introMarks();
++  if (c.s >= M.l1e! + 3 && c.s <= M.l2s! - 8) {       // on the driveway, heading north, well before the aisle: go straight on
++    park.enterPending = false; LIVE = { x: c.x, z: c.z, v: c.v, left: c.left, right: c.right }; delete PLANS.enterLive;
++    if (startPark('enter')) MODE = 'enterLive';
++  }
+ }
+ /** The drive is over: the car stays where it parked. */
+-export function finishPark() { park.t = parkTotal(); park.phase = 'done'; park.loc = park.kind === 'parallel' ? 'box' : park.kind === 'bay' ? 'bay' : park.kind === 'turn' ? 'line' : park.kind === 'back' ? 'rear' : 'gone'; }
++export function finishPark() { park.t = parkTotal(); park.phase = 'done'; park.loc = park.kind === 'enter' ? 'entry' : park.kind === 'parallel' ? 'box' : park.kind === 'bay' ? 'bay' : park.kind === 'turn' ? 'line' : park.kind === 'back' ? 'rear' : 'gone'; }
+ export const parkRunning = () => park.phase === 'run';
+ /** True while the car is rolling in the demonstration (for the shadow refresh and the pixel-ratio hold). */
+ export function parkMoving() { return park.phase === 'run' && parkCarAt(park.t).moving; }
+diff --git a/src/components/nuhome2/world/parkcam.ts b/src/components/nuhome2/world/parkcam.ts
+index a909f10..c3244a6 100644
+--- a/src/components/nuhome2/world/parkcam.ts
++++ b/src/components/nuhome2/world/parkcam.ts
+@@ -12,7 +12,7 @@
+  * car's own body, then smoothed, and played back on a cubic. scripts/check-park.mjs walks the finished camera against the same solids.
+  */
+ import { SOLIDS, clearance, GROUND } from './colliders';
+-import { parkCarAt, parkEnds, parkMarks, parkMode, parkTotal, type ParkCar, type ParkMode } from './park';
++import { park, parkCarAt, parkEnds, parkMarks, parkMode, parkTotal, type ParkCar, type ParkMode } from './park';
+ import { CONN_X } from './rearlot';
+ 
+ export type V3 = [number, number, number];
+@@ -29,30 +29,37 @@ type Shot = { to: number; h?: number; at: (x: Ctx) => { p: V3; l: V3; fov: numbe
+ const carFwd = (c: ParkCar): [number, number] => [Math.cos(c.yaw), -Math.sin(c.yaw)];
+ const carLeft = (c: ParkCar): [number, number] => [-Math.sin(c.yaw), -Math.cos(c.yaw)];
+ 
++/** The last frame of the drive into the back lot, high: the car at the stop line, the "!" for the parallel park and the "!" for the bay both in view. */
++const ENTER_END_N = { p: [12, 40, -36] as V3, l: [12, 0, -45] as V3 }, ENTER_END_W = { p: [7, 32, -39] as V3, l: [7, 0, -48] as V3 };
+ function buildShots(narrow: boolean, mode: ParkMode) {
+   const M = parkMarks() as Record<string, number>, E = parkEnds() as Record<string, number>, T = parkTotal();
+   const f = narrow ? 1.3 : 1, FOV = (v: number) => v * (narrow ? 1.32 : 1), up = narrow ? 1.3 : 1;
+   const c0 = { ...parkCarAt(0) }, o = c0.z < 0 ? 1 : -1;               // the car's tail points away from its stall toward the aisle: +z for row A, -z for row B
+   const shots: Shot[] = [];
+-  if (mode === 'parallel' || mode === 'bayFront') {
++  const enter = mode === 'enterStall' || mode === 'enterLive';
++  if (mode === 'parallel' || mode === 'bayFront' || enter) {
+     // moments found by watching the car
+     let tEast = M.DRIVE_TO_REAR_LOT!, tRear = tEast;
+     for (let t = M.DRIVE_TO_REAR_LOT!; t < T; t += .1) { const c = parkCarAt(t); if (c.x > CONN_X - 7) { tEast = t; break; } }
+     for (let t = tEast; t < T; t += .1) { const c = parkCarAt(t); if (c.z < -27) { tRear = t; break; } }
+     const tStop = M.STOP_AT_ENTRY_LINE!;
+-    shots.push(
++    if (mode !== 'enterLive') shots.push(
+       // F1. high three-quarter: the signal flashes, the car backs out and swings into the aisle
+       { to: E.EXIT_REVERSE! + 1.6, h: 3.0, at: ({ c, u }) => ({ p: [c0.x + 7 * f, 11 + 1.5 * u, c0.z + o * 11 * f], l: [c.x, .6, c.z + o * 1.2], fov: FOV(40) }) },
+       // F2. a tracking shot from ahead: high, in front of the car and to its right, looking back at it as it comes down the aisle
+       { to: tEast - .8, h: 3.0, at: ({ c, u }) => { const [fx, fz] = carFwd(c), [lx, lz] = carLeft(c); return { p: [c.x + fx * 12 * f - lx * 5 * f, 11 + 1.5 * u, c.z + fz * 12 * f - lz * 5 * f], l: [c.x, .6, c.z], fov: FOV(42) }; } },
+-      // F3. beside the east road, high, the building and its stars behind
+-      { to: tRear + 1.2, h: 3.8, at: ({ c }) => ({ p: [Math.min(CONN_X + 11 * f, c.x + 14 * f), 10, c.z + 8 * f], l: [c.x - 1, .6, c.z - 2.5], fov: FOV(42) }) },
++    );
++    shots.push(
++      // F3. beside the east road, high, the building and its stars behind (the live drive keeps the opening shot's own vantage: south-west of the car, over the front lawn)
++      { to: tRear + 1.2, h: 3.8, at: ({ c }) => mode === 'enterLive' ? ({ p: [c.x - (narrow ? 14 : 13), narrow ? 14.5 : 12.5, c.z + (narrow ? 17 : 14)], l: [c.x - 1, .6, c.z - 2.5], fov: FOV(42) }) : ({ p: [Math.min(CONN_X + 11 * f, c.x + 14 * f), 10, c.z + 8 * f], l: [c.x - 1, .6, c.z - 2.5], fov: FOV(42) }) },
+       // F4. over the roof of the building: the back lot opens up and the car comes in toward the stop line
+-      { to: tStop + 2.2, h: 3.9, at: ({ c, u }) => ({ p: [mix(27, 20, u), mix(17.5, 15, u), -25.5 * f - 1], l: [mix(c.x, 12, .55), .8, mix(c.z, -43, .5)], fov: FOV(44) }) },
++      { to: tStop + (enter ? .4 : 2.2), h: 3.9, at: ({ c, u }) => ({ p: [mix(27, 20, u), mix(17.5, 15, u), -25.5 * f - 1], l: [mix(c.x, 12, enter ? .3 : .55), .8, mix(c.z, -43, enter ? .3 : .5)], fov: FOV(44) }) },
+     );
++    // F5 (the PARKING sign's drive only). the car has stopped at the stop line: the camera rises to a high view with the car and both "!" that start the next drives, the parallel one and the bay one
++    if (enter) shots.push({ to: T, at: () => ({ p: narrow ? ENTER_END_N.p : ENTER_END_W.p, l: narrow ? ENTER_END_N.l : ENTER_END_W.l, fov: FOV(44) }) });
+   }
+   const north = ({ c }: Ctx) => ({ p: [c.x + 8 * f, 17 * (narrow ? 1.1 : 1), -58] as V3, l: [c.x - 2, .4, c.z + .5] as V3, fov: FOV(36) });   // from beyond the back kerb, looking south over the lot
+-  if (mode === 'parallel') {
++  if (mode === 'parallel' || mode === 'parallelE') {
+     const tPull1 = E.PULL_FORWARD_TO_SETUP!, tBlack = M.STOP_AT_BLACK_LINE!, tArcEnd = E.REVERSE_FULL_LEFT!;
+     shots.push(
+       // P1. from beyond the back kerb, high, as the car pulls up to the second white line
+@@ -69,7 +76,7 @@ function buildShots(narrow: boolean, mode: ParkMode) {
+       // U1. high from the south: the left signal, then the car rolls out of the bay and swings east onto the lane
+       { to: E.TURN_DRIVE! - 5.0, h: 2.4, at: ({ c }) => ({ p: [c.x * .5 - 2 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], l: [c.x * .9 + .8, .3, c.z - .3], fov: FOV(42) }) },
+       // U2. the pull back over the lane to a high view of the east white line, the car at it and, in the same frame, the next "!" at the west white line
+-      { to: T, at: ({ c, u }) => { const k = sstep(u), a: V3 = [c.x * .5 - 2 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], b: V3 = narrow ? [3.5, 44, -34] : [4, 24, -33], la: V3 = [c.x * .9 + .8, .3, c.z - .3], lb: V3 = narrow ? [3.5, 0, -41] : [4, 0, -42]; return { p: mix3(a, b, k), l: mix3(la, lb, k), fov: FOV(mix(42, 44, k)) }; } },
++      { to: T, at: ({ c, u }) => { const k = sstep(u), a: V3 = [c.x * .5 - 2 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], b: V3 = narrow ? [3.5, 57, -29] : [3, 25, -30], la: V3 = [c.x * .9 + .8, .3, c.z - .3], lb: V3 = narrow ? [3.5, 0, -35] : [3, 0, -39]; return { p: mix3(a, b, k), l: mix3(la, lb, k), fov: FOV(mix(42, 44, k)) }; } },
+     );
+   } else if (mode === 'back') {
+     shots.push(
+@@ -90,8 +97,8 @@ function buildShots(narrow: boolean, mode: ParkMode) {
+       // X3. from the lot, high, with the stop sign, the car and the street in one frame: the stop, the right signal, the right turn, and the car leaving the scene to the west
+       { to: T, at: ({ c }) => { const cx = Math.max(c.x, -52); return { p: [Math.min(-14, cx + 19 * f), 15 * (narrow ? 1.3 : 1), 2], l: [cx - 1, .4, c.z + 2], fov: FOV(42) }; } },
+     );
+-  } else {
+-    if (mode === 'bayFront') shots.push({ to: E.DRIVE_TO_BAY_LINE! + .6, h: 3.4, at: north });
++  } else if (!enter) {
++    if (mode === 'bayFront' || mode === 'bayE') shots.push({ to: E.DRIVE_TO_BAY_LINE! + .6, h: 3.4, at: north });
+     else shots.push(
+       // Q1. high from the south-east: the right signal, the short reverse, the left signal
+       { to: E.BOX_SIGNAL_L! + 1.2, h: 2.6, at: ({ c }) => ({ p: [19 * f, 14 * (narrow ? 1.2 : 1), -34.5], l: [c.x - .5, .4, c.z - .3], fov: FOV(40) }) },
+@@ -102,7 +109,7 @@ function buildShots(narrow: boolean, mode: ParkMode) {
+       // B2. straight down over the line, the car and the bay: the quarter circle into the bay
+       { to: E.BAY_REVERSE! - 3.0, h: 3.0, at: ({ u }) => ({ p: [2.4 + .8 * u, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], l: [2.4, 0, -47.2], fov: FOV(46) }) },
+       // B3. the pull back and rise to a high view of the parked car, the white line on the left and the next "!" beside it
+-      { to: T, at: ({ u }) => { const k = sstep(u); return { p: mix3([3.2, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], narrow ? [0, 40, -37] : [3, 22, -36], k), l: mix3([2.4, 0, -47.2], narrow ? [-.6, 0, -44.8] : [0, 0, -44.8], k), fov: FOV(mix(46, 44, k)) }; } },
++      { to: T, at: ({ u }) => { const k = sstep(u); return { p: mix3([3.2, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], narrow ? [12, 35, -33.5] : [11, 20, -36.5], k), l: mix3([2.4, 0, -47.2], narrow ? [12, 0, -42.5] : [11, 0, -45.5], k), fov: FOV(mix(46, 44, k)) }; } },
+     );
+   }
+   return { shots, T };
+@@ -183,7 +190,7 @@ function bake(narrow: boolean, mode: ParkMode): Baked {
+ export function resetParkCam() { for (const k of Object.keys(CACHE)) delete CACHE[k]; }
+ /** The camera at time t of the drive. Narrow is the portrait phone framing. */
+ export function parkCamAt(t: number, narrow = false): Pose {
+-  const mode = parkMode(), B = (CACHE[mode + (narrow ? 'N' : 'W')] ??= bake(narrow, mode)), f = Math.min(B.n - 1, Math.max(0, t / DT)), i = Math.min(B.n - 2, Math.floor(f)), u = f - i;
++  const mode = parkMode(), key = mode + (narrow ? 'N' : 'W') + (mode === 'enterLive' ? park.seq : ''), B = (CACHE[key] ??= bake(narrow, mode)), f = Math.min(B.n - 1, Math.max(0, t / DT)), i = Math.min(B.n - 2, Math.floor(f)), u = f - i;
+   const g = (A: Float32Array, k: number, d: number) => A[Math.min(B.n - 1, Math.max(0, k)) * 3 + d]!;
+   // a cubic through the samples (Catmull-Rom), so the speed never steps between samples
+   const cr = (A: Float32Array, d: number) => { const p0 = g(A, i - 1, d), p1 = g(A, i, d), p2 = g(A, i + 1, d), p3 = g(A, i + 2, d); return .5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u * u * u); };
+diff --git a/src/pages/NuHome2.tsx b/src/pages/NuHome2.tsx
+index 28e317c..ec561a7 100644
+--- a/src/pages/NuHome2.tsx
++++ b/src/pages/NuHome2.tsx
+@@ -7,6 +7,7 @@ import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
+ import { MessagePopup } from "@/components/nuhome2/MessagePopup";
+ import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
+ import { ExitSign } from "@/components/nuhome2/ExitSign";
++import { ParkingSign } from "@/components/nuhome2/ParkingSign";
+ import wheelUrl from "@/assets/dk-steering-wheel.webp";
+ import { Journey } from "@/components/nuhome2/journey/Journey";
+ import { useAnalytics } from "@/hooks/useAnalytics";
+@@ -202,6 +203,7 @@ export default function NuHome2() {
+           </div>
+         </header>
+         <ExitSign />
++        <ParkingSign />
+ 
+         <div className="n2-hero" data-hidden={stage !== 0}>
+           <div className="n2-eyebrow"><span className="n2-eline" /> {BRAND.eyebrow} <span className="n2-eline" /></div>
+-- 
+2.43.0
+

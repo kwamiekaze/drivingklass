@@ -7,8 +7,9 @@
 //   - the car ends in the middle of the box, parallel, facing west (the arrow), wheels straight, stopped
 //   - the steering is smooth (no jump bigger than the rate limit) and so is the heading
 // run: npx tsx scripts/check-park.mjs
-import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkStall, setParkMode, PARK_GEOM, RA, WB, DMAX } from '../src/components/nuhome2/world/park.ts';
+import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkStall, setParkMode, setLiveCar, PARK_GEOM, RA, WB, DMAX } from '../src/components/nuhome2/world/park.ts';
 import { STALLS } from '../src/components/nuhome2/world/cast.ts';
+import { introCarState, introMarks, T_GO, setStall } from '../src/components/nuhome2/world/intro.ts';
 import { SOLIDS } from '../src/components/nuhome2/world/colliders.ts';
 import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
 import { parkCamAt, resetParkCam } from '../src/components/nuhome2/world/parkcam.ts';
@@ -29,11 +30,18 @@ const boxGap = (c, bx0, bx1, bz0, bz1) => {
   for (const [px, pz] of [[bx0, bz0], [bx0, bz1], [bx1, bz0], [bx1, bz1]]) best = Math.min(best, toCar(c, px, pz));
   return best;
 };
-const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero], ['exit', 'out', STALLS.hero]);
-for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
-  setParkStall(st); setParkMode(mode); resetParkCam();
-  const T = parkTotal(), M = parkMarks(), E = parkEnds(), su = mode === 'parallel' ? parkSetup() : null, by = mode === 'bayFront' || mode === 'bayBox' ? parkBay() : null, bad = [];
-  const front = mode === 'parallel' || mode === 'bayFront', bayish = mode === 'bayFront' || mode === 'bayBox';
+const ONLY = process.env.ONLY; const runs = []; for (const [id, st] of Object.entries(STALLS)) { runs.push(['parallel', id, st]); runs.push(['bayFront', id, st]); } runs.push(['enterStall', 'stall', STALLS.hero], ['parallelE', 'entry', STALLS.hero], ['bayE', 'entry', STALLS.hero], ['enterLive', 'early', STALLS.hero, .0], ['enterLive', 'mid', STALLS.hero, .5], ['enterLive', 'late', STALLS.hero, 1], ['bayBox', 'box', STALLS.hero], ['turn', 'bay', STALLS.hero], ['back', 'line', STALLS.hero], ['exit', 'out', STALLS.hero]);
+for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
+  setParkStall(st); setStall(st); resetParkCam();
+  let live = null;
+  if (mode === 'enterLive') {   // the car is on the driveway, heading north: the earliest moment the sign can divert it, the middle of the window, the last moment
+    const M0 = introMarks(), a = M0.l1e + 3, b = M0.l2s - 8, target = a + (b - a) * liveAt;
+    let t = T_GO; while (introCarState(t).s < target) t += 1 / 120;
+    live = introCarState(t); setLiveCar({ x: live.x, z: live.z, v: live.v, left: live.left, right: live.right });
+  }
+  setParkMode(mode);
+  const T = parkTotal(), M = parkMarks(), E = parkEnds(), su = mode === 'parallel' || mode === 'parallelE' ? parkSetup() : null, by = mode === 'bayFront' || mode === 'bayBox' || mode === 'bayE' ? parkBay() : null, bad = [];
+  const par = mode === 'parallel' || mode === 'parallelE', front = mode === 'parallel' || mode === 'bayFront' || mode === 'enterStall', bayish = mode === 'bayFront' || mode === 'bayBox';
   let worstCone = 9, worstSolid = 9, solidName = '', worstT = 0;
   const own = !front ? null : SOLIDS.find(s => s.k === 'box' && s.n.startsWith('car') && Math.abs((s.min[0] + s.max[0]) / 2 - st.x) < .6 && Math.abs((s.min[2] + s.max[2]) / 2 - st.z) < .6);
   let prev = null, maxDSteer = 0, maxDYaw = 0, maxStep = 0;
@@ -54,11 +62,13 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
   if (worstCone < .1) bad.push(`car passes ${worstCone.toFixed(2)} m from a cone at t=${worstT.toFixed(1)}`);
   if (worstSolid < .2) bad.push(`car passes ${worstSolid.toFixed(2)} m from ${solidName}`);
   if (maxDSteer > 75 * Math.PI / 180) bad.push(`steering moves ${(maxDSteer * 180 / Math.PI).toFixed(0)} deg/s`);
-  if (maxStep > (mode === 'exit' ? 8.2 : 6.2)) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
+  if (maxStep > (mode === 'exit' ? 8.2 : mode === 'enterLive' ? 11.5 : 6.2)) bad.push(`car moves ${maxStep.toFixed(1)} m/s`);
   // signals
   const first = (pred) => { for (let t = 0; t <= T; t += 1 / 60) if (pred(parkCarAt(t))) return t; return null; };
   const tMove = first(c => c.moving), tSig = first(c => c.left || c.right), sideL = { ...parkCarAt(0) }.left;
   if (mode === 'back') { if (tSig !== null) bad.push('the straight back uses a signal'); }
+  else if (mode === 'enterLive') { /* the blinker state of the live car carries on; checked below */ }
+  else if (mode === 'parallelE' || mode === 'bayE') { if (tSig === null || tSig < (M.SIGNAL_RIGHT ?? M.BAY_SIGNAL_RIGHT) - .05) bad.push('a signal before the setup'); }
   else if (mode === 'exit') { if (tSig === null || tSig < M.OUT_TO_STOP - .05) bad.push('the way out: a signal comes on before the car is driving'); }
   else if (mode === 'bayBox') { if (tSig === null || tSig < M.BOX_SIGNAL_L - .05) bad.push(`pulling out of the parallel box: a signal at ${tSig} before the left one (${M.BOX_SIGNAL_L})`); }
   else if (tSig === null || tSig > .2 || tMove - tSig < 1.5) bad.push(`signal at ${tSig}, car moves at ${tMove?.toFixed(2)}`);
@@ -71,9 +81,23 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
   if (front && !dirOk) bad.push('exit signal side does not match the way the tail swings');
   const sigAt = (t) => ({ ...parkCarAt(t) });
   const always = (t0, t1, pred, what) => { for (let t = t0; t <= t1; t += 1 / 30) if (!pred(sigAt(t))) { bad.push(`${what} at t=${t.toFixed(1)}`); return; } };
-  if (mode === 'parallel') {
-    always(M.SIGNAL_RIGHT + .1, T - 3.2, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup to the end');
+  if (par) {
+    always(M.SIGNAL_RIGHT + .1, M.STEER_FULL_LEFT, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup until the left swing into the space');
+    always(M.STEER_FULL_LEFT + .05, T, c => !c.right && !c.left, 'parallel park: NO signal once the car turns left into the space');
     always(M.STOP_AT_ENTRY_LINE, M.SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the setup');
+  } else if (mode === 'enterStall' || mode === 'enterLive') {
+    always(E.DRIVE_TO_REAR_LOT, T, c => !c.left && !c.right, 'drive into the back lot: no signal once the car has arrived');
+    if (mode === 'enterLive') {
+      always(M.DRIVE_TO_REAR_LOT, E.DRIVE_TO_REAR_LOT, c => !c.right, 'drive into the back lot: never a right signal (only left turns)');
+      let any = false; for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) if (parkCarAt(t).left) any = true; if (!any) bad.push('no left signal before the left turn into the back lot');
+      // no glitch: the first frame IS the car, at its own speed; speed and heading never step
+      const g0 = { ...parkCarAt(0) }; if (Math.hypot(g0.x - live.x, g0.z - live.z) > .005 || Math.abs(wrapA(g0.yaw - live.yaw)) > .005 || Math.abs(g0.speed - live.v) > .1) bad.push(`live drive does not start from the car: dpos ${Math.hypot(g0.x - live.x, g0.z - live.z).toFixed(3)} dyaw ${wrapA(g0.yaw - live.yaw).toFixed(3)} dv ${(g0.speed - live.v).toFixed(2)}`);
+      let pv = g0.speed, py = g0.yaw, maxDv = 0, maxA = 0, maxYr = 0; for (let t = 1 / 60; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 60) { const c = parkCarAt(t); maxDv = Math.max(maxDv, Math.abs(c.speed - pv)); maxYr = Math.max(maxYr, Math.abs(c.yaw - py) * 60); maxA = Math.max(maxA, Math.abs(c.accel)); pv = c.speed; py = c.yaw; }
+      if (maxDv > .06) bad.push(`live drive: speed steps by ${maxDv.toFixed(3)} m/s in one frame`);
+      if (maxA > 4) bad.push(`live drive: acceleration ${maxA.toFixed(1)} m/s2`);
+      if (maxYr > 1.0) bad.push(`live drive: turns at ${maxYr.toFixed(2)} rad/s`);
+      for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) { const c = parkCarAt(t); if (c.z < -3 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .6) { bad.push(`live drive: not in the right-hand lane of the east road (x ${c.x.toFixed(2)})`); break; } }
+    }
   } else if (mode === 'turn') {
     // the turn out of the bay is toward the EAST, the car's LEFT hand (it stands nose south): the signal is the one for that side, on before the car moves, off after the turn
     always(M.TURN_SIGNAL + .1, E.TURN_SHIFT_D, c => c.left && !c.right && !c.moving, 'turnabout: left signal on while still, before the car moves');
@@ -93,7 +117,7 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     always(0, T, c => !c.left && !c.right, 'straight back: no signal');
     always(M.BACK_REVERSE + .5, E.BACK_REVERSE - .5, c => c.reversing && Math.abs(c.steer) < 1e-6 && c.speed < 0, 'straight back: in reverse, wheels straight');
   } else {
-    if (mode === 'bayFront') always(M.STOP_AT_ENTRY_LINE, M.BAY_SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the second line');
+    if (mode === 'bayFront' || mode === 'bayE') always(M.STOP_AT_ENTRY_LINE, M.BAY_SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the second line');
     always(M.BAY_SIGNAL_RIGHT + .1, M.BAY_REVERSE, c => c.right && !c.left, 'bay: the right signal on before the reverse');
     // ONE motion: from the first inch of the reverse to the last, the car never stops and the speed never falls below a crawl, until the final braking
     { let vmin = 9, tv = 0; for (let t = M.BAY_REVERSE + 2.6; t < E.BAY_REVERSE - 2.2; t += 1 / 30) { const v = Math.abs(parkCarAt(t).speed); if (v < vmin) { vmin = v; tv = t; } } if (vmin < .6) bad.push(`bay reverse slows to ${vmin.toFixed(2)} m/s at t=${tv.toFixed(1)}`); let vmax = 0; for (let t = M.BAY_REVERSE; t <= E.BAY_REVERSE; t += 1 / 30) vmax = Math.max(vmax, Math.abs(parkCarAt(t).speed)); if (vmax > 1.0) bad.push(`bay reverse reaches ${vmax.toFixed(2)} m/s (not slow)`); }
@@ -114,11 +138,16 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
   }
   const f = { ...parkCarAt(T - .05) }, cx = f.x, cz = f.z;
   const csn = Math.cos(f.yaw), snn = Math.sin(f.yaw);
-  if (mode === 'parallel') {
+  if (par) {
     const endOk = Math.hypot(cx - su.endCentre[0], cz - su.endCentre[1]) < .03 && Math.hypot(cx - (PBOX.x0 + PBOX.x1) / 2, cz - (PBOX.zKerb + PBOX.zLane) / 2) < .9 && Math.abs(Math.abs(f.yaw) - Math.PI) < .004 && Math.abs(f.steer) < .003 && !f.moving && !f.left && !f.right;
     if (!endOk) bad.push(`ends at (${cx.toFixed(2)}, ${cz.toFixed(2)}) yaw ${(f.yaw * 180 / Math.PI).toFixed(2)} steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
     // the car must be entirely inside the box's lines (all four wheels): corners of the body against the painted rectangle
     for (const [a, b] of [[L / 2, 1], [L / 2, -1], [-L / 2, 1], [-L / 2, -1]]) { const wx = f.x + a * csn - b * snn, wz = f.z - a * snn - b * csn; if (wx < PBOX.x0 || wx > PBOX.x1 || wz < PBOX.zKerb || wz > PBOX.zLane) bad.push('a corner of the car is outside the painted box'); }
+  } else if (mode === 'enterStall' || mode === 'enterLive') {
+    const noseX = f.x + 2.25 * Math.cos(f.yaw);
+    if (Math.abs(wrapA(f.yaw - Math.PI)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`drive into the back lot ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
+    if (noseX < STOP_LINE.x + .2 || noseX > STOP_LINE.x + .7) bad.push(`drive into the back lot: nose at x=${noseX.toFixed(2)}, the stop line is at ${STOP_LINE.x.toFixed(2)}`);
+    if (Math.abs(f.z - (STOP_LINE.z0 + STOP_LINE.z1) / 2) > .06) bad.push(`drive into the back lot: not on the lane (z ${f.z.toFixed(2)})`);
   } else if (mode === 'turn') {
     const noseX = f.x + 2.25 * Math.cos(f.yaw);
     if (Math.abs(wrapA(f.yaw)) > .004 || Math.abs(f.steer) > .003 || f.moving || f.left || f.right) bad.push(`turnabout ends yaw ${(f.yaw * 180 / Math.PI).toFixed(2)}, steer ${(f.steer * 180 / Math.PI).toFixed(2)}`);
@@ -158,8 +187,9 @@ for (const [mode, id, st] of runs.filter(r => !ONLY || r[0] === ONLY)) {
       for (const s of SOLIDS) { const d = clearance(s, p); if (d < camMin) { camMin = d; camName = s.n + ' t=' + t.toFixed(1) + (narrow ? ' narrow' : ''); } }
       { const d = Math.hypot(p[0] - c.x, p[1] - .8, p[2] - c.z); if (d < carMin) { carMin = d; camCarT = t; } }   // a bird's eye: the lens is never close to the car
       // is the car (its centre) inside the middle of the frame? angle between the view direction and the direction to the car, against the half field of view
-      const vx = l[0] - p[0], vy = l[1] - p[1], vz = l[2] - p[2], tx = c.x - p[0], ty = .7 - p[1], tz = c.z - p[2], cosA = (vx * tx + vy * ty + vz * tz) / (Math.hypot(vx, vy, vz) * Math.hypot(tx, ty, tz) || 1), ang = Math.acos(Math.min(1, Math.max(-1, cosA))) * 180 / Math.PI;
-      nF++; if (ang < fov * .5 * (narrow ? .75 : 1.0)) framed++;
+      // is the car (its centre) inside the frame? project it with the real aspect of a phone (portrait) or a laptop (wide), with the header and the buttons taking the top and bottom edge
+      { const fx = l[0] - p[0], fy = l[1] - p[1], fz = l[2] - p[2], fn = Math.hypot(fx, fy, fz), F = [fx / fn, fy / fn, fz / fn]; let R = [-F[2], 0, F[0]]; const rn = Math.hypot(...R) || 1; R = R.map(v => v / rn); const U = [R[1] * F[2] - R[2] * F[1], R[2] * F[0] - R[0] * F[2], R[0] * F[1] - R[1] * F[0]], d = [c.x - p[0], .7 - p[1], c.z - p[2]], zc = d[0] * F[0] + d[1] * F[1] + d[2] * F[2], xc = d[0] * R[0] + d[1] * R[1] + d[2] * R[2], yc = d[0] * U[0] + d[1] * U[1] + d[2] * U[2], th = Math.tan(fov * Math.PI / 360), asp = narrow ? 390 / 844 : 1440 / 900, sx = .5 + xc / (zc * th * asp) / 2, sy = .5 - yc / (zc * th) / 2;
+        nF++; if (zc > 0 && sx > .03 && sx < .97 && sy > .14 && sy < .86) framed++; }
       if (pp) { camJump = Math.max(camJump, Math.hypot(p[0] - pp.p[0], p[1] - pp.p[1], p[2] - pp.p[2]) * 30); fovJump = Math.max(fovJump, Math.abs(fov - pp.fov) * 30); }
       pp = { p, fov };
     } }

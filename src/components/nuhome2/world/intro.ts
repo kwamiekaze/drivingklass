@@ -250,3 +250,15 @@ export function carMoving() { return !intro.done && (intro.t < T_STOP || (intro.
 export function releaseCar() { if (intro.t < T_GO) intro.t3 = Math.max(T_STOP + .6, intro.t + (intro.t < T_STOP ? 0 : .4)); }
 /** No opening shot (repeat visit, reduced motion, ?intro=0): the car is simply parked in its stall. */
 export function parkCarNow() { intro.t = T_END + T_DRIVE + 1; intro.t3 = 0; intro.done = true; }
+
+/** The car's own state during the drive from the stop sign to the stall: distance along the route, speed, and where the route's turns are (for the PARKING sign). */
+export function introCarState(t = intro.t, t3 = intro.t3) {
+  const c = carAt(t, t3);
+  if (t < t3) return { x: c.x, z: c.z, yaw: c.yaw, left: c.left, right: c.right, s: -1, v: 0 };
+  const q = atTime(t - t3), k = Math.min(PATH.N - 1, Math.floor(q.s / DS)), f = q.s / DS - k;
+  return { x: c.x, z: c.z, yaw: c.yaw, left: c.left, right: c.right, s: q.s, v: PATH.vs[k]! + (PATH.vs[k + 1]! - PATH.vs[k]!) * f };
+}
+/** Distances along the route: the left turn up the driveway ends at l1e; the left turn into the aisle starts at l2s. */
+export const introMarks = () => PATH.marks;
+/** Is the car at rest in its stall? */
+export const introParked = () => intro.done || intro.t >= intro.t3 + T_DRIVE + .3;

@@ -28,6 +28,7 @@
  * Positions are of the REAR AXLE while the plan is built (that is the point a car pivots about); the car's centre, which is the model's origin, is 1.35 m ahead of it.
  */
 import { CAST, STALLS, type Stall } from './cast';
+import { intro, introCarState, introMarks, introParked } from './intro';
 import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from './rearlot';
 
 export type ParkState =
@@ -45,7 +46,7 @@ const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE', 
   'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP', 'BACK_SHIFT_R', 'BACK_REVERSE', 'BACK_DONE',
   'OUT_SHIFT_D', 'OUT_TO_STOP', 'OUT_STOP_SIGN', 'OUT_TURN_OUT'];
 /** Which drive: the parallel park from the stall, the bay from the stall or from the parallel box, the turnabout out of the bay, the straight back along the lane, the way out. */
-export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit';
+export type ParkMode = 'parallel' | 'bayFront' | 'bayBox' | 'turn' | 'back' | 'exit' | 'enterStall' | 'enterLive' | 'parallelE' | 'bayE';
 
 // ---------- the car ----------
 export const WB = 2.7;                       // wheelbase
@@ -96,10 +97,10 @@ const FPS = 60, DT = 1 / FPS;
 type Leg = { N: number; ds: number; px: Float64Array; pz: Float64Array; yaw: Float64Array; steer: Float64Array; dir: 1 | -1; vs: Float64Array; tm: Float64Array; T: number };
 
 /** The speed along a leg: grip in corners, the engine from rest, the brakes to rest, then eased so nothing lurches. */
-function profile(N: number, ds: number, kap: Float64Array | null, vMax: number, aAcc: number, aDec: number, aLat: number) {
+function profile(N: number, ds: number, kap: Float64Array | null, vMax: number, aAcc: number, aDec: number, aLat: number, vStart = 0) {
   const v0 = new Float64Array(N + 1);
   for (let k = 0; k <= N; k++) { const kk = kap ? Math.abs(kap[k]!) : 0; v0[k] = kk > 1e-6 ? Math.min(vMax, Math.sqrt(aLat / kk)) : vMax; }
-  v0[0] = 0; for (let k = 1; k <= N; k++) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k - 1]! ** 2 + 2 * aAcc * ds));
+  v0[0] = vStart; for (let k = 1; k <= N; k++) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k - 1]! ** 2 + 2 * aAcc * ds));
   v0[N] = 0; for (let k = N - 1; k >= 0; k--) v0[k] = Math.min(v0[k]!, Math.sqrt(v0[k + 1]! ** 2 + 2 * aDec * ds));
   const vs = new Float64Array(N + 1), cv = new Float64Array(N + 2), M = Math.max(1, Math.round(vMax * .42 / ds));
   for (let k = 0; k <= N; k++) cv[k + 1] = cv[k]! + v0[k]!;
@@ -128,15 +129,16 @@ function kinLeg(start: Pose, dir: 1 | -1, D: number, steerAt: (s: number) => num
 }
 
 /** A forward drive along a route of straights and arcs (of the rear axle), eased so the car steers into and out of every turn progressively. */
-type Op = { k: 'S'; len: number; dz?: number } | { k: 'T'; side: 1 | -1; r: number; deg?: number };
-function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4): Leg {
+type Op = { k: 'S'; len: number; dz?: number; dx?: number } | { k: 'T'; side: 1 | -1; r: number; deg?: number };
+/** `v0` is the speed the car already has at the start (a drive that carries on from a moving car); the start is then held exactly: position, heading and speed are the car's own. */
+function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4, v0 = 0): Leg {
   const DS = .02, raw: [number, number][] = [[start.x, start.z]];
   let x = start.x, z = start.z, yw = start.yaw;
   for (const o of ops) {
     if (o.k === 'S') {
-      const n = Math.max(1, Math.round(o.len / DS)), [hx, hz] = nose(yw), z0 = z;
-      for (let i = 1; i <= n; i++) { const f = i / n; raw.push([x + hx * o.len * f, z0 + hz * o.len * f + (o.dz ?? 0) * sstep(f)]); }
-      x += hx * o.len; z += hz * o.len + (o.dz ?? 0);
+      const n = Math.max(1, Math.round(o.len / DS)), [hx, hz] = nose(yw), z0 = z, x0 = x;
+      for (let i = 1; i <= n; i++) { const f = i / n; raw.push([x0 + hx * o.len * f + (o.dx ?? 0) * sstep(f), z0 + hz * o.len * f + (o.dz ?? 0) * sstep(f)]); }
+      x += hx * o.len + (o.dx ?? 0); z += hz * o.len + (o.dz ?? 0);
     } else {
       // a turn of radius r (of the rear axle): the wheel angle that holds it is atan(wheelbase / r), positive to the left
       const a = (o.deg ?? 90) * Math.PI / 180, n = Math.max(2, Math.ceil(o.r * a / DS)), d = Math.atan(WB / o.r) * o.side, from: Pose = { x, z, yaw: yw };
@@ -165,9 +167,13 @@ function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: numbe
     let y = Math.atan2(-(gz[b]! - gz[a]!), gx[b]! - gx[a]!); while (y - prev > Math.PI) y -= 2 * Math.PI; while (y - prev < -Math.PI) y += 2 * Math.PI;
     yaw[k] = y; prev = y;
   }
+  if (v0 > 0) {   // carrying on from a moving car: the first metres are pinned to the car's own position and heading, the correction fading out over 2 m
+    const ex = start.x - px[0]!, ez = start.z - pz[0]!; let ey = start.yaw - yaw[0]!; while (ey > Math.PI) ey -= 2 * Math.PI; while (ey < -Math.PI) ey += 2 * Math.PI;
+    for (let k = 0; k <= N; k++) { const w = 1 - sstep(k * ds / 2); if (w <= 0) break; px[k]! += ex * w; pz[k]! += ez * w; yaw[k]! += ey * w; }
+  }
   const W = Math.max(2, Math.round(.12 / ds));   // curvature from the heading change over about a quarter metre
   for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; steer[k] = Math.atan(WB * kap[k]!) * sstep(Math.min(k, N - k) * ds / .6); }
-  const pr = profile(N, ds, kap, vMax, aAcc, aDec, aLat);
+  const pr = profile(N, ds, kap, Math.max(vMax, v0), aAcc, aDec, aLat, v0);
   return { N, ds, px, pz, yaw, steer, dir: 1, ...pr };
 }
 
@@ -178,6 +184,8 @@ class Rec {
   constructor(start: Pose) { this.p = { ...start }; }
   private mark(name: ParkState) { if (this.marks[name] === undefined) this.marks[name] = this.t; this.st = STATE_LIST.indexOf(name); }
   private emit(v: number, a: number, lat: number) { this.s.push({ x: this.p.x, z: this.p.z, yaw: this.p.yaw, steer: this.steer, v, a, lat, left: this.left, right: this.right, rev: this.rev, st: this.st }); this.t = this.s.length * DT; }
+  /** The first sample of a drive that carries on from a moving car: its own pose at speed v. */
+  begin(v: number) { this.emit(v, 0, 0); }
   /** Stand still for dur seconds. */
   hold(name: ParkState, dur: number) { this.mark(name); const n = Math.max(1, Math.round(dur * FPS)); for (let i = 0; i < n; i++) this.emit(0, 0, 0); this.ends[name] = this.t; }
   /** Stand still while the wheel is turned to angle `to`, smoothly (it eases in and out), at least minDur seconds. */
@@ -189,7 +197,7 @@ class Rec {
   /** Drive a leg from rest to rest. sig gives the signals along it by distance. */
   run(name: ParkState, L: Leg, sig?: (s: number) => { left: boolean; right: boolean }) {
     this.mark(name); this.rev = L.dir < 0;
-    const n = Math.ceil(L.T * FPS); let vPrev = 0;
+    const n = Math.ceil(L.T * FPS); let vPrev = L.vs[0]!;
     for (let i = 1; i <= n; i++) {
       const tau = Math.min(L.T, i * DT), sd = sOf(L, tau), kf = Math.min(L.N - 1, Math.floor(sd / L.ds)), f = sd / L.ds - kf;
       const x = L.px[kf]! + (L.px[kf + 1]! - L.px[kf]!) * f, z = L.pz[kf]! + (L.pz[kf + 1]! - L.pz[kf]!) * f, yaw = L.yaw[kf]! + (L.yaw[kf + 1]! - L.yaw[kf]!) * f, steer = L.steer[kf]! + (L.steer[kf + 1]! - L.steer[kf]!) * f;
@@ -252,9 +260,10 @@ function planFront(st: Stall) {
 let SOLVED: ReturnType<typeof solveMane> | null = null;
 const solved = () => (SOLVED ??= solveMane());
 
-/** The parallel park: from the stop line, up to the second white line, then the two reverse arcs. The right signal is on from the setup to the end. The left one is never used here. */
-function planParallel(st: Stall): Plan {
-  const rec = planFront(st), solved1 = solved();
+/** The parallel park: from the stop line, up to the second white line, then the two reverse arcs. The right signal is on from the setup until the car starts its left swing into the space (the wheel goes left). The left one is never used here. */
+function planParallel(st: Stall): Plan { return parallelTail(planFront(st)); }
+function parallelTail(rec: Rec): Plan {
+  const solved1 = solved();
   // 3. pull forward, drifting to the kerb side of the lane, until the nose is on the second white line
   const p1 = rec.p, setupRA = LINE2_X + NOSE, drift = solved1.setupZ - p1.z, lenPull = p1.x - setupRA;
   const pull = pathLeg(p1, [{ k: 'S', len: 11, dz: drift }, { k: 'S', len: lenPull - 11 }], 4.2, 1.3, 1.7, 2);
@@ -273,7 +282,8 @@ function planParallel(st: Stall): Plan {
   rec.rev = true; rec.steerTo('STRAIGHTEN_1', 0, 1.2);
   rec.run('REVERSE_STRAIGHT_2', kinLeg(rec.p, -1, solved1.s2, () => 0, .9, .4, .7));
   rec.rev = false; rec.hold('REVERSE_STRAIGHT_2', 1.0);
-  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);          // the wheel goes left; the signal stays on the right, the side the car is parking on
+  rec.right = false;                                                  // the car turns LEFT now to swing into the space: the right signal goes off as the wheel goes left
+  rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);
   rec.run('REVERSE_FULL_LEFT', kinLeg(rec.p, -1, R * solved1.phi2, () => DMAX, .85, .4, .7));
   rec.rev = false; rec.hold('REVERSE_FULL_LEFT', .9);
   // 5. final alignment, the way an examiner expects it in a box this size (1.5 car lengths): the car is nearly parallel, so it rolls forward a
@@ -316,8 +326,9 @@ const BAY_SIGNAL_OFF = 1.3;                   // the right signal goes off this 
 const bayEndCentre = (rec: Rec): [number, number] => [rec.p.x + RA * Math.cos(rec.p.yaw), rec.p.z - RA * Math.sin(rec.p.yaw)];
 
 /** The bay, from the stall: the same drive round to the stop line, then straight on to the second white line, then the reverse. */
-function planBayFront(st: Stall): Plan {
-  const rec = planFront(st), p1 = rec.p;
+function planBayFront(st: Stall): Plan { return bayTail(planFront(st)); }
+function bayTail(rec: Rec): Plan {
+  const p1 = rec.p;
   rec.run('DRIVE_TO_BAY_LINE', pathLeg(p1, [{ k: 'S', len: p1.x - (LINE2_X + NOSE), dz: LANE_Z - p1.z }], 4.2, 1.3, 1.7, 2));
   rec.hold('STOP_AT_BAY_LINE', 1.4);
   const b = bayReverse(rec);
@@ -503,10 +514,43 @@ function solveMane() {
   return { phi1: best!.phi1, phi2: best!.phi2, startRA: best!.X, s2: best!.s2, end: best!.end, clearance: best!.mc, setupZ: best!.z };
 }
 
+
+// ---------- the drive into the back lot (the PARKING sign), and the two parks that start from the stop line ----------
+/** The rear axle at the stop line of the back lot, nose west: where every drive into the back lot ends. */
+const ENTRY_POSE = (): Pose => ({ x: NOSE_STOP_X + NOSE, z: LANE_Z, yaw: Math.PI });
+const planOf = (rec: Rec): Plan => ({ s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: null });
+/** From the stall to the stop line of the back lot (the PARKING sign pressed while the car stands in its stall): the same drive the two parks begin with. */
+function planEnterStall(st: Stall): Plan { const rec = planFront(st); rec.hold('STOP_AT_ENTRY_LINE', 3.4); return planOf(rec); }   // (the extra stand lets the camera rise to the view with the next "!")
+/** The parallel park, from the stop line (the car came in by the PARKING sign). */
+function planParallelE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('STOP_AT_ENTRY_LINE', .8); return parallelTail(rec); }
+/** The bay, from the stop line. */
+function planBayE(): Plan { const rec = new Rec(ENTRY_POSE()); rec.hold('STOP_AT_ENTRY_LINE', .8); return bayTail(rec); }
+
+/** Tests: fix the state of the car for the live drive into the back lot. */
+export function setLiveCar(c: LiveCar | null) { LIVE = c; delete PLANS.enterLive; }
+/** What the opening drive tells us about the car when the PARKING sign is pressed: its centre, speed and blinkers. */
+export type LiveCar = { x: number; z: number; v: number; left: boolean; right: boolean };
+let LIVE: LiveCar | null = null;
+/**
+ * The PARKING sign pressed while the car is still on its way to its stall, on the driveway heading north: it does not turn into the aisle but carries on north
+ * at the speed it has, drifts into the right-hand lane, signals left, turns left into the back lot and stops at the stop line. Position, heading and speed at the
+ * first sample are the car's own, so nothing jumps.
+ */
+function planEnterLive(c: LiveCar): Plan {
+  const start: Pose = { x: c.x, z: c.z + RA, yaw: Math.PI / 2 }, rec = new Rec(start);
+  const zTurn = LANE_Z + TURN_W, stopRA = NOSE_STOP_X + NOSE;
+  const lenNorth = start.z - zTurn, lenWest = (LANE_N - TURN_W) - stopRA, lenT = TURN_W * Math.PI / 2;
+  const leg = pathLeg(start, [{ k: 'S', len: 18, dx: LANE_N - start.x }, { k: 'S', len: lenNorth - 18 }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }], 5.4, 1.5, 2.1, 2.0, 1.4, Math.max(.05, c.v));
+  rec.left = c.left; rec.right = c.right; rec.begin(Math.max(.05, c.v));
+  rec.run('DRIVE_TO_REAR_LOT', leg, s => ({ left: s > lenNorth - 9 && s < lenNorth + lenT + 1.5, right: false }));
+  rec.left = false; rec.hold('STOP_AT_ENTRY_LINE', 5.3);
+  return planOf(rec);
+}
+
 // ---------- the plan for this page's car ----------
 let STALL_USED: Stall = STALLS[CAST], MODE: ParkMode = 'parallel';
 const PLANS: Partial<Record<ParkMode, Plan>> = {};
-function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : planExit()); }
+function planFor(m: ParkMode): Plan { return (PLANS[m] ??= m === 'parallel' ? planParallel(STALL_USED) : m === 'bayFront' ? planBayFront(STALL_USED) : m === 'bayBox' ? planBayBox() : m === 'turn' ? planTurn() : m === 'back' ? planBack() : m === 'exit' ? planExit() : m === 'enterStall' ? planEnterStall(STALL_USED) : m === 'parallelE' ? planParallelE() : m === 'bayE' ? planBayE() : planEnterLive(LIVE!)); }
 const plan = () => planFor(MODE);
 /** Use a different stall (tests; the page uses its own car's stall). */
 export function setParkStall(st: Stall) { STALL_USED = st; for (const k of Object.keys(PLANS)) delete PLANS[k as ParkMode]; }
@@ -536,20 +580,48 @@ export function parkCarAt(t: number, out: ParkCar = OUT): ParkCar {
 export function parkAxleAt(t: number) { const c = parkCarAt(t); return { x: c.x - RA * Math.cos(c.yaw), z: c.z + RA * Math.sin(c.yaw), yaw: c.yaw }; }
 
 /** The clock of the demonstration: the rig advances it, the car reads it. `loc` is where the car stands between drives: its stall, the parallel box, the bay. */
-export type ParkKind = 'parallel' | 'bay' | 'turn' | 'back' | 'exit';
-export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'box' | 'bay' | 'line' | 'rear' | 'gone' };
+export type ParkKind = 'parallel' | 'bay' | 'turn' | 'back' | 'exit' | 'enter';
+export const park = { phase: 'idle' as 'idle' | 'run' | 'done', t: 0, startedAt: 0, seq: 0, kind: 'parallel' as ParkKind, loc: 'front' as 'front' | 'entry' | 'box' | 'bay' | 'line' | 'rear' | 'gone', enterPending: false };
 /** Can this drive start now? The five drives go in order: the parallel park from the stall; the bay from the stall or the box; the turnabout from the bay; the straight back from the east white line; the way out from the west white line. */
 export function canStartPark(kind: ParkKind) {
   if (park.phase === 'run') return false;
-  return kind === 'parallel' ? park.loc === 'front' : kind === 'bay' ? park.loc === 'front' || park.loc === 'box' : kind === 'turn' ? park.loc === 'bay' : kind === 'back' ? park.loc === 'line' : park.loc === 'rear';
+  switch (kind) {
+    case 'enter': return park.loc === 'front' && !park.enterPending;                       // the PARKING sign: only while the car is in the front lot
+    case 'parallel': return park.loc === 'front' || park.loc === 'entry';
+    case 'bay': return park.loc === 'front' || park.loc === 'entry' || park.loc === 'box';
+    case 'turn': return park.loc === 'bay';
+    case 'back': return park.loc === 'line';
+    default: return park.loc === 'rear';
+  }
 }
 export function startPark(kind: ParkKind = 'parallel') {
   if (!canStartPark(kind)) return false;
-  MODE = kind === 'parallel' ? 'parallel' : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'exit' ? 'exit' : park.loc === 'front' ? 'bayFront' : 'bayBox';
-  park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
+  const here = park.loc;
+  MODE = kind === 'parallel' ? (here === 'entry' ? 'parallelE' : 'parallel') : kind === 'turn' ? 'turn' : kind === 'back' ? 'back' : kind === 'exit' ? 'exit' : kind === 'enter' ? 'enterStall' : here === 'front' ? 'bayFront' : here === 'entry' ? 'bayE' : 'bayBox';
+  park.enterPending = false; park.kind = kind; park.phase = 'run'; park.t = 0; park.seq++; return true;
+}
+/**
+ * The PARKING sign was pressed. Parked in its stall: it drives out and round to the back lot at once. Still driving: it carries on down its own path and diverts, with no jump:
+ * once it is on the driveway heading north (and has not yet begun the left turn into the aisle) it goes straight on to the back lot instead. If it has already begun
+ * that turn, it first drives into its stall and parks, and then drives out and round to the back lot.
+ */
+export function requestEnter() {
+  if (!canStartPark('enter')) return false;
+  if (introParked()) return startPark('enter');
+  park.enterPending = true; return true;
+}
+/** Called every frame by the rig: carries out a pending PARKING request at the right moment. */
+export function tickEnter() {
+  if (!park.enterPending || park.phase === 'run') return;
+  if (introParked()) { park.enterPending = false; startPark('enter'); return; }
+  const c = introCarState(), M = introMarks();
+  if (c.s >= M.l1e! + 3 && c.s <= M.l2s! - 8) {       // on the driveway, heading north, well before the aisle: go straight on
+    park.enterPending = false; LIVE = { x: c.x, z: c.z, v: c.v, left: c.left, right: c.right }; delete PLANS.enterLive;
+    if (startPark('enter')) MODE = 'enterLive';
+  }
 }
 /** The drive is over: the car stays where it parked. */
-export function finishPark() { park.t = parkTotal(); park.phase = 'done'; park.loc = park.kind === 'parallel' ? 'box' : park.kind === 'bay' ? 'bay' : park.kind === 'turn' ? 'line' : park.kind === 'back' ? 'rear' : 'gone'; }
+export function finishPark() { park.t = parkTotal(); park.phase = 'done'; park.loc = park.kind === 'enter' ? 'entry' : park.kind === 'parallel' ? 'box' : park.kind === 'bay' ? 'bay' : park.kind === 'turn' ? 'line' : park.kind === 'back' ? 'rear' : 'gone'; }
 export const parkRunning = () => park.phase === 'run';
 /** True while the car is rolling in the demonstration (for the shadow refresh and the pixel-ratio hold). */
 export function parkMoving() { return park.phase === 'run' && parkCarAt(park.t).moving; }
