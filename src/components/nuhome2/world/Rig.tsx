@@ -40,7 +40,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const mode = useRef<Mode>(parkT !== null ? 'park' : shotQ !== null ? 'cinema' : introT !== null ? 'intro' : reducedMotion || hasStage ? 'fly' : skipIntro ? 'pan' : 'intro');
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
-  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { if (q.get('parkFrom') === 'box') park.loc = 'box'; startPark(q.get('park') === 'bay' ? 'bay' : 'parallel'); park.t = parkT; } }   // ?park=bay (&parkFrom=box) picks the other drive
+  if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? 0; intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'); if (q.get('parkFrom') === 'box') park.loc = 'box'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());

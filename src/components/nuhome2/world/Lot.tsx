@@ -428,7 +428,7 @@ function BackLot({ asphalt }: { asphalt: THREE.Material }) {
     })}
     <Arrows items={[{ x: CONN_X, z: -19.5, yaw: 0 }, { x: -CONN_X, z: -19.5, yaw: Math.PI }]} />
     <Cones list={BL_CONES} />
-    <ParkSpot kind="parallel" /><ParkSpot kind="bay" />
+    <ParkSpot kind="parallel" /><ParkSpot kind="bay" /><ParkSpot kind="turn" /><ParkSpot kind="back" />
     {[-18, 12].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
     {[[-27.6, -21, Math.PI], [27.6, -21, 0]].map(([x, z, r]) => <Lamp key={`cl${x}`} x={x!} z={z!} rotY={r!} />)}
   </group>;

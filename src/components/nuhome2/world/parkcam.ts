@@ -34,7 +34,7 @@ function buildShots(narrow: boolean, mode: ParkMode) {
   const f = narrow ? 1.3 : 1, FOV = (v: number) => v * (narrow ? 1.32 : 1), up = narrow ? 1.3 : 1;
   const c0 = { ...parkCarAt(0) }, o = c0.z < 0 ? 1 : -1;               // the car's tail points away from its stall toward the aisle: +z for row A, -z for row B
   const shots: Shot[] = [];
-  if (mode !== 'bayBox') {
+  if (mode === 'parallel' || mode === 'bayFront') {
     // moments found by watching the car
     let tEast = M.DRIVE_TO_REAR_LOT!, tRear = tEast;
     for (let t = M.DRIVE_TO_REAR_LOT!; t < T; t += .1) { const c = parkCarAt(t); if (c.x > CONN_X - 7) { tEast = t; break; } }
@@ -64,6 +64,18 @@ function buildShots(narrow: boolean, mode: ParkMode) {
       // P4. the pull back and rise to a three-quarter of the parked car
       { to: T, at: ({ u }) => { const k = sstep(u); return { p: mix3([11.6, 26 * up, -42 + 4 * (up - 1)], [27 * (narrow ? 1.15 : 1), 12, -31.5], k), l: mix3([10.4, 0, -47.5], [8.2, 1.0, -45.3], k), fov: FOV(mix(46, 44, k)) }; } },
     );
+  } else if (mode === 'turn') {
+    shots.push(
+      // U1. high from the south-east: the signal, then the car rolls out of the bay and swings west onto the lane
+      { to: E.TURN_DRIVE! - 5.0, h: 2.4, at: ({ c }) => ({ p: [c.x * .55 + 9 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], l: [c.x * .8 - .6, .3, c.z - .3], fov: FOV(42) }) },
+      // U2. the pull back over the lane to a high view of the white line, the car at it and, in the same frame, the next "!" at the old stop line
+      { to: T, at: ({ c, u }) => { const k = sstep(u), a: V3 = [c.x * .55 + 9 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], b: V3 = narrow ? [-18, 30, -41] : [8, 24, -33], la: V3 = [c.x * .8 - .6, .3, c.z - .3], lb: V3 = narrow ? [10, 0, -41] : [8, 0, -42]; return { p: mix3(a, b, k), l: mix3(la, lb, k), fov: FOV(mix(42, 44, k)) }; } },
+    );
+  } else if (mode === 'back') {
+    shots.push(
+      // K1. high, looking along the lane: the car backs slowly toward the line, then the view rises a little over the finished move
+      { to: T, at: ({ c, u }) => { const k = sstep(u); return narrow ? { p: [c.x - 17, 30 - 2 * k, -41], l: [c.x + 11, 0, -41], fov: FOV(44) } : { p: [c.x + 8, 24 - 2 * k, -33], l: [c.x + 6, .3, c.z - .5], fov: FOV(44) }; } },
+    );
   } else {
     if (mode === 'bayFront') shots.push({ to: E.DRIVE_TO_BAY_LINE! + .6, h: 3.4, at: north });
     else shots.push(
@@ -74,9 +86,9 @@ function buildShots(narrow: boolean, mode: ParkMode) {
     );
     shots.push(
       // B2. straight down over the line, the car and the bay: the quarter circle into the bay
-      { to: M.BAY_REVERSE_2! + 2.2, h: 3.0, at: ({ u }) => ({ p: [2.4 + .8 * u, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], l: [2.4, 0, -47.2], fov: FOV(46) }) },
-      // B3. the pull back and rise to a three-quarter of the parked car
-      { to: T, at: ({ u }) => { const k = sstep(u); return { p: mix3([3.2, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], [22 * (narrow ? 1.1 : 1), 12, -31], k), l: mix3([2.4, 0, -47.2], [4.7, .8, -48.5], k), fov: FOV(mix(46, 44, k)) }; } },
+      { to: E.BAY_REVERSE! - 3.0, h: 3.0, at: ({ u }) => ({ p: [2.4 + .8 * u, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], l: [2.4, 0, -47.2], fov: FOV(46) }) },
+      // B3. the pull back and rise to a high view of the parked car, the white line on the left and the next "!" beside it
+      { to: T, at: ({ u }) => { const k = sstep(u); return { p: mix3([3.2, 32 * (narrow ? 1.1 : 1), -39.7 - 2 * (up - 1)], narrow ? [0, 40, -37] : [3, 22, -36], k), l: mix3([2.4, 0, -47.2], narrow ? [-.6, 0, -44.8] : [0, 0, -44.8], k), fov: FOV(mix(46, 44, k)) }; } },
     );
   }
   return { shots, T };

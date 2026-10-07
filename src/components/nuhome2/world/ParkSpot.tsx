@@ -4,12 +4,14 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { intro, T_DRIVE } from './intro';
 import { canStartPark, park, startPark, type ParkKind } from './park';
-import { BAY, PBOX } from './rearlot';
+import { BAY, BAY_LINE, PBOX, STOP_LINE } from './rearlot';
 
 /**
- * The two "!" markers of the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the repair markers of fixing365.com.
+ * The four "!" markers of the back lot: the same glowing orange disc, white exclamation mark and pulsing ring as the repair markers of fixing365.com.
  *   parallel   beside the parallel-parking space, at the east end of the box: the car that opened the page backs out of its stall and parallel parks (park.ts)
  *   bay        right behind the closed end of the reverse bay: the car reverses into the bay (from its stall, or by backing out of the parallel box first)
+ *   turn       just past the white line on the left: the car drives out of the bay, turns, and stops with its nose at that line (the turnabout)
+ *   back       just past the old white stop line on the right: the car backs slowly and straight until its tail touches that line
  * Each keeps a steady size on screen at any distance and is hidden while the car is working, until the car is in its stall (the entrance drive is over),
  * and once it has no drive left to offer.
  */
@@ -29,6 +31,12 @@ const ready = () => intro.done || intro.t >= intro.t3 + T_DRIVE;
 
 export const SPOT_POS: [number, number, number] = [PBOX.x1 + 1.7, 1.6, (PBOX.zKerb + PBOX.zLane) / 2];
 export const BAY_SPOT_POS: [number, number, number] = [(BAY.xW + BAY.xE) / 2, 1.6, BAY.zEnd - 1.3];
+const LANE_MID = (STOP_LINE.z0 + STOP_LINE.z1) / 2;
+/** The turnabout's "!": just past the white line on the left (the far side from the car), where the car's nose comes to rest. */
+export const TURN_SPOT_POS: [number, number, number] = [BAY_LINE.x - 1.6, 1.6, LANE_MID];
+/** The straight back's "!": just past the old stop line (the blue-circled one), where the car's tail comes to rest. */
+export const BACK_SPOT_POS: [number, number, number] = [STOP_LINE.x + 1.6, 1.6, LANE_MID];
+const SPOTS = { parallel: SPOT_POS, bay: BAY_SPOT_POS, turn: TURN_SPOT_POS, back: BACK_SPOT_POS };
 /** Is this marker on offer now? Not while a drive runs; the first drive only from the stall; the bay from the stall or the box. */
 const offered = (kind: ParkKind) => canStartPark(kind) && (park.loc !== 'front' || ready());
 
@@ -53,7 +61,7 @@ export function ParkSpot({ kind, reducedMotion = false }: { kind: ParkKind; redu
   const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; };
   const out = () => { setHover(false); document.body.style.cursor = 'auto'; };
   return <group ref={outer} visible={false} name={`park-spot-${kind}`}>
-    <Billboard position={kind === 'bay' ? BAY_SPOT_POS : SPOT_POS} ref={holder}>
+    <Billboard position={SPOTS[kind]} ref={holder}>
       <group onClick={choose} onPointerOver={over} onPointerOut={out}>
         <mesh geometry={hitGeo} material={hitMat} />
         <mesh geometry={haloGeo} material={mats.halo} renderOrder={9} />
