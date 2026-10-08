@@ -36,12 +36,12 @@ export type ParkState =
   | 'DRIVE_TO_REAR_LOT' | 'STOP_AT_ENTRY_LINE' | 'PULL_FORWARD_TO_SETUP' | 'SIGNAL_RIGHT' | 'SHIFT_TO_REVERSE'
   | 'REVERSE_STRAIGHT_1' | 'STOP_AT_BLACK_LINE' | 'STEER_FULL_RIGHT' | 'REVERSE_FULL_RIGHT' | 'STRAIGHTEN_1' | 'REVERSE_STRAIGHT_2'
   | 'STEER_FULL_LEFT' | 'REVERSE_FULL_LEFT' | 'STRAIGHTEN_2' | 'FINAL_ALIGNMENT' | 'PARKED'
-  | 'BOX_SHIFT_R' | 'BOX_STEER_R' | 'BOX_REVERSE' | 'BOX_STOP' | 'BOX_SIGNAL_L' | 'BOX_STEER_0' | 'BOX_SHIFT_D' | 'BOX_PULL_OUT'
+  | 'BOX_SHIFT_R' | 'BOX_STEER_R' | 'BOX_REVERSE' | 'BOX_STOP' | 'BOX_SIGNAL_L' | 'BOX_STEER_L' | 'BOX_SHIFT_D' | 'BOX_PULL_OUT'
   | 'DRIVE_TO_BAY_LINE' | 'STOP_AT_BAY_LINE' | 'BAY_SIGNAL_RIGHT' | 'BAY_SHIFT_R' | 'BAY_REVERSE' | 'BAY_PARKED'
   | 'TURN_SIGNAL' | 'TURN_SHIFT_D' | 'TURN_DRIVE' | 'TURN_STOP' | 'BACK_SHIFT_R' | 'BACK_REVERSE' | 'BACK_DONE'
   | 'OUT_SHIFT_D' | 'OUT_TO_STOP' | 'OUT_STOP_SIGN' | 'OUT_TURN_OUT';
 const STATE_LIST: ParkState[] = ['EXIT_SIGNAL', 'EXIT_SHIFT_R', 'EXIT_REVERSE', 'EXIT_STRAIGHTEN', 'EXIT_SHIFT_D', 'DRIVE_TO_REAR_LOT', 'STOP_AT_ENTRY_LINE', 'PULL_FORWARD_TO_SETUP', 'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',
-  'BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_0', 'BOX_SHIFT_D', 'BOX_PULL_OUT',
+  'BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_L', 'BOX_SHIFT_D', 'BOX_PULL_OUT',
   'DRIVE_TO_BAY_LINE', 'STOP_AT_BAY_LINE', 'BAY_SIGNAL_RIGHT', 'BAY_SHIFT_R', 'BAY_REVERSE', 'BAY_PARKED',
   'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP', 'BACK_SHIFT_R', 'BACK_REVERSE', 'BACK_DONE',
   'OUT_SHIFT_D', 'OUT_TO_STOP', 'OUT_STOP_SIGN', 'OUT_TURN_OUT'];
@@ -71,6 +71,7 @@ const BLUE_X = BAY_LINE.x;
 const SETUP_Z = -42.2;                      // the car's lane position beside the box: the first guess; the solver may move it a little off the kerb
 export const BOX_CX = (PBOX.x0 + PBOX.x1) / 2 - .19, BOX_CZ = (PBOX.zKerb + PBOX.zLane) / 2 + .19;   // where the car's centre is aimed: a little west and to the lane side of the very middle, which is what the cones leave room for   // the middle of the box: where the car's centre ends
 const CONE_NEAR = ((): [number, number] => { let best = BL_CONES[0]!; for (const c of BL_CONES) if (Math.hypot(c[0] - PBOX.x0, c[1] - PBOX.zLane) < Math.hypot(best[0] - PBOX.x0, best[1] - PBOX.zLane)) best = c; return best; })();   // the cone at the near, open corner of the box: "the cone just right of the black line"
+const BOX_EASE = 1.4;                        // the usual smoothing: the wheel starts the pull-out already at full lock (steer0), then follows the path
 const BLACK_RA = 6.1;                        // the rear axle when the tail reaches the black line: the rear bumper is TAIL (0.9 m) further, at x 7.0
 
 // ---------- small maths ----------
@@ -133,7 +134,7 @@ function kinLeg(start: Pose, dir: 1 | -1, D: number, steerAt: (s: number) => num
 /** A forward drive along a route of straights and arcs (of the rear axle), eased so the car steers into and out of every turn progressively. */
 type Op = { k: 'S'; len: number; dz?: number; dx?: number } | { k: 'T'; side: 1 | -1; r: number; deg?: number };
 /** `v0` is the speed the car already has at the start (a drive that carries on from a moving car); the start is then held exactly: position, heading and speed are the car's own. */
-function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4, v0 = 0): Leg {
+function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: number, aLat: number, EASE = 1.4, v0 = 0, steer0?: number): Leg {
   const DS = .02, raw: [number, number][] = [[start.x, start.z]];
   let x = start.x, z = start.z, yw = start.yaw;
   for (const o of ops) {
@@ -174,7 +175,9 @@ function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: numbe
     for (let k = 0; k <= N; k++) { const w = 1 - sstep(k * ds / 2); if (w <= 0) break; px[k]! += ex * w; pz[k]! += ez * w; yaw[k]! += ey * w; }
   }
   const W = Math.max(2, Math.round(.12 / ds));   // curvature from the heading change over about a quarter metre
-  for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; steer[k] = Math.atan(WB * kap[k]!) * sstep(Math.min(k, N - k) * ds / 1.1); }
+  for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; const v = Math.max(-DMAX, Math.min(DMAX, Math.atan(WB * kap[k]!))) * sstep((N - k) * ds / 1.1);   // (never past full lock)
+    // a car that sets off with the wheel already at a lock (steer0) keeps it: the wheel eases from steer0 into what the path asks for, instead of first dropping to straight
+    steer[k] = steer0 === undefined ? v * sstep(k * ds / 1.1) : steer0 + (v - steer0) * sstep(k * ds / .7); }
   const pr = profile(N, ds, kap, Math.max(vMax, v0), aAcc, aDec, aLat, v0);
   return { N, ds, px, pz, yaw, steer, dir: 1, ...pr };
 }
@@ -351,19 +354,20 @@ function solveBoxExit(start: Pose) {
   const R = R_MIN, x2 = LINE2_X + NOSE;
   let best: { d: number; r: number; a1: number; s: number; gap: number; ops: Op[]; sOff: number } | null = null;
   // (a wider search showed the best answer is always about here: the tail cones limit how far it can back up, the cone ahead how soon it must swing out)
+  // the way out begins with a FULL LEFT: the first arc is at full lock (radius R_MIN), the second, the right arc that points the car west again, is searched
   for (const d of [.9, 1.0, 1.1, 1.2]) for (const r of [4.2, 4.4, 5.0, 6.0]) for (let deg = 30; deg <= 55; deg += 2.5) {
     const a1 = deg * Math.PI / 180, th = d / R + a1, p1 = arc(start, -1, d, -DMAX), dl = Math.atan(WB / r);
-    const q = arc(p1, 1, r * a1, dl), q2 = arc(q, 1, r * th, -dl), s = (LANE_Z - q2.z) / Math.sin(th);
+    const q = arc(p1, 1, R * a1, DMAX), q2 = arc(q, 1, r * th, -dl), s = (LANE_Z - q2.z) / Math.sin(th);
     if (!(s >= .3)) continue;
     const xEnd = q2.x + s * Math.cos(p1.yaw + a1), lenEnd = xEnd - x2;
     if (lenEnd < 2.6) continue;
-    const ops: Op[] = [{ k: 'T', side: 1, r, deg }, { k: 'S', len: s }, { k: 'T', side: -1, r, deg: th * 180 / Math.PI }, { k: 'S', len: lenEnd }];
-    const leg = pathLeg(p1, ops, 3.6, 1.2, 1.6, 1.8);
+    const ops: Op[] = [{ k: 'T', side: 1, r: R, deg }, { k: 'S', len: s }, { k: 'T', side: -1, r, deg: th * 180 / Math.PI }, { k: 'S', len: lenEnd }];
+    const leg = pathLeg(p1, ops, 3.6, 1.2, 1.6, 1.8, BOX_EASE, 0, DMAX);
     let gap = 9;
     for (let k = 0; k <= Math.round(d / .05); k++) gap = Math.min(gap, coneGapAt(arc(start, -1, Math.min(d, k * .05), -DMAX)));
     for (let k = 0; k <= leg.N; k += 5) gap = Math.min(gap, coneGapAt({ x: leg.px[k]!, z: leg.pz[k]!, yaw: leg.yaw[k]! }));
     if (Math.abs(leg.pz[leg.N]! - LANE_Z) > .05) continue;
-    if (!best || gap > best.gap + .02 || (Math.abs(gap - best.gap) <= .02 && s < best.s)) best = { d, r, a1, s, gap, ops, sOff: r * a1 + s + r * th + 1.0 };
+    if (!best || gap > best.gap + .02 || (Math.abs(gap - best.gap) <= .02 && s < best.s)) best = { d, r, a1, s, gap, ops, sOff: R * a1 + s + r * th + 1.0 };
   }
   if (!best) throw new Error('no way out of the box');
   return best;
@@ -380,9 +384,9 @@ function planBayBox(): Plan {
   rec.rev = false; rec.hold('BOX_STOP', .9);
   // 2. the left signal, then straight the wheel and forward out of the box into the lane, and on west to the second white line
   rec.left = true; rec.hold('BOX_SIGNAL_L', 1.6);
-  rec.steerTo('BOX_STEER_0', 0, 1.0);
+  rec.steerTo('BOX_STEER_L', DMAX, 1.4);      // from full right straight to FULL LEFT: the wheel is not brought to centre on the way
   rec.hold('BOX_SHIFT_D', .8);
-  rec.run('BOX_PULL_OUT', pathLeg(rec.p, ex.ops, 3.6, 1.2, 1.6, 1.3), s => ({ left: s < ex.sOff, right: false }));
+  rec.run('BOX_PULL_OUT', pathLeg(rec.p, ex.ops, 3.6, 1.2, 1.6, 1.3, BOX_EASE, 0, DMAX), s => ({ left: s < ex.sOff, right: false }));
   rec.left = false; rec.hold('STOP_AT_BAY_LINE', 1.4);
   const b = bayReverse(rec);
   return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: { lineX: BAY_LINE.x, z0: b.z0, s1: b.s1, s3: b.s3, xB: b.xB, endCentre: bayEndCentre(rec), box: { d: ex.d, r: ex.r, a1: ex.a1, s: ex.s, gap: ex.gap } } };
@@ -423,7 +427,7 @@ function planBack(): Plan {
   rec.hold('BACK_SHIFT_R', 1.6);
   rec.rev = true; rec.hold('BACK_SHIFT_R', .6);
   rec.run('BACK_REVERSE', kinLeg(rec.p, -1, start.x - xEnd, () => 0, 1.1, .35, .5));
-  rec.rev = false; rec.hold('BACK_DONE', 3);
+  rec.rev = false; rec.hold('BACK_DONE', 5);      // (the lens swings to the EXIT sign meanwhile: parkcam.ts)
   return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: null };
 }
 
@@ -468,9 +472,9 @@ function exitOps(from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' |
   return { ops, sig, total, prefixLen };
 }
 /** The drive itself: along the route to a full stop at the stop sign (right signal on), a pause, then the right turn onto the street and away, cut where the car leaves the scene. */
-function exitDrive(rec: Rec, from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' | 'R' | null, v0 = 0): Plan {
+function exitDrive(rec: Rec, from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' | 'R' | null, v0 = 0, steer0?: number): Plan {
   const o = exitOps(from, prefix, prefixSig), laneX = EXIT.laneX;
-  rec.run('OUT_TO_STOP', pathLeg(rec.p, o.ops, 7.5, 1.5, 2.2, prefix.length ? 1.3 : 2.0, 1.4, v0), o.sig);   // (a car that first has to leave the box or the bay takes those tight turns gently)
+  rec.run('OUT_TO_STOP', pathLeg(rec.p, o.ops, 7.5, 1.5, 2.2, prefix.length ? 1.3 : 2.0, steer0 === undefined ? 1.4 : BOX_EASE, v0, steer0), o.sig);   // (a car that first has to leave the box or the bay takes those tight turns gently)
   rec.left = false; rec.right = true; rec.hold('OUT_STOP_SIGN', 2.6);       // a full stop at the sign, right signal flashing
   const p1 = rec.p, lenB = OUT_TURN_Z - p1.z, aB = OUT_R4 * Math.PI / 2, farX = OUT_CUT_X - 22;
   const legB = pathLeg(p1, [{ k: 'S', len: lenB }, { k: 'T', side: -1, r: OUT_R4 }, { k: 'S', len: (laneX - OUT_R4) - farX }], 7.5, 1.5, 2.2, 2.0);
@@ -498,9 +502,9 @@ function planExitBox(): Plan {
   rec.run('BOX_REVERSE', kinLeg(rec.p, -1, ex.d, () => -DMAX, .8, .4, .7));
   rec.rev = false; rec.hold('BOX_STOP', .9);
   rec.left = true; rec.hold('BOX_SIGNAL_L', 1.6);
-  rec.steerTo('BOX_STEER_0', 0, 1.0);
+  rec.steerTo('BOX_STEER_L', DMAX, 1.4);
   rec.hold('OUT_SHIFT_D', .8);
-  return exitDrive(rec, { x: LINE2_X + NOSE, z: LANE_Z, yaw: Math.PI }, ex.ops, s => (s < ex.sOff ? 'L' : null));
+  return exitDrive(rec, { x: LINE2_X + NOSE, z: LANE_Z, yaw: Math.PI }, ex.ops, s => (s < ex.sOff ? 'L' : null), 0, DMAX);
 }
 /** From the bay (nose south): the right signal, forward out of the bay, one smooth right turn onto the lane heading west (searched to keep clear of the cones), then on and round. */
 function planExitBay(): Plan {

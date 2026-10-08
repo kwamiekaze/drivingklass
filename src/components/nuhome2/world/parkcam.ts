@@ -13,7 +13,7 @@
  */
 import { SOLIDS, clearance, GROUND } from './colliders';
 import { park, parkCarAt, parkEnds, parkMarks, parkMode, parkTotal, type ParkCar, type ParkMode } from './park';
-import { CONN_X } from './rearlot';
+import { CONN_X, LOT_SIGN, LOT_SIGNS } from './rearlot';
 
 export type V3 = [number, number, number];
 export type Pose = { p: V3; l: V3; fov: number };
@@ -79,9 +79,14 @@ function buildShots(narrow: boolean, mode: ParkMode) {
       { to: T, at: ({ c, u }) => { const k = sstep(u), a: V3 = [c.x * .5 - 2 * f, 17 * (narrow ? 1.2 : 1), -33 + 2 * (up - 1)], b: V3 = narrow ? [3.5, 57, -29] : [3, 25, -30], la: V3 = [c.x * .9 + .8, .3, c.z - .3], lb: V3 = narrow ? [3.5, 0, -35] : [3, 0, -39]; return { p: mix3(a, b, k), l: mix3(la, lb, k), fov: FOV(mix(42, 44, k)) }; } },
     );
   } else if (mode === 'back') {
+    // the moment the straight reverse is over and the car is home at the west white line
+    const tDone = M.BACK_DONE!, sg = LOT_SIGNS.exit, sy = LOT_SIGN.Y - .1;
     shots.push(
-      // K1. high, looking along the lane: the car backs slowly west toward the line, then the view rises a little over the finished move
-      { to: T, at: ({ c, u }) => { const k = sstep(u); return narrow ? { p: [c.x + 17, 30 - 2 * k, -41], l: [c.x - 11, 0, -41], fov: FOV(44) } : { p: [c.x - 8, 24 - 2 * k, -33], l: [c.x - 6, .3, c.z - .5], fov: FOV(44) }; } },
+      // K1. high, looking along the lane: the car backs slowly west toward the line
+      { to: tDone + 1.0, h: 2.4, at: ({ c }) => narrow ? { p: [c.x + 17, 30, -41], l: [c.x - 11, 0, -41], fov: FOV(44) } : { p: [c.x - 8, 24, -33], l: [c.x - 6, .3, c.z - .5], fov: FOV(44) } },
+      // K2. the car has come to rest: the lens glides over the lot to the EXIT sign at the west road and settles on it (the long blend into this shot does the travelling), so the
+      //     visitor sees where the way out is; the EXIT button is offered now
+      { to: T, at: ({ u }) => ({ p: mix3(narrow ? [-12.5, 6.6, -31.6] : [-12.5, 6.2, -32], narrow ? [-13.3, 6.5, -31.3] : [-13.3, 6.1, -31.7], sstep(u)), l: [sg.x - .4, sy - .35, sg.z - .2], fov: FOV(narrow ? 36 : 34) }) },
     );
   } else if (mode.startsWith('exit')) {
     // (the way out, from wherever the car starts: in the front lot the shots above have already brought it to the back lot's stop line)

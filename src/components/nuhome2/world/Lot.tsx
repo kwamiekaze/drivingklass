@@ -15,6 +15,7 @@ import { Halo, champagneMat, starRow, useGlow, wordGeometry } from './Signage';
 import { BackPatio } from './BackPatio';
 import { BL, bx, bz, BL_CONES, CONN_X, CONN_Z0, BAY_LINE, EXIT } from './rearlot';
 import { ParkSpot } from './ParkSpot';
+import { LotSign } from './LotSigns';
 
 /*
  * The lot, laid out like a real one. World meters. Building front wall z -14.5, terrace z -15.2 to -8.6.
@@ -431,6 +432,7 @@ function BackLot({ asphalt }: { asphalt: THREE.Material }) {
     <Arrows items={[{ x: CONN_X, z: -19.5, yaw: 0 }, { x: -CONN_X, z: -19.5, yaw: Math.PI }]} />
     <Cones list={BL_CONES} />
     <ParkSpot kind="parallel" /><ParkSpot kind="bay" /><ParkSpot kind="turn" /><ParkSpot kind="back" />
+    <LotSign kind="exit" /><LotSign kind="entrance" />
     {[-18, 12].map(x => <Lamp key={x} x={x} z={BL.zn + 1.1} rotY={-Math.PI / 2} />)}
     {[[-27.6, -21, Math.PI], [27.6, -21, 0]].map(([x, z, r]) => <Lamp key={`cl${x}`} x={x!} z={z!} rotY={r!} />)}
   </group>;

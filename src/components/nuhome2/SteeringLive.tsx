@@ -15,7 +15,7 @@ const LOCK_DEG = 450;
  * left turn out of the bay. Before that (the front lot, the drive round, leaving the stall or the box) and after it (the straight back, the way out) it stays dead still, and as
  * soon as EXIT is pressed it eases back to centre and takes no more part. (Leaving the parallel box comes before the second line, and is part of it.)
  */
-const BOX_STATES = ['BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_0', 'BOX_SHIFT_D', 'BOX_PULL_OUT'];   // out of the parallel box: the reverse with the wheel right, then forward with the wheel left
+const BOX_STATES = ['BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_L', 'BOX_SHIFT_D', 'BOX_PULL_OUT'];   // out of the parallel box: the reverse with the wheel right, then forward with the wheel left
 const WHEEL_STATES = new Set<string>([
   ...BOX_STATES,
   'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',   // the parallel park, from the line

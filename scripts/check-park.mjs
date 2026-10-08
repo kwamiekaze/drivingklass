@@ -11,7 +11,7 @@ import { parkTotal, parkMarks, parkEnds, parkSetup, parkBay, parkCarAt, setParkS
 import { STALLS } from '../src/components/nuhome2/world/cast.ts';
 import { introCarState, introMarks, T_GO, setStall } from '../src/components/nuhome2/world/intro.ts';
 import { SOLIDS } from '../src/components/nuhome2/world/colliders.ts';
-import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
+import { BAY, BAY_LINE, BL_CONES, CONE_R, CONN_X, EXIT, LOT_SIGN, LOT_SIGNS, PBOX, STOP_LINE } from '../src/components/nuhome2/world/rearlot.ts';
 import { parkCamAt, resetParkCam } from '../src/components/nuhome2/world/parkcam.ts';
 import { GROUND, clearance } from '../src/components/nuhome2/world/colliders.ts';
 const L = 4.5, W = 2.1;
@@ -190,12 +190,19 @@ for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
       // is the car (its centre) inside the middle of the frame? angle between the view direction and the direction to the car, against the half field of view
       // is the car (its centre) inside the frame? project it with the real aspect of a phone (portrait) or a laptop (wide), with the header and the buttons taking the top and bottom edge
       { const fx = l[0] - p[0], fy = l[1] - p[1], fz = l[2] - p[2], fn = Math.hypot(fx, fy, fz), F = [fx / fn, fy / fn, fz / fn]; let R = [-F[2], 0, F[0]]; const rn = Math.hypot(...R) || 1; R = R.map(v => v / rn); const U = [R[1] * F[2] - R[2] * F[1], R[2] * F[0] - R[0] * F[2], R[0] * F[1] - R[1] * F[0]], d = [c.x - p[0], .7 - p[1], c.z - p[2]], zc = d[0] * F[0] + d[1] * F[1] + d[2] * F[2], xc = d[0] * R[0] + d[1] * R[1] + d[2] * R[2], yc = d[0] * U[0] + d[1] * U[1] + d[2] * U[2], th = Math.tan(fov * Math.PI / 360), asp = narrow ? 390 / 844 : 1440 / 900, sx = .5 + xc / (zc * th * asp) / 2, sy = .5 - yc / (zc * th) / 2;
-        nF++; if (zc > 0 && sx > .03 && sx < .97 && sy > .14 && sy < .86) framed++; }
+        if (!(mode === 'back' && t > (parkMarks().BACK_DONE ?? T) + .2)) { nF++; if (zc > 0 && sx > .03 && sx < .97 && sy > .14 && sy < .86) framed++; } }   // (once the straight back is over, the lens deliberately looks at the EXIT sign instead: checked below)
       if (pp) { camJump = Math.max(camJump, Math.hypot(p[0] - pp.p[0], p[1] - pp.p[1], p[2] - pp.p[2]) * 30); fovJump = Math.max(fovJump, Math.abs(fov - pp.fov) * 30); }
       pp = { p, fov };
     } }
   if (camMin < .55) bad.push(`lens ${camMin.toFixed(2)} m from ${camName}`);
   if (carMin < 8) bad.push(`lens only ${carMin.toFixed(2)} m from the car at t=${camCarT.toFixed(1)}: not a bird's eye`);
+  if (mode === 'back') for (const narrow of [false, true]) {   // the straight back ends on the EXIT sign, whole and well inside the frame
+    const { p, l } = parkCamAt(T, narrow), g = LOT_SIGNS.exit, fx = l[0] - p[0], fy = l[1] - p[1], fz = l[2] - p[2], fn = Math.hypot(fx, fy, fz), F = [fx / fn, fy / fn, fz / fn];
+    let R = [-F[2], 0, F[0]]; const rn = Math.hypot(...R) || 1; R = R.map(v => v / rn); const U = [R[1] * F[2] - R[2] * F[1], R[2] * F[0] - R[0] * F[2], R[0] * F[1] - R[1] * F[0]];
+    const asp = narrow ? .5 : 1.6, fv = (parkCamAt(T, narrow).fov * Math.PI) / 180, th = Math.tan(fv / 2);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, 0]]) { const wx = g.x, wy = LOT_SIGN.Y + dy * LOT_SIGN.H / 2, wz = g.z + dx * LOT_SIGN.W / 2, d = [wx - p[0], wy - p[1], wz - p[2]], zc = d[0] * F[0] + d[1] * F[1] + d[2] * F[2], sx = .5 + (d[0] * R[0] + d[1] * R[1] + d[2] * R[2]) / (zc * th * 2 * asp), sy = .5 - (d[0] * U[0] + d[1] * U[1] + d[2] * U[2]) / (zc * th * 2);
+      if (!(zc > 0 && sx > .08 && sx < .92 && sy > .2 && sy < .8)) bad.push(`the EXIT sign is not in frame at the end of the straight back (${narrow ? 'phone' : 'wide'}: x ${sx.toFixed(2)} y ${sy.toFixed(2)})`); }
+  }
   if (framed / nF < .9) bad.push(`the car is in frame only ${(100 * framed / nF).toFixed(0)}% of the time`);
   if (camJump > 30) bad.push(`camera moves ${camJump.toFixed(0)} m/s`);
   console.log(`${(mode + ' ' + id).padEnd(16)} camera: lens min ${camMin.toFixed(2)} m (${camName}), ${carMin.toFixed(2)} m from the car, car in frame ${(100 * framed / nF).toFixed(0)}%, max speed ${camJump.toFixed(1)} m/s, fov change ${fovJump.toFixed(1)} deg/s`);
