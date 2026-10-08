@@ -97,7 +97,7 @@ for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
       if (maxDv > .06) bad.push(`live drive: speed steps by ${maxDv.toFixed(3)} m/s in one frame`);
       if (maxA > 4) bad.push(`live drive: acceleration ${maxA.toFixed(1)} m/s2`);
       if (maxYr > 1.0) bad.push(`live drive: turns at ${maxYr.toFixed(2)} rad/s`);
-      for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) { const c = parkCarAt(t); if (c.z < -3 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .6) { bad.push(`live drive: not in the right-hand lane of the east road (x ${c.x.toFixed(2)})`); break; } }
+      for (let t = 0; t <= E.DRIVE_TO_REAR_LOT; t += 1 / 30) { const c = parkCarAt(t); if (c.z < -3 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .1) { bad.push(`live drive: not in the right-hand lane of the east road (x ${c.x.toFixed(2)})`); break; } }
     }
   } else if (mode === 'turn') {
     // the turn out of the bay is toward the EAST, the car's LEFT hand (it stands nose south): the signal is the one for that side, on before the car moves, off after the turn
@@ -178,7 +178,7 @@ for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     if (noseX < BAY_LINE.x + .2 || noseX > BAY_LINE.x + .7 || g.moving) bad.push(`nose at x=${noseX.toFixed(2)} at the second white line (${BAY_LINE.x.toFixed(2)})`);
   }
   // right-hand lanes: the south half of the aisle, the east half of the east road
-  if (front) { const t0 = M.DRIVE_TO_REAR_LOT, t1 = E.DRIVE_TO_REAR_LOT; for (let t = t0; t <= t1; t += 1 / 20) { const c = sigAt(t); if (c.x > 24 && c.x < 25.5 && c.z > -3 && c.z < .5) { bad.push(`aisle: not in the right-hand lane at x=${c.x.toFixed(1)} (z ${c.z.toFixed(2)})`); break; } if (c.z < -4 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .7) { bad.push(`east road: not in the right-hand lane at z=${c.z.toFixed(1)} (x ${c.x.toFixed(2)})`); break; } } }
+  if (front) { const t0 = M.DRIVE_TO_REAR_LOT, t1 = E.DRIVE_TO_REAR_LOT; for (let t = t0; t <= t1; t += 1 / 20) { const c = sigAt(t); if (c.x > 24 && c.x < 25.5 && c.z > -3 && c.z < .5) { bad.push(`aisle: not in the right-hand lane at x=${c.x.toFixed(1)} (z ${c.z.toFixed(2)})`); break; } if (c.z < -14.7 && c.z > -24 && Math.abs(c.yaw - Math.PI / 2) < .1 && c.x < CONN_X + .3) { bad.push(`east road: not in the right-hand lane at z=${c.z.toFixed(1)} (x ${c.x.toFixed(2)})`); break; } } }
   // the camera, wide and portrait: clear of every solid and of the car's body, above the ground, and the car in the frame
   let camMin = 9, camName = '', carMin = 99, framed = 0, nF = 0, camJump = 0, fovJump = 0, camCarT = 0;
   for (const narrow of [false, true]) { let pp = null;

@@ -61,9 +61,10 @@ const STEER_RATE = 36 * Math.PI / 180;       // how fast the wheel is turned, ra
 
 // ---------- where things are (world metres, x east, z south) ----------
 const LANE_E = .9;                           // the eastbound lane of the aisle in front of the building: the south (right-hand) half, not the middle
-const TURN_N = 6.2, TURN_W = 5.6;            // radii of the left turn up the east road and the left turn into the back lot
+const TURN_N = 7.5, TURN_W = 5.6;            // radii of the left turn up the east road and the left turn into the back lot
 const LANE_Z = (STOP_LINE.z0 + STOP_LINE.z1) / 2;           // the lane of the back lot, the middle of the stop line
-const LANE_N = CONN_X + 1.0;                 // the northbound lane of the east road: its east (right-hand) half, not the middle
+const TURN_SHIFT = 1.0;                      // the left turn up the east road is made this far in from the lane (the nose swings out wide in it, toward the kerb); the car eases out to the lane on the straight after it
+const LANE_N = CONN_X + .4;                  // the northbound lane of the east road: its east (right-hand) half, but well in from the kerb on the right: the car's right side is 1.1 m from it (it was 0.5 m)
 const NOSE_STOP_X = STOP_LINE.x + .4;        // the nose stops this far short of the white line
 const LINE2_X = BAY_LINE.x + .4;             // and this far short of the second white line (the owner's blue line)
 const BLUE_X = BAY_LINE.x;
@@ -168,12 +169,12 @@ function pathLeg(start: Pose, ops: Op[], vMax: number, aAcc: number, aDec: numbe
     let y = Math.atan2(-(gz[b]! - gz[a]!), gx[b]! - gx[a]!); while (y - prev > Math.PI) y -= 2 * Math.PI; while (y - prev < -Math.PI) y += 2 * Math.PI;
     yaw[k] = y; prev = y;
   }
-  if (v0 > 0) {   // carrying on from a moving car: the first metres are pinned to the car's own position and heading, the correction fading out over 2 m
+  {   // the first metres are pinned to the car's own position and heading (a car carrying on at speed, or one setting off from rest straight into a turn: the easing must not move it), the correction fading out over 2 m
     const ex = start.x - px[0]!, ez = start.z - pz[0]!; let ey = start.yaw - yaw[0]!; while (ey > Math.PI) ey -= 2 * Math.PI; while (ey < -Math.PI) ey += 2 * Math.PI;
     for (let k = 0; k <= N; k++) { const w = 1 - sstep(k * ds / 2); if (w <= 0) break; px[k]! += ex * w; pz[k]! += ez * w; yaw[k]! += ey * w; }
   }
   const W = Math.max(2, Math.round(.12 / ds));   // curvature from the heading change over about a quarter metre
-  for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; steer[k] = Math.atan(WB * kap[k]!) * sstep(Math.min(k, N - k) * ds / .6); }
+  for (let k = 0; k <= N; k++) { const a = Math.max(0, k - W), b = Math.min(N, k + W); kap[k] = b > a ? (yaw[b]! - yaw[a]!) / ((b - a) * ds) : 0; steer[k] = Math.atan(WB * kap[k]!) * sstep(Math.min(k, N - k) * ds / 1.1); }
   const pr = profile(N, ds, kap, Math.max(vMax, v0), aAcc, aDec, aLat, v0);
   return { N, ds, px, pz, yaw, steer, dir: 1, ...pr };
 }
@@ -244,12 +245,12 @@ function planFront(st: Stall) {
   rec.left = false; rec.right = false; rec.rev = false; rec.hold('EXIT_SHIFT_D', .8);
   // 2. forward: east along the aisle in its right-hand (south) half, left up the east road into its right-hand (east) half, left into the back lot, stop at the white line
   const p0 = rec.p, toLane = LANE_E - p0.z;   // the rear axle is on this z now, the eastbound lane is here: drift across it smoothly
-  const GAP = Math.min(22, (LANE_N - TURN_N - p0.x) * .8);                              // the distance over which the drift happens
-  const xTurn = LANE_N - TURN_N;
+  const GAP = Math.min(22, (LANE_N - TURN_SHIFT - TURN_N - p0.x) * .8);                              // the distance over which the drift happens
+  const xTurn = LANE_N - TURN_SHIFT - TURN_N;
   const zTurn = LANE_Z + TURN_W;               // the left turn into the back lot starts when the rear axle is this far from the lane (it is heading north)
   const lenAisle = xTurn - p0.x, lenNorth = (LANE_E - TURN_N) - zTurn;
   const stopRA = NOSE_STOP_X + NOSE, lenWest = (LANE_N - TURN_W) - stopRA;
-  const ops: Op[] = [{ k: 'S', len: GAP, dz: toLane }, { k: 'S', len: lenAisle - GAP }, { k: 'T', side: 1, r: TURN_N }, { k: 'S', len: lenNorth }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }];
+  const ops: Op[] = [{ k: 'S', len: GAP, dz: toLane }, { k: 'S', len: lenAisle - GAP }, { k: 'T', side: 1, r: TURN_N }, { k: 'S', len: 12, dx: TURN_SHIFT }, { k: 'S', len: lenNorth - 12 }, { k: 'T', side: 1, r: TURN_W }, { k: 'S', len: lenWest }];
   const fwd = pathLeg(p0, ops, 5.4, 1.5, 2.1, 2.0);
   // left blinker for each left turn: on 9 m before it, off 1.5 m after
   const lenTurn1 = TURN_N * Math.PI / 2, lenTurn2 = TURN_W * Math.PI / 2, s1 = lenAisle, sB = lenAisle + lenTurn1 + lenNorth;
@@ -381,7 +382,7 @@ function planBayBox(): Plan {
   rec.left = true; rec.hold('BOX_SIGNAL_L', 1.6);
   rec.steerTo('BOX_STEER_0', 0, 1.0);
   rec.hold('BOX_SHIFT_D', .8);
-  rec.run('BOX_PULL_OUT', pathLeg(rec.p, ex.ops, 3.6, 1.2, 1.6, 1.8), s => ({ left: s < ex.sOff, right: false }));
+  rec.run('BOX_PULL_OUT', pathLeg(rec.p, ex.ops, 3.6, 1.2, 1.6, 1.3), s => ({ left: s < ex.sOff, right: false }));
   rec.left = false; rec.hold('STOP_AT_BAY_LINE', 1.4);
   const b = bayReverse(rec);
   return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: { lineX: BAY_LINE.x, z0: b.z0, s1: b.s1, s3: b.s3, xB: b.xB, endCentre: bayEndCentre(rec), box: { d: ex.d, r: ex.r, a1: ex.a1, s: ex.s, gap: ex.gap } } };
@@ -469,7 +470,7 @@ function exitOps(from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' |
 /** The drive itself: along the route to a full stop at the stop sign (right signal on), a pause, then the right turn onto the street and away, cut where the car leaves the scene. */
 function exitDrive(rec: Rec, from: Pose, prefix: Op[] = [], prefixSig?: (s: number) => 'L' | 'R' | null, v0 = 0): Plan {
   const o = exitOps(from, prefix, prefixSig), laneX = EXIT.laneX;
-  rec.run('OUT_TO_STOP', pathLeg(rec.p, o.ops, 7.5, 1.5, 2.2, 2.0, 1.4, v0), o.sig);
+  rec.run('OUT_TO_STOP', pathLeg(rec.p, o.ops, 7.5, 1.5, 2.2, prefix.length ? 1.3 : 2.0, 1.4, v0), o.sig);   // (a car that first has to leave the box or the bay takes those tight turns gently)
   rec.left = false; rec.right = true; rec.hold('OUT_STOP_SIGN', 2.6);       // a full stop at the sign, right signal flashing
   const p1 = rec.p, lenB = OUT_TURN_Z - p1.z, aB = OUT_R4 * Math.PI / 2, farX = OUT_CUT_X - 22;
   const legB = pathLeg(p1, [{ k: 'S', len: lenB }, { k: 'T', side: -1, r: OUT_R4 }, { k: 'S', len: (laneX - OUT_R4) - farX }], 7.5, 1.5, 2.2, 2.0);

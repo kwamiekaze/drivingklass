@@ -13,21 +13,43 @@ const LOCK_DEG = 450;
 /**
  * The wheel moves ONLY from the moment the car is at the second white line of the back lot (the signal before the parallel park or the reverse into the bay) to the end of the
  * left turn out of the bay. Before that (the front lot, the drive round, leaving the stall or the box) and after it (the straight back, the way out) it stays dead still, and as
- * soon as EXIT is pressed it eases back to centre and takes no more part.
+ * soon as EXIT is pressed it eases back to centre and takes no more part. (Leaving the parallel box comes before the second line, and is part of it.)
  */
+const BOX_STATES = ['BOX_SHIFT_R', 'BOX_STEER_R', 'BOX_REVERSE', 'BOX_STOP', 'BOX_SIGNAL_L', 'BOX_STEER_0', 'BOX_SHIFT_D', 'BOX_PULL_OUT'];   // out of the parallel box: the reverse with the wheel right, then forward with the wheel left
 const WHEEL_STATES = new Set<string>([
+  ...BOX_STATES,
   'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',   // the parallel park, from the line
   'BAY_SIGNAL_RIGHT', 'BAY_SHIFT_R', 'BAY_REVERSE', 'BAY_PARKED',                                                                                                                                                                        // the reverse into the bay, from the line
   'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP',                                                                                                                                                                              // the left turn out of the bay: the last of it
 ]);
-/** The states in which the words are shown: the steering of the parallel park and of the reverse into the bay (from the second white line). */
+/** The states in which the words are shown: into the parallel space, out of it, into the bay, out of the bay. */
 const CAPTION_STATES = new Set<string>([
+  ...BOX_STATES, 'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP',     // out of the parallel box, and out of the bay
   'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',
   'BAY_SIGNAL_RIGHT', 'BAY_SHIFT_R', 'BAY_REVERSE', 'BAY_PARKED',
 ]);
 /** What the caption says now ('' for none); written by SteeringLive, read by SteeringCaption. */
 const caption = { label: "" };
 type Hint = { dir: -1 | 0 | 1; label: string };
+/**
+ * The words for the wheel's present motion, named by where it is going (not by the next instant): FULL LEFT / FULL RIGHT when it goes to the stop, STRAIGHTEN when it goes to
+ * centre, TURN LEFT / TURN RIGHT for anything in between. A wheel that swings from one lock to the other in one go is just FULL LEFT or FULL RIGHT, never STRAIGHTEN on the way.
+ * Backing out of the parallel box with the wheel hard right is TURN RIGHT, as the owner asked.
+ */
+function wheelWords(state: string, steer: number, t: number, T: number): string {
+  // walk forward to where this motion ends: the next turning point of the wheel (or where it comes to rest)
+  let prev = steer, dest = steer, dir = 0;
+  for (let k = .1; k <= 3.2; k += .1) {
+    const s = parkCarAt(Math.min(T, t + k)).steer, d = s - prev;
+    if (dir === 0) { if (Math.abs(d) > .002) dir = Math.sign(d); }
+    else if (d * dir < .002) break;                                     // it has stopped, or turned back
+    prev = s; dest = s;
+  }
+  const m = Math.min(1, Math.abs(dest) / DMAX), side = dest > 0 ? "LEFT" : "RIGHT";
+  if (m < .08) return "STRAIGHTEN";
+  if (state === "BOX_STEER_R" || state === "BOX_REVERSE") return "TURN " + side;
+  return (m > .85 ? "FULL " : "TURN ") + side;
+}
 const NONE: Hint = { dir: 0, label: "" };
 export function SteeringLive() {
   const host = useRef<HTMLSpanElement>(null);
@@ -42,9 +64,9 @@ export function SteeringLive() {
       let steer = 0, ahead = 0;
       const kindOk = run && !park.exitPending && (park.kind === "parallel" || park.kind === "bay" || park.kind === "turn");
       const c0 = kindOk ? parkCarAt(Math.min(park.t, T)) : null, live = !!c0 && WHEEL_STATES.has(c0.state);
-      let words = false;
-      if (live && c0) { steer = c0.steer; ahead = parkCarAt(Math.min(park.t + .3, T)).steer; words = (park.kind === "parallel" || park.kind === "bay") && CAPTION_STATES.has(c0.state); }
-      const target = -steer / DMAX * LOCK_DEG;                            // left (positive steer) turns the wheel counter-clockwise
+      let words = false, label = "";
+      if (live && c0) { const state = c0.state; steer = c0.steer; words = CAPTION_STATES.has(state); label = wheelWords(state, steer, park.t, T); ahead = parkCarAt(Math.min(park.t + .3, T)).steer; }   // (parkCarAt reuses one object: read it before the next call)
+      const target = -Math.max(-1, Math.min(1, steer / DMAX)) * LOCK_DEG;                            // left (positive steer) turns the wheel counter-clockwise
       if (!live && !park.exitPending) deg = 0;                           // outside the allowed window the wheel is simply still
       else { deg += (target - deg) * (1 - Math.exp(-16 * dt)); if (Math.abs(target - deg) < .05) deg = target; }   // (EXIT pressed: it eases back to centre)
       img.style.transform = Math.abs(deg) < .01 ? "" : `rotate(${deg.toFixed(2)}deg)`;
@@ -52,7 +74,7 @@ export function SteeringLive() {
       if (wrap.dataset.turn !== (turning ? "on" : "off")) wrap.dataset.turn = turning ? "on" : "off";
       // which way are the hands moving? (over the next 0.3 s; held on screen for a moment so a short turn is still read)
       const d = ahead - steer; let h = NONE;
-      if (live && Math.abs(d) > .012) h = { dir: d > 0 ? 1 : -1, label: Math.abs(ahead) < Math.abs(steer) ? "STRAIGHTEN" : d > 0 ? "TURN LEFT" : "TURN RIGHT" };
+      if (live && Math.abs(d) > .012) h = { dir: d > 0 ? 1 : -1, label };
       if (h.dir !== 0) { shown = h; hold = .45; } else if (hold > 0) { hold -= dt; } else shown = NONE;
       caption.label = words ? shown.label : "";
       const key = shown.dir + "|" + shown.label; if (key !== lastKey) { lastKey = key; setHint(shown); }
