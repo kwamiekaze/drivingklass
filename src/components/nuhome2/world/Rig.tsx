@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { FOV, PAN, STAGES, type Stop, type V3 } from './views';
-import { SOLIDS, clearance, GROUND } from './colliders';
+import { OrbitGuard } from './orbitGuard';
 import { T_END, T_DRIVE, T_GO, carMoving, intro, introAt, parkCarNow, releaseCar } from './intro';
 import { usableShots, type Shot } from './shots';
 import { cinema, stopReel } from './reel';
@@ -42,7 +42,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
   if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? Number(q.get('introFrom') ?? 0); intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'), from = q.get('parkFrom'); if (from === 'box') park.loc = 'box'; if (from === 'entry') park.loc = 'entry'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = from === 'entry' || from === 'box' || from === 'bay' || from === 'line' || from === 'front' ? from : 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' || pk === 'enter' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
   const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
-  const panClock = useRef(0), first = useRef(true), snapped = useRef(false), dir = useRef(1), done = useRef(false);
+  const panClock = useRef(0), first = useRef(true), snapped = useRef(false), guard = useRef(new OrbitGuard()), dragging = useRef(false), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
   const C = useMemo(() => ({ pp: curve(PAN.p), pl: curve(PAN.l) }), []);
   const fovNow = narrow ? FOV.narrow : FOV.wide;
@@ -66,8 +66,9 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   useEffect(() => {
     if (!controls) return;
     const grab = () => { if (mode.current === 'intro') releaseCar(); stopReel(); if (mode.current !== 'free') mode.current = 'free'; };   // the parking drive carries on by its own clock
-    controls.addEventListener('start', grab);
-    return () => controls.removeEventListener('start', grab);
+    const down = () => { dragging.current = true; }, up = () => { dragging.current = false; };
+    controls.addEventListener('start', grab); controls.addEventListener('start', down); controls.addEventListener('end', up);
+    return () => { controls.removeEventListener('start', grab); controls.removeEventListener('start', down); controls.removeEventListener('end', up); };
   }, [controls]);
 
   // The opening's clock is ticked before everything else every frame (negative priority) from a smoothed frame time, and it is held until the
@@ -105,12 +106,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) { if (mode.current === 'intro') releaseCar(); cinema.auto = false; stopReel(); mode.current = 'park'; }
     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) parkFrom.current = { p: camera.position.clone(), l: controls.target.clone(), fov: (camera as THREE.PerspectiveCamera).fov, seq: park.seq };
     const m = mode.current;
-    controls.autoRotate = m === 'free' && !reducedMotion && !hasCam;
-    if (controls.autoRotate) {
-      const a = controls.getAzimuthalAngle();
-      if (Math.abs(a) < 1.5) { if (a < -.85) dir.current = -1; else if (a > .85) dir.current = 1; }
-      controls.autoRotateSpeed = .42 * dir.current;
-    }
+    if (m !== 'free') controls.autoRotate = false;                              // (in free mode the orbit guard decides, below)
     const glide = (p: THREE.Vector3) => { p.x += Math.sin(time * .9) * .03; p.y += Math.sin(time * .7 + 1) * .025; p.z += Math.sin(time * .8 + 2) * .03; };
     const fovTo = (f: number, k = .08) => { if (Math.abs(persp.fov - f) > .01) { persp.fov += (f - persp.fov) * k; persp.updateProjectionMatrix(); } };
     if (m === 'intro') {
@@ -153,14 +149,8 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       if (camera.position.distanceTo(tp.current) < .06) mode.current = 'free';
     } else {
       controls.target.y += Math.sin(time * .35) * .0012;
-      // the lens never goes into anything solid or under the ground, however the visitor orbits
-      const cp = camera.position; if (cp.y < GROUND) cp.y = GROUND;
-      for (const sd of SOLIDS) {
-        if (sd.k === 'wire') continue;
-        const d = clearance(sd, [cp.x, cp.y, cp.z]); if (d >= .45) continue;
-        if (sd.k === 'cyl') { const dx = cp.x - sd.x, dz = cp.z - sd.z, h = Math.hypot(dx, dz) || 1e-3; if (cp.y > sd.y1 - .3 || cp.y < sd.y0 + .05) cp.y = cp.y > (sd.y0 + sd.y1) / 2 ? sd.y1 + .5 : Math.max(GROUND, sd.y0 - .5); else { cp.x = sd.x + (dx / h) * (sd.r + .5); cp.z = sd.z + (dz / h) * (sd.r + .5); } }
-        else { const c = [(sd.min[0] + sd.max[0]) / 2, (sd.min[1] + sd.max[1]) / 2, (sd.min[2] + sd.max[2]) / 2], e = [(sd.max[0] - sd.min[0]) / 2 + .5, (sd.max[1] - sd.min[1]) / 2 + .5, (sd.max[2] - sd.min[2]) / 2 + .5], dd = [cp.x - c[0]!, cp.y - c[1]!, cp.z - c[2]!], ax = [0, 1, 2].reduce((best, i) => (e[i]! - Math.abs(dd[i]!) < e[best]! - Math.abs(dd[best]!) ? i : best), 0); const sign = dd[ax]! >= 0 ? 1 : -1; if (ax === 0) cp.x = c[0]! + sign * e[0]!; else if (ax === 1) cp.y = c[1]! + sign * e[1]!; else cp.z = c[2]! + sign * e[2]!; }
-      }
+      // the lens never goes into anything solid or under the ground, and never sits pressed against one: the slow orbit looks ahead and turns round before it gets there, a hand that pushes into something is pushed out and rebounds (orbitGuard.ts)
+      guard.current.frame(camera.position, controls, dt, { auto: !reducedMotion && !hasCam, drag: dragging.current });
     }
     if (!done.current && m !== 'intro') { done.current = true; onIntroDone(); }
     if (skyAnchor.current) skyAnchor.current.position.set(camera.position.x, 0, camera.position.z);

@@ -32,7 +32,7 @@ function faceTexture(kind: 'exit' | 'entrance') {
 export function LotSign({ kind }: { kind: 'exit' | 'entrance' }) {
   const mix = useContext(NightCtx), g = LOT_SIGNS[kind];
   const tex = useMemo(() => faceTexture(kind), [kind]);
-  const face = useMemo(() => new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: '#ffffff', emissiveIntensity: .05, roughness: .4, metalness: .1 }), [tex]);
+  const face = useMemo(() => new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: '#ffffff', emissiveIntensity: .05, roughness: .4, metalness: .1, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), [tex]);
   const board = useMemo(() => new THREE.MeshStandardMaterial({ color: '#0a2a66', roughness: .45, metalness: .35 }), []);
   const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: '#8d9198', roughness: .45, metalness: .75 }), []);
   useFrame(() => { face.emissiveIntensity = .05 + .5 * mix.current; });
@@ -40,7 +40,7 @@ export function LotSign({ kind }: { kind: 'exit' | 'entrance' }) {
   return <group position={[g.x, 0, g.z]} rotation-y={g.rotY}>
     {[-POLE_DX, POLE_DX].map(x => <mesh key={x} position={[x, POLE_H / 2, -.06]} material={metal} castShadow><cylinderGeometry args={[.045, .05, POLE_H, 12]} /></mesh>)}
     <mesh position={[0, Y, 0]} material={board} castShadow><boxGeometry args={[W, H, .07]} /></mesh>
-    <mesh position={[0, Y, .037]} material={face}><planeGeometry args={[W - .05, H - .05]} /></mesh>
+    <mesh position={[0, Y, .045]} material={face} renderOrder={1}><planeGeometry args={[W - .05, H - .05]} /></mesh>
     {[-POLE_DX, POLE_DX].flatMap(x => [Y + H * .3, Y - H * .3].map(y => <mesh key={`${x}${y}`} position={[x, y, -.05]} material={metal}><boxGeometry args={[.07, .06, .04]} /></mesh>))}
   </group>;
 }
