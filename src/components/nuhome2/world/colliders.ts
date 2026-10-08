@@ -36,10 +36,10 @@ export const SOLIDS: Solid[] = [
   // the back lot: every cone of the training layout, and its four lamps
   ...BL_CONES.map(([x, z]) => cyl('cone', x, z, CONE_R, 0, CONE_H)),
   ...[[-18, BL.zn + 1.1], [12, BL.zn + 1.1], [-27.6, -21], [27.6, -21]].map(([x, z]) => cyl('back lot lamp', x!, z!, .3, 0, 8.4)),
-  // the EXIT and ENTRANCE signs: two poles and the board each (the board lies along z for the exit sign, which faces east, and along x for the entrance sign, which faces south)
-  ...(['exit', 'entrance'] as const).flatMap(k => { const g = LOT_SIGNS[k], al = Math.abs(Math.sin(g.rotY)) > .5 ? 'z' : 'x', hw = LOT_SIGN.W / 2, t = .08;
-    return [-1, 1].map(sg => cyl(k + ' sign pole', g.x + (al === 'x' ? sg * LOT_SIGN.POLE_DX : 0), g.z + (al === 'z' ? sg * LOT_SIGN.POLE_DX : 0), .06, 0, LOT_SIGN.POLE_H))
-      .concat([al === 'z' ? box(k + ' sign', g.x - t, g.x + t, LOT_SIGN.Y - LOT_SIGN.H / 2, LOT_SIGN.Y + LOT_SIGN.H / 2, g.z - hw, g.z + hw) : box(k + ' sign', g.x - hw, g.x + hw, LOT_SIGN.Y - LOT_SIGN.H / 2, LOT_SIGN.Y + LOT_SIGN.H / 2, g.z - t, g.z + t)]); }),
+  // the EXIT and ENTRANCE signs: two poles and the board each (the board is turned by rotY, so its box is the bounding box of the turned board)
+  ...(['exit', 'entrance'] as const).flatMap(k => { const g = LOT_SIGNS[k], c = Math.cos(g.rotY), sn = Math.sin(g.rotY), hw = LOT_SIGN.W / 2, t = .04, hx = Math.abs(c) * hw + Math.abs(sn) * t, hz = Math.abs(sn) * hw + Math.abs(c) * t;
+    return [-1, 1].map(sg => cyl(k + ' sign pole', g.x + sg * LOT_SIGN.POLE_DX * c, g.z - sg * LOT_SIGN.POLE_DX * sn, .06, 0, LOT_SIGN.POLE_H))
+      .concat([box(k + ' sign', g.x - hx, g.x + hx, LOT_SIGN.Y - LOT_SIGN.H / 2, LOT_SIGN.Y + LOT_SIGN.H / 2, g.z - hz, g.z + hz)]); }),
 ];
 /** The sagging star strings, so the camera can keep clear of them. */
 for (let i = 0; i < WIRE_POLES.length - 1; i++) SOLIDS.push({ n: 'star string', k: 'wire', a: WIRE_POLES[i]!, b: WIRE_POLES[i + 1]! });

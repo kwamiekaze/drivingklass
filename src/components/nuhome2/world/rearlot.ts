@@ -37,13 +37,14 @@ export const BAY = { xW: bx(366), xE: bx(476), zEnd: bz(83), zOpen: bz(315) };
 export const EXIT = { laneX: -(CONN_X + .5), zBar: 15.3, zNose: 14.75, signX: -35.9, signZ: 15.0 };
 
 /**
- * The two guide signs of the back lot, at the south edge of the lot beside the mouth of each road (world metres; rotY turns the board about the vertical: 0 faces south, +PI/2 faces east).
- *   exit      at the west road: faces east, toward the cars that drive west along the back of the building, its arrow points left (south) to the left turn onto the west road
- *   entrance  at the east road: faces south, toward the cars that come up the east road, its arrow points up (north) into the lot
+ * The two guide signs of the back lot, each standing in the grass (world metres; rotY turns the board about the vertical: 0 faces south, +PI/2 faces east).
+ *   exit      on the lawn just west of the lot's west kerb, level with the end of the lane that runs along the back of the building: it faces east, toward the cars driving west,
+ *             and its arrow points left (south), the way the road out runs
+ *   entrance  in the grass inside the corner where the east road meets the lot's south kerb: it faces south-east, toward the cars coming up the east road, its arrow points up (north) into the lot
  * The board is W by H, its middle at height Y; two poles hold it.
  */
 export const LOT_SIGN = { W: 2.0, H: .85, Y: 2.15, POLE_H: 2.6, POLE_DX: .7 };
 export const LOT_SIGNS = {
-  exit: { x: -23.6, z: -26.6, rotY: Math.PI / 2 },
-  entrance: { x: 27.2, z: -26.7, rotY: 0 },
+  exit: { x: -36.9, z: -26.1, rotY: Math.PI / 2 },
+  entrance: { x: 27.2, z: -25.15, rotY: Math.PI / 4 },
 };

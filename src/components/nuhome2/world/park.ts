@@ -427,7 +427,7 @@ function planBack(): Plan {
   rec.hold('BACK_SHIFT_R', 1.6);
   rec.rev = true; rec.hold('BACK_SHIFT_R', .6);
   rec.run('BACK_REVERSE', kinLeg(rec.p, -1, start.x - xEnd, () => 0, 1.1, .35, .5));
-  rec.rev = false; rec.hold('BACK_DONE', 5);      // (the lens swings to the EXIT sign meanwhile: parkcam.ts)
+  rec.rev = false; rec.hold('BACK_DONE', 6.5);    // (the lens swings to the EXIT sign meanwhile: parkcam.ts)
   return { s: rec.s, T: rec.t, marks: rec.marks, ends: rec.ends, end: rec.p, setup: null, bay: null };
 }
 

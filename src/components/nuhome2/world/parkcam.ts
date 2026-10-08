@@ -83,10 +83,10 @@ function buildShots(narrow: boolean, mode: ParkMode) {
     const tDone = M.BACK_DONE!, sg = LOT_SIGNS.exit, sy = LOT_SIGN.Y - .1;
     shots.push(
       // K1. high, looking along the lane: the car backs slowly west toward the line
-      { to: tDone + 1.0, h: 2.4, at: ({ c }) => narrow ? { p: [c.x + 17, 30, -41], l: [c.x - 11, 0, -41], fov: FOV(44) } : { p: [c.x - 8, 24, -33], l: [c.x - 6, .3, c.z - .5], fov: FOV(44) } },
+      { to: tDone + 1.4, h: 3.0, at: ({ c }) => narrow ? { p: [c.x + 17, 30, -41], l: [c.x - 11, 0, -41], fov: FOV(44) } : { p: [c.x - 8, 24, -33], l: [c.x - 6, .3, c.z - .5], fov: FOV(44) } },
       // K2. the car has come to rest: the lens glides over the lot to the EXIT sign at the west road and settles on it (the long blend into this shot does the travelling), so the
       //     visitor sees where the way out is; the EXIT button is offered now
-      { to: T, at: ({ u }) => ({ p: mix3(narrow ? [-12.5, 6.6, -31.6] : [-12.5, 6.2, -32], narrow ? [-13.3, 6.5, -31.3] : [-13.3, 6.1, -31.7], sstep(u)), l: [sg.x - .4, sy - .35, sg.z - .2], fov: FOV(narrow ? 36 : 34) }) },
+      { to: T, at: ({ u }) => { const k = sstep(u), d: V3 = narrow ? [15, 4.6, -5.6] : [13.5, 4.2, -5.2]; return { p: mix3([sg.x + d[0], sy + d[1], sg.z + d[2]], [sg.x + d[0] - .9, sy + d[1] - .2, sg.z + d[2] + .3], k), l: [sg.x, sy - .3, sg.z], fov: FOV(narrow ? 36 : 34) }; } },
     );
   } else if (mode.startsWith('exit')) {
     // (the way out, from wherever the car starts: in the front lot the shots above have already brought it to the back lot's stop line)
