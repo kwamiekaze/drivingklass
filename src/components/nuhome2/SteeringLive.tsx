@@ -10,6 +10,16 @@ import { DMAX, park, parkCarAt, parkTotal } from "./world/park";
  * well clear of the slogan. Mounted inside .n2-hdr-wheelwrap; it reads park.ts a frame at a time.
  */
 const LOCK_DEG = 450;
+/**
+ * The wheel moves ONLY from the moment the car is at the second white line of the back lot (the signal before the parallel park or the reverse into the bay) to the end of the
+ * left turn out of the bay. Before that (the front lot, the drive round, leaving the stall or the box) and after it (the straight back, the way out) it stays dead still, and as
+ * soon as EXIT is pressed it eases back to centre and takes no more part.
+ */
+const WHEEL_STATES = new Set<string>([
+  'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',   // the parallel park, from the line
+  'BAY_SIGNAL_RIGHT', 'BAY_SHIFT_R', 'BAY_REVERSE', 'BAY_PARKED',                                                                                                                                                                        // the reverse into the bay, from the line
+  'TURN_SIGNAL', 'TURN_SHIFT_D', 'TURN_DRIVE', 'TURN_STOP',                                                                                                                                                                              // the left turn out of the bay: the last of it
+]);
 /** The states in which the words are shown: the steering of the parallel park and of the reverse into the bay (from the second white line). */
 const CAPTION_STATES = new Set<string>([
   'SIGNAL_RIGHT', 'SHIFT_TO_REVERSE', 'REVERSE_STRAIGHT_1', 'STOP_AT_BLACK_LINE', 'STEER_FULL_RIGHT', 'REVERSE_FULL_RIGHT', 'STRAIGHTEN_1', 'REVERSE_STRAIGHT_2', 'STEER_FULL_LEFT', 'REVERSE_FULL_LEFT', 'STRAIGHTEN_2', 'FINAL_ALIGNMENT', 'PARKED',
@@ -30,11 +40,13 @@ export function SteeringLive() {
       const dt = Math.min(.05, (now - last) / 1000); last = now;
       const run = park.phase === "run", T = parkTotal();
       let steer = 0, ahead = 0;
-      const live = run && park.kind !== "back" && park.kind !== "exit";                  // after the left turn out of the bay the wheel is still
+      const kindOk = run && !park.exitPending && (park.kind === "parallel" || park.kind === "bay" || park.kind === "turn");
+      const c0 = kindOk ? parkCarAt(Math.min(park.t, T)) : null, live = !!c0 && WHEEL_STATES.has(c0.state);
       let words = false;
-      if (live) { const c = parkCarAt(Math.min(park.t, T)); steer = c.steer; ahead = parkCarAt(Math.min(park.t + .3, T)).steer; words = (park.kind === "parallel" || park.kind === "bay") && CAPTION_STATES.has(c.state); }
+      if (live && c0) { steer = c0.steer; ahead = parkCarAt(Math.min(park.t + .3, T)).steer; words = (park.kind === "parallel" || park.kind === "bay") && CAPTION_STATES.has(c0.state); }
       const target = -steer / DMAX * LOCK_DEG;                            // left (positive steer) turns the wheel counter-clockwise
-      deg += (target - deg) * (1 - Math.exp(-16 * dt)); if (Math.abs(target - deg) < .05) deg = target;
+      if (!live && !park.exitPending) deg = 0;                           // outside the allowed window the wheel is simply still
+      else { deg += (target - deg) * (1 - Math.exp(-16 * dt)); if (Math.abs(target - deg) < .05) deg = target; }   // (EXIT pressed: it eases back to centre)
       img.style.transform = Math.abs(deg) < .01 ? "" : `rotate(${deg.toFixed(2)}deg)`;
       const turning = Math.abs(deg) > 3;
       if (wrap.dataset.turn !== (turning ? "on" : "off")) wrap.dataset.turn = turning ? "on" : "off";
