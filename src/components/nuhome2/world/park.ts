@@ -281,9 +281,9 @@ function parallelTail(rec: Rec): Plan {
   rec.run('REVERSE_FULL_RIGHT', kinLeg(rec.p, -1, R * solved1.phi1, () => -DMAX, .85, .4, .7));
   rec.rev = false; rec.hold('REVERSE_FULL_RIGHT', .9);
   rec.rev = true; rec.steerTo('STRAIGHTEN_1', 0, 1.2);
+  rec.right = false;                                                  // the wheel is straight again after full right: the right signal cancels itself, as it does in a real car
   rec.run('REVERSE_STRAIGHT_2', kinLeg(rec.p, -1, solved1.s2, () => 0, .9, .4, .7));
   rec.rev = false; rec.hold('REVERSE_STRAIGHT_2', 1.0);
-  rec.right = false;                                                  // the car turns LEFT now to swing into the space: the right signal goes off as the wheel goes left
   rec.rev = true; rec.steerTo('STEER_FULL_LEFT', DMAX, 1.4);
   rec.run('REVERSE_FULL_LEFT', kinLeg(rec.p, -1, R * solved1.phi2, () => DMAX, .85, .4, .7));
   rec.rev = false; rec.hold('REVERSE_FULL_LEFT', .9);
@@ -323,7 +323,7 @@ function bayReverse(rec: Rec) {
   rec.rev = false; rec.left = false; rec.right = false; rec.hold('BAY_PARKED', 3);
   return { s1: s0, s3, xB, z0: p.z };
 }
-const BAY_SIGNAL_OFF = 1.3;                   // the right signal goes off this far after the wheel is straight again: the car is straight and its whole body is in the bay
+const BAY_SIGNAL_OFF = 0;                     // the right signal goes off the instant the wheel is straight again
 const bayEndCentre = (rec: Rec): [number, number] => [rec.p.x + RA * Math.cos(rec.p.yaw), rec.p.z - RA * Math.sin(rec.p.yaw)];
 
 /** The bay, from the stall: the same drive round to the stop line, then straight on to the second white line, then the reverse. */

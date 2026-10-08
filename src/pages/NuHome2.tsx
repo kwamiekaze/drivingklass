@@ -7,7 +7,7 @@ import { PackagesPopup } from "@/components/nuhome2/PackagesPopup";
 import { MessagePopup } from "@/components/nuhome2/MessagePopup";
 import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
 import { ExitSign } from "@/components/nuhome2/ExitSign";
-import { SteeringLive } from "@/components/nuhome2/SteeringLive";
+import { SteeringLive, SteeringCaption } from "@/components/nuhome2/SteeringLive";
 import { ParkingSign } from "@/components/nuhome2/ParkingSign";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
@@ -204,6 +204,7 @@ export default function NuHome2() {
           </div>
         </header>
         <ExitSign />
+        <SteeringCaption />
         <ParkingSign />
 
         <div className="n2-hero" data-hidden={stage !== 0}>

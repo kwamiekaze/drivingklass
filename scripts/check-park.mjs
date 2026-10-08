@@ -82,7 +82,8 @@ for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
   const sigAt = (t) => ({ ...parkCarAt(t) });
   const always = (t0, t1, pred, what) => { for (let t = t0; t <= t1; t += 1 / 30) if (!pred(sigAt(t))) { bad.push(`${what} at t=${t.toFixed(1)}`); return; } };
   if (par) {
-    always(M.SIGNAL_RIGHT + .1, M.STEER_FULL_LEFT, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup until the left swing into the space');
+    always(M.SIGNAL_RIGHT + .1, E.STRAIGHTEN_1 - .05, c => c.right && !c.left, 'parallel park: the right signal only, never the left, from the setup until the wheel is straight again after full right');
+    always(E.STRAIGHTEN_1 + .03, T, c => !c.right && !c.left, 'parallel park: no signal once the wheel is straight again (it cancels itself)');
     always(M.STEER_FULL_LEFT + .05, T, c => !c.right && !c.left, 'parallel park: NO signal once the car turns left into the space');
     always(M.STOP_AT_ENTRY_LINE, M.SIGNAL_RIGHT - .1, c => !c.left && !c.right, 'no signal between the stop line and the setup');
   } else if (mode === 'enterStall' || mode === 'enterLive') {
@@ -124,7 +125,7 @@ for (const [mode, id, st, liveAt] of runs.filter(r => !ONLY || r[0] === ONLY)) {
     // the right signal goes off when the car is straight in the bay (the owner's screenshot): wheels straight, heading south, the whole body inside the lines
     { const tOff = first(c => c.state === 'BAY_REVERSE' && !c.right); if (tOff === null) bad.push('bay: right signal never goes off before the end'); else { const c = { ...parkCarAt(tOff) }; const csx = Math.cos(c.yaw), snx = Math.sin(c.yaw);
         if (Math.abs(wrapA(c.yaw - 1.5 * Math.PI)) > .02 || Math.abs(c.steer) > .02) bad.push(`bay: signal off while the car is not straight (yaw ${(c.yaw * 180 / Math.PI).toFixed(1)}, steer ${(c.steer * 180 / Math.PI).toFixed(1)})`);
-        for (const [a, b] of [[L / 2, 1], [L / 2, -1], [-L / 2, 1], [-L / 2, -1]]) { const wx = c.x + a * csx - b * snx, wz = c.z - a * snx - b * csx; if (wz > BAY.zOpen || wx < BAY.xW || wx > BAY.xE) bad.push('bay: signal off before the whole car is inside the bay'); }
+        // (the right signal goes off the instant the wheel is straight, so the body need not be inside the lines yet)
         always(tOff, T, cc => !cc.right && !cc.left, 'bay: no signal after it goes off'); } }
     if (mode === 'bayBox') {
       // pulling out of the parallel box: NO right signal at any time
