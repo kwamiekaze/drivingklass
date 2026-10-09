@@ -91,11 +91,12 @@ export function wheelMatrix(out: THREE.Matrix4, centre: THREE.Vector3, up: THREE
 }
 
 /** Materials shared by every wheel: tyre rubber is plain black (no texture, almost no reflection), the rim a dark graphite metal. */
-let rubberMat: THREE.MeshStandardMaterial | null = null, rimMat: THREE.MeshStandardMaterial | null = null;
+let rubberMat: THREE.MeshStandardMaterial | null = null, rimMat: THREE.MeshStandardMaterial | null = null, linerMat: THREE.MeshBasicMaterial | null = null;
 export function wheelMaterials() {
   rubberMat ??= new THREE.MeshStandardMaterial({ color: '#070708', roughness: .86, metalness: 0, envMapIntensity: .08 });
   rimMat ??= new THREE.MeshStandardMaterial({ color: '#2b2c31', roughness: .38, metalness: .85, envMapIntensity: .55 });
-  return { rubber: rubberMat, rim: rimMat };
+  linerMat ??= new THREE.MeshBasicMaterial({ color: '#050506', side: THREE.BackSide });
+  return { rubber: rubberMat, rim: rimMat, liner: linerMat };
 }
 
 /**

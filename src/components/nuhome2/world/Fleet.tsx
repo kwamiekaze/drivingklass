@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
 import { NightCtx } from './theme';
-import { splitWheels, buildWheel, type WheelFit, type WheelSplit } from './wheelsplit';
+import { splitWheels, buildWheel, wheelMaterials, type WheelFit, type WheelSplit } from './wheelsplit';
 
 /*
  * The DrivingKlass fleet: one premium fastback sedan, generated in Higgsfield from the reference car, shown five times
@@ -51,6 +51,8 @@ export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFlee
 
 /** What the car is doing with its wheels, written by whoever drives it: the road-wheel angle (radians, left positive) and the distance rolled forward (metres, signed). */
 export type WheelState = { steer: number; dist: number };
+/** The car rides this far above the road: the tyres sit ON the street paint (stop bars, crosswalk, lines are 3 to 5 cm above the tarmac), never cutting through it. */
+const LIFT = .05;
 const splitCache = new Map<string, WheelSplit | null>();
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
@@ -382,6 +384,10 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
       const w = Math.min(.3, Math.max(.2, part.z1 - part.z0)), zc = part.z1 - w / 2;
       const pivot = new THREE.Group(), spin = new THREE.Group(); pivot.position.set(cx * fit, cy * fit, part.side * zc * fit);
       spin.add(buildWheel(cr * fit * 1.0, w * fit, lite)); pivot.add(spin); out.group.add(pivot);
+      // a dark liner round the wheel hole the cut leaves in the body, so the road (and crosswalk paint) never shows through the gap beside a turned tyre
+      const lz0 = part.z1, lz1 = Math.max(.12, part.z0 - .2), len = (lz0 - lz1) * fit;
+      const liner = new THREE.Mesh(new THREE.CylinderGeometry(cr * fit * 1.045, cr * fit * 1.045, len, lite ? 24 : 40, 1, true), wheelMaterials().liner);
+      liner.rotation.x = Math.PI / 2; liner.position.set(cx * fit, cy * fit, part.side * ((lz0 + lz1) / 2) * fit); out.group.add(liner);
       out.w.push({ pivot, spin, front: part.posAxle === (nz > 0), r: cr * fit });
     }
     return out;
@@ -398,6 +404,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
   return <group position={position} rotation-y={rotationY}>
     <group rotation-y={nz > 0 ? 0 : Math.PI}>
       <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * fit * 1.22, P.W * fit * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
+      <group position-y={LIFT}>
       <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
       <primitive object={rig.group} />
       {plateMat && <>
@@ -406,6 +413,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
       </>}
       <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
       {sig && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={sig} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={sig} />)}
+      </group>
     </group>
   </group>;
 }
