@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
 import { NightCtx } from './theme';
+import { splitWheels, wheelMatrix, type WheelFit, type WheelSplit } from './wheelsplit';
 
 /*
  * The DrivingKlass fleet: one premium fastback sedan, generated in Higgsfield from the reference car, shown five times
@@ -29,8 +30,8 @@ export const fleetFiles = (id: string) => (IMPORTED_FLEET as Record<string, Impo
 /** The real lamps of a Meshy car, measured on the model in car space (metres, nose +x, up +y). Centre and half size of the lamp on the car's right (+z); the left lamp is its mirror. Lets the turn signal light the car's own headlight and tail light. */
 type LampBox = [cx: number, cy: number, cz: number, hx: number, hy: number, hz: number];
 type Lamps = { front: LampBox; rear: LampBox };
-type ImportedFleetAsset = { full: string; lite: string; length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number };   // length: metres, flip: model nose guess is wrong, roofX: topper position along the car (fraction of length from the middle)
-const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number } = {}): ImportedFleetAsset => ({
+type ImportedFleetAsset = { full: string; lite: string; wheels?: WheelFit; length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number };   // length: metres, flip: model nose guess is wrong, roofX: topper position along the car (fraction of length from the middle)
+const asset = (name: string, o: { wheels?: WheelFit; length?: number; flip?: boolean; roofX?: number; lamps?: Lamps; plateRy?: number } = {}): ImportedFleetAsset => ({
   full: `${import.meta.env.BASE_URL}models/${name}.glb`,
   lite: `${import.meta.env.BASE_URL}models/${name}-lite.glb`,
   ...o,
@@ -38,15 +39,20 @@ const asset = (name: string, o: { length?: number; flip?: boolean; roofX?: numbe
 
 /** The three Meshy cars selected for the new homepage. Their baked paint and surface detail are preserved. */
 export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFleetAsset>> = {
-  corolla: asset('dk-meshy-future-ev', { lamps: { front: [2.1, .62, .7, .26, .13, .24], rear: [-2.12, .8, .7, .24, .1, .22] } }),
-  elantra: asset('dk-meshy-red-sport', { lamps: { front: [2.1, .66, .7, .26, .13, .22], rear: [-2.12, .8, .66, .26, .12, .24] } }),
+  corolla: asset('dk-meshy-future-ev', { wheels: { pos: [1.41, .4, .4], neg: [-1.65, .39, .39] },  lamps: { front: [2.1, .62, .7, .26, .13, .24], rear: [-2.12, .8, .7, .24, .1, .22] } }),
+  elantra: asset('dk-meshy-red-sport', { wheels: { pos: [1.33, .38, .38], neg: [-1.49, .34, .34] },  lamps: { front: [2.1, .66, .7, .26, .13, .22], rear: [-2.12, .8, .66, .26, .12, .24] } }),
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
-  civic: asset('dk-meshy-matra-laser', { length: 4.4, lamps: { front: [-1.85, .58, .62, .26, .12, .22], rear: [1.88, .74, .62, .24, .1, .22] } }),
-  camry: asset('dk-meshy-vibranium', { length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
+  civic: asset('dk-meshy-matra-laser', { wheels: { pos: [1.59, .43, .43], neg: [-1.37, .42, .42] },  length: 4.4, lamps: { front: [-1.85, .58, .62, .26, .12, .22], rear: [1.88, .74, .62, .24, .1, .22] } }),
+  camry: asset('dk-meshy-vibranium', { wheels: { pos: [1.27, .34, .34], neg: [-1.53, .41, .41] },  length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
   // the black and orange striped sports car (Meshy, "high detail"); its model faces the other way, so its lamps are measured at -x (front) and +x (rear)
-  sentra: asset('dk-meshy-detail-sport', { length: 4.5, lamps: { front: [-1.88, .7, .69, .28, .13, .22], rear: [1.95, .78, .69, .24, .12, .22] } }),
-  hero: asset('dk-meshy-orange-sport', { length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
+  sentra: asset('dk-meshy-detail-sport', { wheels: { pos: [1.51, .38, .38], neg: [-1.47, .4, .4] },  length: 4.5, lamps: { front: [-1.88, .7, .69, .28, .13, .22], rear: [1.95, .78, .69, .24, .12, .22] } }),
+  hero: asset('dk-meshy-orange-sport', { wheels: { pos: [1.35, .37, .37], neg: [-1.41, .37, .37] },  length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
 };
+
+/** What the car is doing with its wheels, written by whoever drives it: the road-wheel angle (radians, left positive) and the distance rolled forward (metres, signed). */
+export type WheelState = { steer: number; dist: number };
+const splitCache = new Map<string, WheelSplit | null>();
+type Hung = { holder: THREE.Group; part: WheelSplit['wheels'][number]; centre: THREE.Vector3; up: THREE.Vector3; axle: THREE.Vector3; r: number };
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
 
@@ -323,15 +329,17 @@ function LampHalos({ lamps, u, signal }: { lamps: Lamps; u: LampUniforms; signal
 }
 
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
-function LoadedImported({ files, plate, position, rotationY, lite, signal }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean; signal?: { current: CarSignal } }) {
+function LoadedImported({ files, plate, position, rotationY, lite, signal, wheels }: { files: ImportedFleetAsset; plate?: string; position: [number, number, number]; rotationY: number; lite: boolean; signal?: { current: CarSignal }; wheels?: { current: WheelState } }) {
   const url = lite ? files.lite : files.full;
   const { scene } = useGLTF(url);
   const P = useMemo(() => { let p = prepared.get(url); if (!p) { p = prepare(scene.clone(true)); prepared.set(url, p); } return p; }, [scene, url]);
   const fit = files.length ? files.length / P.L : 1;   // this car's real-world length
   const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p: p.multiplyScalar(fit), q, sc: sc.multiplyScalar(fit) }; }, [P, fit]);
   const lampU = useMemo(() => (signal && files.lamps ? makeLampUniforms(files.lamps, new THREE.Matrix4().compose(xf.p, xf.q, xf.sc)) : null), [signal, files.lamps, xf]);
+  const hung = useRef<Hung[]>([]);
   const root = useMemo(() => {
     const r = scene.clone(true);
+    hung.current = [];
     const polish = (source: THREE.Material) => {
       const material = source.clone();
       if (material instanceof THREE.MeshStandardMaterial) {
@@ -348,9 +356,42 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal }: { f
       m.castShadow = !lite;
       m.receiveShadow = !lite;
     });
+    // turning wheels (wheelsplit.ts): only for the car that drives, and only if its wheels can be cut cleanly out of the file
+    if (wheels && files.wheels) {
+      let mesh: THREE.Mesh | null = null; r.traverse(o => { if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh; });
+      const src = mesh as THREE.Mesh | null;
+      if (src && src.geometry.index && !Array.isArray(src.material)) {
+        r.updateMatrixWorld(true);
+        const toCar = new THREE.Matrix4().copy(P.M).multiply(src.matrixWorld), key = url;
+        let sp = splitCache.get(key);
+        if (sp === undefined) { try { sp = splitWheels(src.geometry.getAttribute('position'), src.geometry.index.array, toCar, files.wheels); } catch { sp = null; } splitCache.set(key, sp); }
+        if (sp) {
+          const g = src.geometry, shareWith = (idx: Uint32Array) => { const o = new THREE.BufferGeometry(); for (const name of Object.keys(g.attributes)) o.setAttribute(name, g.getAttribute(name)); o.setIndex(new THREE.BufferAttribute(idx, 1)); o.computeBoundingSphere(); return o; };
+          src.geometry = shareWith(sp.body);
+          const inv = new THREE.Matrix4().copy(toCar).invert();
+          for (const part of sp.wheels) {
+            const pivot = new THREE.Group(); pivot.position.copy(src.position); pivot.quaternion.copy(src.quaternion); pivot.scale.copy(src.scale);
+            const holder = new THREE.Group(); holder.matrixAutoUpdate = false; pivot.add(holder);
+            const w = new THREE.Mesh(shareWith(part.idx), src.material); w.castShadow = src.castShadow; w.receiveShadow = src.receiveShadow; holder.add(w);
+            src.parent!.add(pivot);
+            const [cx, cy, cr] = part.posAxle ? files.wheels.pos : files.wheels.neg;
+            hung.current.push({ holder, part, centre: new THREE.Vector3(cx, cy, part.cz).applyMatrix4(inv), up: new THREE.Vector3(0, 1, 0).transformDirection(inv), axle: new THREE.Vector3(0, 0, 1).transformDirection(inv), r: cr });
+          }
+        }
+      }
+    }
     return r;
   }, [scene, lite, lampU]);
   const nz = (files.flip ? -1 : 1) * P.nose;
+  // the wheels follow what the driver says: the front pair steers, all four roll. (Axes and centres are the car's own, taken into the file's coordinates.)
+  const hm = useMemo(() => new THREE.Matrix4(), []);
+  useFrame(() => {
+    const st = wheels?.current; if (!st || !hung.current.length) return;
+    for (const h of hung.current) {
+      const front = h.part.posAxle === (nz > 0), steer = front ? st.steer : 0, spin = -nz * st.dist / (h.r * fit);
+      h.holder.matrix.copy(wheelMatrix(hm, h.centre, h.up, h.axle, steer, spin)); h.holder.matrixWorldNeedsUpdate = true;
+    }
+  });
   const sig = useMemo(() => (signal && nz < 0 ? ({ get current() { const s = signal.current; return { left: s.right, right: s.left }; } } as { current: CarSignal }) : signal), [signal, nz]);
   const plateMat = useMemo(() => (plate ? new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }) : null), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
@@ -377,7 +418,7 @@ class Fallback extends Component<{ fallback: ReactNode; children: ReactNode }, {
 }
 
 /** One fleet car: three selected Meshy cars plus two house sedans, all with automatic mobile variants and fallbacks. */
-export function FleetCar({ color, plate, specId, position, rotationY = 0, lite = false, signal }: { color: string; plate: string; specId: keyof typeof CAR_SPECS; position: [number, number, number]; rotationY?: number; lite?: boolean; signal?: { current: CarSignal } }) {
+export function FleetCar({ color, plate, specId, position, rotationY = 0, lite = false, signal, wheels }: { color: string; plate: string; specId: keyof typeof CAR_SPECS; position: [number, number, number]; rotationY?: number; lite?: boolean; signal?: { current: CarSignal }; wheels?: { current: WheelState } }) {
   const spec = useMemo(() => ({ ...CAR_SPECS[specId]!, color }), [specId, color]);
   const fallback = <Car spec={spec} position={position} rotationY={rotationY} />;
   // while the file loads the spot stays empty for a moment, so the boxy stand-in never flashes up first
@@ -385,5 +426,5 @@ export function FleetCar({ color, plate, specId, position, rotationY = 0, lite =
   // textured first; if its file is not in the build the painted sedan stays, so the lot is never empty
   const house = useTexturedFleet() ? <Fallback fallback={standard}><Suspense fallback={null}><LoadedTex color={color} plate={plate} position={position} rotationY={rotationY} lite={lite} /></Suspense></Fallback> : standard;
   const imported = IMPORTED_FLEET[specId];
-  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} plate={['civic', 'camry', 'sentra', 'hero'].includes(specId) ? plate : undefined} position={position} rotationY={rotationY} lite={lite} signal={signal} /></Suspense></Fallback> : house;
+  return imported ? <Fallback fallback={house}><Suspense fallback={null}><LoadedImported files={imported} plate={['civic', 'camry', 'sentra', 'hero'].includes(specId) ? plate : undefined} position={position} rotationY={rotationY} lite={lite} signal={signal} wheels={wheels} /></Suspense></Fallback> : house;
 }
