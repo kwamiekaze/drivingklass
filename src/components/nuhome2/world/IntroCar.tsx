@@ -18,7 +18,7 @@ if (typeof window !== 'undefined') { const f = fleetFiles(CAST); if (f) useGLTF.
 
 export function IntroCar({ lite }: { lite: boolean }) {
   const g = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null);
-  const signal = useRef<CarSignal>({ left: false, right: false });
+  const signal = useRef<CarSignal>({ left: false, right: false, head: false, reverse: false });
   const lean = useRef({ pitch: 0, roll: 0 });
   const wheels = useRef<WheelState>({ steer: 0, dist: 0 });
   const last = useRef<{ x: number; z: number; yaw: number } | null>(null);
@@ -44,13 +44,16 @@ export function IntroCar({ lite }: { lite: boolean }) {
       m.visible = !(park.kind === 'exit' && park.phase === 'done');       // the car has driven out of the scene
       roll(c.x, c.z, c.yaw, dt, c.steer);
       signal.current.left = c.left; signal.current.right = c.right;
+      signal.current.head = park.phase === 'run'; signal.current.reverse = park.phase === 'run' && c.reversing;   // headlights on while it drives (they shine at night); the reverse lamps while the gear is reverse
       const b = body.current, k = 1 - Math.exp(-6 * Math.min(dt, .05));
-      if (b) { const L = lean.current; L.pitch += (Math.max(-.035, Math.min(.035, .011 * c.accel)) - L.pitch) * k; L.roll += (Math.max(-.03, Math.min(.03, .0045 * c.lat)) - L.roll) * k; b.rotation.z = L.pitch; b.rotation.x = L.roll; }
+      if (b) { const L = lean.current; L.pitch += (Math.max(-.035, Math.min(.035, .011 * c.accel)) - L.pitch) * k; L.roll += (Math.max(-.03, Math.min(.03, .0045 * c.lat)) - L.roll) * k; b.rotation.z = L.pitch; b.rotation.x = L.roll; wheels.current.pitch = L.pitch; wheels.current.roll = L.roll; }
       return;
     }
     const c = carAt(intro.t, intro.t3);
     m.position.set(c.x, c.y, c.z); m.rotation.y = c.yaw;
     signal.current.left = c.left; signal.current.right = c.right;
+    signal.current.head = c.moving || intro.t < intro.t3; signal.current.reverse = false;   // lights on from the avenue to the stall; off once it is parked
+    wheels.current.pitch = 0; wheels.current.roll = 0;
     roll(c.x, c.z, c.yaw, dt, null);
   });
   const c0 = carAt(intro.t, intro.t3);

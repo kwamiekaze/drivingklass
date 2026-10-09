@@ -1,4 +1,4 @@
-import { useRef, Component, Suspense, useContext, useMemo, type ReactNode } from 'react';
+import { useRef, Component, Suspense, useContext, useMemo, type ReactNode, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -50,7 +50,7 @@ export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFlee
 };
 
 /** What the car is doing with its wheels, written by whoever drives it: the road-wheel angle (radians, left positive) and the distance rolled forward (metres, signed). */
-export type WheelState = { steer: number; dist: number };
+export type WheelState = { steer: number; dist: number; pitch?: number; roll?: number };   // pitch and roll: the lean the driver gives the body (radians), so the car can be set down on its wheels, never into the road
 /** The car rides this far above the road: the tyres sit ON the street paint (stop bars, crosswalk, lines are 3 to 5 cm above the tarmac), never cutting through it. */
 const LIFT = .05;
 const splitCache = new Map<string, WheelSplit | null>();
@@ -250,7 +250,7 @@ function LoadedTex({ color, plate, position, rotationY, lite }: { color: string;
 }
 
 /** The turn signal: left is the car's left. Flashes at 90 a minute, 50% on, and always starts on, the way a real stalk does. */
-export type CarSignal = { left: boolean; right: boolean };
+export type CarSignal = { left: boolean; right: boolean; head?: boolean; reverse?: boolean };   // head: the driver has the headlights on (they shine only when it is night); reverse: the gear is in reverse, so the white reverse lamps are lit
 const glowTex = (() => { if (typeof document === 'undefined') return null; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,190,70,1)'); r.addColorStop(.35, 'rgba(255,150,20,.55)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
 const FLASH = .66, ON = .33;
 const ss = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -288,9 +288,9 @@ function Blinkers({ L, W, H, signal }: { L: number; W: number; H: number; signal
  * bright parts of the lamp in the model's texture, inside the lamp's box, and turns exactly those amber, so the glow follows the
  * real lamp shape on the real surface. A soft halo sits just outside each lamp. `u` holds the two flasher values the shader reads.
  */
-type LampUniforms = { uLeft: { value: number }; uRight: { value: number }; uToCar: { value: THREE.Matrix4 }; uFc: { value: THREE.Vector3 }; uFh: { value: THREE.Vector3 }; uRc: { value: THREE.Vector3 }; uRh: { value: THREE.Vector3 } };
+type LampUniforms = { uLeft: { value: number }; uRight: { value: number }; uHead: { value: number }; uRev: { value: number }; uToCar: { value: THREE.Matrix4 }; uFc: { value: THREE.Vector3 }; uFh: { value: THREE.Vector3 }; uRc: { value: THREE.Vector3 }; uRh: { value: THREE.Vector3 } };
 export const makeLampUniforms = (lamps: Lamps, toCar: THREE.Matrix4): LampUniforms => ({
-  uLeft: { value: 0 }, uRight: { value: 0 }, uToCar: { value: toCar },
+  uLeft: { value: 0 }, uRight: { value: 0 }, uHead: { value: 0 }, uRev: { value: 0 }, uToCar: { value: toCar },
   uFc: { value: new THREE.Vector3(...lamps.front.slice(0, 3) as [number, number, number]) }, uFh: { value: new THREE.Vector3(...lamps.front.slice(3) as [number, number, number]) },
   uRc: { value: new THREE.Vector3(...lamps.rear.slice(0, 3) as [number, number, number]) }, uRh: { value: new THREE.Vector3(...lamps.rear.slice(3) as [number, number, number]) },
 });
@@ -301,8 +301,9 @@ export function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
         varying vec3 vLp;
-        uniform float uLeft, uRight; uniform vec3 uFc, uFh, uRc, uRh;
-        float lampIn(vec3 p, vec3 c, vec3 h) { vec3 d = abs(p - c) / h; return 1. - smoothstep(.72, .96, max(d.x, max(d.y, d.z))); }`)
+        uniform float uLeft, uRight, uHead, uRev; uniform vec3 uFc, uFh, uRc, uRh;
+        float lampIn(vec3 p, vec3 c, vec3 h) { vec3 d = abs(p - c) / h; return 1. - smoothstep(.72, .96, max(d.x, max(d.y, d.z))); }
+        float lampOval(vec3 p, vec3 c, vec3 h) { return 1. - smoothstep(.5, 1., length((p - c) / h)); }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         {
           vec3 q = vec3(vLp.x, vLp.y, abs(vLp.z));
@@ -312,21 +313,90 @@ export function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms
           float lit = inside * on * (.08 + .92 * smoothstep(.05, .4, lum));
           totalEmissiveRadiance += vec3(1., .46, .03) * lit * 3.6;
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1., .5, .06), lit * .35);
+          // headlights (night): the bright part of the car's own headlight lens glows warm white
+          float fz = lampOval(q, uFc, uFh * vec3(.9, .8, .85));
+          float hm = fz * uHead * (.6 + .4 * smoothstep(.1, .5, lum));
+          totalEmissiveRadiance += vec3(1., .93, .78) * hm * 3.4;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1., .96, .88), hm * .5);
+          // reverse lamps: the inner part of the tail lamp turns white, with a soft falloff toward the outer edge
+          float rz = lampIn(q, uRc, uRh * vec3(1., .9, 1.));
+          float rv = lampOval(q, uRc - vec3(0., 0., uRh.z * .22), uRh * vec3(.95, .85, .78)) * uRev;
+          totalEmissiveRadiance += vec3(1., .97, .92) * rv * 4.2;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.97, .97, 1.), rv * .95);
+          // tail lights (night, with the headlights): the red of the lamp glows
+          float tz = max(rz - rv, 0.) * uHead * smoothstep(.0, .35, diffuseColor.r - diffuseColor.b * .6);
+          totalEmissiveRadiance += vec3(1., .04, .02) * tz * 1.6;
         }`);
   };
-  material.customProgramCacheKey = () => 'dk-lamps-v1';
+  material.customProgramCacheKey = () => 'dk-lamps-v2';
 }
-function LampHalos({ lamps, u, signal }: { lamps: Lamps; u: LampUniforms; signal: { current: CarSignal } }) {
+/** A long soft pool of light for the ground: bright at its left end (u = 0), fading to nothing at the far end and at both sides. */
+const poolTex = (() => {
+  if (typeof document === 'undefined') return null;
+  const W = 128, H = 64, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d')!, im = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const u = x / (W - 1), v = (y / (H - 1)) * 2 - 1, along = Math.pow(1 - u, 1.55) * Math.min(1, u * 9 + .25), across = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), 1.7)), 1.3);
+    const i = (y * W + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = 255; im.data[i + 3] = Math.round(255 * along * across);
+  }
+  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const whiteGlow = (() => { if (typeof document === 'undefined') return null; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.28, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const ease = (v: number, target: number, dt: number, rate: number) => v + (target - v) * (1 - Math.exp(-rate * Math.min(dt, .05)));
+
+/**
+ * Everything a lamp does to the air and the road, drawn at each lamp's measured box (the same boxes the paint shader lights):
+ * the turn signal halos, the headlight halos with a pool of light on the road and a real spot lamp on the road ahead (night only), and the reverse
+ * lamps' white halos with a short pool on the road behind. The lenses themselves glow in the paint shader; `u` holds the values it reads.
+ */
+function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; signal: { current: CarSignal }; lite: boolean }) {
   const halos = useRef<(THREE.Sprite | null)[]>([]), sl = useRef({ v: -1 }), sr = useRef({ v: -1 });
-  useFrame(({ clock }) => {
-    const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime), r = flash(s.right, sr.current, clock.elapsedTime);
-    u.uLeft.value = l; u.uRight.value = r;
-    const lit = [l, l, r, r];   // front left, rear left, front right, rear right
-    halos.current.forEach((h, i) => { if (!h) return; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
-  });
+  const headHalos = useRef<(THREE.Sprite | null)[]>([]), revHalos = useRef<(THREE.Sprite | null)[]>([]), headCores = useRef<(THREE.Sprite | null)[]>([]), revCores = useRef<(THREE.Sprite | null)[]>([]);
+  const headPool = useRef<THREE.Mesh>(null), revPool = useRef<THREE.Mesh>(null), beams = useRef<(THREE.SpotLight | null)[]>([]);
+  const mix = useContext(NightCtx), st = useRef({ head: 0, rev: 0 });
   const f = lamps.front, r = lamps.rear;
-  const fo = Math.sign(f[0]) || 1, ro = Math.sign(r[0]) || -1, spots: [number, number, number][] = [[f[0] + fo * f[3] * .45, f[1], -f[2]], [r[0] + ro * r[3] * .45, r[1], -r[2]], [f[0] + fo * f[3] * .45, f[1], f[2]], [r[0] + ro * r[3] * .45, r[1], r[2]]];   // outward from the car, whichever way its model faces
-  return <group>{spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}</group>;
+  const fo = Math.sign(f[0]) || 1, ro = Math.sign(r[0]) || -1;
+  const aim = useMemo(() => [new THREE.Object3D(), new THREE.Object3D()], []);
+  useFrame(({ clock }, dt) => {
+    const s = signal.current, l = flash(s.left, sl.current, clock.elapsedTime), rr = flash(s.right, sr.current, clock.elapsedTime);
+    u.uLeft.value = l; u.uRight.value = rr;
+    const lit = [l, l, rr, rr];   // front left, rear left, front right, rear right
+    halos.current.forEach((h, i) => { if (!h) return; (h.material as THREE.SpriteMaterial).opacity = lit[i]! * .7; });
+    // the headlights shine when the driver has them on and it is night; the reverse lamps whenever the gear is reverse (day or night)
+    const night = Math.min(1, Math.max(0, (mix.current - .25) / .4));
+    const k = st.current; k.head = ease(k.head, s.head ? night : 0, dt, 7); k.rev = ease(k.rev, s.reverse ? 1 : 0, dt, 16);
+    if (k.head < .003) k.head = 0; if (k.rev < .003) k.rev = 0;
+    u.uHead.value = k.head; u.uRev.value = k.rev;
+    const hv = k.head > 0, rv = k.rev > 0;
+    headHalos.current.forEach((h) => { if (!h) return; h.visible = hv; (h.material as THREE.SpriteMaterial).opacity = k.head * .85; });
+    revHalos.current.forEach((h) => { if (!h) return; h.visible = rv; (h.material as THREE.SpriteMaterial).opacity = k.rev * .8; });
+    headCores.current.forEach((h) => { if (!h) return; h.visible = hv; (h.material as THREE.SpriteMaterial).opacity = k.head; });
+    revCores.current.forEach((h) => { if (!h) return; h.visible = rv; (h.material as THREE.SpriteMaterial).opacity = k.rev; });
+    if (headPool.current) { headPool.current.visible = hv; (headPool.current.material as THREE.MeshBasicMaterial).opacity = k.head * .5; }
+    if (revPool.current) { revPool.current.visible = rv; (revPool.current.material as THREE.MeshBasicMaterial).opacity = k.rev * (.12 + .3 * mix.current); }   // a faint pool by day, a strong one at night
+    beams.current.forEach((b) => { if (b) { b.intensity = k.head * 42; b.visible = hv; } });
+  });
+  const spots: [number, number, number][] = [[f[0] + fo * f[3] * .45, f[1], -f[2]], [r[0] + ro * r[3] * .45, r[1], -r[2]], [f[0] + fo * f[3] * .45, f[1], f[2]], [r[0] + ro * r[3] * .45, r[1], r[2]]];   // outward from the car, whichever way its model faces
+  const ground = -.025;   // the road under the car, in the car's lifted frame (the road paint is just above it)
+  const pool = (x: number, dir: number, len: number, wid: number, color: string, ref: RefObject<THREE.Mesh>) => (
+    <group position={[x, ground, 0]} rotation-y={dir > 0 ? 0 : Math.PI}>
+      <mesh ref={ref} position={[len / 2, 0, 0]} rotation-x={-Math.PI / 2} visible={false} renderOrder={3}>
+        <planeGeometry args={[len, wid]} /><meshBasicMaterial map={poolTex} color={color} transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
+      </mesh>
+    </group>);
+  return <group>
+    {spots.map((p, i) => <sprite key={i} ref={(h) => { halos.current[i] = h; }} position={p} scale={[.5, .36, 1]}><spriteMaterial map={glowTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
+    {[-1, 1].map((sd, i) => <sprite key={`h${i}`} ref={(h) => { headHalos.current[i] = h; }} position={[f[0] + fo * f[3] * .55, f[1], sd * f[2]]} scale={[.95, .7, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#fff1cf" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
+    {[-1, 1].map((sd, i) => <sprite key={`r${i}`} ref={(h) => { revHalos.current[i] = h; }} position={[r[0] + ro * r[3] * .55, r[1], sd * (r[2] - r[5] * .45)]} scale={[.62, .46, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#f4f7ff" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
+    {[-1, 1].map((sd, i) => <sprite key={`hc${i}`} ref={(h) => { headCores.current[i] = h; }} position={[f[0] + fo * f[3] * .75, f[1], sd * f[2]]} scale={[.36, .26, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#fff6e0" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
+    {[-1, 1].map((sd, i) => <sprite key={`rc${i}`} ref={(h) => { revCores.current[i] = h; }} position={[r[0] + ro * r[3] * .75, r[1], sd * (r[2] - r[5] * .22)]} scale={[.3, .22, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#ffffff" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
+    {pool(f[0] + fo * f[3], fo, 7.2, 3.9, '#ffe6b0', headPool)}
+    {pool(r[0] + ro * r[3], ro, 3.4, 2.5, '#eef4ff', revPool)}
+    {!lite && [-1, 1].map((sd, i) => <group key={`b${i}`}>
+      <primitive object={aim[i]!} position={[f[0] + fo * 9, ground, sd * f[2] * .55]} />
+      <spotLight ref={(b) => { beams.current[i] = b; }} position={[f[0] + fo * (f[3] + .9), f[1] - .05, sd * f[2]]} target={aim[i]!} angle={.34} penumbra={.85} distance={16} decay={1.5} color="#fff0d2" intensity={0} visible={false} />
+    </group>)}
+  </group>;
 }
 
 /** A selected Meshy car with its original identity, finish and baked PBR detail intact. */
@@ -392,11 +462,16 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
     }
     return out;
   }, [root, fit, lite, nz, files.wheels]);
+  const seat = useRef<THREE.Group>(null);
   useFrame(() => {
     const st = wheels?.current; if (!st) return;
     for (const h of rig.w) { h.pivot.rotation.y = h.front ? st.steer : 0; h.spin.rotation.z = -nz * st.dist / h.r; }
+    // the body leans (pitch and roll) about its middle, which would sink the low wheel into the road: lift the whole car by exactly the drop of its lowest tyre, so every wheel stays on or above the ground
+    let drop = 0; const th = st.pitch ?? 0, ph = st.roll ?? 0;
+    for (const h of rig.w) { const x = nz > 0 ? h.pivot.position.x : -h.pivot.position.x, z = nz > 0 ? h.pivot.position.z : -h.pivot.position.z; drop = Math.max(drop, -(x * Math.sin(th) - z * Math.sin(ph))); }
+    if (seat.current) seat.current.position.y = LIFT + drop;
   });
-  const sig = useMemo(() => (signal && nz < 0 ? ({ get current() { const s = signal.current; return { left: s.right, right: s.left }; } } as { current: CarSignal }) : signal), [signal, nz]);
+  const sig = useMemo(() => (signal && nz < 0 ? ({ get current() { const s = signal.current; return { left: s.right, right: s.left, head: s.head, reverse: s.reverse }; } } as { current: CarSignal }) : signal), [signal, nz]);
   const plateMat = useMemo(() => (plate ? new THREE.MeshStandardMaterial({ map: plateTexture(plate), roughness: .45 }) : null), [plate]);
   const shadow = useMemo(() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.56)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }); }, []);
   const rf = P.roof.clone().multiplyScalar(fit), pf = P.plateF.clone().multiplyScalar(fit), pr = P.plateR.clone().multiplyScalar(fit);
@@ -404,7 +479,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
   return <group position={position} rotation-y={rotationY}>
     <group rotation-y={nz > 0 ? 0 : Math.PI}>
       <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * fit * 1.22, P.W * fit * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
-      <group position-y={LIFT}>
+      <group ref={seat} position-y={LIFT}>
       <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
       <primitive object={rig.group} />
       {plateMat && <>
@@ -412,7 +487,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
         <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
       </>}
       <Topper position={[rf.x + (files.roofX ?? 0) * P.L * fit, rf.y - .012, 0]} />
-      {sig && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={sig} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={sig} />)}
+      {sig && (lampU && files.lamps ? <LampHalos lamps={files.lamps} u={lampU} signal={sig} lite={lite} /> : <Blinkers L={P.L * fit} W={P.W * fit} H={P.H * fit} signal={sig} />)}
       </group>
     </group>
   </group>;
