@@ -8,6 +8,7 @@ import { StarCanopy } from './StarCanopy';
 import { CAR_POS, ISLANDS, ISLAND_TREES, Lot } from './Lot';
 import { Blooms, Grass, Trees, lawnTexture } from './Grounds';
 import type { Quality } from './quality';
+import { atmo } from './atmosphere';
 
 function windowsTexture() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 512;
@@ -78,14 +79,18 @@ export function Estate({ quality, open, children }: { quality: Quality; open: bo
   const dayTex = useMemo(dayTexture, []);
   const lawnTex = useMemo(() => { const t = lawnTexture(); t.repeat.set(1 / 8, 1 / 8); return t; }, []);
   const asphalt = useMemo(() => new THREE.MeshStandardMaterial({ map: asphaltTexture(), color: '#ffffff', roughness: .88 }), []);
+  const lawnMat = useMemo(() => new THREE.MeshStandardMaterial({ map: lawnTex, roughness: .95, emissive: '#dfe8f5', emissiveIntensity: 0 }), [lawnTex]);
   const lotMat = useMemo(() => new THREE.MeshStandardMaterial({ map: lotTexture(lite), color: '#ffffff', roughness: .86 }), [lite]);
   const towerMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d4dbe8', map: dayTex, emissive: '#ffffff', emissiveMap: winTex, emissiveIntensity: .05, roughness: 1 }), [winTex, dayTex]);
-  const dayC = useMemo(() => new THREE.Color('#ffffff'), []), nightC = useMemo(() => new THREE.Color('#55556a'), []);
+  const dayC = useMemo(() => new THREE.Color('#ffffff'), []), nightC = useMemo(() => new THREE.Color('#55556a'), []), white = useMemo(() => new THREE.Color('#f4f7ff'), []);
   const dayT = useMemo(() => new THREE.Color('#d4dbe8'), []), nightT = useMemo(() => new THREE.Color('#2a2c55'), []);
   useFrame(() => {
     const m = mix.current;
     towerMat.emissiveIntensity = .04 + .75 * m; towerMat.color.copy(dayT).lerp(nightT, m);
-    asphalt.color.copy(dayC).lerp(nightC, m); lotMat.color.copy(asphalt.color);
+    lawnMat.emissiveIntensity = atmo.look.snow * .55 * (1 - .75 * m);
+    const A = atmo.look, wet = Math.min(1, A.rain * 1.1 + A.storm * .2), snowy = A.snow;
+    asphalt.color.copy(dayC).lerp(nightC, m).multiplyScalar(1 - .22 * wet - .35 * atmo.deep * m).lerp(white, snowy * .55); lotMat.color.copy(asphalt.color);
+    asphalt.roughness = lotMat.roughness = (.88 - .5 * wet); asphalt.envMapIntensity = lotMat.envMapIntensity = 1 + .8 * wet;
   });
 
   const lawnGeo = useMemo(() => {
@@ -134,7 +139,7 @@ export function Estate({ quality, open, children }: { quality: Quality; open: bo
   return <group>
     {/* a dark ground underlay: if two ground pieces ever leave a hairline gap, this shows instead of the sky */}
     <mesh rotation-x={-Math.PI / 2} position={[0, -.16, 0]}><planeGeometry args={[900, 900]} /><meshStandardMaterial color="#2b3d26" roughness={1} /></mesh>
-    <mesh geometry={lawnGeo} rotation-x={-Math.PI / 2} position={[0, -.07, 0]} receiveShadow><meshStandardMaterial map={lawnTex} roughness={.95} /></mesh>
+    <mesh geometry={lawnGeo} rotation-x={-Math.PI / 2} position={[0, -.07, 0]} receiveShadow material={lawnMat} />
     <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, PLAZA.cz]} material={lotMat} receiveShadow><planeGeometry args={[PLAZA.x + 1.2, PLAZA.z + 1.2]} /></mesh>
     {skyline.map((t, i) => <mesh key={i} position={t.p} rotation-y={t.rot} scale={t.s} material={towerMat}><boxGeometry args={[1, 1, 1]} /></mesh>)}
     <Building position={[0, 0, HQ_Z]} lite={lite} open={open} />

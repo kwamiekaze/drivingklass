@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download, Menu, Music, X } from "lucide-react";
+import { LayoutDashboard, Gamepad2, UserCircle, LogIn, Download, Menu, Music, X, CloudSun } from "lucide-react";
 import portalCarIcon from "@/assets/portal-car-icon.png";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { InstallAppModal } from "./InstallAppModal";
@@ -199,6 +199,16 @@ export function PortalMenuButton({ size = "md", variant = "car", triggerClassNam
             >
               <Music className="h-4 w-4 text-gold" />
               <span>Music settings</span>
+            </button>
+          )}
+          {role === "admin" && (
+            <button
+              role="menuitem"
+              onClick={() => { setOpen(false); window.dispatchEvent(new Event("dk:weather-panel")); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-gold/10 text-left"
+            >
+              <CloudSun className="h-4 w-4 text-gold" />
+              <span>Weather &amp; night</span>
             </button>
           )}
           </div>

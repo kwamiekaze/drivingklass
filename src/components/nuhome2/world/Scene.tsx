@@ -6,6 +6,8 @@ import { Estate } from './Estate';
 import { Butterflies } from './Butterflies';
 import { Clouds, Moon, ShootingStars, SkyDome, Stars, Sun, skyAnchor } from './Sky';
 import { NightCtx } from './theme';
+import { Weather } from './Weather';
+import { atmo } from './atmosphere';
 import { Rig } from './Rig';
 import { detectTier, qualityFor, type Quality } from './quality';
 import { carMoving, introAt } from './intro';
@@ -28,16 +30,25 @@ function ThemeDriver({ night, mix, shadow }: { night: boolean; mix: { current: n
     dirD: new THREE.Color('#ffe6bf'), dirN: new THREE.Color('#9db8ff'),
   }), []);
   useEffect(() => { scene.fog = new THREE.Fog('#f3e4c6', 70, 235); }, [scene]);
+  const gl = useThree(s => s.gl), grey = useMemo(() => ({ d: new THREE.Color('#b4bcc6'), n: new THREE.Color('#0d1226'), deep: new THREE.Color('#03040d') }), []), tmp = useMemo(() => new THREE.Color(), []);
   useFrame((_, dt) => {
     const target = night ? 1 : 0;
     mix.current += (target - mix.current) * (1 - Math.exp(-2.2 * Math.min(dt, .05)));
     if (Math.abs(target - mix.current) < .0005) mix.current = target;
-    const m = mix.current;
-    const fog = scene.fog as THREE.Fog | null; if (fog) fog.color.copy(c.fogD).lerp(c.fogN, m);
-    if (amb.current) { amb.current.color.copy(c.ambD).lerp(c.ambN, m); amb.current.intensity = .5 - .32 * m; }
-    if (hemi.current) { hemi.current.color.copy(c.hsD).lerp(c.hsN, m); hemi.current.groundColor.copy(c.hgD).lerp(c.hgN, m); hemi.current.intensity = 1.0 - .68 * m; }
-    if (dir.current) { dir.current.color.copy(c.dirD).lerp(c.dirN, m); dir.current.intensity = 2.7 - 2.1 * m; }
-    if (fill.current) fill.current.intensity = .5 * m;
+    const m = mix.current, L = atmo.look, deep = atmo.deep * m;                  // deep: the extra darkness after 9 pm (night theme only)
+    const cl = L.cloud, dim = 1 - .55 * cl * (1 - m) - .12 * L.storm, flash = atmo.flash * L.storm;
+    const fog = scene.fog as THREE.Fog | null;
+    if (fog) {
+      fog.color.copy(c.fogD).lerp(c.fogN, m).lerp(tmp.copy(grey.d).lerp(grey.n, m), Math.min(1, .55 * cl + .4 * L.fog)).lerp(grey.deep, deep * .75);
+      fog.near = 70 - 66 * L.fog - 30 * L.rain - 22 * L.snow; fog.far = 235 - 190 * L.fog - 95 * L.rain - 80 * L.snow;
+      if (flash > .01) fog.color.lerp(tmp.set('#dfe6ff'), flash * .5);
+    }
+    scene.environmentIntensity = (1 - .6 * deep) * (1 - .34 * Math.max(0, cl - .06)) * (1 - .12 * L.storm) + flash * .5;   // the sky's own light (it lights the lawn and the road most): dimmer under cloud and in the deep night
+    gl.toneMappingExposure = (.9 - .1 * deep) * (1 - .1 * L.storm);
+    if (amb.current) { amb.current.color.copy(c.ambD).lerp(c.ambN, m); amb.current.intensity = (.5 - .32 * m) * (1 - .35 * deep) * (1 - .12 * cl * (1 - m)) + flash * 1.6; }
+    if (hemi.current) { hemi.current.color.copy(c.hsD).lerp(c.hsN, m); hemi.current.groundColor.copy(c.hgD).lerp(c.hgN, m); hemi.current.intensity = (1.0 - .68 * m) * (1 - .42 * deep) * (.9 + .1 * (1 - cl)) * (1 - .1 * L.storm) + flash * .8; }
+    if (dir.current) { dir.current.color.copy(c.dirD).lerp(c.dirN, m); dir.current.intensity = (2.7 - 2.1 * m) * dim * (1 - .6 * deep) * (1 - .5 * L.rain * (1 - m)) + flash * 1.4; }
+    if (fill.current) fill.current.intensity = .5 * m * (1 - .55 * deep);
   });
   return <>
     <ambientLight ref={amb} />
@@ -71,6 +82,7 @@ function World({ quality, shadow, ...p }: Omit<SceneProps, 'onReady' | 'onLost'>
     <Clouds count={lite ? 12 : 22} /></SkyFollow>
     <Suspense fallback={null}><Estate quality={quality} open={p.open} /></Suspense>
     <Butterflies count={lite ? 5 : 9} />
+    <Weather lite={lite} />
     <Rig stage={p.stage} reducedMotion={p.reducedMotion} skipIntro={p.skipIntro} onIntroDone={p.onIntroDone} />
     <OrbitControls makeDefault enablePan enableZoom zoomSpeed={.7} panSpeed={.6} rotateSpeed={.55} minDistance={1} maxDistance={120} minPolarAngle={.1} maxPolarAngle={1.9} enableDamping dampingFactor={.07} target={[0, 5, -17.5]} />
   </NightCtx.Provider>;

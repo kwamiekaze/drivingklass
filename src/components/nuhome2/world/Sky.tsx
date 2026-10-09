@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { NightCtx, radialTexture, rng } from './theme';
+import { atmo } from './atmosphere';
 
 const R = 92;
 
@@ -13,7 +14,7 @@ function FadeGroup({ day, children }: { day: boolean; children: ReactNode }) {
   const last = useRef(-1);
   useFrame(() => {
     const g = ref.current; if (!g) return;
-    const o = day ? 1 - mix.current : mix.current;
+    const o = (day ? 1 - mix.current : mix.current) * (1 - .93 * atmo.look.cloud);
     if (Math.abs(o - last.current) < .004) return;
     last.current = o; g.visible = o > .01;
     g.traverse(obj => {
@@ -28,11 +29,16 @@ export function SkyDome() {
   const mix = useContext(NightCtx);
   const mat = useMemo(() => new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { uMix: { value: 0 }, dTop: { value: new THREE.Color('#2b6fcf') }, dMid: { value: new THREE.Color('#86bdee') }, dLow: { value: new THREE.Color('#ffe8c2') }, nTop: { value: new THREE.Color('#02041a') }, nMid: { value: new THREE.Color('#0f1748') }, nLow: { value: new THREE.Color('#382a66') } },
+    uniforms: { uMix: { value: 0 }, dTop: { value: new THREE.Color('#2b6fcf') }, dMid: { value: new THREE.Color('#86bdee') }, dLow: { value: new THREE.Color('#ffe8c2') }, nTop: { value: new THREE.Color('#02041a') }, nMid: { value: new THREE.Color('#0f1748') }, nLow: { value: new THREE.Color('#382a66') }, uCl: { value: 0 }, uDeep: { value: 0 }, uOver: { value: new THREE.Color('#b4bcc6') } },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: 'varying vec3 vP; uniform float uMix; uniform vec3 dTop,dMid,dLow,nTop,nMid,nLow; void main(){ float h = clamp(abs(vP.y),0.0,1.0); vec3 d = mix(dLow,dMid,smoothstep(0.0,0.3,h)); d = mix(d,dTop,smoothstep(0.25,0.9,h)); vec3 n = mix(nLow,nMid,smoothstep(0.0,0.3,h)); n = mix(n,nTop,smoothstep(0.25,0.9,h)); gl_FragColor = vec4(mix(d,n,uMix),1.0); }',
+    fragmentShader: 'varying vec3 vP; uniform float uMix, uCl, uDeep; uniform vec3 dTop,dMid,dLow,nTop,nMid,nLow,uOver; void main(){ float h = clamp(abs(vP.y),0.0,1.0); vec3 d = mix(dLow,dMid,smoothstep(0.0,0.3,h)); d = mix(d,dTop,smoothstep(0.25,0.9,h)); vec3 n = mix(nLow,nMid,smoothstep(0.0,0.3,h)); n = mix(n,nTop,smoothstep(0.25,0.9,h)); vec3 col = mix(d,n,uMix); col *= 1.0 - uDeep * uMix * .62; col = mix(col, uOver * (.86 + .24 * (1.0 - h)), uCl); gl_FragColor = vec4(col,1.0); }',
   }), []);
-  useFrame(() => { mat.uniforms.uMix.value = mix.current; });
+  const over = useMemo(() => ({ d: new THREE.Color('#b9c1cb'), n: new THREE.Color('#0c1024'), s: new THREE.Color('#5d636d') }), []);
+  useFrame(() => {
+    const u = mat.uniforms, m = mix.current, L = atmo.look;
+    u.uMix.value = m; u.uCl.value = Math.min(1, L.cloud * .92 + L.fog * .3); u.uDeep.value = atmo.deep;
+    (u.uOver!.value as THREE.Color).copy(over.d).lerp(over.n, m).lerp(over.s, L.storm * (1 - m) * .8);
+  });
   return <mesh material={mat} scale={R} renderOrder={-10}><sphereGeometry args={[1, 32, 20]} /></mesh>;
 }
 
@@ -78,7 +84,7 @@ export function Stars({ count = 7000 }: { count?: number }) {
     });
     return { geo: g, mat: m };
   }, [count]);
-  useFrame(({ clock }) => { mat.uniforms.uTime.value = clock.elapsedTime; mat.uniforms.uMix.value = Math.max(0, (mix.current - .25) / .75); mat.uniforms.uPx.value = gl.getPixelRatio() * 1.1; });
+  useFrame(({ clock }) => { mat.uniforms.uTime.value = clock.elapsedTime; mat.uniforms.uMix.value = Math.max(0, (mix.current - .25) / .75) * (1 - .97 * Math.min(1, atmo.look.cloud * 1.05)); mat.uniforms.uPx.value = gl.getPixelRatio() * 1.1; });
   return <points geometry={geo} material={mat} frustumCulled={false} renderOrder={-9} />;
 }
 
@@ -202,6 +208,7 @@ export function Clouds({ count = 26 }: { count?: number }) {
   const grp = useRef<THREE.Group>(null);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: .35, roughness: 1, transparent: true, opacity: .96 }), []);
   const dayC = useMemo(() => new THREE.Color('#ffffff'), []), nightC = useMemo(() => new THREE.Color('#8d96bd'), []);
+  const grey = useMemo(() => new THREE.Color('#7e858f'), []);
   const dayE = useMemo(() => new THREE.Color('#fff4e6'), []), nightE = useMemo(() => new THREE.Color('#252c5c'), []);
   const clouds = useMemo(() => {
     const r = rng(21);
@@ -212,9 +219,10 @@ export function Clouds({ count = 26 }: { count?: number }) {
     });
   }, [count]);
   useFrame((_, dt) => {
-    if (grp.current) grp.current.rotation.y += dt * .0055;
-    const m = mix.current;
-    mat.color.copy(dayC).lerp(nightC, m); mat.emissive.copy(dayE).lerp(nightE, m); mat.emissiveIntensity = .38 + .3 * m;
+    if (grp.current) { grp.current.rotation.y += dt * .0055; const k = 1 + .3 * atmo.look.cloud; grp.current.scale.set(k, 1 + .6 * atmo.look.cloud, k); }
+    const m = mix.current, L = atmo.look;
+    mat.color.copy(dayC).lerp(nightC, m).lerp(grey, Math.min(1, L.cloud * .55 + L.storm * .35) * (1 - .4 * m)).multiplyScalar(1 - .5 * atmo.deep * m);
+    mat.emissive.copy(dayE).lerp(nightE, m); mat.emissiveIntensity = (.38 + .3 * m) * (1 - .45 * L.cloud * (1 - m)) * (1 - .6 * atmo.deep * m);
   });
   return <group ref={grp}>
     {clouds.map((c, i) => <group key={i} position={c.pos} rotation-y={c.rot} scale={c.s}>

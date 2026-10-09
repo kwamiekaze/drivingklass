@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
 import { NightCtx } from './theme';
+import { atmo } from './atmosphere';
 import { splitWheels, wheelMatrix, type WheelFit, type WheelSplit } from './wheelsplit';
 
 /*
@@ -331,16 +332,20 @@ export function lampShader(material: THREE.MeshStandardMaterial, u: LampUniforms
   };
   material.customProgramCacheKey = () => 'dk-lamps-v2';
 }
-/** A long soft pool of light for the ground: bright at its left end (u = 0), fading to nothing at the far end and at both sides. */
+/**
+ * A beam on the road: a cone that widens as it goes, bright at the lamp and fading to nothing well before the far end, soft (gaussian) across and
+ * exactly 0 at every edge of the picture, so no straight cut-off can show anywhere. u = 0 at the lamp.
+ */
 const poolTex = (() => {
   if (typeof document === 'undefined') return null;
-  const W = 128, H = 64, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d')!, im = g.createImageData(W, H);
+  const W = 256, H = 128, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d')!, im = g.createImageData(W, H), sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const u = x / (W - 1), v = (y / (H - 1)) * 2 - 1, along = Math.pow(1 - u, 1.55) * Math.min(1, u * 9 + .25), across = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), 1.7)), 1.3);
-    const i = (y * W + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = 255; im.data[i + 3] = Math.round(255 * along * across);
+    const u = x / (W - 1), v = (y / (H - 1)) * 2 - 1, hw = .16 + .84 * Math.pow(u, .85), n = Math.abs(v) / hw;
+    const across = Math.exp(-3.4 * n * n) * (1 - sm(.8, 1, n)), along = Math.pow(1 - sm(.05, .97, u), 1.35) * (.55 + .45 * Math.exp(-u * 6)) * sm(0, .035, u);
+    const i = (y * W + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = 255; im.data[i + 3] = Math.round(255 * Math.min(1, along * across * 1.15));
   }
-  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 })();
 const whiteGlow = (() => { if (typeof document === 'undefined') return null; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.28, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
 const ease = (v: number, target: number, dt: number, rate: number) => v + (target - v) * (1 - Math.exp(-rate * Math.min(dt, .05)));
@@ -353,7 +358,7 @@ const ease = (v: number, target: number, dt: number, rate: number) => v + (targe
 function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; signal: { current: CarSignal }; lite: boolean }) {
   const halos = useRef<(THREE.Sprite | null)[]>([]), sl = useRef({ v: -1 }), sr = useRef({ v: -1 });
   const headHalos = useRef<(THREE.Sprite | null)[]>([]), revHalos = useRef<(THREE.Sprite | null)[]>([]), headCores = useRef<(THREE.Sprite | null)[]>([]), revCores = useRef<(THREE.Sprite | null)[]>([]);
-  const headPool = useRef<THREE.Mesh>(null), revPool = useRef<THREE.Mesh>(null), beams = useRef<(THREE.SpotLight | null)[]>([]);
+  const headPool = useRef<(THREE.Mesh | null)[]>([]), revPool = useRef<(THREE.Mesh | null)[]>([]), beams = useRef<(THREE.SpotLight | null)[]>([]);
   const mix = useContext(NightCtx), st = useRef({ head: 0, rev: 0 });
   const f = lamps.front, r = lamps.rear;
   const fo = Math.sign(f[0]) || 1, ro = Math.sign(r[0]) || -1;
@@ -373,16 +378,17 @@ function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; 
     revHalos.current.forEach((h) => { if (!h) return; h.visible = rv; (h.material as THREE.SpriteMaterial).opacity = k.rev * .8; });
     headCores.current.forEach((h) => { if (!h) return; h.visible = hv; (h.material as THREE.SpriteMaterial).opacity = k.head; });
     revCores.current.forEach((h) => { if (!h) return; h.visible = rv; (h.material as THREE.SpriteMaterial).opacity = k.rev; });
-    if (headPool.current) { headPool.current.visible = hv; (headPool.current.material as THREE.MeshBasicMaterial).opacity = k.head * .5; }
-    if (revPool.current) { revPool.current.visible = rv; (revPool.current.material as THREE.MeshBasicMaterial).opacity = k.rev * (.12 + .3 * mix.current); }   // a faint pool by day, a strong one at night
-    beams.current.forEach((b) => { if (b) { b.intensity = k.head * 42; b.visible = hv; } });
+    const dp = atmo.deep * mix.current;   // the deeper the night, the more the beams show
+    headPool.current.forEach((m) => { if (m) { m.visible = hv; (m.material as THREE.MeshBasicMaterial).opacity = k.head * (.5 + .3 * dp); } });
+    revPool.current.forEach((m) => { if (m) { m.visible = rv; (m.material as THREE.MeshBasicMaterial).opacity = k.rev * (.2 + .38 * mix.current + .2 * dp); } });   // a faint pool by day, a strong one at night
+    beams.current.forEach((b) => { if (b) { b.intensity = k.head * (42 + 24 * atmo.deep * mix.current); b.visible = hv; } });
   });
   const spots: [number, number, number][] = [[f[0] + fo * f[3] * .45, f[1], -f[2]], [r[0] + ro * r[3] * .45, r[1], -r[2]], [f[0] + fo * f[3] * .45, f[1], f[2]], [r[0] + ro * r[3] * .45, r[1], r[2]]];   // outward from the car, whichever way its model faces
-  const ground = -.025;   // the road under the car, in the car's lifted frame (the road paint is just above it)
-  const pool = (x: number, dir: number, len: number, wid: number, color: string, ref: RefObject<THREE.Mesh>) => (
-    <group position={[x, ground, 0]} rotation-y={dir > 0 ? 0 : Math.PI}>
-      <mesh ref={ref} position={[len / 2, 0, 0]} rotation-x={-Math.PI / 2} visible={false} renderOrder={3}>
-        <planeGeometry args={[len, wid]} /><meshBasicMaterial map={poolTex} color={color} transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
+  const ground = .07;   // just above every bit of road paint (it is 3 to 5 cm over the tarmac and writes depth), so no line ever cuts a beam
+  const lobe = (key: string, x: number, z: number, sd: number, dir: number, len: number, wid: number, color: string, arr: RefObject<(THREE.Mesh | null)[]>, i: number, spread: number) => (
+    <group key={key} position={[x, ground, z]} rotation-y={(dir > 0 ? 0 : Math.PI) + sd * spread}>
+      <mesh ref={(m) => { arr.current![i] = m; }} position={[len / 2, 0, 0]} rotation-x={-Math.PI / 2} visible={false} renderOrder={3}>
+        <planeGeometry args={[len, wid]} /><meshBasicMaterial map={poolTex} color={color} transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} polygonOffset polygonOffsetFactor={-4} polygonOffsetUnits={-4} />
       </mesh>
     </group>);
   return <group>
@@ -391,8 +397,8 @@ function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; 
     {[-1, 1].map((sd, i) => <sprite key={`r${i}`} ref={(h) => { revHalos.current[i] = h; }} position={[r[0] + ro * r[3] * .55, r[1], sd * (r[2] - r[5] * .45)]} scale={[.62, .46, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#f4f7ff" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
     {[-1, 1].map((sd, i) => <sprite key={`hc${i}`} ref={(h) => { headCores.current[i] = h; }} position={[f[0] + fo * f[3] * .75, f[1], sd * f[2]]} scale={[.36, .26, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#fff6e0" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
     {[-1, 1].map((sd, i) => <sprite key={`rc${i}`} ref={(h) => { revCores.current[i] = h; }} position={[r[0] + ro * r[3] * .75, r[1], sd * (r[2] - r[5] * .22)]} scale={[.3, .22, 1]} visible={false}><spriteMaterial map={whiteGlow} color="#ffffff" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></sprite>)}
-    {pool(f[0] + fo * f[3], fo, 7.2, 3.9, '#ffe6b0', headPool)}
-    {pool(r[0] + ro * r[3], ro, 3.4, 2.5, '#eef4ff', revPool)}
+    {[-1, 1].map((sd, i) => lobe(`hp${i}`, f[0] + fo * f[3], sd * f[2], fo > 0 ? -sd : sd, fo, 9.5, 4.6, '#ffe2a8', headPool, i, .07))}
+    {[-1, 1].map((sd, i) => lobe(`rp${i}`, r[0] + ro * r[3], sd * (r[2] - r[5] * .45), ro > 0 ? -sd : sd, ro, 4.6, 2.8, '#e8f0ff', revPool, i, .09))}
     {!lite && [-1, 1].map((sd, i) => <group key={`b${i}`}>
       <primitive object={aim[i]!} position={[f[0] + fo * 9, ground, sd * f[2] * .55]} />
       <spotLight ref={(b) => { beams.current[i] = b; }} position={[f[0] + fo * (f[3] + .9), f[1] - .05, sd * f[2]]} target={aim[i]!} angle={.34} penumbra={.85} distance={16} decay={1.5} color="#fff0d2" intensity={0} visible={false} />
