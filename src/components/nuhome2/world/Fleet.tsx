@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CAR_SPECS, Car, Topper, plateTexture } from './Cars';
 import { NightCtx } from './theme';
-import { splitWheels, buildWheel, wheelMaterials, type WheelFit, type WheelSplit } from './wheelsplit';
+import { splitWheels, wheelMatrix, type WheelFit, type WheelSplit } from './wheelsplit';
 
 /*
  * The DrivingKlass fleet: one premium fastback sedan, generated in Higgsfield from the reference car, shown five times
@@ -54,6 +54,7 @@ export type WheelState = { steer: number; dist: number; pitch?: number; roll?: n
 /** The car rides this far above the road: the tyres sit ON the street paint (stop bars, crosswalk, lines are 3 to 5 cm above the tarmac), never cutting through it. */
 const LIFT = .05;
 const splitCache = new Map<string, WheelSplit | null>();
+type Hung = { holder: THREE.Group; part: WheelSplit['wheels'][number]; centre: THREE.Vector3; up: THREE.Vector3; axle: THREE.Vector3; r: number };
 
 export type Prepared = { M: THREE.Matrix4; geo: THREE.BufferGeometry; L: number; H: number; W: number; ax: number; rw: number; nose: number; roof: THREE.Vector3; plateF: THREE.Vector3; plateR: THREE.Vector3 };
 
@@ -407,7 +408,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
   const fit = files.length ? files.length / P.L : 1;   // this car's real-world length
   const xf = useMemo(() => { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); P.M.decompose(p, q, sc); return { p: p.multiplyScalar(fit), q, sc: sc.multiplyScalar(fit) }; }, [P, fit]);
   const lampU = useMemo(() => (signal && files.lamps ? makeLampUniforms(files.lamps, new THREE.Matrix4().compose(xf.p, xf.q, xf.sc)) : null), [signal, files.lamps, xf]);
-  const cut = useRef<WheelSplit | null>(null);
+  const hung = useRef<Hung[]>([]);
   const root = useMemo(() => {
     const r = scene.clone(true);
     const polish = (source: THREE.Material) => {
@@ -426,8 +427,7 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
       m.castShadow = !lite;
       m.receiveShadow = !lite;
     });
-    // wheels (wheelsplit.ts): the file's own wheels are cut out of the body (it is one fused mesh) and drawn again as clean black tyres built in code, see `rig` below. If the cut is not clean, the car stays exactly as the file has it.
-    cut.current = null;
+    // wheels (wheelsplit.ts): each car's own wheels are cut out of the body (it is one fused mesh) and hung back as separate parts painted plain black (tyre) and dark graphite (rim), so they can steer and roll; if the cut is not clean, the car stays exactly as the file has it
     if (files.wheels) {
       let mesh: THREE.Mesh | null = null; r.traverse(o => { if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh; });
       const src = mesh as THREE.Mesh | null;
@@ -437,38 +437,37 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
         let sp = splitCache.get(key);
         if (sp === undefined) { try { sp = splitWheels(src.geometry.getAttribute('position'), src.geometry.index.array, toCar, files.wheels); } catch { sp = null; } splitCache.set(key, sp); }
         if (sp) {
-          const g = src.geometry, o = new THREE.BufferGeometry(); for (const name of Object.keys(g.attributes)) o.setAttribute(name, g.getAttribute(name));
-          o.setIndex(new THREE.BufferAttribute(sp.body, 1)); o.computeBoundingSphere(); src.geometry = o; cut.current = sp;
+          const g = src.geometry, shareWith = (idx: Uint32Array, colors?: Float32Array) => { const o = new THREE.BufferGeometry(); for (const name of Object.keys(g.attributes)) o.setAttribute(name, g.getAttribute(name)); if (colors) o.setAttribute('color', new THREE.BufferAttribute(colors, 3)); o.setIndex(new THREE.BufferAttribute(idx, 1)); o.computeBoundingSphere(); return o; };
+          // the wheels are drawn plain: black rubber tyres and dark graphite rims, with little reflection (the file's own texture carried the body's orange into the tyres)
+          const rubber = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .12, envMapIntensity: .28 });
+          src.geometry = shareWith(sp.body);
+          const inv = new THREE.Matrix4().copy(toCar).invert();
+          for (const part of sp.wheels) {
+            const pivot = new THREE.Group(); pivot.position.copy(src.position); pivot.quaternion.copy(src.quaternion); pivot.scale.copy(src.scale);
+            const holder = new THREE.Group(); holder.matrixAutoUpdate = false; pivot.add(holder);
+            const w = new THREE.Mesh(shareWith(part.idx, sp.colors), rubber); w.castShadow = src.castShadow; w.receiveShadow = src.receiveShadow; holder.add(w);
+            src.parent!.add(pivot);
+            const [cx, cy, cr] = part.posAxle ? files.wheels.pos : files.wheels.neg;
+            hung.current.push({ holder, part, centre: new THREE.Vector3(cx, cy, part.cz).applyMatrix4(inv), up: new THREE.Vector3(0, 1, 0).transformDirection(inv), axle: new THREE.Vector3(0, 0, 1).transformDirection(inv), r: cr });
+          }
         }
       }
     }
     return r;
   }, [scene, lite, lampU]);
   const nz = (files.flip ? -1 : 1) * P.nose;
-  // the four clean wheels, in car space: a pivot at each wheel centre that steers (front pair), holding the wheel that rolls
-  const rig = useMemo(() => {
-    const sp = cut.current, out = { group: new THREE.Group(), w: [] as { pivot: THREE.Group; spin: THREE.Group; front: boolean; r: number }[] };
-    if (!sp || !files.wheels) return out;
-    for (const part of sp.wheels) {
-      const [cx, cy, cr] = part.posAxle ? files.wheels.pos : files.wheels.neg;
-      const w = Math.min(.3, Math.max(.2, part.z1 - part.z0)), zc = part.z1 - w / 2;
-      const pivot = new THREE.Group(), spin = new THREE.Group(); pivot.position.set(cx * fit, cy * fit, part.side * zc * fit);
-      spin.add(buildWheel(cr * fit * 1.0, w * fit, lite)); pivot.add(spin); out.group.add(pivot);
-      // a dark liner round the wheel hole the cut leaves in the body, so the road (and crosswalk paint) never shows through the gap beside a turned tyre
-      const lz0 = part.z1, lz1 = Math.max(.12, part.z0 - .2), len = (lz0 - lz1) * fit;
-      const liner = new THREE.Mesh(new THREE.CylinderGeometry(cr * fit * 1.045, cr * fit * 1.045, len, lite ? 24 : 40, 1, true), wheelMaterials().liner);
-      liner.rotation.x = Math.PI / 2; liner.position.set(cx * fit, cy * fit, part.side * ((lz0 + lz1) / 2) * fit); out.group.add(liner);
-      out.w.push({ pivot, spin, front: part.posAxle === (nz > 0), r: cr * fit });
-    }
-    return out;
-  }, [root, fit, lite, nz, files.wheels]);
-  const seat = useRef<THREE.Group>(null);
+  // the wheels follow what the driver says: the front pair steers, all four roll. (Axes and centres are the car's own, taken into the file's coordinates.)
+  const hm = useMemo(() => new THREE.Matrix4(), []), seat = useRef<THREE.Group>(null);
   useFrame(() => {
-    const st = wheels?.current; if (!st) return;
-    for (const h of rig.w) { h.pivot.rotation.y = h.front ? st.steer : 0; h.spin.rotation.z = -nz * st.dist / h.r; }
-    // the body leans (pitch and roll) about its middle, which would sink the low wheel into the road: lift the whole car by exactly the drop of its lowest tyre, so every wheel stays on or above the ground
+    const st = wheels?.current; if (!st || !hung.current.length) return;
     let drop = 0; const th = st.pitch ?? 0, ph = st.roll ?? 0;
-    for (const h of rig.w) { const x = nz > 0 ? h.pivot.position.x : -h.pivot.position.x, z = nz > 0 ? h.pivot.position.z : -h.pivot.position.z; drop = Math.max(drop, -(x * Math.sin(th) - z * Math.sin(ph))); }
+    for (const h of hung.current) {
+      const front = h.part.posAxle === (nz > 0), steer = front ? st.steer : 0, spin = -nz * st.dist / (h.r * fit);
+      h.holder.matrix.copy(wheelMatrix(hm, h.centre, h.up, h.axle, steer, spin)); h.holder.matrixWorldNeedsUpdate = true;
+      // the body leans (pitch and roll) about its middle, which would sink the low wheel into the road: lift the whole car by exactly the drop of its lowest tyre, so every wheel stays on or above the ground
+      const wx = h.part.cx * fit, wz = h.part.cz * fit, x = nz > 0 ? wx : -wx, z = nz > 0 ? wz : -wz;
+      drop = Math.max(drop, -(x * Math.sin(th) - z * Math.sin(ph)));
+    }
     if (seat.current) seat.current.position.y = LIFT + drop;
   });
   const sig = useMemo(() => (signal && nz < 0 ? ({ get current() { const s = signal.current; return { left: s.right, right: s.left, head: s.head, reverse: s.reverse }; } } as { current: CarSignal }) : signal), [signal, nz]);
@@ -481,7 +480,6 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
       <mesh position={[0, .055, 0]} rotation-x={-Math.PI / 2} scale={[P.L * fit * 1.22, P.W * fit * 1.42, 1]} material={shadow} renderOrder={2}><planeGeometry args={[1, 1]} /></mesh>
       <group ref={seat} position-y={LIFT}>
       <group position={xf.p} quaternion={xf.q} scale={xf.sc}><primitive object={root} /></group>
-      <primitive object={rig.group} />
       {plateMat && <>
         <mesh position={[pf.x + nz * .012, pf.y, 0]} rotation-y={nz > 0 ? Math.PI / 2 : -Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
         <mesh position={[pr.x - nz * .012, pr.y, 0]} rotation-y={nz > 0 ? -Math.PI / 2 : Math.PI / 2} material={plateMat}><planeGeometry args={[.3, .15]} /></mesh>
