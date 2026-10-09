@@ -366,13 +366,15 @@ function LoadedImported({ files, plate, position, rotationY, lite, signal, wheel
         let sp = splitCache.get(key);
         if (sp === undefined) { try { sp = splitWheels(src.geometry.getAttribute('position'), src.geometry.index.array, toCar, files.wheels); } catch { sp = null; } splitCache.set(key, sp); }
         if (sp) {
-          const g = src.geometry, shareWith = (idx: Uint32Array) => { const o = new THREE.BufferGeometry(); for (const name of Object.keys(g.attributes)) o.setAttribute(name, g.getAttribute(name)); o.setIndex(new THREE.BufferAttribute(idx, 1)); o.computeBoundingSphere(); return o; };
+          const g = src.geometry, shareWith = (idx: Uint32Array, colors?: Float32Array) => { const o = new THREE.BufferGeometry(); for (const name of Object.keys(g.attributes)) o.setAttribute(name, g.getAttribute(name)); if (colors) o.setAttribute('color', new THREE.BufferAttribute(colors, 3)); o.setIndex(new THREE.BufferAttribute(idx, 1)); o.computeBoundingSphere(); return o; };
+          // the wheels are drawn plain: black rubber tyres and dark graphite rims, with little reflection (the file's own texture carried the body's orange into the tyres)
+          const rubber = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .12, envMapIntensity: .28 });
           src.geometry = shareWith(sp.body);
           const inv = new THREE.Matrix4().copy(toCar).invert();
           for (const part of sp.wheels) {
             const pivot = new THREE.Group(); pivot.position.copy(src.position); pivot.quaternion.copy(src.quaternion); pivot.scale.copy(src.scale);
             const holder = new THREE.Group(); holder.matrixAutoUpdate = false; pivot.add(holder);
-            const w = new THREE.Mesh(shareWith(part.idx), src.material); w.castShadow = src.castShadow; w.receiveShadow = src.receiveShadow; holder.add(w);
+            const w = new THREE.Mesh(shareWith(part.idx, sp.colors), rubber); w.castShadow = src.castShadow; w.receiveShadow = src.receiveShadow; holder.add(w);
             src.parent!.add(pivot);
             const [cx, cy, cr] = part.posAxle ? files.wheels.pos : files.wheels.neg;
             hung.current.push({ holder, part, centre: new THREE.Vector3(cx, cy, part.cz).applyMatrix4(inv), up: new THREE.Vector3(0, 1, 0).transformDirection(inv), axle: new THREE.Vector3(0, 0, 1).transformDirection(inv), r: cr });

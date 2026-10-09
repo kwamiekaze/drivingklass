@@ -29,7 +29,9 @@ export type WheelPart = {
   /** Axle at +x (true) or -x (false), and the side of the car (+z or -z) in car space. */
   posAxle: boolean; side: 1 | -1;
 };
-export type WheelSplit = { body: Uint32Array; wheels: WheelPart[] };
+/** `colors`: one linear RGB per vertex of the file (only wheel vertices are filled): near-black rubber for the tyre, dark graphite for the rim. Wheels are drawn with these, never with the file's baked (paint-stained) texture. */
+export type WheelSplit = { body: Uint32Array; wheels: WheelPart[]; colors: Float32Array };
+const TYRE: [number, number, number] = [.012, .012, .014], RIM: [number, number, number] = [.055, .055, .06], RIM_R = .64;   // the rim is everything inside .64 of the tyre's radius
 
 const MIN_TRIS = 120;   // a wheel with fewer triangles than this is not a wheel: leave the car alone
 
@@ -61,16 +63,21 @@ export function splitWheels(position: THREE.BufferAttribute | THREE.InterleavedB
     }
     if (slot < 0) body.push(a, b, c); else take[slot]!.push(a, b, c);
   }
-  const wheels: WheelPart[] = [];
+  const wheels: WheelPart[] = [], colors = new Float32Array(n * 3);
   for (let s = 0; s < 4; s++) {
     const idx = take[s]!;
     if (idx.length / 3 < MIN_TRIS) return null;
     const ax = s >> 1, side: 1 | -1 = s % 2 === 0 ? 1 : -1, [cx, cy] = axles[ax]!;
     const zs: number[] = []; for (let i = 0; i < idx.length; i += 3) zs.push(Math.abs(car[idx[i]! * 3 + 2]!));
     zs.sort((p, q) => p - q);
+    const r = axles[ax]![2];
+    for (let i = 0; i < idx.length; i++) {
+      const v = idx[i]!, f = Math.hypot(car[v * 3]! - cx, car[v * 3 + 1]! - cy) / r, c = f < RIM_R ? RIM : TYRE;
+      colors[v * 3] = c[0]; colors[v * 3 + 1] = c[1]; colors[v * 3 + 2] = c[2];
+    }
     wheels.push({ idx: Uint32Array.from(idx), cx, cy, cz: side * zs[zs.length >> 1]!, posAxle: ax === 0, side });
   }
-  return { body: Uint32Array.from(body), wheels };
+  return { body: Uint32Array.from(body), wheels, colors };
 }
 
 /** Pivot matrix, in the file's own coordinates: steer about the car's up axis, then spin about the axle, both through the wheel's centre. */
