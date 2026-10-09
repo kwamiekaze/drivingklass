@@ -3,8 +3,10 @@
  *   deep      0..1   how much darker the night is: it comes in between 9 and 10 pm (the visitor's own clock) and goes between 5 and 6 am. It only shows in the night theme.
  *   look      the weather as five numbers (cloud, rain, fog, snow, storm), eased toward `goal` so a change of weather fades in and out and never jumps.
  * The weather is the real one for Carrollton, Georgia (Open-Meteo, no key), asked for at most every 15 minutes. If the answer cannot be had the scene stays clear.
- * An admin can preview any look (and the deep night) from the menu: that choice lives in that admin's own browser only; every visitor always gets the live weather.
+ * An admin can set the weather pattern (and the deep night) for the whole site from the admin dashboard (Site controls), or from the home page menu: the choice is saved in the
+ * `home_weather_settings` table and every visitor gets it. "Live" (the default, also used while the table cannot be read) means the real weather of Carrollton.
  */
+import { supabase } from '@/integrations/supabase/client';
 export type WeatherKind = 'clear' | 'cloudy' | 'fog' | 'rain' | 'storm' | 'snow';
 export type Look = { cloud: number; rain: number; fog: number; snow: number; storm: number };
 export const KINDS: WeatherKind[] = ['clear', 'cloudy', 'fog', 'rain', 'storm', 'snow'];
@@ -22,14 +24,16 @@ export const LOOKS: Record<WeatherKind, Look> = {
 export const PLACE = { name: 'Carrollton, GA', lat: 33.5801, lon: -85.0766 };
 
 export type LiveWeather = { kind: WeatherKind; look: Look; tempF: number | null; at: number };
-type PreviewState = { weather: WeatherKind | 'live'; night: 'live' | 'deep' | 'normal' };
+export type PreviewState = { weather: WeatherKind | 'live'; night: 'live' | 'deep' | 'normal' };
 
 export const atmo = {
   deep: 0, deepGoal: 0,
   look: { ...LOOKS.clear } as Look, goal: { ...LOOKS.clear } as Look,
   live: null as LiveWeather | null,
+  site: { weather: 'live', night: 'live' } as PreviewState,     // what the admins chose for the whole site (the home_weather_settings row)
+  siteAt: 0, siteReady: false,
   preview: { weather: 'live', night: 'live' } as PreviewState,
-  admin: false, debug: false,      // debug: a ?wx= / ?deep= link pins the look for screenshots
+  debug: false,                    // debug: a ?wx= / ?deep= link pins the look for screenshots
   flash: 0,                        // 0..1 lightning flash, set by the storm and decayed by whoever draws it
 };
 
@@ -37,9 +41,30 @@ const listeners = new Set<() => void>();
 export const subscribe = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
 const emit = () => listeners.forEach(f => f());
 
-const KEY = 'dk.preview.v1';
-function loadPreview() { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') { if (v.weather === 'live' || KINDS.includes(v.weather)) atmo.preview.weather = v.weather; if (v.night === 'live' || v.night === 'deep' || v.night === 'normal') atmo.preview.night = v.night; } } catch { /* private window: fine */ } }
-function savePreview() { try { localStorage.setItem(KEY, JSON.stringify(atmo.preview)); } catch { /* ok */ } }
+// the new table is not in the generated types yet
+type Loose = { from: (t: string) => any };   // eslint-disable-line @typescript-eslint/no-explicit-any
+const sb = supabase as unknown as Loose;
+const isKind = (v: unknown): v is WeatherKind => KINDS.includes(v as WeatherKind);
+
+/** Read the site-wide choice (everyone can read it). If the table is not there yet or cannot be read, the site simply shows the live weather. */
+export async function loadSite(force = false): Promise<void> {
+  if (!force && atmo.siteReady && Date.now() - atmo.siteAt < 2 * 60 * 1000) return;
+  atmo.siteAt = Date.now();
+  try {
+    const { data, error } = await sb.from('home_weather_settings').select('weather,night').eq('id', 1).maybeSingle();
+    if (!error && data) atmo.site = { weather: isKind(data.weather) ? data.weather : 'live', night: data.night === 'deep' || data.night === 'normal' ? data.night : 'live' };
+  } catch { /* keep what we had */ }
+  atmo.siteReady = true; apply(); emit();
+}
+/** An admin sets the weather pattern and/or the night depth for the whole site. Returns an error message, or null when it was saved. */
+export async function saveSite(p: Partial<PreviewState>): Promise<string | null> {
+  const next = { ...atmo.site, ...p };
+  try {
+    const { error } = await sb.from('home_weather_settings').upsert({ id: 1, weather: next.weather, night: next.night, updated_at: new Date().toISOString() });
+    if (error) return error.message || 'Could not save';
+  } catch (e) { return e instanceof Error ? e.message : 'Could not save'; }
+  atmo.site = next; atmo.siteAt = Date.now(); atmo.siteReady = true; apply(); emit(); return null;
+}
 
 /** The deep-night amount for a clock time: 0 until 9 pm, up to 1 by 10 pm, 1 until 5 am, back to 0 by 6 am. */
 export function deepAt(d: Date): number {
@@ -80,16 +105,15 @@ export async function refreshLive(force = false): Promise<void> {
   fetching = false; apply(); emit();
 }
 
-/** Work out the goals from the live weather, the clock and the admin's preview. */
+/** Work out the goals from the live weather, the clock and the admins' choice for the site. */
 export function apply() {
-  const p = atmo.admin || atmo.debug ? atmo.preview : { weather: 'live', night: 'live' } as PreviewState;
+  const p = atmo.debug ? atmo.preview : atmo.site;
   atmo.goal = p.weather === 'live' ? { ...(atmo.live?.look ?? LOOKS.clear) } : { ...LOOKS[p.weather] };
   atmo.deepGoal = p.night === 'deep' ? 1 : p.night === 'normal' ? 0 : deepAt(new Date());
 }
 
-export function setAdmin(on: boolean) { if (atmo.admin === on) return; atmo.admin = on; if (on) loadPreview(); apply(); emit(); }
-export function setPreview(p: Partial<PreviewState>) { Object.assign(atmo.preview, p); savePreview(); apply(); emit(); }
-export const effectiveKind = (): WeatherKind => (atmo.admin && atmo.preview.weather !== 'live' ? atmo.preview.weather : atmo.live?.kind ?? 'clear');
+/** The weather the scene is showing now (the admins' pattern if they set one, otherwise the live weather). */
+export const effectiveKind = (): WeatherKind => { const w = atmo.debug ? atmo.preview.weather : atmo.site.weather; return w !== 'live' ? w : atmo.live?.kind ?? 'clear'; };
 
 let clockT = 0;
 /** Ease the numbers toward their goals; call once a frame. */
@@ -97,7 +121,7 @@ export function tickAtmo(dt: number) {
   const k = 1 - Math.exp(-.9 * Math.min(dt, .05));
   for (const key of Object.keys(atmo.look) as (keyof Look)[]) { const g = atmo.goal[key]; atmo.look[key] += (g - atmo.look[key]) * k; if (Math.abs(g - atmo.look[key]) < .002) atmo.look[key] = g; }
   atmo.deep += (atmo.deepGoal - atmo.deep) * (1 - Math.exp(-.7 * Math.min(dt, .05))); if (Math.abs(atmo.deepGoal - atmo.deep) < .002) atmo.deep = atmo.deepGoal;
-  clockT += dt; if (clockT > 20) { clockT = 0; apply(); if (!atmo.live || Date.now() - atmo.live.at > 15 * 60 * 1000) void refreshLive(); }
+  clockT += dt; if (clockT > 20) { clockT = 0; apply(); if (!atmo.live || Date.now() - atmo.live.at > 15 * 60 * 1000) void refreshLive(); void loadSite(); }
   atmo.flash = Math.max(0, atmo.flash - dt * 3.2);
 }
 

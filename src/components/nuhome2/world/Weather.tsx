@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { atmo, tickAtmo, refreshLive, debugOverride } from './atmosphere';
+import { atmo, tickAtmo, refreshLive, loadSite, debugOverride } from './atmosphere';
 import { NightCtx, rng } from './theme';
 
 /*
@@ -54,7 +54,7 @@ export function Weather({ lite }: { lite: boolean }) {
   const { camera, size, gl } = useThree(), mix = useContext(NightCtx);
   const rainRef = useRef<THREE.Mesh>(null), snowRef = useRef<THREE.Points>(null);
   const bolt = useRef({ next: 4, t: 0, n: 0 });
-  useEffect(() => { debugOverride(); void refreshLive(); }, []);
+  useEffect(() => { debugOverride(); void refreshLive(); void loadSite(); }, []);
   const nRain = lite ? 3500 : 8000, nSnow = lite ? 2600 : 6000;
   const rainGeo = useMemo(() => {
     const r = rng(77), g = new THREE.InstancedBufferGeometry();

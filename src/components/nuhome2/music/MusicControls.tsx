@@ -16,6 +16,7 @@ export function MusicControls() {
   useEffect(() => {
     if (!isAdmin) return;
     const on = () => setOpen(true);
+    if (new URLSearchParams(window.location.search).get("panel") === "music") setOpen(true);   // from the admin dashboard's Site controls
     window.addEventListener("dk:music-settings", on);
     return () => window.removeEventListener("dk:music-settings", on);
   }, [isAdmin]);

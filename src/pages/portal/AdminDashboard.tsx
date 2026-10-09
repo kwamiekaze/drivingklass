@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { PortalLayout } from "@/components/portal/PortalLayout";
+import { PortalLayout, getNavItems } from "@/components/portal/PortalLayout";
+import { WeatherControls } from "@/components/nuhome2/WeatherControls";
+import { InstallAppModal } from "@/components/InstallAppModal";
 import { ProtectedRoute } from "@/components/portal/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset, Clock, Plus } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, AlertTriangle, UserPlus, BarChart3, Headset, Clock, Plus, CloudSun, Music, Gamepad2, Download, UserCircle, Globe } from "lucide-react";
 import { Profile, Session, ReportCard } from "@/types/portal";
 import { Link } from "react-router-dom";
 import { isAfter, parseISO, startOfDay, subDays, format } from "date-fns";
@@ -158,6 +160,9 @@ function AdminDashboardContent() {
     { href: '/admin/assignments', label: 'Assignments', icon: Users, count: 0, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: 0, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
   ];
+  const [showInstall, setShowInstall] = useState(false);
+  const shown = new Set(quickLinks.map(l => l.href));
+  const moreTools = getNavItems('admin', (k: string) => k).filter(i => i.href !== '/admin' && !shown.has(i.href));
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -225,6 +230,49 @@ function AdminDashboardContent() {
           </Link>
         ))}
       </div>
+
+      {/* Every other tool of the admin menu, so everything is one tap from the dashboard */}
+      <Card className="portal-card">
+        <CardHeader className="pb-3"><CardTitle className="text-base sm:text-lg">All admin tools</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            {moreTools.map(item => (
+              <Link key={item.href} to={item.href} className="flex items-center gap-2.5 rounded-lg border border-border/60 px-3 py-3 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                <item.icon className="h-4 w-4 text-gold shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* The site menu of the home page (Portal, Profile, Play Mini-Game, Install as App, Music settings, Weather & night), all here */}
+      <Card className="portal-card">
+        <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base sm:text-lg"><CloudSun className="h-5 w-5 text-gold" />Site controls</CardTitle></CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            {[
+              { to: '/', label: 'Home page', icon: Globe },
+              { to: '/profile', label: 'My profile', icon: UserCircle },
+              { to: '/simulator', label: 'Play Mini-Game', icon: Gamepad2 },
+              { to: '/?panel=music', label: 'Music settings', icon: Music },
+            ].map(t => (
+              <Link key={t.to} to={t.to} className="flex items-center gap-2.5 rounded-lg border border-border/60 px-3 py-3 hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                <t.icon className="h-4 w-4 text-gold shrink-0" /><span className="text-sm font-medium">{t.label}</span>
+              </Link>
+            ))}
+            <button type="button" onClick={() => setShowInstall(true)} className="flex items-center gap-2.5 rounded-lg border border-border/60 px-3 py-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors">
+              <Download className="h-4 w-4 text-gold shrink-0" /><span className="text-sm font-medium">Install as App</span>
+            </button>
+          </div>
+          <div className="rounded-xl border border-gold/30 p-4">
+            <h3 className="font-semibold mb-1 flex items-center gap-2"><CloudSun className="h-4 w-4 text-gold" />Weather &amp; night on the home page</h3>
+            <p className="text-xs text-muted-foreground mb-3">Visitors see the real weather of Carrollton, Georgia. Pick a pattern here to show it to everyone, and set it back to Live when you are done.</p>
+            <WeatherControls />
+          </div>
+        </CardContent>
+      </Card>
+      {showInstall && <InstallAppModal onClose={() => setShowInstall(false)} />}
 
       {/* Pending Approvals */}
       {recentActivity.length > 0 && (
