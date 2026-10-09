@@ -204,6 +204,41 @@ export function ProposalBuilder({
     try {
       const { data: studentProfile } = await supabase.from('profiles').select('pickup_address, dropoff_address, email, full_name, first_name, last_name').eq('id', studentId).single();
 
+      // The proposal email (dates, package and the Square pay link): sent for a new proposal and again for a revised one. Fire and forget, so a mail hiccup never blocks the proposal itself.
+      const sendProposalEmail = (proposalId: string, pkg: { label: string; price: string; squareUrl: string }, totalHours: number, revised: boolean) => {
+        try {
+          const instructorProfile = instructors.find(i => i.id === instructorId);
+          const studentEmail = studentProfile?.email;
+          if (!studentEmail) return;
+          const emailItems = validItems.map(it => ({
+            dateLabel: format(parseISO(it.date), 'EEE, MMM d, yyyy'),
+            timeLabel: `${formatTime24to12(it.start_time)} – ${formatTime24to12(it.end_time)}`,
+            sessionType: it.session_type === 'testing' ? 'testing' : 'driving',
+            locationLabel: it.session_type === 'testing' ? (it.dds_location || undefined) : undefined,
+          }));
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'schedule-proposal',
+              recipientEmail: studentEmail,
+              idempotencyKey: revised ? `schedule-proposal-${proposalId}-rev-${Date.now()}` : `schedule-proposal-${proposalId}`,
+              templateData: {
+                recipientName: profileFirstName(studentProfile as any),
+                instructorName: instructorProfile ? (profileFirstName(instructorProfile as any) || 'Your Instructor') : undefined,
+                noteToStudent: noteToStudent || undefined,
+                items: emailItems,
+                packageLabel: pkg.label,
+                packageHours: totalHours,
+                packagePrice: pkg.price,
+                paymentUrl: pkg.squareUrl,
+                revised,
+              },
+            },
+          }).catch(err => console.warn('[proposal] email dispatch failed', err));
+        } catch (mailErr) {
+          console.warn('[proposal] email preparation failed', mailErr);
+        }
+      };
+
       if (isEditing) {
         // Update existing proposal: delete old items, insert new ones, update status
         const { error: delErr } = await supabase
@@ -257,6 +292,12 @@ export function ProposalBuilder({
           severity: 'info',
           link: '/student/proposals',
         });
+
+        {
+          const { totalHours, includesRoadTest } = sumProposalHours(validItems);
+          const { pkg } = resolveProposalPackage({ packageId: packageId === 'auto' ? null : packageId, totalHours, includesRoadTest });
+          sendProposalEmail(editingProposalId!, pkg, totalHours, true);
+        }
 
         toast.success(`Revised proposal sent with ${validItems.length} date(s)`);
       } else {
@@ -320,38 +361,7 @@ export function ProposalBuilder({
           } as any,
         });
 
-        // Send proposal email to student (fire-and-forget, non-blocking)
-        try {
-          const instructorProfile = instructors.find(i => i.id === instructorId);
-          const studentEmail = studentProfile?.email;
-          if (studentEmail) {
-            const emailItems = validItems.map(it => ({
-              dateLabel: format(parseISO(it.date), 'EEE, MMM d, yyyy'),
-              timeLabel: `${formatTime24to12(it.start_time)} – ${formatTime24to12(it.end_time)}`,
-              sessionType: it.session_type === 'testing' ? 'testing' : 'driving',
-              locationLabel: it.session_type === 'testing' ? (it.dds_location || undefined) : undefined,
-            }));
-            supabase.functions.invoke('send-transactional-email', {
-              body: {
-                templateName: 'schedule-proposal',
-                recipientEmail: studentEmail,
-                idempotencyKey: `schedule-proposal-${proposal.id}`,
-                templateData: {
-                  recipientName: profileFirstName(studentProfile as any),
-                  instructorName: instructorProfile ? (profileFirstName(instructorProfile as any) || 'Your Instructor') : undefined,
-                  noteToStudent: noteToStudent || undefined,
-                  items: emailItems,
-                  packageLabel: pkg.label,
-                  packageHours: totalHours,
-                  packagePrice: pkg.price,
-                  paymentUrl: pkg.squareUrl,
-                },
-              },
-            }).catch(err => console.warn('[proposal] email dispatch failed', err));
-          }
-        } catch (mailErr) {
-          console.warn('[proposal] email preparation failed', mailErr);
-        }
+        sendProposalEmail(proposal.id, pkg, totalHours, false);
 
         toast.success(`Proposal sent with ${validItems.length} date(s)`);
       }
