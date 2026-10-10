@@ -379,7 +379,7 @@ function Cones({ list }: { list: [number, number][] }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     const m = ref.current; if (!m) return; const o = new THREE.Object3D(), r = rng(8);
-    list.forEach(([x, z], i) => { o.position.set(x, .006, z); o.rotation.set(0, r() * 6.28, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
+    list.forEach(([x, z], i) => { o.position.set(x, .062, z); o.rotation.set(0, r() * 6.28, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
     m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere();
   }, [list]);
   return <instancedMesh ref={ref} args={[coneGeo, undefined, list.length]} castShadow receiveShadow frustumCulled={false}>
