@@ -14,8 +14,8 @@ export function RecenterButton() {
   }, []);
   if (!away) return null;
   return (
-    <button type="button" className="n2-recenter" aria-label="Re-center the camera on the car" onClick={() => { window.dispatchEvent(new Event("dk:recenter")); setAway(false); }}>
-      <Navigation size={15} aria-hidden="true" /><span>Re-center</span>
+    <button type="button" className="n2-recenter" aria-label="Re-center the camera on the car" title="Re-center" onClick={() => { window.dispatchEvent(new Event("dk:recenter")); setAway(false); }}>
+      <Navigation size={14} aria-hidden="true" />
     </button>
   );
 }
