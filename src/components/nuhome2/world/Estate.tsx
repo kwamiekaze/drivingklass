@@ -41,19 +41,7 @@ function lotTexture(lite: boolean) {
   const ground = g, layer = document.createElement('canvas'); layer.width = W; layer.height = H; g = layer.getContext('2d')!;
   // sealed seams every ~11 m
   g.fillStyle = 'rgba(40,40,46,.35)'; for (let x = -33; x < 34; x += 11) g.fillRect(X(x), 0, 2, H); for (const z of [-9, 0, 9]) g.fillRect(0, Z(z), W, 2);
-  // repaired patches
-  for (let i = 0; i < 9; i++) { const x = r() * W, z = r() * H, w = 30 + r() * 90, h = 20 + r() * 50; g.fillStyle = `rgba(${r() > .5 ? '58,58,64' : '96,96,102'},.35)`; g.fillRect(x, z, w, h); g.strokeStyle = 'rgba(30,30,34,.35)'; g.lineWidth = 1.5; g.strokeRect(x, z, w, h); }
-  // tire wear: darker, smoother tracks along the aisle and the entry lanes
-  const wear = (x0: number, z0: number, x1: number, z1: number, wd: number) => { g.strokeStyle = 'rgba(52,52,58,.28)'; g.lineWidth = wd; g.lineCap = 'round'; g.beginPath(); g.moveTo(X(x0), Z(z0)); g.lineTo(X(x1), Z(z1)); g.stroke(); };
-  [-2.1, -1.1, 1.1, 2.1].forEach(dz => wear(-33, dz - .25, 33, dz - .25, sz * .45));
-  [-2.05, 2.05].forEach(dx => [-.8, .8].forEach(o => wear(dx + o, 14, dx + o, -3, sx * .3)));
-  [-31.7, 31.7].forEach(dx => [-1.1, 1.1].forEach(o => wear(dx + o, 14, dx + o, -3, sx * .3)));
-  // oil stains where cars sit
-  const stain = (x: number, z: number, rad: number) => { const gr = g.createRadialGradient(x, z, 1, x, z, rad); gr.addColorStop(0, 'rgba(20,20,24,.45)'); gr.addColorStop(1, 'rgba(20,20,24,0)'); g.fillStyle = gr; g.fillRect(x - rad, z - rad, rad * 2, rad * 2); };
-  for (let i = 0; i < 70; i++) { const row = r() > .5 ? -6 : 5.5, sxp = (Math.floor(r() * 21) - 10) * 2.75; stain(X(sxp + (r() - .5) * 1.2), Z(row + (r() - .5) * 2.4), 5 + r() * 14); }
-  // hairline cracks
-  g.strokeStyle = 'rgba(24,24,28,.5)'; g.lineWidth = 1;
-  for (let i = 0; i < 26; i++) { let x = r() * W, z = r() * H; g.beginPath(); g.moveTo(x, z); for (let k = 0; k < 9; k++) { x += (r() - .5) * 60; z += (r() - .5) * 40; g.lineTo(x, z); } g.stroke(); }
+  // (patches, tyre tracks, oil stains and cracks are left off: the lot is clean)
   // keep the paving round the fountain spotless: fully clean out to 11 m, fading back to the worn lot by 16 m
   g.save(); g.globalCompositeOperation = 'destination-out'; g.translate(X(FOUNTAIN_AT.x), Z(FOUNTAIN_AT.z)); g.scale(1, sz / sx);
   const hole = g.createRadialGradient(0, 0, sx * 11, 0, 0, sx * 16); hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(1, 'rgba(0,0,0,0)');

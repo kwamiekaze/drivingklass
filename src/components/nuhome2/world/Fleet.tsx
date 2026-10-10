@@ -390,7 +390,7 @@ function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; 
     beams.current.forEach((b) => { if (b) { b.intensity = k.head * (105 + 60 * atmo.deep * mix.current); b.visible = hv; } });   // decay 2 and no cut-off distance: the light just thins out, there is no distance where it stops
   });
   const spots: [number, number, number][] = [[f[0] + fo * f[3] * .45, f[1], -f[2]], [r[0] + ro * r[3] * .45, r[1], -r[2]], [f[0] + fo * f[3] * .45, f[1], f[2]], [r[0] + ro * r[3] * .45, r[1], r[2]]];   // outward from the car, whichever way its model faces
-  const ground = .07;   // just above every bit of road paint (it is 3 to 5 cm over the tarmac and writes depth), so no line ever cuts a beam
+  const ground = .23;   // above everything low on the ground: road paint (3 to 5 cm), the back lot's raised slab (16 cm) and the kerbs (20 cm), so none of their edges ever cuts a beam
   const lobe = (key: string, x: number, z: number, sd: number, dir: number, len: number, wid: number, color: string, arr: RefObject<(THREE.Mesh | null)[]>, i: number, spread: number) => (
     <group key={key} position={[x, ground, z]} rotation-y={(dir > 0 ? 0 : Math.PI) + sd * spread}>
       <mesh ref={(m) => { arr.current![i] = m; }} geometry={beamGeo(len, wid)} visible={false} renderOrder={3}>
@@ -406,7 +406,7 @@ function LampHalos({ lamps, u, signal, lite }: { lamps: Lamps; u: LampUniforms; 
     {[-1, 1].map((sd, i) => lobe(`hp${i}`, f[0] + fo * f[3], sd * f[2], fo > 0 ? -sd : sd, fo, 15, 6, '#ffe2a8', headPool, i, .07))}
     {[-1, 1].map((sd, i) => lobe(`rp${i}`, r[0] + ro * r[3], sd * (r[2] - r[5] * .45), ro > 0 ? -sd : sd, ro, 4.6, 2.8, '#e8f0ff', revPool, i, .09))}
     {!lite && [-1, 1].map((sd, i) => <group key={`b${i}`}>
-      <primitive object={aim[i]!} position={[f[0] + fo * 9, ground, sd * f[2] * .55]} />
+      <primitive object={aim[i]!} position={[f[0] + fo * 9, 0, sd * f[2] * .55]} />
       <spotLight ref={(b) => { beams.current[i] = b; }} position={[f[0] + fo * (f[3] + .9), f[1] - .05, sd * f[2]]} target={aim[i]!} angle={.32} penumbra={1} distance={0} decay={2} color="#fff0d2" intensity={0} visible={false} />
     </group>)}
   </group>;
