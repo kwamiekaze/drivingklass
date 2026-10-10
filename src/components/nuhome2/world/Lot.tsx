@@ -304,9 +304,9 @@ export function Lot({ lite, tier, asphalt }: { lite: boolean; tier: 'high' | 'mi
   const wells: V3[] = ISLAND_TREES.map(([x, z]) => [x, .42, z + .5] as V3);
   const lots = lite ? LOT_LAMPS.slice(0, 4) : LOT_LAMPS, aves = lite ? AVENUE_LAMPS.slice(0, 3) : AVENUE_LAMPS;
   const cars: { id: keyof typeof CAR_SPECS; x: number; z: number; r: number }[] = [
-    { id: 'corolla', x: -5.5, z: -6, r: Math.PI / 2 }, { id: 'civic', x: 8.25, z: -6, r: Math.PI / 2 }, { id: 'elantra', x: -16.5, z: -6, r: Math.PI / 2 },
-    { id: 'hero', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
-    { id: 'camry', x: 0, z: -6, r: Math.PI / 2 },   // the school's black car in the reserved stall in front of the door (when it is not the one driving in)
+    // row A, west to east: red, black, yellow (in the reserved stall in front of the door), white; row B east of the fountain: the second green car
+    { id: 'elantra', x: -16.5, z: -6, r: Math.PI / 2 }, { id: 'camry', x: -5.5, z: -6, r: Math.PI / 2 }, { id: 'hero', x: 0, z: -6, r: Math.PI / 2 }, { id: 'corolla', x: 8.25, z: -6, r: Math.PI / 2 },
+    { id: 'civic', x: 11, z: 5.5, r: -Math.PI / 2 }, { id: 'sentra', x: -13.75, z: 5.5, r: -Math.PI / 2 },
   ];
   return <group>
     <Decals items={mk.white} color="#e2dfd6" /><Arrows items={arrows} />

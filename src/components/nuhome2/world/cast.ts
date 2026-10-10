@@ -8,12 +8,12 @@ export type CastId = 'hero' | 'camry' | 'corolla' | 'civic' | 'elantra' | 'sentr
 /** A stall: where the car comes to rest, and which way it turns into it from the aisle (+1 right, -1 left). */
 export type Stall = { x: number; z: number; side: 1 | -1 };
 export const STALLS: Record<CastId, Stall> = {
-  hero: { x: 11, z: 5.5, side: -1 },        // the yellow sports car, row B east of the fountain (nose south)
-  camry: { x: 0, z: -6, side: 1 },           // the school's black car: the reserved stall in front of the door
-  corolla: { x: -5.5, z: -6, side: 1 },      // the white car, row A
-  civic: { x: 8.25, z: -6, side: 1 },        // the second green sports car, row A east
-  elantra: { x: -16.5, z: -6, side: 1 },     // the red sports car, row A
-  sentra: { x: -13.75, z: 5.5, side: -1 },   // the black and orange striped sports car, row B west
+  hero: { x: 0, z: -6, side: 1 },            // the yellow sports car: the reserved stall in front of the door, row A (west to east: red, black, yellow, white)
+  camry: { x: -5.5, z: -6, side: 1 },        // the school's black car, row A
+  corolla: { x: 8.25, z: -6, side: 1 },      // the white car, row A east
+  civic: { x: 11, z: 5.5, side: -1 },        // the second green sports car, row B east of the fountain (nose south)
+  elantra: { x: -16.5, z: -6, side: 1 },     // the red sports car, row A west
+  sentra: { x: -13.75, z: 5.5, side: -1 },   // the first green sports car, row B west
 };
 export const PLATES: Record<CastId, string> = { hero: 'DK29OR', camry: 'DK27RR', corolla: 'DK24CO', civic: 'DK25ML', elantra: 'DK26OR', sentra: 'DK28GA' };
 const ORDER: CastId[] = ['hero', 'camry', 'corolla', 'civic', 'elantra', 'sentra'];
