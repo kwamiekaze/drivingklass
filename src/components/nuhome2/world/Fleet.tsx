@@ -47,7 +47,7 @@ export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFlee
   camry: asset('dk-meshy-vibranium', { wheels: { pos: [1.27, .34, .34], neg: [-1.53, .41, .41] },  length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
   // the green sports car (Meshy, supplied by the owner) in the row B west stall: the model faces +x, so its lamps are measured at +x (front) and -x (rear)
   sentra: asset('dk-meshy-green-sport', { wheels: { pos: [1.4, .37, .37], neg: [-1.35, .37, .37] },  length: 4.5, lamps: { front: [2.12, .67, .64, .26, .12, .24], rear: [-2.12, .89, .56, .24, .1, .22] } }),
-  hero: asset('dk-meshy-orange-sport', { wheels: { pos: [1.35, .37, .37], neg: [-1.41, .37, .37] },  length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
+  hero: asset('dk-meshy-yellow-sport', { wheels: { pos: [1.35, .377, .38], neg: [-1.284, .377, .378] },  length: 4.5, lamps: { front: [-1.66, .744, .703, .2, .138, .156], rear: [2.02, .735, .634, .184, .074, .25] } }),   // the parked car, now the yellow sports car (Guyana yellow); nose points to -x like the Matra
 };
 
 /** What the car is doing with its wheels, written by whoever drives it: the road-wheel angle (radians, left positive) and the distance rolled forward (metres, signed). */

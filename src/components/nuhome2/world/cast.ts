@@ -8,7 +8,7 @@ export type CastId = 'hero' | 'camry' | 'corolla' | 'civic' | 'elantra' | 'sentr
 /** A stall: where the car comes to rest, and which way it turns into it from the aisle (+1 right, -1 left). */
 export type Stall = { x: number; z: number; side: 1 | -1 };
 export const STALLS: Record<CastId, Stall> = {
-  hero: { x: 11, z: 5.5, side: -1 },        // the orange sports car, row B east of the fountain (nose south)
+  hero: { x: 11, z: 5.5, side: -1 },        // the yellow sports car, row B east of the fountain (nose south)
   camry: { x: 0, z: -6, side: 1 },           // the school's black car: the reserved stall in front of the door
   corolla: { x: -5.5, z: -6, side: 1 },      // the white car, row A
   civic: { x: 8.25, z: -6, side: 1 },        // the pale blue Matra, row A
