@@ -45,8 +45,8 @@ export const IMPORTED_FLEET: Partial<Record<keyof typeof CAR_SPECS, ImportedFlee
   // the other three spots: Matra Laser 1971, orange sports car, red roadster (all Meshy, CC0 models supplied by the owner)
   civic: asset('dk-meshy-matra-laser', { wheels: { pos: [1.59, .43, .43], neg: [-1.37, .42, .42] },  length: 4.4, lamps: { front: [-1.85, .58, .62, .26, .12, .22], rear: [1.88, .74, .62, .24, .1, .22] } }),
   camry: asset('dk-meshy-vibranium', { wheels: { pos: [1.27, .34, .34], neg: [-1.53, .41, .41] },  length: 4.3, plateRy: .6, lamps: { front: [1.87, .575, .6, .3, .11, .24], rear: [-1.93, .755, .6, .27, .1, .24] } }),   // the school's car: the Vibranium Meshy model, in the opening shot
-  // the black and orange striped sports car (Meshy, "high detail"); its model faces the other way, so its lamps are measured at -x (front) and +x (rear)
-  sentra: asset('dk-meshy-detail-sport', { wheels: { pos: [1.51, .38, .38], neg: [-1.47, .4, .4] },  length: 4.5, lamps: { front: [-1.88, .7, .69, .28, .13, .22], rear: [1.95, .78, .69, .24, .12, .22] } }),
+  // the green sports car (Meshy, supplied by the owner) in the row B west stall: the model faces +x, so its lamps are measured at +x (front) and -x (rear)
+  sentra: asset('dk-meshy-green-sport', { wheels: { pos: [1.4, .37, .37], neg: [-1.35, .37, .37] },  length: 4.5, lamps: { front: [2.12, .67, .64, .26, .12, .24], rear: [-2.12, .89, .56, .24, .1, .22] } }),
   hero: asset('dk-meshy-orange-sport', { wheels: { pos: [1.35, .37, .37], neg: [-1.41, .37, .37] },  length: 4.5, lamps: { front: [1.95, .66, .62, .24, .11, .2], rear: [-1.95, .82, .6, .24, .1, .18] } }),   // the parked car that used to be the gold sedan
 };
 
