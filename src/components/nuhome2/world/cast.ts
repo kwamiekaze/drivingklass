@@ -11,7 +11,7 @@ export const STALLS: Record<CastId, Stall> = {
   hero: { x: 11, z: 5.5, side: -1 },        // the yellow sports car, row B east of the fountain (nose south)
   camry: { x: 0, z: -6, side: 1 },           // the school's black car: the reserved stall in front of the door
   corolla: { x: -5.5, z: -6, side: 1 },      // the white car, row A
-  civic: { x: 8.25, z: -6, side: 1 },        // the pale blue Matra, row A
+  civic: { x: 8.25, z: -6, side: 1 },        // the second green sports car, row A east
   elantra: { x: -16.5, z: -6, side: 1 },     // the red sports car, row A
   sentra: { x: -13.75, z: 5.5, side: -1 },   // the black and orange striped sports car, row B west
 };
