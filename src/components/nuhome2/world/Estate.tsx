@@ -39,9 +39,7 @@ function lotTexture(lite: boolean) {
   for (let i = 0; i < (lite ? 20000 : 70000); i++) { const v = 94 + r() * 74; g.fillStyle = `rgba(${v},${v},${v + 6},.5)`; g.fillRect(r() * W, r() * H, 1 + r() * 1.6, 1 + r() * 1.6); }
   // everything dark (seams, patches, tire tracks, oil, cracks) goes on its own layer, so a clean zone can be cut around the fountain
   const ground = g, layer = document.createElement('canvas'); layer.width = W; layer.height = H; g = layer.getContext('2d')!;
-  // sealed seams every ~11 m
-  g.fillStyle = 'rgba(40,40,46,.35)'; for (let x = -33; x < 34; x += 11) g.fillRect(X(x), 0, 2, H); for (const z of [-9, 0, 9]) g.fillRect(0, Z(z), W, 2);
-  // (patches, tyre tracks, oil stains and cracks are left off: the lot is clean)
+  // (seams, patches, tyre tracks, oil stains and cracks are all left off: the lot is clean)
   // keep the paving round the fountain spotless: fully clean out to 11 m, fading back to the worn lot by 16 m
   g.save(); g.globalCompositeOperation = 'destination-out'; g.translate(X(FOUNTAIN_AT.x), Z(FOUNTAIN_AT.z)); g.scale(1, sz / sx);
   const hole = g.createRadialGradient(0, 0, sx * 11, 0, 0, sx * 16); hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(1, 'rgba(0,0,0,0)');
