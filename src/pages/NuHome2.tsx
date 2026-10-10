@@ -9,6 +9,7 @@ import { HeaderPanel } from "@/components/nuhome2/HeaderPanel";
 import { ExitSign } from "@/components/nuhome2/ExitSign";
 import { SteeringLive, SteeringCaption } from "@/components/nuhome2/SteeringLive";
 import { WeatherAdmin } from "@/components/nuhome2/WeatherAdmin";
+import { RecenterButton } from "@/components/nuhome2/RecenterButton";
 import { ParkingSign } from "@/components/nuhome2/ParkingSign";
 import wheelUrl from "@/assets/dk-steering-wheel.webp";
 import { Journey } from "@/components/nuhome2/journey/Journey";
@@ -208,6 +209,7 @@ export default function NuHome2() {
         <SteeringCaption />
         <ParkingSign />
         <WeatherAdmin />
+        <RecenterButton />
 
         <div className="n2-hero" data-hidden={stage !== 0}>
           <div className="n2-eyebrow"><span className="n2-eline" /> {BRAND.eyebrow} <span className="n2-eline" /></div>

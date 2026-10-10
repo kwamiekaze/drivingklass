@@ -41,7 +41,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
   const started = useRef(false);
   const cut = useRef({ pos: 0, idx: -1, t: 0, consumed: cinema.beatCuts, order: [] as number[], list: [] as Shot[], narrow: false });
   if (!started.current) { started.current = true; if (mode.current === 'intro') { intro.t = introT ?? Number(q.get('introFrom') ?? 0); intro.t3 = T_GO; intro.done = false; } else parkCarNow(); if (parkT !== null) { const pk = q.get('park'), from = q.get('parkFrom'); if (from === 'box') park.loc = 'box'; if (from === 'entry') park.loc = 'entry'; if (pk === 'turn') park.loc = 'bay'; if (pk === 'back') park.loc = 'line'; if (pk === 'exit') park.loc = from === 'entry' || from === 'box' || from === 'bay' || from === 'line' || from === 'front' ? from : 'rear'; startPark(pk === 'bay' || pk === 'turn' || pk === 'back' || pk === 'exit' || pk === 'enter' ? pk : 'parallel'); park.t = parkT; if (parkT >= parkTotal()) finishPark(); } }   // ?park=bay (&parkFrom=box) picks the other drive
-  const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number } | null>(null);
+  const parkFrom = useRef<{ p: THREE.Vector3; l: THREE.Vector3; fov: number; seq: number; at?: number } | null>(null), awayRef = useRef(false);
   const panClock = useRef(0), first = useRef(true), snapped = useRef(false), guard = useRef(new OrbitGuard()), dragging = useRef(false), done = useRef(false);
   const tp = useRef(new THREE.Vector3()), tl = useRef(new THREE.Vector3());
   const C = useMemo(() => ({ pp: curve(PAN.p), pl: curve(PAN.l) }), []);
@@ -70,6 +70,18 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     controls.addEventListener('start', grab); controls.addEventListener('start', down); controls.addEventListener('end', up);
     return () => { controls.removeEventListener('start', grab); controls.removeEventListener('start', down); controls.removeEventListener('end', up); };
   }, [controls]);
+
+  // Re-center (the button in RecenterButton.tsx): the lens glides back onto the driving car and follows it again
+  useEffect(() => {
+    if (!controls) return;
+    const back = () => {
+      if (park.phase !== 'run') return;
+      mode.current = 'park';
+      parkFrom.current = { p: camera.position.clone(), l: controls.target.clone(), fov: (camera as THREE.PerspectiveCamera).fov, seq: park.seq, at: -1 };
+    };
+    window.addEventListener('dk:recenter', back);
+    return () => window.removeEventListener('dk:recenter', back);
+  }, [controls, camera]);
 
   // The opening's clock is ticked before everything else every frame (negative priority) from a smoothed frame time, and it is held until the
   // scene's files are in and its shaders are compiled, so the car never pops in late and no hitch lands in the middle of the drive.
@@ -106,6 +118,8 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) { if (mode.current === 'intro') releaseCar(); cinema.auto = false; stopReel(); mode.current = 'park'; }
     if (park.phase === 'run' && parkFrom.current?.seq !== park.seq) parkFrom.current = { p: camera.position.clone(), l: controls.target.clone(), fov: (camera as THREE.PerspectiveCamera).fov, seq: park.seq };
     const m = mode.current;
+    const away = park.phase === 'run' && m === 'free';                          // the drive goes on but the lens is no longer on the car (the visitor moved it): the Re-center button shows
+    if (away !== awayRef.current) { awayRef.current = away; window.dispatchEvent(new CustomEvent('dk:cam-away', { detail: away })); }
     if (m !== 'free') controls.autoRotate = false;                              // (in free mode the orbit guard decides, below)
     const glide = (p: THREE.Vector3) => { p.x += Math.sin(time * .9) * .03; p.y += Math.sin(time * .7 + 1) * .025; p.z += Math.sin(time * .8 + 2) * .03; };
     const fovTo = (f: number, k = .08) => { if (Math.abs(persp.fov - f) > .01) { persp.fov += (f - persp.fov) * k; persp.updateProjectionMatrix(); } };
@@ -116,7 +130,7 @@ export function Rig({ stage, reducedMotion, skipIntro, onIntroDone }: { stage: n
       if (introT === null && intro.t >= T_END) { mode.current = 'pan'; panClock.current = 0; }
     } else if (m === 'park') {
       // the parallel-parking drive: a scripted camera (parkcam.ts) that starts from wherever the lens was, and hands the scene back to the visitor when the car is parked
-      const pose = parkCamAt(Math.min(park.t, parkTotal()), narrow), from = parkFrom.current, k = from && parkT === null ? sstep(park.t / 2.4) : 1;
+      const pose = parkCamAt(Math.min(park.t, parkTotal()), narrow), from = parkFrom.current, k = from && parkT === null ? (from.at !== undefined ? (from.at < 0 && (from.at = time), sstep((time - from.at) / 1.1)) : sstep(park.t / 2.4)) : 1;
       if (from && k < 1) { camera.position.set(from.p.x + (pose.p[0] - from.p.x) * k, from.p.y + (pose.p[1] - from.p.y) * k, from.p.z + (pose.p[2] - from.p.z) * k); controls.target.set(from.l.x + (pose.l[0] - from.l.x) * k, from.l.y + (pose.l[1] - from.l.y) * k, from.l.z + (pose.l[2] - from.l.z) * k); persp.fov = from.fov + (pose.fov - from.fov) * k; }
       else { camera.position.set(...pose.p); controls.target.set(...pose.l); persp.fov = pose.fov; }
       camera.lookAt(controls.target); persp.updateProjectionMatrix();
